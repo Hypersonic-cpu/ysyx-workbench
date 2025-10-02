@@ -124,7 +124,7 @@ static int cmd_p(char *args) {
   bool success = false;
   word_t val = expr(args, &success);
   if (success) {
-    printf(FMT_WORD, val);
+    printf("%u\n", val);
     return 0;
   } else {
     printf("Expression eval failed\n");
