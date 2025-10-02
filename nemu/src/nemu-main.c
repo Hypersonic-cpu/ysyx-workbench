@@ -31,9 +31,8 @@ bool expr_eval_test_unsigned(char *path) {
   int errcnt = 0;
   bool success = true;
 
-  printf("%lu\n", getline(&ln, NULL, fp));
-  printf("%s\n", ln);
-  while (0) {
+  while (ln = NULL, getline(&ln, NULL, fp)) {
+    printf("%lu\n", strlen(ln));
     cnt ++;
     fprintf(stderr, "\rTesting case #%6d: \n", cnt);
     word_t expected;
@@ -60,6 +59,7 @@ bool expr_eval_test_unsigned(char *path) {
     } else {
       fprintf(stderr, "\r[AC:%6d] Pass\n", cnt);
     }
+    free(ln);
   }
   fclose(fp);
   fprintf(stderr, "Total %d Error %d\n", cnt, errcnt);
