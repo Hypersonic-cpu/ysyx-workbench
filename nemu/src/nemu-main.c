@@ -32,7 +32,7 @@ bool expr_eval_test_unsigned(char *path) {
   bool success = true;
   while ((ln = readline("")) != NULL) {
     cnt ++;
-    fprintf(stderr, "\rTesting case #%6d: ", cnt);
+    fprintf(stderr, "\rTesting case #%6d: \n", cnt);
     word_t expected;
     int dig_len;
     int read_num = sscanf(ln, "%u%n", &expected, &dig_len);
@@ -54,7 +54,7 @@ bool expr_eval_test_unsigned(char *path) {
       success = false;
       errcnt ++;
     } else {
-      fprintf(stderr, " pass");
+      fprintf(stderr, "\r[AC:%6d] Pass\n", cnt);
     }
   }
   fclose(fp);
