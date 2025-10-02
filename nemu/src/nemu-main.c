@@ -54,12 +54,14 @@ bool expr_eval_test_unsigned(char *path) {
       fprintf(stderr, "Test Case:\n\"%s\"\n", exprstr);
       success = false;
       errcnt ++;
+      return false;
     } else if (expected != ret) {
       fprintf(stderr, "[RE:%6d] Expr parse error\n", cnt);
       fprintf(stderr, "Test Case:\n\"%s\"\n", exprstr);
       fprintf(stderr, "Expected: %u, Read %u\n", expected, ret);
       success = false;
       errcnt ++;
+      return false;
     } else {
       fprintf(stderr, "[AC:%6d] Pass\n", cnt);
     }
