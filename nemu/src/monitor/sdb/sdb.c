@@ -18,7 +18,9 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 #include "sdb.h"
+#include "common.h"
 #include "debug.h"
+#include "memory/vaddr.h"
 #include "utils.h"
 
 static int is_batch_mode = false;
@@ -56,12 +58,14 @@ static int cmd_si(char *args) {
 }
 
 static int cmd_info(char *args) {
+  // TODO: 改用 strtok
   for (size_t cur = 0; args[cur] != '\0'; ++cur) {
     switch (args[cur]) {
       case 'r':
         isa_reg_display();
         return 0;
       case 'w':
+        // TODO: Print watchpoints
         TODO();
         return 0;
       default: 
@@ -83,6 +87,35 @@ static int cmd_q(char *args) {
   return -1;
 }
 
+static int cmd_x(char *args) {
+  char *arg = strtok(NULL, " ");
+
+  if (arg == NULL) {
+    printf("Invalid arguments, type `help x` for more info\n");
+  }
+  size_t scan_num = atoll(arg);
+  printf("Scan len : %lu Bytes\n", scan_num * sizeof(word_t));
+  
+  arg = strtok(NULL, " ");
+  if (arg == NULL) {
+    printf("Invalid arguments, type `help x` for more info\n");
+  }
+  vaddr_t base_addr = strtoull(arg, NULL, 16);
+  printf("Scan base : %#x\n", base_addr);
+
+  for (size_t idx = 0; idx < scan_num; ++idx) {
+    vaddr_t cur = base_addr + idx * sizeof(word_t);
+    if (idx % 4 == 0) {
+      printf("%#x:", cur);
+    }
+    printf(" \t" FMT_WORD, vaddr_read(cur, sizeof(word_t)));
+    if (idx % 4 == 3 || idx+1 == scan_num) {
+      printf("\n");
+    }
+  }
+  return 0;
+}
+
 static int cmd_help(char *args);
 
 static struct {
@@ -93,8 +126,9 @@ static struct {
   { "help", "Display information about all supported commands", cmd_help },
   { "c", "Continue the execution of the program", cmd_c },
   { "q", "Exit NEMU", cmd_q },
-  { "si", "Arg [N=1], execute `N` steps", cmd_si },
-  { "info", "Arg <r|w>, show info of registers|watchpoints", cmd_info}, 
+  { "si", "Arg [$N=1], execute `$N` steps", cmd_si },
+  { "info", "Arg <r|w>, show info of registers|watchpoints", cmd_info }, 
+  { "x", "Arg <$nw> <$VA(hex)> scan next $nw words from mem $VA", cmd_x }, 
 
   /* TODO: Add more commands */
 
