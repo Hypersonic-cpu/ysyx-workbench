@@ -165,7 +165,7 @@ static int choose_pivot(int l, int r, bool* valid) {
 
   int par_lv = 0;
   int8_t preced = 0xf;
-  int ret = 0;
+  int ret = -1;
   for (int i = l; i <= r; ++i) {
     if (tokens[i].type == TK_NUM) { /* skip */ }
     else if (tokens[i].type == TK_BRA) { par_lv ++; }
@@ -194,6 +194,7 @@ static int choose_pivot(int l, int r, bool* valid) {
       }
     }
   }
+  if (ret < 0) { *valid = false; }
   return ret;
 }
 
