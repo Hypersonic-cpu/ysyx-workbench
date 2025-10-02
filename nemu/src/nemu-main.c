@@ -33,11 +33,11 @@ bool expr_eval_test_unsigned(char *path) {
   size_t malloc_sz;
   
   while (ln = NULL, getline(&ln, &malloc_sz, fp) > 0) {
-    printf("%lu\n", malloc_sz);
-    printf("%s\n", ln);
-    printf("%lu\n", strlen(ln));
+    // printf("%lu\n", malloc_sz);
+    // printf("%s\n", ln);
+    // printf("%lu\n", strlen(ln));
     cnt ++;
-    fprintf(stderr, "\rTesting case #%6d: \n", cnt);
+    fprintf(stderr, "Testing case #%6d: \n", cnt);
     word_t expected;
     int dig_len;
     int read_num = sscanf(ln, "%u%n", &expected, &dig_len);
@@ -49,18 +49,18 @@ bool expr_eval_test_unsigned(char *path) {
     word_t ret = expr(exprstr, &succ);
 
     if (!succ) {
-      fprintf(stderr, "\r[RE:%6d] Expr parse error\n", cnt);
-      fprintf(stderr, "Test Case:\n%s\n", exprstr);
+      fprintf(stderr, "[RE:%6d] Expr parse error\n", cnt);
+      fprintf(stderr, "Test Case:\n\"%s\"\n", exprstr);
       success = false;
       errcnt ++;
     } else if (expected != ret) {
-      fprintf(stderr, "\r[RE:%6d] Expr parse error\n", cnt);
-      fprintf(stderr, "Test Case:\n%s\n", exprstr);
+      fprintf(stderr, "[RE:%6d] Expr parse error\n", cnt);
+      fprintf(stderr, "Test Case:\n\"%s\"\n", exprstr);
       fprintf(stderr, "Expected: %u, Read %u\n", expected, ret);
       success = false;
       errcnt ++;
     } else {
-      fprintf(stderr, "\r[AC:%6d] Pass\n", cnt);
+      fprintf(stderr, "[AC:%6d] Pass\n", cnt);
     }
     free(ln);
   }
