@@ -18,6 +18,8 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 #include "sdb.h"
+#include "debug.h"
+#include "utils.h"
 
 static int is_batch_mode = false;
 
@@ -42,6 +44,35 @@ static char* rl_gets() {
   return line_read;
 }
 
+static int cmd_si(char *args) {
+  uint64_t cmd_to_go = 0;
+  // NULL will cause seg fault, while 
+  // other errors will let `cmd_to_go=0` which causes no harm.
+  if (args) { cmd_to_go = atoll(args); }
+  // Set the default value to 1;
+  cmd_to_go += (cmd_to_go == 0);
+  cpu_exec(cmd_to_go);
+  return 0;
+}
+
+static int cmd_info(char *args) {
+  for (size_t cur = 0; args[cur] != '\0'; ++cur) {
+    switch (args[cur]) {
+      case 'r':
+        isa_reg_display();
+        return 0;
+      case 'w':
+        // TODO: Print watchpoints
+        TODO();
+        return 0;
+      default: 
+        // pass 
+        break;
+    }
+  }
+  return 1;
+}
+
 static int cmd_c(char *args) {
   cpu_exec(-1);
   return 0;
@@ -49,6 +80,7 @@ static int cmd_c(char *args) {
 
 
 static int cmd_q(char *args) {
+  nemu_state.state = NEMU_QUIT;
   return -1;
 }
 
@@ -62,6 +94,8 @@ static struct {
   { "help", "Display information about all supported commands", cmd_help },
   { "c", "Continue the execution of the program", cmd_c },
   { "q", "Exit NEMU", cmd_q },
+  { "si", "Arg [N=1], execute `N` steps", cmd_si },
+  { "info", "Arg <r|w>, show info of registers|watchpoints", cmd_info}, 
 
   /* TODO: Add more commands */
 
