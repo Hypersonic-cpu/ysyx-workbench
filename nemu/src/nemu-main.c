@@ -30,9 +30,8 @@ bool expr_eval_test_unsigned(char *path) {
   int cnt = 0; 
   int errcnt = 0;
   bool success = true;
-  rl_outstream = NULL;
 
-  while ((ln = readline(NULL)) != NULL) {
+  while (getline(&ln, NULL, stdin) > 0) {
     cnt ++;
     fprintf(stderr, "\rTesting case #%6d: \n", cnt);
     word_t expected;
