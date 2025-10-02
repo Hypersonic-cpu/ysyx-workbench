@@ -18,6 +18,7 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 #include "sdb.h"
+#include "debug.h"
 #include "utils.h"
 
 static int is_batch_mode = false;
@@ -54,6 +55,23 @@ static int cmd_si(char *args) {
   return 0;
 }
 
+static int cmd_info(char *args) {
+  for (size_t cur = 0; args[cur] != '\0'; ++cur) {
+    switch (args[cur]) {
+      case 'r':
+        isa_reg_display();
+        return 0;
+      case 'w':
+        TODO();
+        return 0;
+      default: 
+        // pass 
+        break;
+    }
+  }
+  return 0;
+}
+
 static int cmd_c(char *args) {
   cpu_exec(-1);
   return 0;
@@ -75,7 +93,8 @@ static struct {
   { "help", "Display information about all supported commands", cmd_help },
   { "c", "Continue the execution of the program", cmd_c },
   { "q", "Exit NEMU", cmd_q },
-  { "si", "Arg [N=1], execute `N` steps", cmd_si }, 
+  { "si", "Arg [N=1], execute `N` steps", cmd_si },
+  { "info", "Arg <r|w>, show info of registers|watchpoints", cmd_info}, 
 
   /* TODO: Add more commands */
 
