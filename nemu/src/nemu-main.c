@@ -32,6 +32,7 @@ bool expr_eval_test_unsigned(char *path) {
   bool success = true;
 
   printf("%lu\n", getline(&ln, NULL, stdin));
+  printf("%s\n", ln);
   while (0) {
     cnt ++;
     fprintf(stderr, "\rTesting case #%6d: \n", cnt);
