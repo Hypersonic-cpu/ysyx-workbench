@@ -25,13 +25,13 @@ void engine_start();
 int is_exit_status_bad();
 
 bool expr_eval_test_unsigned(char *path) {
-  FILE* fp = freopen(path, "r", stdin);
+  FILE* fp = fopen(path, "r");
   char* ln = NULL;
   int cnt = 0; 
   int errcnt = 0;
   bool success = true;
 
-  printf("%lu\n", getline(&ln, NULL, stdin));
+  printf("%lu\n", getline(&ln, NULL, fp));
   printf("%s\n", ln);
   while (0) {
     cnt ++;
