@@ -120,6 +120,18 @@ static int cmd_x(char *args) {
   return 0;
 }
 
+static int cmd_p(char *args) {
+  bool success = false;
+  word_t val = expr(args, &success);
+  if (success) {
+    printf(FMT_WORD, val);
+    return 0;
+  } else {
+    printf("Expression eval failed\n");
+    return 1;
+  }
+}
+
 static int cmd_help(char *args);
 
 static struct {
@@ -133,6 +145,7 @@ static struct {
   { "si", "Arg [$N=1], execute `$N` steps", cmd_si },
   { "info", "Arg <r|w>, show info of registers|watchpoints", cmd_info }, 
   { "x", "Arg <$nw> <$VA(hex)> scan next $nw words from mem $VA", cmd_x }, 
+  { "p", "Arg <$expr> evaluate expression", cmd_p }, 
 
   /* TODO: Add more commands */
 
