@@ -33,7 +33,7 @@ bool expr_eval_test_unsigned(char *path) {
   size_t malloc_sz;
   
   while (getline(&ln, &malloc_sz, fp) > 0) {
-    // printf("%lu\n", malloc_sz);
+    printf("Malloc %lu\n", malloc_sz);
     // printf("%s\n", ln);
     // printf("%lu\n", strlen(ln));
     ln[strlen(ln)-1] = 0;
