@@ -199,7 +199,7 @@ static int choose_pivot(int l, int r, bool* valid) {
 }
 
 // NOTE: Initial *valid should be true.
-static sword_t eval(int l, int r, bool* valid) {
+static word_t eval(int l, int r, bool* valid) {
   printf("Eval (%d, %d) V%d\n", l, r, *valid);
   if (!(*valid)) { return 0; }
   if (l > r) {
@@ -222,10 +222,10 @@ static sword_t eval(int l, int r, bool* valid) {
   assert(pivot_pos >= l && pivot_pos <= r);
 
   bool lvalid = true, rvalid = true;
-  sword_t lret = eval(l, pivot_pos-1, &lvalid);
+  word_t lret = eval(l, pivot_pos-1, &lvalid);
   printf("L ret %d V%d\n", lret, lvalid);
 
-  sword_t rret = eval(pivot_pos+1, r, &rvalid);
+  word_t rret = eval(pivot_pos+1, r, &rvalid);
   printf("R ret %d V%d\n", rret, rvalid);
 
   if (!lvalid || !rvalid) { 
@@ -262,7 +262,7 @@ word_t expr(char *e, bool *success) {
 
   if (nr_token == 0) { *success = false; return 0; }
   *success = true;
-  sword_t val = eval(0, nr_token-1, success);
+  word_t val = eval(0, nr_token-1, success);
 
   return val;
 }
