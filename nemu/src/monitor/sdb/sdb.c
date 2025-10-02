@@ -43,6 +43,13 @@ static char* rl_gets() {
   return line_read;
 }
 
+static int cmd_si(char *args) {
+  // Errors will let `cmd_to_go=0` which causes no harm.
+  uint64_t cmd_to_go = atoll(args);
+  cpu_exec(cmd_to_go);
+  return 0;
+}
+
 static int cmd_c(char *args) {
   cpu_exec(-1);
   return 0;
@@ -64,6 +71,7 @@ static struct {
   { "help", "Display information about all supported commands", cmd_help },
   { "c", "Continue the execution of the program", cmd_c },
   { "q", "Exit NEMU", cmd_q },
+  { "si", "Arg [N=1], execute `N` steps", cmd_si }, 
 
   /* TODO: Add more commands */
 
