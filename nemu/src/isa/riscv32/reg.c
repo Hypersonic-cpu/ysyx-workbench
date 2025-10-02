@@ -26,7 +26,7 @@ const char *regs[] = {
 void isa_reg_display() {
   printf("No. Name  Value\n");
   for (size_t i = 0; i < MUXDEF(CONFIG_RVE, 16, 32); ++i) {
-    printf("x%2lu %4s  %#08x:%d\n", i, reg_name(i), gpr(i), gpr(i));
+    printf("x%2lu %4s  %#010x:%d\n", i, reg_name(i), gpr(i), gpr(i));
   }
   printf("\n");
 }
