@@ -20,6 +20,7 @@
 #include <assert.h>
 #include <string.h>
 
+static size_t buf_ptr = 0;
 // this should be enough
 static char buf[65536] = {};
 static char code_buf[65536 + 128] = {}; // a little larger than `buf`
@@ -31,8 +32,33 @@ static char *code_format =
 "  return 0; "
 "}";
 
-static void gen_rand_expr() {
-  buf[0] = '\0';
+static const char* const ops[] = {
+  "+", "-", "*", "/", 
+  "+", "-", "*", "==" };
+
+static void gen_rand_expr(int lim) {
+  if (lim < 10) { 
+    sprintf(buf+buf_ptr, "1"); buf_ptr++;
+    return; 
+  }
+  int wnum = 0;
+  switch (rand() % 5) {
+    case 0: 
+      wnum = sprintf(buf+buf_ptr, "%u", rand() % 10000); 
+      buf_ptr += wnum;
+      break;
+    case 1: case 2: 
+      sprintf(buf+buf_ptr, "("); buf_ptr++;
+      gen_rand_expr(lim-1); 
+      sprintf(buf+buf_ptr, ")"); buf_ptr++;
+      break;
+    default: 
+      gen_rand_expr(lim/2-1); 
+      wnum = sprintf(buf+buf_ptr, "%s", ops[rand() % 8]);
+      buf_ptr += wnum;
+      gen_rand_expr(lim/2-1); 
+      break;
+  }
 }
 
 int main(int argc, char *argv[]) {
@@ -44,7 +70,9 @@ int main(int argc, char *argv[]) {
   }
   int i;
   for (i = 0; i < loop; i ++) {
-    gen_rand_expr();
+    fprintf(stderr, "\rGenerating testpoint #%6d", i);
+    buf_ptr = 0;
+    gen_rand_expr(65530);
 
     sprintf(code_buf, code_format, buf);
 
@@ -53,7 +81,8 @@ int main(int argc, char *argv[]) {
     fputs(code_buf, fp);
     fclose(fp);
 
-    int ret = system("gcc /tmp/.code.c -o /tmp/.expr");
+    int ret = system("gcc /tmp/.code.c -Werror=div-by-zero -Wno-overflow"
+                     " -o /tmp/.expr 2> /dev/null");
     if (ret != 0) continue;
 
     fp = popen("/tmp/.expr", "r");
