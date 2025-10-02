@@ -36,8 +36,9 @@ bool expr_eval_test_unsigned(char *path) {
     word_t expected;
     int dig_len;
     int read_num = sscanf(ln, "%u%n", &expected, &dig_len);
+    printf("%u %d %d\n", expected, dig_len, read_num);
     assert(read_num == 2);
-    char* exprstr = ln + read_num;
+    char* exprstr = ln + dig_len;
 
     bool succ;
     word_t ret = expr(exprstr, &succ);
