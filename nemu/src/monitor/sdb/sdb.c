@@ -46,6 +46,8 @@ static char* rl_gets() {
 static int cmd_si(char *args) {
   // Errors will let `cmd_to_go=0` which causes no harm.
   uint64_t cmd_to_go = atoll(args);
+  // Set the default value to 1;
+  cmd_to_go += (cmd_to_go == 0);
   cpu_exec(cmd_to_go);
   return 0;
 }
