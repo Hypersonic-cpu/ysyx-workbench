@@ -36,6 +36,7 @@ bool expr_eval_test_unsigned(char *path) {
     // printf("%lu\n", malloc_sz);
     // printf("%s\n", ln);
     // printf("%lu\n", strlen(ln));
+    ln[strlen(ln)-1] = 0;
     cnt ++;
     fprintf(stderr, "Testing case #%6d: \n", cnt);
     word_t expected;
