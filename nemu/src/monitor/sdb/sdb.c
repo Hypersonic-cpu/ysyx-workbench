@@ -73,7 +73,6 @@ static int cmd_info(char *args) {
       TODO();
       return 0;
     default: 
-      // pass 
       printf("Invalid argument `%c`, type `help info` for more info\n", arg[0]);
       return 1;
   }
