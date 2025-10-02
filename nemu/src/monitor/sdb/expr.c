@@ -88,7 +88,9 @@ static bool make_token(char *e) {
 
   nr_token = 0;
 
+  printf(" >>>> %lu\n", strlen(e));
   while (e[position] != '\0') {
+    printf(" >>>> %d\n", position);
     /* Try all rules one by one. */
     for (i = 0; i < NR_REGEX; i ++) {
       if (regexec(&re[i], e + position, 1, &pmatch, 0) == 0 && pmatch.rm_so == 0) {
@@ -261,9 +263,6 @@ word_t expr(char *e, bool *success) {
   // TODO();
 
   if (nr_token == 0) { *success = false; return 0; }
-  for (size_t i = 0; i < nr_token; i++) {
-    printf(">> [%lu] %d \n", i, tokens[i].type);
-  }
   *success = true;
   word_t val = eval(0, nr_token-1, success);
 
