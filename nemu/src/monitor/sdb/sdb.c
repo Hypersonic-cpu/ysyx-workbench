@@ -69,7 +69,7 @@ static int cmd_info(char *args) {
         break;
     }
   }
-  return 0;
+  return 1;
 }
 
 static int cmd_c(char *args) {
