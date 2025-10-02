@@ -30,9 +30,9 @@ bool expr_eval_test_unsigned(char *path) {
   int cnt = 0; 
   int errcnt = 0;
   bool success = true;
-  while ((ln = readline("")) != NULL) {
-    if (cnt > 100) break;
-    continue ;
+  rl_outstream = NULL;
+
+  while ((ln = readline(NULL)) != NULL) {
     cnt ++;
     fprintf(stderr, "\rTesting case #%6d: \n", cnt);
     word_t expected;
@@ -44,6 +44,7 @@ bool expr_eval_test_unsigned(char *path) {
 
     bool succ;
     word_t ret = expr(exprstr, &succ);
+
     if (!succ) {
       fprintf(stderr, "\r[RE:%6d] Expr parse error\n", cnt);
       fprintf(stderr, "Test Case:\n%s\n", exprstr);
