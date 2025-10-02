@@ -141,14 +141,14 @@ static bool make_token(char *e) {
 }
 
 static bool check_braket(size_t l, size_t r, bool* valid) {
-  // NOTE: Given that the whole expr is surrounded by ().
   int par_lv = 0;
   for (size_t i = l; i <= r; ++i) {
     if (tokens[i].type == TK_BRA) { par_lv ++; }
     else if (tokens[i].type == TK_KET) { par_lv --; }
     if (par_lv < 0) { *valid = false; return false; }
   }
-  return par_lv == 0;
+  return par_lv == 0 && 
+    tokens[l].type == TK_BRA && tokens[r].type == TK_KET;
 }
 
 static size_t choose_pivot(size_t l, size_t r, bool* valid) {
