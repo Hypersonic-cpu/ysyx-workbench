@@ -13,6 +13,8 @@
 * See the Mulan PSL v2 for more details.
 ***************************************************************************************/
 
+#include "common.h"
+#include "debug.h"
 #include <isa.h>
 
 /* We use the POSIX regex functions to process regular expressions.
@@ -138,6 +140,115 @@ static bool make_token(char *e) {
   return true;
 }
 
+static bool check_braket(size_t l, size_t r, bool* valid) {
+  // NOTE: Given that the whole expr is surrounded by ().
+  int par_lv = 0;
+  for (size_t i = l; i <= r; ++i) {
+    if (tokens[i].type == TK_BRA) { par_lv ++; }
+    else if (tokens[i].type == TK_KET) { par_lv --; }
+    if (par_lv < 0) { *valid = false; return false; }
+  }
+  return par_lv == 0;
+}
+
+static size_t choose_pivot(size_t l, size_t r, bool* valid) {
+  // NOTE: Rules:
+  // 0. Given that the whole expr is NOT surrounded by ().
+  // 1. Cannot in braket.
+  // 2. The the expr is flattened: <0> op <1> op <2> ...
+  // 3. Choose the lowest-level or right-most op. (all 
+  //    binary ops are left assoc so far).
+  // X. precedence:
+  //    1: '=='
+  //    2: '+-'
+  //    3: '*/'
+
+  int par_lv = 0;
+  int8_t preced = 0;
+  size_t ret = 0;
+  for (size_t i = l; i <= r; ++i) {
+    if (tokens[i].type == TK_NUM) { /* skip */ }
+    else if (tokens[i].type == TK_BRA) { par_lv ++; }
+    else if (tokens[i].type == TK_KET) { par_lv --; }
+    else if (par_lv) { /* skip */ }
+    else {
+      // operators
+      int8_t cur_preced = 0;
+      switch (tokens[i].type) {
+        case TK_EQ: 
+          cur_preced = 1;
+          break;
+        case '+': case '-': 
+          cur_preced = 2;
+          break;
+        case '*': case '/':
+          cur_preced = 3;
+          break;
+        default:
+          assert(false && "Unexpected operator type");
+          return 0;
+      }
+      if (cur_preced <= preced) {
+        preced = cur_preced;
+        ret = i;
+      }
+    }
+  }
+  return ret;
+}
+
+// NOTE: Initial *valid should be true.
+static sword_t eval(size_t l, size_t r, bool* valid) {
+  printf("Eval (%lu, %lu) V%d\n", l, r, *valid);
+  if (!(*valid)) { return 0; }
+  if (l > r) {
+    *valid = false;
+    return 0;
+  } 
+  if (l == r) {
+    assert(tokens[l].type == TK_NUM);
+    return atoi(tokens[l].str);
+  } 
+  bool bra_ket = check_braket(l, r, valid);
+  printf("Braket (%lu, %lu) V%d Ret%d\n", l, r, *valid, bra_ket);
+  if (!*valid) { return 0; }
+  if (bra_ket) { return eval(l+1, r-1, valid); }
+  
+  size_t pivot_pos = choose_pivot(l, r, valid);
+  if (!*valid) { return 0; }
+
+  printf("Pivot (%lu, <%lu>, %lu)\n", l, pivot_pos, r);
+  assert(pivot_pos >= l && pivot_pos <= r);
+
+  bool lvalid = true, rvalid = true;
+  sword_t lret = eval(l, pivot_pos-1, &lvalid);
+  printf("L ret %d V%d\n", lret, lvalid);
+
+  sword_t rret = eval(pivot_pos+1, r, &rvalid);
+  printf("R ret %d V%d\n", rret, rvalid);
+
+  if (!lvalid || !rvalid) { 
+    *valid = false;
+    return 0; 
+  }
+
+  switch (tokens[pivot_pos].type) {
+    case '+': 
+      return (lret + rret);
+    case '-': 
+      return (lret - rret);
+    case '*': 
+      return (lret * rret);
+    case '/': 
+      // TODO: Div 0 exception
+      return (lret / rret);
+    case TK_EQ:
+      return (lret == rret);
+    default:
+      assert(false && "Unexpected operator");
+      return 0;
+  }
+}
 
 word_t expr(char *e, bool *success) {
   if (!make_token(e)) {
@@ -146,7 +257,11 @@ word_t expr(char *e, bool *success) {
   }
 
   /* TODO: Insert codes to evaluate the expression. */
-  TODO();
+  // TODO();
 
-  return 0;
+  if (nr_token == 0) { *success = false; return 0; }
+  *success = true;
+  sword_t val = eval(0, nr_token-1, success);
+
+  return val;
 }
