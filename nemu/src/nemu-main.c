@@ -32,7 +32,7 @@ bool expr_eval_test_unsigned(char *path) {
   bool success = true;
   size_t malloc_sz;
   
-  while (ln = NULL, getline(&ln, &malloc_sz, fp) > 0) {
+  while (getline(&ln, &malloc_sz, fp) > 0) {
     // printf("%lu\n", malloc_sz);
     // printf("%s\n", ln);
     // printf("%lu\n", strlen(ln));
@@ -64,6 +64,7 @@ bool expr_eval_test_unsigned(char *path) {
       fprintf(stderr, "[AC:%6d] Pass\n", cnt);
     }
     free(ln);
+    ln = NULL;
   }
   fclose(fp);
   fprintf(stderr, "Total %d Error %d\n", cnt, errcnt);
