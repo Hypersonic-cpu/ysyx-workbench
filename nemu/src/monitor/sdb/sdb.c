@@ -44,6 +44,7 @@ static char* rl_gets() {
 }
 
 static int cmd_si(char *args) {
+  printf("Args recv: \'%s\'\n", args);
   // Errors will let `cmd_to_go=0` which causes no harm.
   uint64_t cmd_to_go = atoll(args);
   // Set the default value to 1;
