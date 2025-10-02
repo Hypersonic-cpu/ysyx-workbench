@@ -30,15 +30,11 @@ bool expr_eval_test_unsigned(char *path) {
   int cnt = 0; 
   int errcnt = 0;
   bool success = true;
+  size_t malloc_sz;
   
-  ln = NULL;
-  size_t n;
-  ssize_t ret = getline(&ln, &n, fp);
-  printf("%lu %lu\n", ret, n);
-  printf("%s\n", ln);
-  
-  
-  while (0) {
+  while (ln = NULL, getline(&ln, &malloc_sz, fp) > 0) {
+    printf("%lu\n", malloc_sz);
+    printf("%s\n", ln);
     printf("%lu\n", strlen(ln));
     cnt ++;
     fprintf(stderr, "\rTesting case #%6d: \n", cnt);
