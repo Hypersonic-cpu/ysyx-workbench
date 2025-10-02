@@ -59,21 +59,24 @@ static int cmd_si(char *args) {
 
 static int cmd_info(char *args) {
   // TODO: 改用 strtok
-  for (size_t cur = 0; args[cur] != '\0'; ++cur) {
-    switch (args[cur]) {
-      case 'r':
-        isa_reg_display();
-        return 0;
-      case 'w':
-        // TODO: Print watchpoints
-        TODO();
-        return 0;
-      default: 
-        // pass 
-        break;
-    }
+  char* arg = strtok(NULL, " ");
+  if (arg == NULL) {
+    printf("Invalid arguments, type `help info` for more info\n");
+    return 1;
   }
-  return 1;
+  switch (arg[0]) {
+    case 'r':
+      isa_reg_display();
+      return 0;
+    case 'w':
+      // TODO: Print watchpoints
+      TODO();
+      return 0;
+    default: 
+      // pass 
+      return 1;
+      break;
+  }
 }
 
 static int cmd_c(char *args) {
@@ -92,6 +95,7 @@ static int cmd_x(char *args) {
 
   if (arg == NULL) {
     printf("Invalid arguments, type `help x` for more info\n");
+    return 1;
   }
   size_t scan_num = atoll(arg);
   printf("Scan len : %lu Bytes\n", scan_num * sizeof(word_t));
@@ -99,6 +103,7 @@ static int cmd_x(char *args) {
   arg = strtok(NULL, " ");
   if (arg == NULL) {
     printf("Invalid arguments, type `help x` for more info\n");
+    return 1;
   }
   vaddr_t base_addr = strtoull(arg, NULL, 16);
   printf("Scan base : %#x\n", base_addr);
