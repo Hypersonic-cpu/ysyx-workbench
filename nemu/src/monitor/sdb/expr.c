@@ -116,7 +116,7 @@ static bool make_token(char *e) {
             nr_token++;
             break;
           case TK_NUM:
-            if (substr_len >= 32) {
+            if (substr_len >= 65536) {
               printf("buffer overflow at position %d\n%s\n%*.s^\n", position, e, position, "");
               return false;
             }
