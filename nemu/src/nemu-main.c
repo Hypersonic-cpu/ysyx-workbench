@@ -31,13 +31,13 @@ bool expr_eval_test_unsigned(char *path) {
   int errcnt = 0;
   bool success = true;
   while ((ln = readline("")) != NULL) {
+    if (cnt > 100) break;
+    continue ;
     cnt ++;
     fprintf(stderr, "\rTesting case #%6d: \n", cnt);
     word_t expected;
     int dig_len;
     int read_num = sscanf(ln, "%u%n", &expected, &dig_len);
-    if (cnt > 100) break;
-    continue ;
     // printf("%u %d %d\n", expected, dig_len, read_num);
     assert(read_num == 1);
     char* exprstr = ln + dig_len;
