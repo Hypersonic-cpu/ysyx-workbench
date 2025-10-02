@@ -151,7 +151,7 @@ static bool check_braket(size_t l, size_t r, bool* valid) {
     tokens[l].type == TK_BRA && tokens[r].type == TK_KET;
 }
 
-static size_t choose_pivot(size_t l, size_t r, bool* valid) {
+static int choose_pivot(int l, int r, bool* valid) {
   // NOTE: Rules:
   // 0. Given that the whole expr is NOT surrounded by ().
   // 1. Cannot in braket.
@@ -164,9 +164,9 @@ static size_t choose_pivot(size_t l, size_t r, bool* valid) {
   //    3: '*/'
 
   int par_lv = 0;
-  int8_t preced = 0;
-  size_t ret = 0;
-  for (size_t i = l; i <= r; ++i) {
+  int8_t preced = 0xf;
+  int ret = 0;
+  for (int i = l; i <= r; ++i) {
     if (tokens[i].type == TK_NUM) { /* skip */ }
     else if (tokens[i].type == TK_BRA) { par_lv ++; }
     else if (tokens[i].type == TK_KET) { par_lv --; }
@@ -198,8 +198,8 @@ static size_t choose_pivot(size_t l, size_t r, bool* valid) {
 }
 
 // NOTE: Initial *valid should be true.
-static sword_t eval(size_t l, size_t r, bool* valid) {
-  printf("Eval (%lu, %lu) V%d\n", l, r, *valid);
+static sword_t eval(int l, int r, bool* valid) {
+  printf("Eval (%d, %d) V%d\n", l, r, *valid);
   if (!(*valid)) { return 0; }
   if (l > r) {
     *valid = false;
@@ -210,14 +210,14 @@ static sword_t eval(size_t l, size_t r, bool* valid) {
     return atoi(tokens[l].str);
   } 
   bool bra_ket = check_braket(l, r, valid);
-  printf("Braket (%lu, %lu) V%d Ret%d\n", l, r, *valid, bra_ket);
+  printf("Braket (%d, %d) V%d Ret%d\n", l, r, *valid, bra_ket);
   if (!*valid) { return 0; }
   if (bra_ket) { return eval(l+1, r-1, valid); }
   
-  size_t pivot_pos = choose_pivot(l, r, valid);
+  int pivot_pos = choose_pivot(l, r, valid);
   if (!*valid) { return 0; }
 
-  printf("Pivot (%lu, <%lu>, %lu)\n", l, pivot_pos, r);
+  printf("Pivot (%d, <%d>, %d)\n", l, pivot_pos, r);
   assert(pivot_pos >= l && pivot_pos <= r);
 
   bool lvalid = true, rvalid = true;
