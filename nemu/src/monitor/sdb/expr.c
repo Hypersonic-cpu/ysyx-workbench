@@ -261,6 +261,9 @@ word_t expr(char *e, bool *success) {
   // TODO();
 
   if (nr_token == 0) { *success = false; return 0; }
+  for (size_t i = 0; i < nr_token; i++) {
+    printf(">> [%lu] %d \n", i, tokens[i].type);
+  }
   *success = true;
   word_t val = eval(0, nr_token-1, success);
 
