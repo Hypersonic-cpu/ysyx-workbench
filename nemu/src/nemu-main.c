@@ -18,6 +18,7 @@
 #include <common.h>
 #include <readline/readline.h>
 #include <stdio.h>
+#include <sys/types.h>
 
 void init_monitor(int, char *[]);
 void am_init_monitor();
@@ -31,12 +32,13 @@ bool expr_eval_test_unsigned(char *path) {
   int errcnt = 0;
   bool success = true;
   size_t malloc_sz;
+  ssize_t read_strlen;
   
-  while (getline(&ln, &malloc_sz, fp) > 0) {
+  while ((read_strlen = getline(&ln, &malloc_sz, fp)) > 0) {
     // printf("Malloc %lu\n", malloc_sz);
     // printf("%s\n", ln);
     // printf("%lu\n", strlen(ln));
-    ln[strlen(ln)-1] = 0;
+    ln[read_strlen] = 0;
     cnt ++;
     fprintf(stderr, "\rTesting case #%6d: ", cnt);
     word_t expected;
