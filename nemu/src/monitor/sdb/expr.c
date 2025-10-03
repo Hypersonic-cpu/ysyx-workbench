@@ -249,22 +249,31 @@ static word_t eval(int l, int r, bool* valid) {
   printf("R ret %d V%d\n", rret, rvalid);
   if (!rvalid) { *valid = false; return 0; }
 
+  word_t res = 0;
   switch (tokens[pivot_pos].type) {
     case '+': 
-      return (lret + rret);
+      res = (lret + rret);
+      break;
     case '-': 
-      return (lret - rret);
+      res = (lret - rret);
+      break;
     case '*': 
-      return (lret * rret);
+      res = (lret * rret);
+      break;
     case '/': 
       // TODO: Div 0 exception
-      return (lret / rret);
+      res = (lret / rret);
+      break;
     case TK_EQ:
-      return (lret == rret);
+      res = (lret == rret);
+      break;
     default:
       assert(false && "Unexpected operator");
-      return 0;
+      break;
   }
+
+  printf("Join L %u R %u Res %u\n", lret, rret, res);
+  return res;
 }
 
 word_t expr(char *e, bool *success) {
