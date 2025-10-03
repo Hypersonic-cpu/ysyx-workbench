@@ -113,7 +113,7 @@ static bool make_token(char *e) {
          * of tokens, some extra actions should be performed.
          */
 
-        printf("cur nr_token = %d\n", nr_token);
+        // printf("cur nr_token = %d\n", nr_token);
         switch (rules[i].token_type) {
           case TK_NOTYPE: 
             break;
@@ -209,7 +209,7 @@ static int choose_pivot(int l, int r, bool* valid) {
 
 // NOTE: Initial *valid should be true.
 static word_t eval(int l, int r, bool* valid) {
-  // printf("Eval (%d, %d) V%d\n", l, r, *valid);
+  printf("! Eval (%d, %d) V%d\n", l, r, *valid);
   if (!(*valid)) { return 0; }
   if (l > r) {
     *valid = false;
@@ -220,22 +220,22 @@ static word_t eval(int l, int r, bool* valid) {
     return atoi(tokens[l].str);
   } 
   bool bra_ket = check_braket(l, r, valid);
-  // printf("Braket (%d, %d) V%d Ret%d\n", l, r, *valid, bra_ket);
+  printf("Braket (%d, %d) V%d Ret%d\n", l, r, *valid, bra_ket);
   if (!*valid) { return 0; }
   if (bra_ket) { return eval(l+1, r-1, valid); }
   
   int pivot_pos = choose_pivot(l, r, valid);
   if (!*valid) { return 0; }
 
-  // printf("Pivot (%d, <%d>, %d)\n", l, pivot_pos, r);
+  printf("Pivot (%d, <%d>, %d)\n", l, pivot_pos, r);
   assert(pivot_pos >= l && pivot_pos <= r);
 
   bool lvalid = true, rvalid = true;
   word_t lret = eval(l, pivot_pos-1, &lvalid);
-  // printf("L ret %d V%d\n", lret, lvalid);
+  printf("L ret %d V%d\n", lret, lvalid);
 
   word_t rret = eval(pivot_pos+1, r, &rvalid);
-  // printf("R ret %d V%d\n", rret, rvalid);
+  printf("R ret %d V%d\n", rret, rvalid);
 
   if (!lvalid || !rvalid) { 
     *valid = false;
