@@ -233,14 +233,11 @@ static word_t eval(int l, int r, bool* valid) {
   bool lvalid = true, rvalid = true;
   word_t lret = eval(l, pivot_pos-1, &lvalid);
   printf("L ret %d V%d\n", lret, lvalid);
+  if (!lvalid) { *valid = false; return 0; }
 
   word_t rret = eval(pivot_pos+1, r, &rvalid);
   printf("R ret %d V%d\n", rret, rvalid);
-
-  if (!lvalid || !rvalid) { 
-    *valid = false;
-    return 0; 
-  }
+  if (!rvalid) { *valid = false; return 0; }
 
   switch (tokens[pivot_pos].type) {
     case '+': 
