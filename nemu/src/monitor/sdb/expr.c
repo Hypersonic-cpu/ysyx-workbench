@@ -73,12 +73,15 @@ void init_regex() {
   }
 }
 
+#define TOKEN_STRMAX  128
+#define TOKEN_ARRSIZE 65536
+
 typedef struct token {
   int type;
-  char str[65536];
+  char str[TOKEN_STRMAX];
 } Token;
 
-static Token tokens[32] __attribute__((used)) = {};
+static Token tokens[TOKEN_ARRSIZE] __attribute__((used)) = {};
 static int nr_token __attribute__((used))  = 0;
 
 static bool make_token(char *e) {
@@ -88,19 +91,19 @@ static bool make_token(char *e) {
 
   nr_token = 0;
 
-  printf(" >>>> %lu\n", strlen(e));
+  // printf(" >>>> %lu\n", strlen(e));
   while (e[position] != '\0') {
-    printf(" >>>> %d\n", position);
+    // printf(" >>>> %d\n", position);
     /* Try all rules one by one. */
     for (i = 0; i < NR_REGEX; i ++) {
       if (regexec(&re[i], e + position, 1, &pmatch, 0) == 0 && pmatch.rm_so == 0) {
         char *substr_start = e + position;
         int substr_len = pmatch.rm_eo;
 
-        printf( ANSI_FG_BLUE "match rules[%d] = \"%s\" at position %d with len %d: %.*s\n" ANSI_NONE,
-            i, rules[i].regex, position, substr_len, substr_len, substr_start);
-        // Log("match rules[%d] = \"%s\" at position %d with len %d: %.*s",
+        // printf( ANSI_FG_BLUE "match rules[%d] = \"%s\" at position %d with len %d: %.*s\n" ANSI_NONE,
         //     i, rules[i].regex, position, substr_len, substr_len, substr_start);
+        Log("match rules[%d] = \"%s\" at position %d with len %d: %.*s",
+            i, rules[i].regex, position, substr_len, substr_len, substr_start);
 
         // printf("position %d += %d\n", position, substr_len);
         position += substr_len;
@@ -120,7 +123,7 @@ static bool make_token(char *e) {
             nr_token++;
             break;
           case TK_NUM:
-            if (substr_len >= 65536) {
+            if (substr_len >= TOKEN_STRMAX) {
               printf("buffer overflow at position %d\n%s\n%*.s^\n", position, e, position, "");
               return false;
             }
