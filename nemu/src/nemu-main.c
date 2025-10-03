@@ -25,7 +25,10 @@ void am_init_monitor();
 void engine_start();
 int is_exit_status_bad();
 
-bool expr_eval_test_unsigned(char *path) {
+static bool 
+__attribute__((unused))
+expr_eval_test_unsigned(char *path) 
+{
   FILE* fp = fopen(path, "r");
   char* ln = NULL;
   int cnt = 0; 
@@ -56,14 +59,14 @@ bool expr_eval_test_unsigned(char *path) {
       fprintf(stderr, "Test Case:\n\"%s\"\n", exprstr);
       success = false;
       errcnt ++;
-      return false;
+      // return false;
     } else if (expected != ret) {
       fprintf(stderr, "\n[WA:%6d] Expr parse error\n", cnt);
       fprintf(stderr, "Test Case:\n\"%s\"\n", exprstr);
       fprintf(stderr, "Expected: %u, Read %u\n", expected, ret);
       success = false;
       errcnt ++;
-      return false;
+      // return false;
     } else {
       fprintf(stderr, "[AC:%6d] Pass", cnt);
     }
@@ -83,7 +86,8 @@ int main(int argc, char *argv[]) {
   init_monitor(argc, argv);
 #endif
    
-  return !expr_eval_test_unsigned("tools/gen-expr/input_nemu.txt");
+  // return !expr_eval_test_unsigned("tools/gen-expr/input_nemu.txt");
+  
   /* Start engine. */
   engine_start();
 

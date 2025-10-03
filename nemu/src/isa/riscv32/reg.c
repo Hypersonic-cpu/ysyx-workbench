@@ -14,6 +14,7 @@
 ***************************************************************************************/
 
 #include <isa.h>
+#include <stdio.h>
 #include "local-include/reg.h"
 
 const char *regs[] = {
@@ -32,5 +33,29 @@ void isa_reg_display() {
 }
 
 word_t isa_reg_str2val(const char *s, bool *success) {
+  ssize_t len = strlen(s);
+  *success = false;
+  if (!s || len < 2 || len > 3) { return 0; }
+  if (s[0] == 'x') {
+    int id = -1;
+    int n_read = sscanf(s+1, "%d", &id);
+    if (n_read == 1 
+        && id >= 0 && id < MUXDEF(CONFIG_RVE, 16, 32)) {
+      *success = true;
+      return gpr(id);
+    } else {
+      return 0;
+    }
+  } else {
+    size_t i;
+    for (i = 0; i < MUXDEF(CONFIG_RVE, 16, 32); ++i) {
+      if (strcmp(regs[i], s) == 0) { 
+        *success = true;
+        break; 
+      }
+    }
+    if (*success) { return gpr(i); }
+    else { return 0; }
+  }
   return 0;
 }
