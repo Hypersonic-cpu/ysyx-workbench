@@ -149,15 +149,25 @@ static bool make_token(char *e) {
   return true;
 }
 
-static bool check_braket(size_t l, size_t r, bool* valid) {
-  int par_lv = 0;
-  for (size_t i = l; i <= r; ++i) {
+static bool check_braket(int l, int r, bool* valid) {
+  // We do not modify `valid` since we didn't check that.
+  // Premature exit is resonable because even if the 
+  // whole expression is checked, we cannot guarantee every 
+  // sub-expression is valid. So we leave it to further process.
+  if (!(tokens[l].type == TK_BRA && tokens[r].type == TK_KET)) {
+    return false; 
+  }
+  int par_lv = 1;
+  // Does not exit here to check for valid
+  for (size_t i = l+1; i <= r-1; ++i) {
     if (tokens[i].type == TK_BRA) { par_lv ++; }
     else if (tokens[i].type == TK_KET) { par_lv --; }
     if (par_lv < 0) { *valid = false; return false; }
+    if (par_lv == 0) { return false; }
   }
-  return par_lv == 0 && 
-    tokens[l].type == TK_BRA && tokens[r].type == TK_KET;
+
+  if (par_lv) { *valid = false; return false; }
+  return true;
 }
 
 static int choose_pivot(int l, int r, bool* valid) {
