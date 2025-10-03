@@ -81,7 +81,7 @@ int main(int argc, char *argv[]) {
   init_monitor(argc, argv);
 #endif
    
-  return expr_eval_test_unsigned("tools/gen-expr/input.txt");
+  return expr_eval_test_unsigned("tools/gen-expr/input_nemu.txt");
   /* Start engine. */
   engine_start();
 
