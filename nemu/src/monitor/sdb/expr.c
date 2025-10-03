@@ -226,7 +226,11 @@ static word_t eval(int l, int r, bool* valid) {
     return 0;
   } 
   if (l == r) {
-    assert(tokens[l].type == TK_NUM);
+    // assert(tokens[l].type == TK_NUM);
+    if (tokens[l].type != TK_NUM) {
+      *valid = false;
+      return 0;
+    }
     return atoi(tokens[l].str);
   } 
   bool bra_ket = check_braket(l, r, valid);
