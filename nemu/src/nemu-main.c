@@ -69,7 +69,7 @@ bool expr_eval_test_unsigned(char *path) {
     ln = NULL;
   }
   fclose(fp);
-  fprintf(stderr, "Total %d Error %d\n", cnt, errcnt);
+  fprintf(stderr, "\n=== Total %d Error %d ===\n", cnt, errcnt);
   return success;
 }
 
