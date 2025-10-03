@@ -166,7 +166,7 @@ static bool check_braket(int l, int r, bool* valid) {
     if (par_lv == 0) { return false; }
   }
 
-  if (par_lv) { *valid = false; return false; }
+  if (par_lv != 1) { *valid = false; return false; }
   return true;
 }
 
