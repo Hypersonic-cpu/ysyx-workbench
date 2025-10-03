@@ -38,7 +38,7 @@ bool expr_eval_test_unsigned(char *path) {
     // printf("%lu\n", strlen(ln));
     ln[strlen(ln)-1] = 0;
     cnt ++;
-    fprintf(stderr, "Testing case #%6d: \n", cnt);
+    fprintf(stderr, "\rTesting case #%6d: ", cnt);
     word_t expected;
     int dig_len;
     int read_num = sscanf(ln, "%u%n", &expected, &dig_len);
@@ -50,20 +50,20 @@ bool expr_eval_test_unsigned(char *path) {
     word_t ret = expr(exprstr, &succ);
 
     if (!succ) {
-      fprintf(stderr, "[RE:%6d] Expr parse error\n", cnt);
+      fprintf(stderr, "\n[RE:%6d] Expr parse error\n", cnt);
       fprintf(stderr, "Test Case:\n\"%s\"\n", exprstr);
       success = false;
       errcnt ++;
       return false;
     } else if (expected != ret) {
-      fprintf(stderr, "[RE:%6d] Expr parse error\n", cnt);
+      fprintf(stderr, "\n[WA:%6d] Expr parse error\n", cnt);
       fprintf(stderr, "Test Case:\n\"%s\"\n", exprstr);
       fprintf(stderr, "Expected: %u, Read %u\n", expected, ret);
       success = false;
       errcnt ++;
       return false;
     } else {
-      fprintf(stderr, "[AC:%6d] Pass\n", cnt);
+      fprintf(stderr, "[AC:%6d] Pass", cnt);
     }
     free(ln);
     ln = NULL;
