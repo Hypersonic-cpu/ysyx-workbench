@@ -272,7 +272,8 @@ static word_t eval(int l, int r, bool* valid) {
       break;
   }
 
-  printf("Join L %u R %u Res %u\n", lret, rret, res);
+  printf("Join L(%d,%d) %u R(%d,%d) %u Res %u\n", 
+         l, pivot_pos-1, lret, pivot_pos+1, r, rret, res);
   return res;
 }
 
