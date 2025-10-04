@@ -132,16 +132,16 @@ static int cmd_p(char *args) {
 }
 
 static int cmd_w(char *args) {
-  // int id = watchpoint_set(args);
-  // printf("Watchpoint %d set: %s\n", id, args);
+  int id = watchpoint_set(args);
+  printf("Watchpoint %d set: %s\n", id, args);
   return 0;
 }
 
 static int cmd_d(char *args) {
-  // int id = atoi(args);
-  // bool success = watchpoint_del(id);
-  // printf("Watchpoint %d removal %s\n", 
-  //        id, success ? "success" : "failed");
+  int id = atoi(args);
+  bool success = watchpoint_del(id);
+  printf("Watchpoint %d removal %s\n", 
+         id, success ? "success" : "failed");
   return 0;
 }
 
