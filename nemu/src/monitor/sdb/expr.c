@@ -174,7 +174,9 @@ static bool make_token(char *e) {
 
   for (size_t i = 0; i < nr_token; ++i) {
     bool unary = i == 0 || 
-      !(tokens[i-1].type == TK_NUM || tokens[i-1].type == TK_KET);
+      !(tokens[i-1].type == TK_NUM || 
+        tokens[i-1].type == TK_REG || 
+        tokens[i-1].type == TK_KET);
     if (tokens[i].type == '-' && unary) {
       tokens[i].type = TK_UNEG;
     } else if (tokens[i].type == '+' && unary) {
