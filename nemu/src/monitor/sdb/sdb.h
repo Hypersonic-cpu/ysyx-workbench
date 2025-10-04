@@ -23,8 +23,8 @@
 
 word_t expr(char *e, bool *success);
 
-// int watchpoint_set(char* exprs) { return 0; };
+int watchpoint_set(char* exprs);
 
-// bool watchpoint_del(int id) { return false; };
+bool watchpoint_del(int id);
 
 #endif

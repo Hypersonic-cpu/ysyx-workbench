@@ -41,3 +41,6 @@ void init_wp_pool() {
 
 /* TODO: Implement the functionality of watchpoint */
 
+int watchpoint_set(char *expr) { return 0; }
+
+bool watchpoint_del(int id) { return true; }
