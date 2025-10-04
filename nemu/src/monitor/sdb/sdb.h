@@ -18,6 +18,13 @@
 
 #include <common.h>
 
+#define TOKEN_STRMAX  128
+#define TOKEN_ARRSIZE 65536
+
 word_t expr(char *e, bool *success);
+
+// int watchpoint_set(char* exprs) { return 0; };
+
+// bool watchpoint_del(int id) { return false; };
 
 #endif
