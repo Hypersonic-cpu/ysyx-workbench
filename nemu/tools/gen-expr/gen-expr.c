@@ -32,32 +32,43 @@ static char *code_format =
 "  return 0; "
 "}";
 
+static const size_t NUM_BINARY_OPS = 8;
 static const char* const ops[] = {
   "+", "-", "*", "/", 
   "+", "-", "*", "==" };
+
+static const size_t NUM_UNARY_OPS = 5;
+static const char* const unary[] = {
+  " ", "", "", " +", " -" // , "*"
+};
 
 static void gen_rand_expr(int lim) {
   int wnum = 0;
   if (lim < 10) { 
     wnum = sprintf(buf+buf_ptr, "%s%1dU", 
-                   rand() % 2 ? " -" : " ", rand()%10); 
+                     unary[rand()%NUM_UNARY_OPS], rand() % 10); 
     buf_ptr += wnum;
     return; 
   }
   switch (rand() % 5) {
     case 0: 
       wnum = sprintf(buf+buf_ptr, "%s%uU", 
-                     rand()%2 ? " -" : " ", rand() % 10000); 
+                     unary[rand()%NUM_UNARY_OPS], rand() % 10000); 
       buf_ptr += wnum;
       break;
-    case 1: case 2: 
+    case 1: 
       sprintf(buf+buf_ptr, "("); buf_ptr++;
       gen_rand_expr(lim-1); 
       sprintf(buf+buf_ptr, ")"); buf_ptr++;
       break;
+    case 2: 
+      wnum = sprintf(buf+buf_ptr, "%s", unary[rand()%NUM_UNARY_OPS]);
+      buf_ptr += wnum;
+      gen_rand_expr(lim-wnum);
+      break;
     default: 
       gen_rand_expr(lim/2-1); 
-      wnum = sprintf(buf+buf_ptr, "%s", ops[rand() % 8]);
+      wnum = sprintf(buf+buf_ptr, "%s", ops[rand() % NUM_BINARY_OPS]);
       buf_ptr += wnum;
       gen_rand_expr(lim/2-1); 
       break;

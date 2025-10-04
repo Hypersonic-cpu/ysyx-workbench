@@ -86,7 +86,9 @@ int main(int argc, char *argv[]) {
   init_monitor(argc, argv);
 #endif
    
-  return !expr_eval_test_unsigned("tools/gen-expr/input_nemu.txt");
+  if (argc >= 3 && strcmp(argv[1], "--test") == 0) {
+    return !expr_eval_test_unsigned(argv[2]);
+  }
   
   /* Start engine. */
   engine_start();
