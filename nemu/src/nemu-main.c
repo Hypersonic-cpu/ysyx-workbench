@@ -26,10 +26,11 @@ void engine_start();
 int is_exit_status_bad();
 
 static bool 
-__attribute__((unused))
+// __attribute__((unused))
 expr_eval_test_unsigned(char *path) 
 {
   FILE* fp = fopen(path, "r");
+  if (!fp) { return false; }
   char* ln = NULL;
   int cnt = 0; 
   int errcnt = 0;
@@ -87,7 +88,7 @@ int main(int argc, char *argv[]) {
 #endif
    
   return !expr_eval_test_unsigned("tools/gen-expr/input_nemu.txt")
-      && !expr_eval_test_unsigned("tools/gen-expr/input_pos_neg_nemu.txt");
+      || !expr_eval_test_unsigned("tools/gen-expr/input_pos_neg_nemu.txt");
   
   /* Start engine. */
   engine_start();
