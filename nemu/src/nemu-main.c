@@ -86,6 +86,10 @@ int main(int argc, char *argv[]) {
   init_monitor(argc, argv);
 #endif
    
+  printf("ac %d \n", argc);
+  for (size_t i = 0; i < argc; ++i) {
+    printf("\'%s\'\n", argv[i]);
+  }
   if (argc >= 3 && strcmp(argv[1], "--test") == 0) {
     return !expr_eval_test_unsigned(argv[2]);
   }
