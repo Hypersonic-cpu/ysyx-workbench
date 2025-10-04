@@ -136,11 +136,6 @@ static bool make_token(char *e) {
         switch (rules[i].token_type) {
           case TK_NOTYPE: 
             break;
-          case '+': case '-': case '*': case '/':
-          case TK_BRA: case TK_KET: case TK_EQ:
-            tokens[nr_token].type = rules[i].token_type;
-            nr_token++;
-            break;
           case TK_NUM:
             if (substr_len >= TOKEN_STRMAX) {
               printf("buffer overflow at position %d\n%s\n%*.s^\n", position, e, position, "");
@@ -151,10 +146,11 @@ static bool make_token(char *e) {
             tokens[nr_token].str[substr_len] = '\0';
             nr_token++;
             break;
-          default: 
-            assert(false && "Unknown token type encountered");
+          default:
+            tokens[nr_token].type = rules[i].token_type;
+            nr_token++;
+            break;
         }
-
         break;
       }
     }
