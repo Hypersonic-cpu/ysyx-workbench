@@ -23,9 +23,14 @@
 #include <regex.h>
 
 enum {
-  TK_NOTYPE = 256, TK_EQ,
-  TK_BRA, // "("
-  TK_KET, // ")"
+  TK_NOTYPE = 256, 
+  TK_EQ, // ==
+  TK_NEQ, // != 
+  TK_NEG,
+  TK_LAND, // &&
+  TK_BRA, // (
+  TK_KET, // )
+  TK_DEREF, // *pointer
   TK_NUM,
 
   /* TODO: Add more token types */
@@ -43,7 +48,7 @@ static struct rule {
 
   {" +", TK_NOTYPE},    // spaces
   {"\\+", '+'},         // plus
-  {"-", '-'},           // minus | negation
+  {"-", '-'},           // minus
   {"\\*", '*'},         // mul
   {"\\/", '/'},         // div
   {"\\(", TK_BRA },
@@ -83,6 +88,17 @@ typedef struct token {
 
 static Token tokens[TOKEN_ARRSIZE] __attribute__((used)) = {};
 static int nr_token __attribute__((used))  = 0;
+
+static inline bool 
+is_unary(Token* tk) {
+  switch (tk->type) {
+    case TK_NEG: case TK_DEREF: return true;
+    case TK_NUM: case TK_NOTYPE: 
+      assert(false && "tk is not an op");
+      return false;
+    default: return false;
+  }
+}
 
 static bool make_token(char *e) {
   int position = 0;
@@ -146,6 +162,16 @@ static bool make_token(char *e) {
     }
   }
 
+  for (size_t i = 0; i < nr_token; ++i) {
+    bool unary = i == 0 || 
+      !(tokens[i-1].type == TK_NUM || tokens[i-1].type == TK_KET);
+    if (tokens[i].type == '-' && unary) {
+      tokens[i].type = TK_NEG;
+    } else if (tokens[i].type == '*' && unary) {
+      // tokens[i].type = TK_DEREF;
+    }
+  }
+
   return true;
 }
 
@@ -180,7 +206,8 @@ static int choose_pivot(int l, int r, bool* valid) {
   // X. precedence:
   //    1: '=='
   //    2: '+-'
-  //    3: '*/'
+  //    3: '-' unary
+  //    4: '*/'
 
   int par_lv = 0;
   int8_t preced = 0xf;
@@ -200,8 +227,11 @@ static int choose_pivot(int l, int r, bool* valid) {
         case '+': case '-': 
           cur_preced = 2;
           break;
-        case '*': case '/':
+        case TK_NEG: 
           cur_preced = 3;
+          break;
+        case '*': case '/':
+          cur_preced = 4;
           break;
         default:
           assert(false && "Unexpected operator type");
@@ -245,11 +275,15 @@ static word_t eval(int l, int r, bool* valid) {
   assert(pivot_pos >= l && pivot_pos <= r);
 
   bool lvalid = true, rvalid = true;
-  word_t lret = eval(l, pivot_pos-1, &lvalid);
-  // printf("L ret %d V%d\n", lret, lvalid);
-  if (!lvalid) { *valid = false; return 0; }
+  word_t lret = 0, rret = 0;
 
-  word_t rret = eval(pivot_pos+1, r, &rvalid);
+  if (!is_unary(tokens+pivot_pos)) {
+    lret = eval(l, pivot_pos-1, &lvalid);
+    // printf("L ret %d V%d\n", lret, lvalid);
+    if (!lvalid) { *valid = false; return 0; }
+  }
+
+  rret = eval(pivot_pos+1, r, &rvalid);
   // printf("R ret %d V%d\n", rret, rvalid);
   if (!rvalid) { *valid = false; return 0; }
 
@@ -261,6 +295,8 @@ static word_t eval(int l, int r, bool* valid) {
     case '-': 
       res = (lret - rret);
       break;
+    case TK_NEG:
+      res = -rret;
     case '*': 
       res = (lret * rret);
       break;
