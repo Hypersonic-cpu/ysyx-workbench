@@ -297,6 +297,7 @@ static word_t eval(int l, int r, bool* valid) {
       break;
     case TK_NEG:
       res = -rret;
+      break;
     case '*': 
       res = (lret * rret);
       break;
