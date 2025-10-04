@@ -18,6 +18,7 @@
 #include <common.h>
 #include <readline/readline.h>
 #include <stdio.h>
+#include <string.h>
 #include <sys/types.h>
 
 void init_monitor(int, char *[]);
@@ -27,7 +28,7 @@ int is_exit_status_bad();
 
 static bool 
 __attribute__((unused))
-expr_eval_test_unsigned(char *path) 
+expr_eval_test_unsigned(const char *const path) 
 {
   FILE* fp = fopen(path, "r");
   if (!fp) { return false; }
@@ -79,6 +80,23 @@ expr_eval_test_unsigned(char *path)
   return success;
 }
 
+static size_t const TEST_NUMS = 3;
+static const char* const test_files[] = {
+  "tools/gen-expr/input_nemu.txt",
+  "tools/gen-expr/input_pos_neg_nemu.txt", 
+  "tools/gen-expr/input_all_arith_nemu.txt", 
+};
+
+static bool 
+do_expr_tests() {
+  for (size_t i = 0; i < TEST_NUMS; ++i) {
+    if (!expr_eval_test_unsigned(test_files[i])) {
+      return false;
+    }
+  }
+  return true;
+}
+
 int main(int argc, char *argv[]) {
   /* Initialize the monitor. */
 #ifdef CONFIG_TARGET_AM
@@ -87,8 +105,7 @@ int main(int argc, char *argv[]) {
   init_monitor(argc, argv);
 #endif
    
-  return !expr_eval_test_unsigned("tools/gen-expr/input_nemu.txt")
-      || !expr_eval_test_unsigned("tools/gen-expr/input_pos_neg_nemu.txt");
+  return !do_expr_tests();
   
   /* Start engine. */
   engine_start();
