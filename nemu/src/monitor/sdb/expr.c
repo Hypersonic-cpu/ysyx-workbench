@@ -23,13 +23,17 @@
 #include <regex.h>
 
 enum {
-  TK_NOTYPE = 256, TK_EQ,
-  TK_BRA, // "("
-  TK_KET, // ")"
+  TK_NOTYPE = 256, 
+  TK_EQ, // ==
+  TK_NEQ, // != 
+  TK_UPOS,
+  TK_UNEG,
+  TK_LAND, // &&
+  TK_BRA, // (
+  TK_KET, // )
+  TK_DEREF, // *pointer
   TK_NUM,
-
-  /* TODO: Add more token types */
-
+  TK_REG,
 };
 
 static struct rule {
@@ -43,13 +47,16 @@ static struct rule {
 
   {" +", TK_NOTYPE},    // spaces
   {"\\+", '+'},         // plus
-  {"-", '-'},           // minus | negation
+  {"-", '-'},           // minus
   {"\\*", '*'},         // mul
   {"\\/", '/'},         // div
   {"\\(", TK_BRA },
   {"\\)", TK_KET },
+  {"&&", TK_LAND}, 
   {"[0-9]+", TK_NUM }, 
-  {"==", TK_EQ},        // equal
+  {"\\$[A-Za-z0-9]+", TK_REG },
+  {"==", TK_EQ },        // equal
+  {"!=", TK_NEQ },
 };
 
 #define NR_REGEX ARRLEN(rules)
@@ -84,6 +91,17 @@ typedef struct token {
 static Token tokens[TOKEN_ARRSIZE] __attribute__((used)) = {};
 static int nr_token __attribute__((used))  = 0;
 
+static inline bool 
+is_unary(Token* tk) {
+  switch (tk->type) {
+    case TK_UPOS: case TK_UNEG: case TK_DEREF: return true;
+    // case TK_NUM: case TK_NOTYPE: 
+    //   assert(false && "tk is not an op");
+    //   return false;
+    default: return false;
+  }
+}
+
 static bool make_token(char *e) {
   int position = 0;
   int i;
@@ -117,14 +135,10 @@ static bool make_token(char *e) {
         switch (rules[i].token_type) {
           case TK_NOTYPE: 
             break;
-          case '+': case '-': case '*': case '/':
-          case TK_BRA: case TK_KET: case TK_EQ:
-            tokens[nr_token].type = rules[i].token_type;
-            nr_token++;
-            break;
           case TK_NUM:
             if (substr_len >= TOKEN_STRMAX) {
-              printf("buffer overflow at position %d\n%s\n%*.s^\n", position, e, position, "");
+              printf("buffer overflow at position %d\n%s\n%*.s^\n", 
+                     position, e, position, "");
               return false;
             }
             tokens[nr_token].type = rules[i].token_type;
@@ -132,17 +146,31 @@ static bool make_token(char *e) {
             tokens[nr_token].str[substr_len] = '\0';
             nr_token++;
             break;
-          default: 
-            assert(false && "Unknown token type encountered");
+          default:
+            tokens[nr_token].type = rules[i].token_type;
+            nr_token++;
+            break;
         }
-
         break;
       }
     }
 
     if (i == NR_REGEX) {
-      printf("no match at position %d\n%s\n%*.s^\n", position, e, position, "");
+      printf("no match at position %d\n%s\n%*.s^\n", 
+             position, e, position, "");
       return false;
+    }
+  }
+
+  for (size_t i = 0; i < nr_token; ++i) {
+    bool unary = i == 0 || 
+      !(tokens[i-1].type == TK_NUM || tokens[i-1].type == TK_KET);
+    if (tokens[i].type == '-' && unary) {
+      tokens[i].type = TK_UNEG;
+    } else if (tokens[i].type == '+' && unary) {
+      tokens[i].type = TK_UPOS;
+    } else if (tokens[i].type == '*' && unary) {
+      tokens[i].type = TK_DEREF;
     }
   }
 
@@ -177,13 +205,16 @@ static int choose_pivot(int l, int r, bool* valid) {
   // 2. The the expr is flattened: <0> op <1> op <2> ...
   // 3. Choose the lowest-level or right-most op. (all 
   //    binary ops are left assoc so far).
-  // X. precedence:
-  //    1: '=='
-  //    2: '+-'
-  //    3: '*/'
+  // X. precedence: 
+  //    0: Highest, None
+  //    3: Unary *deref, +pos, -neg
+  //    5: '*/' 
+  //    6: '+-'  
+  //    10: '==', '!=' 
+  //    14: Logical &&
 
   int par_lv = 0;
-  int8_t preced = 0xf;
+  int8_t preced = 0;
   int ret = -1;
   for (int i = l; i <= r; ++i) {
     if (tokens[i].type == TK_NUM) { /* skip */ }
@@ -194,26 +225,39 @@ static int choose_pivot(int l, int r, bool* valid) {
       // operators
       int8_t cur_preced = 0;
       switch (tokens[i].type) {
-        case TK_EQ: 
-          cur_preced = 1;
+        case TK_LAND:
+          cur_preced = 14;
+          break;
+        case TK_EQ: case TK_NEQ:
+          cur_preced = 10;
           break;
         case '+': case '-': 
-          cur_preced = 2;
+          cur_preced = 6;
           break;
         case '*': case '/':
+          cur_preced = 5;
+          break;
+        case TK_UPOS: case TK_UNEG: case TK_DEREF:
           cur_preced = 3;
           break;
         default:
           assert(false && "Unexpected operator type");
           return 0;
       }
-      if (cur_preced <= preced) {
+      // Assuming left-assoc
+      if (cur_preced >= preced) {
         preced = cur_preced;
         ret = i;
       }
     }
   }
+
   if (ret < 0) { *valid = false; }
+  else if (is_unary(tokens+ret)) {
+    // NOTE: Unary op is right-assoc
+    assert(is_unary(tokens+l));
+    ret = l;
+  }
   return ret;
 }
 
@@ -226,7 +270,12 @@ static word_t eval(int l, int r, bool* valid) {
     return 0;
   } 
   if (l == r) {
-    assert(tokens[l].type == TK_NUM);
+    // assert(tokens[l].type == TK_NUM);
+    // TODO: Reg support
+    if (tokens[l].type != TK_NUM) {
+      *valid = false;
+      return 0;
+    }
     return atoi(tokens[l].str);
   } 
   bool bra_ket = check_braket(l, r, valid);
@@ -241,11 +290,15 @@ static word_t eval(int l, int r, bool* valid) {
   assert(pivot_pos >= l && pivot_pos <= r);
 
   bool lvalid = true, rvalid = true;
-  word_t lret = eval(l, pivot_pos-1, &lvalid);
-  // printf("L ret %d V%d\n", lret, lvalid);
-  if (!lvalid) { *valid = false; return 0; }
+  word_t lret = 0, rret = 0;
 
-  word_t rret = eval(pivot_pos+1, r, &rvalid);
+  if (!is_unary(tokens+pivot_pos)) {
+    lret = eval(l, pivot_pos-1, &lvalid);
+    // printf("L ret %d V%d\n", lret, lvalid);
+    if (!lvalid) { *valid = false; return 0; }
+  }
+
+  rret = eval(pivot_pos+1, r, &rvalid);
   // printf("R ret %d V%d\n", rret, rvalid);
   if (!rvalid) { *valid = false; return 0; }
 
@@ -257,6 +310,12 @@ static word_t eval(int l, int r, bool* valid) {
     case '-': 
       res = (lret - rret);
       break;
+    case TK_UPOS:
+      res = rret;
+      break;
+    case TK_UNEG:
+      res = -rret;
+      break;
     case '*': 
       res = (lret * rret);
       break;
@@ -267,13 +326,19 @@ static word_t eval(int l, int r, bool* valid) {
     case TK_EQ:
       res = (lret == rret);
       break;
+    case TK_NEQ:
+      res = (lret != rret);
+      break;
+    case TK_LAND:
+      res = (lret && rret);
+      break;
     default:
       assert(false && "Unexpected operator");
       break;
   }
 
   // printf("> Join L(%d,%d) %u R(%d,%d) %u Res %u\n", 
-         // l, pivot_pos-1, lret, pivot_pos+1, r, rret, res);
+  //        l, pivot_pos-1, lret, pivot_pos+1, r, rret, res);
   return res;
 }
 
