@@ -54,8 +54,10 @@ static struct rule {
   {"\\/", '/'},         // div
   {"\\(", TK_BRA },
   {"\\)", TK_KET },
+  {"&&", TK_LAND}, 
   {"[0-9]+", TK_NUM }, 
-  {"==", TK_EQ},        // equal
+  {"==", TK_EQ },        // equal
+  {"!=", TK_NEQ },
 };
 
 #define NR_REGEX ARRLEN(rules)

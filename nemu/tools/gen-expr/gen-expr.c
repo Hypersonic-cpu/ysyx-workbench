@@ -32,10 +32,10 @@ static char *code_format =
 "  return 0; "
 "}";
 
-static const size_t NUM_BINARY_OPS = 8;
+static const size_t NUM_BINARY_OPS = 10;
 static const char* const ops[] = {
   "+", "-", "*", "/", 
-  "+", "-", "*", "==" };
+  "+", "-", "*", "==", "!=", "&&" };
 
 static const size_t NUM_UNARY_OPS = 5;
 static const char* const unary[] = {
