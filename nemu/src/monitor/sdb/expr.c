@@ -15,6 +15,7 @@
 
 #include "common.h"
 #include "debug.h"
+#include "memory/vaddr.h"
 #include <isa.h>
 
 /* We use the POSIX regex functions to process regular expressions.
@@ -33,9 +34,7 @@ enum {
   TK_KET, // )
   TK_DEREF, // *pointer
   TK_NUM,
-
-  /* TODO: Add more token types */
-
+  TK_REG,
 };
 
 static struct rule {
@@ -56,6 +55,7 @@ static struct rule {
   {"\\)", TK_KET },
   {"&&", TK_LAND}, 
   {"[0-9]+", TK_NUM }, 
+  {"\\$[A-Za-z0-9]+", TK_REG },
   {"==", TK_EQ },        // equal
   {"!=", TK_NEQ },
 };
@@ -96,9 +96,6 @@ static inline bool
 is_unary(Token* tk) {
   switch (tk->type) {
     case TK_UPOS: case TK_UNEG: case TK_DEREF: return true;
-    // case TK_NUM: case TK_NOTYPE: 
-    //   assert(false && "tk is not an op");
-    //   return false;
     default: return false;
   }
 }
@@ -147,6 +144,18 @@ static bool make_token(char *e) {
             tokens[nr_token].str[substr_len] = '\0';
             nr_token++;
             break;
+          case TK_REG:
+            if (substr_len >= TOKEN_STRMAX) {
+              printf("buffer overflow at position %d\n%s\n%*.s^\n", 
+                     position, e, position, "");
+              return false;
+            }
+            tokens[nr_token].type = rules[i].token_type;
+            // Skip '\$' character.
+            strncpy(tokens[nr_token].str, substr_start+1, substr_len);
+            tokens[nr_token].str[substr_len] = '\0';
+            nr_token++;
+            break;
           default:
             tokens[nr_token].type = rules[i].token_type;
             nr_token++;
@@ -171,7 +180,7 @@ static bool make_token(char *e) {
     } else if (tokens[i].type == '+' && unary) {
       tokens[i].type = TK_UPOS;
     } else if (tokens[i].type == '*' && unary) {
-      // tokens[i].type = TK_DEREF;
+      tokens[i].type = TK_DEREF;
     }
   }
 
@@ -271,13 +280,16 @@ static word_t eval(int l, int r, bool* valid) {
     return 0;
   } 
   if (l == r) {
-    // assert(tokens[l].type == TK_NUM);
-    if (tokens[l].type != TK_NUM) {
+    if (tokens[l].type == TK_NUM) {
+      return atoi(tokens[l].str);
+    } else if (tokens[l].type == TK_REG) {
+      word_t val = isa_reg_str2val(tokens[l].str, valid);
+      return val;
+    } else {
       *valid = false;
       return 0;
     }
-    return atoi(tokens[l].str);
-  } 
+  }
   bool bra_ket = check_braket(l, r, valid);
   // printf("Braket (%d, %d) V%d Ret%d\n", l, r, *valid, bra_ket);
   if (!*valid) { return 0; }
@@ -331,6 +343,9 @@ static word_t eval(int l, int r, bool* valid) {
       break;
     case TK_LAND:
       res = (lret && rret);
+      break;
+    case TK_DEREF:
+      res = vaddr_read(rret, sizeof(word_t));
       break;
     default:
       assert(false && "Unexpected operator");
