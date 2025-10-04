@@ -37,7 +37,7 @@ void isa_reg_display() {
 word_t isa_reg_str2val(const char *s, bool *success) {
   ssize_t len = strlen(s);
   *success = false;
-  if (!s || len < 2 || len > 3) { return 0; }
+  if (!s || len < 2 || len > 4) { return 0; }
   if (s[0] == 'x') {
     int id = -1;
     int n_read = sscanf(s+1, "%d", &id);
