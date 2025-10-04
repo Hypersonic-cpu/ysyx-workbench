@@ -243,7 +243,13 @@ static int choose_pivot(int l, int r, bool* valid) {
       }
     }
   }
+
   if (ret < 0) { *valid = false; }
+  else if (is_unary(tokens+ret)) {
+    // NOTE: Unary op is right-assoc
+    assert(is_unary(tokens+l));
+    ret = l;
+  }
   return ret;
 }
 
