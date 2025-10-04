@@ -138,7 +138,8 @@ static bool make_token(char *e) {
             break;
           case TK_NUM:
             if (substr_len >= TOKEN_STRMAX) {
-              printf("buffer overflow at position %d\n%s\n%*.s^\n", position, e, position, "");
+              printf("buffer overflow at position %d\n%s\n%*.s^\n", 
+                     position, e, position, "");
               return false;
             }
             tokens[nr_token].type = rules[i].token_type;
@@ -156,7 +157,8 @@ static bool make_token(char *e) {
     }
 
     if (i == NR_REGEX) {
-      printf("no match at position %d\n%s\n%*.s^\n", position, e, position, "");
+      printf("no match at position %d\n%s\n%*.s^\n", 
+             position, e, position, "");
       return false;
     }
   }
@@ -262,7 +264,7 @@ static int choose_pivot(int l, int r, bool* valid) {
 
 // NOTE: Initial *valid should be true.
 static word_t eval(int l, int r, bool* valid) {
-  // printf("! Eval (%d, %d) V%d\n", l, r, *valid);
+  printf("! Eval (%d, %d) V%d\n", l, r, *valid);
   if (!(*valid)) { return 0; }
   if (l > r) {
     *valid = false;
@@ -277,7 +279,7 @@ static word_t eval(int l, int r, bool* valid) {
     return atoi(tokens[l].str);
   } 
   bool bra_ket = check_braket(l, r, valid);
-  // printf("Braket (%d, %d) V%d Ret%d\n", l, r, *valid, bra_ket);
+  printf("Braket (%d, %d) V%d Ret%d\n", l, r, *valid, bra_ket);
   if (!*valid) { return 0; }
   if (bra_ket) { return eval(l+1, r-1, valid); }
   
@@ -335,8 +337,8 @@ static word_t eval(int l, int r, bool* valid) {
       break;
   }
 
-  // printf("> Join L(%d,%d) %u R(%d,%d) %u Res %u\n", 
-  //        l, pivot_pos-1, lret, pivot_pos+1, r, rret, res);
+  printf("> Join L(%d,%d) %u R(%d,%d) %u Res %u\n", 
+         l, pivot_pos-1, lret, pivot_pos+1, r, rret, res);
   return res;
 }
 
