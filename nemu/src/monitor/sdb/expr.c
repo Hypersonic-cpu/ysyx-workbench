@@ -312,6 +312,7 @@ static word_t eval(int l, int r, bool* valid) {
       break;
     case TK_UPOS:
       res = rret;
+      break;
     case TK_UNEG:
       res = -rret;
       break;
