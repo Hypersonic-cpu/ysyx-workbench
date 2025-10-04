@@ -58,7 +58,6 @@ static int cmd_si(char *args) {
 }
 
 static int cmd_info(char *args) {
-  // TODO: 改用 strtok
   char* arg = strtok(NULL, " ");
   if (arg == NULL) {
     printf("Invalid arguments, type `help info` for more info\n");
@@ -132,6 +131,20 @@ static int cmd_p(char *args) {
   }
 }
 
+static int cmd_w(char *args) {
+  // int id = watchpoint_set(args);
+  // printf("Watchpoint %d set: %s\n", id, args);
+  return 0;
+}
+
+static int cmd_d(char *args) {
+  // int id = atoi(args);
+  // bool success = watchpoint_del(id);
+  // printf("Watchpoint %d removal %s\n", 
+  //        id, success ? "success" : "failed");
+  return 0;
+}
+
 static int cmd_help(char *args);
 
 static struct {
@@ -146,9 +159,8 @@ static struct {
   { "info", "Arg <r|w>, show info of registers|watchpoints", cmd_info }, 
   { "x", "Arg <$nw> <$VA(hex)> scan next $nw words from mem $VA", cmd_x }, 
   { "p", "Arg <$expr> evaluate expression", cmd_p }, 
-
-  /* TODO: Add more commands */
-
+  { "w", "Arg <$expr> watchpoint, pause when $expr changes", cmd_w },
+  { "d", "Arg <$N> delete watchpoint $N", cmd_d }
 };
 
 #define NR_CMD ARRLEN(cmd_table)
