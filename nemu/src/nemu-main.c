@@ -86,13 +86,8 @@ int main(int argc, char *argv[]) {
   init_monitor(argc, argv);
 #endif
    
-  printf("ac %d \n", argc);
-  for (size_t i = 0; i < argc; ++i) {
-    printf("\'%s\'\n", argv[i]);
-  }
-  if (argc >= 3 && strcmp(argv[1], "--test") == 0) {
-    return !expr_eval_test_unsigned(argv[2]);
-  }
+  return !expr_eval_test_unsigned("tools/gen-expr/input_nemu.txt")
+      && !expr_eval_test_unsigned("tools/gen-expr/input_pos_neg_nemu.txt");
   
   /* Start engine. */
   engine_start();
