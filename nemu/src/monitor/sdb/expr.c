@@ -227,7 +227,8 @@ static int choose_pivot(int l, int r, bool* valid) {
   int8_t preced = 0;
   int ret = -1;
   for (int i = l; i <= r; ++i) {
-    if (tokens[i].type == TK_NUM) { /* skip */ }
+    if (tokens[i].type == TK_NUM || 
+        tokens[i].type == TK_REG) { /* skip */ }
     else if (tokens[i].type == TK_BRA) { par_lv ++; }
     else if (tokens[i].type == TK_KET) { par_lv --; }
     else if (par_lv) { /* skip */ }
