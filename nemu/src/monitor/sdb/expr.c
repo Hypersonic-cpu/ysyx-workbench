@@ -296,9 +296,9 @@ static word_t eval(int l, int r, bool* valid) {
   if (bra_ket) { return eval(l+1, r-1, valid); }
   
   int pivot_pos = choose_pivot(l, r, valid);
+  printf("Pivot (%d, <%d>, %d) V%d\n", l, pivot_pos, r, *valid);
   if (!*valid) { return 0; }
 
-  printf("Pivot (%d, <%d>, %d)\n", l, pivot_pos, r);
   assert(pivot_pos >= l && pivot_pos <= r);
 
   bool lvalid = true, rvalid = true;
