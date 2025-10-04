@@ -15,12 +15,14 @@
 
 #include "common.h"
 #include "debug.h"
+#include "memory/vaddr.h"
 #include <isa.h>
 
 /* We use the POSIX regex functions to process regular expressions.
  * Type 'man regex' for more information about POSIX regex functions.
  */
 #include <regex.h>
+#include <stdio.h>
 
 enum {
   TK_NOTYPE = 256, 
@@ -53,6 +55,9 @@ static struct rule {
   {"\\(", TK_BRA },
   {"\\)", TK_KET },
   {"&&", TK_LAND}, 
+  // Hex, must come before decimal to prevent match 
+  // of '0' in '0xff'
+  {"0[xX][0-9A-Fa-f]+", TK_NUM }, 
   {"[0-9]+", TK_NUM }, 
   {"\\$[A-Za-z0-9]+", TK_REG },
   {"==", TK_EQ },        // equal
@@ -95,9 +100,6 @@ static inline bool
 is_unary(Token* tk) {
   switch (tk->type) {
     case TK_UPOS: case TK_UNEG: case TK_DEREF: return true;
-    // case TK_NUM: case TK_NOTYPE: 
-    //   assert(false && "tk is not an op");
-    //   return false;
     default: return false;
   }
 }
@@ -120,8 +122,8 @@ static bool make_token(char *e) {
 
         // printf( ANSI_FG_BLUE "match rules[%d] = \"%s\" at position %d with len %d: %.*s\n" ANSI_NONE,
         //     i, rules[i].regex, position, substr_len, substr_len, substr_start);
-        // Log("match rules[%d] = \"%s\" at position %d with len %d: %.*s",
-        //     i, rules[i].regex, position, substr_len, substr_len, substr_start);
+        Log("match rules[%d] = \"%s\" at position %d with len %d: %.*s",
+            i, rules[i].regex, position, substr_len, substr_len, substr_start);
 
         // printf("position %d += %d\n", position, substr_len);
         position += substr_len;
@@ -146,6 +148,18 @@ static bool make_token(char *e) {
             tokens[nr_token].str[substr_len] = '\0';
             nr_token++;
             break;
+          case TK_REG:
+            if (substr_len >= TOKEN_STRMAX) {
+              printf("buffer overflow at position %d\n%s\n%*.s^\n", 
+                     position, e, position, "");
+              return false;
+            }
+            tokens[nr_token].type = rules[i].token_type;
+            // Skip '\$' character.
+            strncpy(tokens[nr_token].str, substr_start+1, substr_len-1);
+            tokens[nr_token].str[substr_len] = '\0';
+            nr_token++;
+            break;
           default:
             tokens[nr_token].type = rules[i].token_type;
             nr_token++;
@@ -164,7 +178,9 @@ static bool make_token(char *e) {
 
   for (size_t i = 0; i < nr_token; ++i) {
     bool unary = i == 0 || 
-      !(tokens[i-1].type == TK_NUM || tokens[i-1].type == TK_KET);
+      !(tokens[i-1].type == TK_NUM || 
+        tokens[i-1].type == TK_REG || 
+        tokens[i-1].type == TK_KET);
     if (tokens[i].type == '-' && unary) {
       tokens[i].type = TK_UNEG;
     } else if (tokens[i].type == '+' && unary) {
@@ -217,7 +233,8 @@ static int choose_pivot(int l, int r, bool* valid) {
   int8_t preced = 0;
   int ret = -1;
   for (int i = l; i <= r; ++i) {
-    if (tokens[i].type == TK_NUM) { /* skip */ }
+    if (tokens[i].type == TK_NUM || 
+        tokens[i].type == TK_REG) { /* skip */ }
     else if (tokens[i].type == TK_BRA) { par_lv ++; }
     else if (tokens[i].type == TK_KET) { par_lv --; }
     else if (par_lv) { /* skip */ }
@@ -270,23 +287,29 @@ static word_t eval(int l, int r, bool* valid) {
     return 0;
   } 
   if (l == r) {
-    // assert(tokens[l].type == TK_NUM);
-    // TODO: Reg support
-    if (tokens[l].type != TK_NUM) {
+    if (tokens[l].type == TK_NUM) {
+      const char* const snum = tokens[l].str;
+      word_t val = 0;
+      int num_matched = sscanf(snum, "%i", &val);
+      if (num_matched != 1) { *valid = false; }
+      return val;
+    } else if (tokens[l].type == TK_REG) {
+      word_t val = isa_reg_str2val(tokens[l].str, valid);
+      return val;
+    } else {
       *valid = false;
       return 0;
     }
-    return atoi(tokens[l].str);
-  } 
+  }
   bool bra_ket = check_braket(l, r, valid);
   // printf("Braket (%d, %d) V%d Ret%d\n", l, r, *valid, bra_ket);
   if (!*valid) { return 0; }
   if (bra_ket) { return eval(l+1, r-1, valid); }
   
   int pivot_pos = choose_pivot(l, r, valid);
+  // printf("Pivot (%d, <%d>, %d) V%d\n", l, pivot_pos, r, *valid);
   if (!*valid) { return 0; }
 
-  // printf("Pivot (%d, <%d>, %d)\n", l, pivot_pos, r);
   assert(pivot_pos >= l && pivot_pos <= r);
 
   bool lvalid = true, rvalid = true;
@@ -331,6 +354,9 @@ static word_t eval(int l, int r, bool* valid) {
       break;
     case TK_LAND:
       res = (lret && rret);
+      break;
+    case TK_DEREF:
+      res = vaddr_read(rret, sizeof(word_t));
       break;
     default:
       assert(false && "Unexpected operator");

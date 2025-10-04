@@ -89,6 +89,7 @@ static const char* const test_files[] = {
 };
 
 static bool 
+__attribute__((unused))
 do_expr_tests() {
   for (size_t i = 0; i < TEST_NUMS; ++i) {
     if (!expr_eval_test_unsigned(test_files[i])) {
