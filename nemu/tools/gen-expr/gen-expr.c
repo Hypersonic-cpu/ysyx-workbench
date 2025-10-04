@@ -39,13 +39,15 @@ static const char* const ops[] = {
 static void gen_rand_expr(int lim) {
   int wnum = 0;
   if (lim < 10) { 
-    wnum = sprintf(buf+buf_ptr, "%1dU", rand()%10); 
+    wnum = sprintf(buf+buf_ptr, "%s%1dU", 
+                   rand() % 2 ? " -" : " ", rand()%10); 
     buf_ptr += wnum;
     return; 
   }
   switch (rand() % 5) {
     case 0: 
-      wnum = sprintf(buf+buf_ptr, "%u", rand() % 10000); 
+      wnum = sprintf(buf+buf_ptr, "%s%uU", 
+                     rand()%2 ? " -" : " ", rand() % 10000); 
       buf_ptr += wnum;
       break;
     case 1: case 2: 
