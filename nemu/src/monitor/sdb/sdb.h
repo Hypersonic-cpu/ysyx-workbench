@@ -18,6 +18,7 @@
 
 #include <common.h>
 
+#define WP_STRMAX 512
 #define TOKEN_STRMAX  128
 #define TOKEN_ARRSIZE 65536
 

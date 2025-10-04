@@ -14,6 +14,7 @@
 ***************************************************************************************/
 
 #include "sdb.h"
+#include <string.h>
 
 #define NR_WP 32
 
@@ -21,7 +22,7 @@ typedef struct watchpoint {
   int NO;
   struct watchpoint *next;
 
-  /* TODO: Add more members if necessary */
+  char exprs[WP_STRMAX];
 
 } WP;
 
@@ -41,6 +42,42 @@ void init_wp_pool() {
 
 /* TODO: Implement the functionality of watchpoint */
 
-int watchpoint_set(char *expr) { return 0; }
+int 
+watchpoint_set(char *expr) { 
+  if (free_ == NULL) {
+    assert(0 && "No available space for new watchpoint");
+  } 
 
-bool watchpoint_del(int id) { return true; }
+  WP* sel = free_;
+  free_ = sel->next;
+
+  strncpy(sel->exprs, expr, WP_STRMAX);
+  sel->exprs[WP_STRMAX-1] = '\0';
+
+  sel->next = head;
+  head = sel;
+  return sel->NO; 
+}
+
+bool 
+watchpoint_del(int id) { 
+  WP* cur = head;
+  WP* last = NULL;
+  while (cur) {
+    if (cur->NO == id) {
+      if (last == NULL) { 
+        // Remove the 1st elem
+        head = cur->next;
+      } else {
+        last->next = cur->next;
+      }
+      cur->next = free_;
+      free_ = cur;
+      return true;
+    }
+    last = cur;
+    cur = cur->next;
+  }
+  return false; 
+}
+
