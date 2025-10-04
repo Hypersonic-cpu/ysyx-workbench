@@ -22,6 +22,7 @@
  * Type 'man regex' for more information about POSIX regex functions.
  */
 #include <regex.h>
+#include <stdio.h>
 
 enum {
   TK_NOTYPE = 256, 
@@ -54,6 +55,9 @@ static struct rule {
   {"\\(", TK_BRA },
   {"\\)", TK_KET },
   {"&&", TK_LAND}, 
+  // Hex, must come before decimal to prevent match 
+  // of '0' in '0xff'
+  {"0[xX][0-9A-Fa-f]+", TK_NUM }, 
   {"[0-9]+", TK_NUM }, 
   {"\\$[A-Za-z0-9]+", TK_REG },
   {"==", TK_EQ },        // equal
@@ -284,7 +288,11 @@ static word_t eval(int l, int r, bool* valid) {
   } 
   if (l == r) {
     if (tokens[l].type == TK_NUM) {
-      return atoi(tokens[l].str);
+      const char* const snum = tokens[l].str;
+      word_t val = 0;
+      int num_matched = sscanf(snum, "%i", &val);
+      if (num_matched != 1) { *valid = false; }
+      return val;
     } else if (tokens[l].type == TK_REG) {
       word_t val = isa_reg_str2val(tokens[l].str, valid);
       return val;
