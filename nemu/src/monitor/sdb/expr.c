@@ -286,7 +286,7 @@ static word_t eval(int l, int r, bool* valid) {
   int pivot_pos = choose_pivot(l, r, valid);
   if (!*valid) { return 0; }
 
-  // printf("Pivot (%d, <%d>, %d)\n", l, pivot_pos, r);
+  printf("Pivot (%d, <%d>, %d)\n", l, pivot_pos, r);
   assert(pivot_pos >= l && pivot_pos <= r);
 
   bool lvalid = true, rvalid = true;
