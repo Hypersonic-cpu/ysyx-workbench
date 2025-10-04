@@ -280,7 +280,7 @@ static int choose_pivot(int l, int r, bool* valid) {
 
 // NOTE: Initial *valid should be true.
 static word_t eval(int l, int r, bool* valid) {
-  printf("! Eval (%d, %d) V%d\n", l, r, *valid);
+  // printf("! Eval (%d, %d) V%d\n", l, r, *valid);
   if (!(*valid)) { return 0; }
   if (l > r) {
     *valid = false;
@@ -302,12 +302,12 @@ static word_t eval(int l, int r, bool* valid) {
     }
   }
   bool bra_ket = check_braket(l, r, valid);
-  printf("Braket (%d, %d) V%d Ret%d\n", l, r, *valid, bra_ket);
+  // printf("Braket (%d, %d) V%d Ret%d\n", l, r, *valid, bra_ket);
   if (!*valid) { return 0; }
   if (bra_ket) { return eval(l+1, r-1, valid); }
   
   int pivot_pos = choose_pivot(l, r, valid);
-  printf("Pivot (%d, <%d>, %d) V%d\n", l, pivot_pos, r, *valid);
+  // printf("Pivot (%d, <%d>, %d) V%d\n", l, pivot_pos, r, *valid);
   if (!*valid) { return 0; }
 
   assert(pivot_pos >= l && pivot_pos <= r);
@@ -363,8 +363,8 @@ static word_t eval(int l, int r, bool* valid) {
       break;
   }
 
-  printf("> Join L(%d,%d) %u R(%d,%d) %u Res %u\n", 
-         l, pivot_pos-1, lret, pivot_pos+1, r, rret, res);
+  // printf("> Join L(%d,%d) %u R(%d,%d) %u Res %u\n", 
+  //        l, pivot_pos-1, lret, pivot_pos+1, r, rret, res);
   return res;
 }
 
