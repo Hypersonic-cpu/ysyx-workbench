@@ -145,8 +145,10 @@ static int cmd_d(char *args) {
     printf("Invalid arguments, type `help d` for more info\n");
     return 1;
   }
-  int id = atoi(args);
-  bool success = watchpoint_del(id);
+  int id = -1;
+  int read_num = sscanf(args, "%i", &id);
+  bool success = (read_num == 1) && (id >= 0) 
+    && watchpoint_del(id);
   printf("Watchpoint %d removal %s\n", 
          id, success ? "success" : "failed");
   return 0;
