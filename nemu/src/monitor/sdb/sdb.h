@@ -28,4 +28,6 @@ int watchpoint_set(char* exprs);
 
 bool watchpoint_del(int id);
 
+void watchpoint_list();
+
 #endif
