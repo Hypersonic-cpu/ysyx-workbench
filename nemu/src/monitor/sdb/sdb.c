@@ -141,7 +141,7 @@ static int cmd_w(char *args) {
   if (success) {
     printf("Watchpoint %d set: %s\n", id, args);
   } else {
-    printf("Watchpoint is not set for eval failed: %s\n", args);
+    printf("Watchpoint is not set for invalid expr: %s\n", args);
   }
   return 0;
 }
