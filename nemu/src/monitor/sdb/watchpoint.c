@@ -87,10 +87,10 @@ free_wp(int id) {
 
 void 
 list_wp() {
-  printf("Num  Last Val   What\n");
+  printf("Num\tLast Val  \tWhat\n");
   size_t cnt = 0;
   for (WP* cur = head; cur; ++cnt, cur = cur->next) {
-    printf("%4d 0x%08x %s\n", cur->NO, cur->last_val, cur->exprs);
+    printf("%-3d\t0x%08x\t%s\n", cur->NO, cur->last_val, cur->exprs);
   }
   printf("%lu active in total\n", cnt);
 }
