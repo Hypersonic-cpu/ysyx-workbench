@@ -198,7 +198,6 @@ source "src/memory/Kconfig"
 source "src/device/Kconfig"
 endif
 
-
 menu "Miscellaneous"
 choice
   depends on !TARGET_AM
@@ -212,6 +211,10 @@ endchoice
 
 config RT_CHECK
   bool "Enable runtime checking"
+  default y
+
+config ENABLE_WATCHPOINT
+  bool "Enable watchpoint"
   default y
 
 endmenu
