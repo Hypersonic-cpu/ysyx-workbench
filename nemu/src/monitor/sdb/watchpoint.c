@@ -95,3 +95,23 @@ list_wp() {
   printf("%lu active in total\n", cnt);
 }
 
+bool 
+trig_wp() {
+  bool triggered = false;
+  for (WP* cur = head; cur; cur = cur->next) {
+    bool success;
+    word_t val = expr(cur->exprs, &success);
+    assert(success && "Watchpoint should eval successfully");
+
+    if (!triggered) {
+      printf("Watchpoints triggered\n");
+      printf("Num\tLast Val  \tCurr Val  \tWhat\n");
+    }
+    printf("%-3d\t0x%08x\t0x%08x\t%s\n", cur->NO, 
+           cur->last_val, val, cur->exprs);
+    cur->last_val = val;
+    triggered = true;
+  }
+  return triggered;
+}
+

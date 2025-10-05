@@ -366,15 +366,16 @@ static word_t eval(int l, int r, bool* valid) {
   return res;
 }
 
-word_t expr(char *e, bool *success) {
-  if (!make_token(e)) {
-    *success = false;
-    return 0;
+word_t expr(char *e, bool *valid) {
+  bool loc_succ = true;
+  
+  word_t val = 0;
+  if (!make_token(e) || nr_token == 0) {
+    loc_succ = false;
+  } else {
+    val = eval(0, nr_token-1, &loc_succ);
   }
 
-  if (nr_token == 0) { *success = false; return 0; }
-  *success = true;
-  word_t val = eval(0, nr_token-1, success);
-
+  if (valid) { *valid = loc_succ; }
   return val;
 }
