@@ -30,4 +30,6 @@ bool free_wp(int id);
 
 void list_wp();
 
+bool trig_wp();
+
 #endif
