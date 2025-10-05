@@ -16,6 +16,7 @@
 #include "common.h"
 #include "debug.h"
 #include "memory/vaddr.h"
+#include "sdb.h"
 #include <isa.h>
 
 /* We use the POSIX regex functions to process regular expressions.
@@ -23,6 +24,7 @@
  */
 #include <regex.h>
 #include <stdio.h>
+#include <string.h>
 
 enum {
   TK_NOTYPE = 256, 
@@ -85,9 +87,6 @@ void init_regex() {
   }
 }
 
-#define TOKEN_STRMAX  128
-#define TOKEN_ARRSIZE 65536
-
 typedef struct token {
   int type;
   char str[TOKEN_STRMAX];
@@ -122,8 +121,8 @@ static bool make_token(char *e) {
 
         // printf( ANSI_FG_BLUE "match rules[%d] = \"%s\" at position %d with len %d: %.*s\n" ANSI_NONE,
         //     i, rules[i].regex, position, substr_len, substr_len, substr_start);
-        Log("match rules[%d] = \"%s\" at position %d with len %d: %.*s",
-            i, rules[i].regex, position, substr_len, substr_len, substr_start);
+        // Log("match rules[%d] = \"%s\" at position %d with len %d: %.*s",
+        //     i, rules[i].regex, position, substr_len, substr_len, substr_start);
 
         // printf("position %d += %d\n", position, substr_len);
         position += substr_len;
@@ -154,10 +153,11 @@ static bool make_token(char *e) {
                      position, e, position, "");
               return false;
             }
+            assert(substr_len > 0);
             tokens[nr_token].type = rules[i].token_type;
             // Skip '\$' character.
             strncpy(tokens[nr_token].str, substr_start+1, substr_len-1);
-            tokens[nr_token].str[substr_len] = '\0';
+            tokens[nr_token].str[substr_len-1] = '\0';
             nr_token++;
             break;
           default:
@@ -294,6 +294,11 @@ static word_t eval(int l, int r, bool* valid) {
       if (num_matched != 1) { *valid = false; }
       return val;
     } else if (tokens[l].type == TK_REG) {
+      const char* str = tokens[l].str;
+      if (!strcmp(str, "pc") || !strcmp(str, "PC")) {
+        // NOTE: implicit cast to word_t
+        return cpu.pc;
+      }
       word_t val = isa_reg_str2val(tokens[l].str, valid);
       return val;
     } else {
@@ -364,22 +369,20 @@ static word_t eval(int l, int r, bool* valid) {
   }
 
   // printf("> Join L(%d,%d) %u R(%d,%d) %u Res %u\n", 
-  //        l, pivot_pos-1, lret, pivot_pos+1, r, rret, res);
+         // l, pivot_pos-1, lret, pivot_pos+1, r, rret, res);
   return res;
 }
 
-word_t expr(char *e, bool *success) {
-  if (!make_token(e)) {
-    *success = false;
-    return 0;
+word_t expr(char *e, bool *valid) {
+  bool loc_succ = true;
+  
+  word_t val = 0;
+  if (!make_token(e) || nr_token == 0) {
+    loc_succ = false;
+  } else {
+    val = eval(0, nr_token-1, &loc_succ);
   }
 
-  /* TODO: Insert codes to evaluate the expression. */
-  // TODO();
-
-  if (nr_token == 0) { *success = false; return 0; }
-  *success = true;
-  word_t val = eval(0, nr_token-1, success);
-
+  if (valid) { *valid = loc_succ; }
   return val;
 }
