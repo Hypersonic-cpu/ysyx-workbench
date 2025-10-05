@@ -103,6 +103,8 @@ trig_wp() {
     word_t val = expr(cur->exprs, &success);
     assert(success && "Watchpoint should eval successfully");
 
+    if (val == cur->last_val) { continue; }
+
     if (!triggered) {
       printf("Watchpoints triggered\n");
       printf("Num\tLast Val  \tCurr Val  \tWhat\n");
