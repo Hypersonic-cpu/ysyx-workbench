@@ -24,6 +24,8 @@ typedef struct watchpoint {
 
   char exprs[WP_STRMAX];
 
+  word_t last_val;
+
 } WP;
 
 static WP wp_pool[NR_WP] = {};
@@ -42,25 +44,27 @@ void init_wp_pool() {
 
 /* TODO: Implement the functionality of watchpoint */
 
-int 
-watchpoint_set(char *expr) { 
+int
+new_wp(const char* const args, bool* valid) {
   if (free_ == NULL) {
     assert(0 && "No available space for new watchpoint");
   } 
 
   WP* sel = free_;
   free_ = sel->next;
-
-  strncpy(sel->exprs, expr, WP_STRMAX);
-  sel->exprs[WP_STRMAX-1] = '\0';
-
   sel->next = head;
   head = sel;
-  return sel->NO; 
+
+  strncpy(sel->exprs, args, WP_STRMAX);
+  sel->exprs[WP_STRMAX-1] = '\0';
+
+  sel->last_val = expr(sel->exprs, valid);
+
+  return sel->NO;
 }
 
 bool 
-watchpoint_del(int id) { 
+free_wp(int id) { 
   WP* cur = head;
   WP* last = NULL;
   while (cur) {
@@ -82,11 +86,11 @@ watchpoint_del(int id) {
 }
 
 void 
-watchpoint_list() {
-  printf("Watchpoints \n");
+list_wp() {
+  printf("Num  Last Val   What\n");
   size_t cnt = 0;
   for (WP* cur = head; cur; ++cnt, cur = cur->next) {
-    printf("NO %2d : %s\n", cur->NO, cur->exprs);
+    printf("%4d 0x%08x %s\n", cur->NO, cur->last_val, cur->exprs);
   }
   printf("%lu active in total\n", cnt);
 }

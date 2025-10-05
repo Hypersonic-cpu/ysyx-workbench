@@ -24,10 +24,10 @@
 
 word_t expr(char *e, bool *success);
 
-int watchpoint_set(char* exprs);
+int new_wp(const char* const args, bool *success);
 
-bool watchpoint_del(int id);
+bool free_wp(int id);
 
-void watchpoint_list();
+void list_wp();
 
 #endif

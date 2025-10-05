@@ -68,7 +68,7 @@ static int cmd_info(char *args) {
       isa_reg_display();
       return 0;
     case 'w':
-      watchpoint_list();
+      list_wp();
       return 0;
     default: 
       printf("Invalid argument `%c`, type `help info` for more info\n", arg[0]);
@@ -135,8 +135,14 @@ static int cmd_w(char *args) {
     printf("Invalid arguments, type `help w` for more info\n");
     return 1;
   }
-  int id = watchpoint_set(args);
-  printf("Watchpoint %d set: %s\n", id, args);
+
+  bool success;
+  int id = new_wp(args, &success);
+  if (success) {
+    printf("Watchpoint %d set: %s\n", id, args);
+  } else {
+    printf("Watchpoint %d set but eval failed: %s\n", id, args);
+  }
   return 0;
 }
 
@@ -146,7 +152,7 @@ static int cmd_d(char *args) {
     printf("Invalid arguments, type `help d` for more info\n");
     return 1;
   }
-  bool success = (id >= 0) && watchpoint_del(id);
+  bool success = (id >= 0) && free_wp(id);
   printf("Watchpoint %d removal %s\n", 
          id, success ? "success" : "failed");
   return 0;
