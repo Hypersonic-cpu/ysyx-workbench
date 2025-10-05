@@ -24,6 +24,7 @@
  */
 #include <regex.h>
 #include <stdio.h>
+#include <string.h>
 
 enum {
   TK_NOTYPE = 256, 
@@ -292,7 +293,12 @@ static word_t eval(int l, int r, bool* valid) {
       if (num_matched != 1) { *valid = false; }
       return val;
     } else if (tokens[l].type == TK_REG) {
-      word_t val = isa_reg_str2val(tokens[l].str, valid);
+      const char* str = tokens[l].str;
+      if (!strcmp(str, "pc") || !strcmp(str, "PC")) {
+        // NOTE: implicit cast to word_t
+        return cpu.pc;
+      }
+      word_t val = isa_reg_str2val(str, valid);
       return val;
     } else {
       *valid = false;
