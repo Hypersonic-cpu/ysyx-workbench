@@ -81,3 +81,13 @@ watchpoint_del(int id) {
   return false; 
 }
 
+void 
+watchpoint_list() {
+  printf("Active watchpoints\n");
+  size_t cnt = 0;
+  for (WP* cur = head; cur; ++cnt, cur = cur->next) {
+    printf("NO %2d : %s\n", cur->NO, cur->exprs);
+  }
+  printf("%lu active in total\n", cnt);
+}
+

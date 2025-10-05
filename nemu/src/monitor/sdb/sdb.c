@@ -68,8 +68,7 @@ static int cmd_info(char *args) {
       isa_reg_display();
       return 0;
     case 'w':
-      // TODO: Print watchpoints
-      TODO();
+      watchpoint_list();
       return 0;
     default: 
       printf("Invalid argument `%c`, type `help info` for more info\n", arg[0]);
