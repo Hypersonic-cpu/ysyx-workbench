@@ -83,7 +83,7 @@ watchpoint_del(int id) {
 
 void 
 watchpoint_list() {
-  printf("Active watchpoints\n");
+  printf("Watchpoints: \n");
   size_t cnt = 0;
   for (WP* cur = head; cur; ++cnt, cur = cur->next) {
     printf("NO %2d : %s\n", cur->NO, cur->exprs);
