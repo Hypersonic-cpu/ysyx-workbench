@@ -24,7 +24,7 @@
 
 word_t expr(char *e, bool *success);
 
-int new_wp(const char* const args, bool *success);
+int new_wp(char* args, bool *success);
 
 bool free_wp(int id);
 

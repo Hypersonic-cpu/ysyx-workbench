@@ -45,10 +45,13 @@ void init_wp_pool() {
 /* TODO: Implement the functionality of watchpoint */
 
 int
-new_wp(const char* const args, bool* valid) {
+new_wp(char* args, bool* valid) {
   if (free_ == NULL) {
     assert(0 && "No available space for new watchpoint");
   } 
+
+  word_t val = expr(args, valid);
+  if (!*valid) { return -1; }
 
   WP* sel = free_;
   free_ = sel->next;
@@ -58,7 +61,7 @@ new_wp(const char* const args, bool* valid) {
   strncpy(sel->exprs, args, WP_STRMAX);
   sel->exprs[WP_STRMAX-1] = '\0';
 
-  sel->last_val = expr(sel->exprs, valid);
+  sel->last_val = val;
 
   return sel->NO;
 }
