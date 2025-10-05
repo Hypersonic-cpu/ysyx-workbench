@@ -141,14 +141,12 @@ static int cmd_w(char *args) {
 }
 
 static int cmd_d(char *args) {
-  if (args == NULL) {
+  int id = -1;
+  if (args == NULL || sscanf(args, "%i", &id) != 1) {
     printf("Invalid arguments, type `help d` for more info\n");
     return 1;
   }
-  int id = -1;
-  int read_num = sscanf(args, "%i", &id);
-  bool success = (read_num == 1) && (id >= 0) 
-    && watchpoint_del(id);
+  bool success = (id >= 0) && watchpoint_del(id);
   printf("Watchpoint %d removal %s\n", 
          id, success ? "success" : "failed");
   return 0;
