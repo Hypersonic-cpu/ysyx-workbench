@@ -47,7 +47,6 @@ $(BINARY): $(V_SRC) $(C_SRC) $(NVBOARD_ARCHIVE)
 	@echo "===  Build Done  ==="
 
 ## TARGETS ##
-
 .PHONY: sim clean all 
 
 all: $(BINARY) sim
@@ -61,6 +60,4 @@ sim:
 
 clean:
 	rm -rf $(BUILD_DIR)
-
-# include ../Makefile
 
