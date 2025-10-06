@@ -61,3 +61,11 @@ else
 # Include rules to build NEMU
 include $(NEMU_HOME)/scripts/native.mk
 endif
+
+.PHONY: line-count line-nonempty
+
+line-count: 
+	@find . -name "*.c" -o -name "*.h" | xargs cat | wc -l  
+
+line-nonempty:
+	@find . -name "*.c" -o -name "*.h" | xargs grep -E '\S' | wc -l
