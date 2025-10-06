@@ -1,51 +1,66 @@
+## Nv board
+include $(NVBOARD_HOME)/scripts/nvboard.mk
+
+TOPNAME = example
+NXDC_FIELS = constr/example.nxdc
+INC_PATH ?= 
+
 VERILATOR = verilator 
-
-BUILD_CXX_FLAGS = -cc 
-BUILD_ELF_FLAGS = -cc --exe --build
-
-VERILATOR_FLAGS += -x-assign fast -Wall 
+VERILATOR_CFLAGS += -MMD --build -cc
+VERILATOR_CFLAGS += -x-assign fast --x-initial fast -O3 -Wall 
 # Generate .fst waveform
-VERILATOR_FLAGS += --trace-fst
-VERILATOR_FLAGS += --assert 
-VERILATOR_FLAGS += --coverage
+# VERILATOR_CFLAGS += --trace-fst
+# VERILATOR_FLAGS += --assert 
+VERILATOR_CFLAGS += --noassert 
+# VERILATOR_CFLAGS += --coverage
 
-OBJ_DIR = obj_dir
-SOURCE_V = $(wildcard vsrc/*.v)
-WRAPPER_CXX = csrc/main.cpp
-ELF_NAME = Vexample
-ELF_PATH = $(OBJ_DIR)/$(ELF_NAME)
+BUILD_DIR = build
+OBJ_DIR = $(BUILD_DIR)/obj_dir
+BINARY = $(BUILD_DIR)/$(TOPNAME)
+$(shell mkdir -p $(BUILD_DIR))
 
-.PHONY: build_cxx build_elf sim
+## Pin binding 
+SRC_AUTO_BIND = $(abspath $(BUILD_DIR)/auto_bind.cpp)
+$(SRC_AUTO_BIND): $(NXDC_FIELS)
+	python3 $(NVBOARD_HOME)/scripts/auto_pin_bind.py $^ $@
 
-default: all
+## Source files
+V_SRC = $(wildcard vsrc/*.v)
+C_SRC = $(abspath $(wildcard csrc/*.c csrc/*.cc csrc/*.cxx csrc/*.cpp) )
+C_SRC += $(SRC_AUTO_BIND)
 
-all: build_elf sim
+## Verilator 
+INCFLAGS = $(addprefix -I, $(INC_PATH))
+CXXFLAGS += -DTOP_NAME="\"V$(TOPNAME)\""
+CXXFLAGS += $(INCFLAGS)
 
-build_elf:
-	@echo "===  VERILATE  ==="
-	@echo "  <= source files " $(SOURCE_V)
-	@echo "  <= main() cxx " $(WRAPPER_CXX)
-	@echo "  => elf path " $(ELF_PATH)
-	@mkdir -p $(OBJ_DIR)
-	$(VERILATOR) $(VERILATOR_FLAGS) $(BUILD_ELF_FLAGS) -j 0 \
-		-Mdir $(OBJ_DIR) -o $(ELF_NAME) \
-		$(SOURCE_V) $(WRAPPER_CXX) 
-	@echo "===  BUILD ELF DONE  ==="
+$(BINARY): $(V_SRC) $(C_SRC) $(NVBOARD_ARCHIVE)
+	@echo " <= Src V   " $(V_SRC)
+	@echo " <= Src CXX " $(C_SRC)
+	@echo " => Obj dir " $(OBJ_DIR)
+	@echo " INCFLAGS " $(INC_PATH) $(INCFLAGS)
+	@rm -rf $(OBJ_DIR)
+	$(VERILATOR) $(VERILATOR_CFLAGS) -j 1 \
+		-top-module $(TOPNAME) $^ \
+		$(addprefix -CFLAGS , $(CXXFLAGS)) $(addprefix -LDFLAGS , $(LDFLAGS)) \
+		-Mdir $(OBJ_DIR) --exe -o $(abspath $(BINARY)) 
+	@echo "===  Build Done  ==="
 
-build_cxx:
-	@echo "===  VERILATE  ==="
-	@echo "  <= source files " $(SOURCE_V)
-	@echo "  <= main() cxx " $(WRAPPER_CXX)
-	@mkdir -p $(OBJ_DIR)
-	$(VERILATOR) $(VERILATOR_FLAGS) $(BUILD_CXX_FLAGS) -j 0 \
-		-Mdir $(OBJ_DIR) -o $(ELF_NAME) $(SOURCE_V)
-	@echo "===  BUILD CXX DONE  ==="
+## TARGETS ##
+
+.PHONY: sim clean all 
+
+all: $(BINARY) sim
 
 sim:
-	$(call git_commit, "sim RTL") # DO NOT REMOVE THIS LINE!!!
-	@echo "===  RUNNING ==="
-	./$(ELF_PATH) +trace 
+	@# DO NOT REMOVE THIS LINE!!!
+	$(call git_commit, "sim RTL")
+	@echo "===  RUNNING " $(BINARY) "  ==="
+	./$(BINARY)
 	@echo "===  FINISHED  ==="
 
-include ../Makefile
+clean:
+	rm -rf $(BUILD_DIR)
+
+# include ../Makefile
 
