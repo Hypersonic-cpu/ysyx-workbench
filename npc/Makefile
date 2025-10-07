@@ -1,51 +1,37 @@
-VERILATOR = verilator 
+BUILD_DIR = ./build
 
-BUILD_CXX_FLAGS = -cc 
-BUILD_ELF_FLAGS = -cc --exe --build
+PRJ = playground
 
-VERILATOR_FLAGS += -x-assign fast -Wall 
-# Generate .fst waveform
-VERILATOR_FLAGS += --trace-fst
-VERILATOR_FLAGS += --assert 
-VERILATOR_FLAGS += --coverage
+test:
+	mill -i $(PRJ).test
 
-OBJ_DIR = obj_dir
-SOURCE_V = $(wildcard vsrc/*.v)
-WRAPPER_CXX = csrc/main.cpp
-ELF_NAME = Vexample
-ELF_PATH = $(OBJ_DIR)/$(ELF_NAME)
+verilog:
+	$(call git_commit, "generate verilog")
+	mkdir -p $(BUILD_DIR)
+	mill -i $(PRJ).runMain Elaborate --target-dir $(BUILD_DIR)
 
-.PHONY: build_cxx build_elf sim
+help:
+	mill -i $(PRJ).runMain Elaborate --help
 
-default: all
+reformat:
+	mill -i __.reformat
 
-all: build_elf sim
+checkformat:
+	mill -i __.checkFormat
 
-build_elf:
-	@echo "  ===  VERILATE  ===  "
-	@echo "  <= source files " $(SOURCE_V)
-	@echo "  <= main() cxx " $(WRAPPER_CXX)
-	@echo "  => elf path " $(ELF_PATH)
-	@mkdir -p $(OBJ_DIR)
-	$(VERILATOR) $(VERILATOR_FLAGS) $(BUILD_ELF_FLAGS) -j 0 \
-		-Mdir $(OBJ_DIR) -o $(ELF_NAME) \
-		$(SOURCE_V) $(WRAPPER_CXX) 
-	@echo "  ===  BUILD ELF DONE  ===  "
+bsp:
+	mill -i mill.bsp.BSP/install
 
-build_cxx:
-	@echo "  ===  VERILATE  ===  "
-	@echo "  <= source files " $(SOURCE_V)
-	@echo "  <= main() cxx " $(WRAPPER_CXX)
-	@mkdir -p $(OBJ_DIR)
-	$(VERILATOR) $(VERILATOR_FLAGS) $(BUILD_CXX_FLAGS) -j 0 \
-		-Mdir $(OBJ_DIR) -o $(ELF_NAME) $(SOURCE_V)
-	@echo "  ===  BUILD CXX DONE  ===  "
+idea:
+	mill -i mill.idea.GenIdea/idea
+
+clean:
+	-rm -rf $(BUILD_DIR)
+
+.PHONY: test verilog help reformat checkformat clean
 
 sim:
 	$(call git_commit, "sim RTL") # DO NOT REMOVE THIS LINE!!!
-	@echo "  ===  RUNNING ===  "
-	./$(ELF_PATH) +trace 
-	@echo "  ===  FINISHED  ===  "
+	@echo "Write this Makefile by yourself."
 
-include ../Makefile
-
+-include ../Makefile
