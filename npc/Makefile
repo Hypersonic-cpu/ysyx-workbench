@@ -47,7 +47,7 @@ $(BINARY): $(V_SRC) $(C_SRC) $(NVBOARD_ARCHIVE)
 	@echo "===  Build Done  ==="
 
 ## TARGETS ##
-.PHONY: sim clean all 
+.PHONY: sim clean all lint
 
 all: $(BINARY) sim
 
@@ -57,6 +57,10 @@ sim:
 	@echo "===  RUNNING " $(BINARY) "  ==="
 	./$(BINARY)
 	@echo "===  FINISHED  ==="
+
+lint: 
+	@$(VERILATOR) --lint-only -Wall -j 1 \
+		-top-module $(TOPNAME) $(V_SRC)
 
 clean:
 	rm -rf $(BUILD_DIR)
