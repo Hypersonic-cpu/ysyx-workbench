@@ -13,3 +13,6 @@ build/
 obj_dir/
 logs/
 *.log
+.bloop/
+.metals/
+out/
