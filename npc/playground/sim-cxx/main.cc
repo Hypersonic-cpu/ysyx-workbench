@@ -13,11 +13,15 @@
 //
 
 inline void 
-single_cycle(const std::unique_ptr<TOP_NAME>& top) {
-    top->clock = 1;
-    top->eval();
-    top->clock = 0;
-    top->eval();
+single_cycle(
+    const std::unique_ptr<TOP_NAME>& top, 
+    const std::unique_ptr<VerilatedContext>& context) {
+
+  context->timeInc(1);
+  top->clock = 1;
+  top->eval();
+  top->clock = 0;
+  top->eval();
 }
 
 int 
@@ -40,22 +44,17 @@ main() {
   constexpr vluint64_t TimeMax = 100U;
   srand(time(0));
   while (contextp->time() < TimeMax && !contextp->gotFinish()) {
-    contextp->timeInc(1);
     int a = rand() % 16;
     int b = rand() & 16;
     top->io_value1 = a;
     top->io_value2 = b;
     top->io_loadingValues = 1;
-    single_cycle(top);
-    printf("%lu: V %d, a = %d, b = %d, GCD = %d\n", contextp->time(), top->io_outputValid, top->io_value1, top->io_value2, top->io_outputGCD);
-    contextp->timeInc(1);
-    single_cycle(top);
+    single_cycle(top, contextp);
+    single_cycle(top, contextp);
     top->io_loadingValues = 0;
-    printf("%lu: V %d, a = %d, b = %d, GCD = %d\n", contextp->time(), top->io_outputValid, top->io_value1, top->io_value2, top->io_outputGCD);
     while (!top->io_outputValid && contextp->time() < TimeMax) {
-      contextp->timeInc(1);
       printf("%lu: a = %d, b = %d, GCD = %d\n", contextp->time(), a, b, top->io_outputGCD);
-      single_cycle(top);
+      single_cycle(top, contextp);
     }
     if (contextp->time() < TimeMax) {
       printf("a = %d, b = %d, GCD = %d\n", a, b, top->io_outputGCD);
