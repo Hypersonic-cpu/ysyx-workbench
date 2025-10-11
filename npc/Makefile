@@ -77,9 +77,13 @@ idea:
 clean:
 	-rm -rf $(BUILD_SV_DIR) $(BUILD_SIM_DIR)
 
-.PHONY: test verilog help reformat checkformat clean
+.PHONY: test verilog help reformat checkformat clean verilate sim
 
-sim: verilog $(SIM_BIN)
+verilate:
+	@mkdir -p $(BUILD_OBJ_DIR)
+	@mkdir -p $(BUILD_SIM_DIR)
+
+sim: verilate verilog $(SIM_BIN)
 	@echo "VSRCS " $(VSRCS)
 	@echo "CSRCS " $(CSRCS)
 	# TODO: Add tracing back
