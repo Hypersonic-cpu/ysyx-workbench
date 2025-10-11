@@ -34,7 +34,7 @@ CSRCS = $(shell find $(abspath $(SIM_CXX_DIR)) -name "*.cc" -or -name "*.cpp")
 
 ifeq ($(WITH_NVBOARD),0)
 NVB_ARCHIVE=
-LDFLAGS=
+# LDFLAGS=
 else
 NVB_ARCHIVE=$(NVBOARD_ARCHIVE)
 CSRCS += $(SRC_AUTO_BIND)

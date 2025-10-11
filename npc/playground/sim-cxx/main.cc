@@ -5,7 +5,7 @@
 #include <verilated_fst_c.h>
 
 #include "VGCD.h"
-#include "verilatedos.h"
+// #include "verilatedos.h"
 
 // vluint64_t glb_time { 0 };
 // double sc_time_stamp() { return glb_time; }
