@@ -23,7 +23,7 @@ main() {
   // Trace 99 levels of hierarchy (or see below)
   top->trace(tfp, 99);
                         // tfp->dumpvars(1, "t"); // trace 1 level under "t"
-  tfp->open("logs/log.fst");
+  tfp->open("/mnt/hgfs/Arch-PA/ysyx-workbench/npc/build-sim/playground/logs/log.fst");
   
   int passed = 0;
   int failed = 0;
@@ -39,6 +39,7 @@ main() {
     top->io_loadingValues = 1;
     top->eval();
     while (!top->io_outputValid && contextp->time() < TimeMax) {
+      contextp->timeInc(1);
       top->eval();
     }
     if (contextp->time() < TimeMax) {
