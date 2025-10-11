@@ -1,35 +1,36 @@
 ## Directories
-# dir for generated Verilog
-BUILD_DIR = ./build
-# project source dir
+# project name (also source dir)
 PRJ = playground
-
-## Verilator related
-VERILATOR = verilator
-VERILATOR_COVERAGE = verilator_coverage
-VERILATOR_CFLAGS += -MMD --build -cc  \
-				-O3 --x-assign fast --x-initial fast --noassert
-
-## NV Board related 
-
-# TOPNAME = top
-NXDC_FILES = $(PRJ)/constr/top.nxdc
-INC_PATH ?=
+# # dir for generated Verilog
+BUILD_SV_DIR = ./build-sv
+# # dir for C++ compiled by Verilator
+# BUILD_SIM_DIR = ./build-sim
+# BUILD_OBJ_DIR = $(BUILD_SIM_DIR)/obj_dir
+# # simulation elf or nvboard elf
+# SIM_BIN = $(BUILD_SIM_DIR)/$(PRJ)
 #
-# NVB_BUILD_DIR = ./build/
-# OBJ_DIR = $(BUILD_DIR)/obj_dir
-# BIN = $(BUILD_DIR)/$(TOPNAME)
-
-##< NVBoard end
+# ## Verilator related
+# VERILATOR = verilator
+# VERILATOR_COVERAGE = verilator_coverage
+# VERILATOR_CFLAGS += -MMD --build -cc  \
+# 										-O3 --x-assign fast --x-initial fast --noassert
+#
+# ## NV Board related 
+# NXDC_FILES = $(PRJ)/constr/top.nxdc
+# INC_PATH ?=
+#
+# $(SIM_BIN)
+# ## constant end
 
 
 test:
 	mill -i $(PRJ).test
 
 verilog:
+	@echo $(MAKEGOALS)
 	$(call git_commit, "generate verilog")
-	mkdir -p $(BUILD_DIR)
-	mill -i $(PRJ).runMain Elaborate --target-dir $(BUILD_DIR)
+	mkdir -p $(BUILD_SV_DIR)
+	mill -i $(PRJ).runMain Elaborate --target-dir $(BUILD_SV_DIR)
 
 help:
 	mill -i $(PRJ).runMain Elaborate --help
@@ -47,7 +48,7 @@ idea:
 	mill -i mill.idea.GenIdea/idea
 
 clean:
-	-rm -rf $(BUILD_DIR)
+	-rm -rf $(BUILD_SV_DIR)
 
 .PHONY: test verilog help reformat checkformat clean
 
