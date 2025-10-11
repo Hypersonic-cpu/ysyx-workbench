@@ -46,7 +46,7 @@ main() {
     top->io_loadingValues = 1;
     single_cycle(top);
     top->io_loadingValues = 0;
-    printf("%lu: V %d, a = %d, b = %d, GCD = %d\n", contextp->time(), top->io_outputValid, a, b, top->io_outputGCD);
+    printf("%lu: V %d, a = %d, b = %d, GCD = %d\n", contextp->time(), top->io_outputValid, top->io_value1, top->io_value2, top->io_outputGCD);
     while (!top->io_outputValid && contextp->time() < TimeMax) {
       contextp->timeInc(1);
       printf("%lu: a = %d, b = %d, GCD = %d\n", contextp->time(), a, b, top->io_outputGCD);
