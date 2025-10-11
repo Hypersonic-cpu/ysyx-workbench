@@ -1,3 +1,4 @@
+#include <ctime>
 #include <memory>
 #include <cstdlib>
 
@@ -28,6 +29,7 @@ main() {
   int failed = 0;
 
   constexpr vluint64_t TimeMax = 100U;
+  srand(time(0));
   while (contextp->time() < TimeMax && !contextp->gotFinish()) {
     contextp->timeInc(1);
     int a = rand() % 16;
