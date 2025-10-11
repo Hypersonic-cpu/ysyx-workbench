@@ -16,6 +16,7 @@ WITH_NVBOARD=0
 ## Verilator related
 VERILATOR = verilator
 VERILATOR_COVERAGE = verilator_coverage
+VERILATOR_CFLAGS ?= --trace --trace-fst
 VERILATOR_CFLAGS += -MMD --build -cc  \
 										-O3 --x-assign fast --x-initial fast --noassert
 INCFLAGS = $(addprefix -I, $(INC_PATH))
