@@ -2,6 +2,7 @@
 #include <memory>
 #include <cstdlib>
 
+#include <numeric>
 #include <verilated.h>
 #include <verilated_fst_c.h>
 
@@ -59,9 +60,11 @@ main() {
     }
     if (contextp->time() < TimeMax) {
       printf("a = %d, b = %d, GCD = %d\n", a, b, top->io_outputGCD);
-      passed++;
+      if (top->io_outputGCD == std::gcd(a, b)) { passed ++; }
+      else { failed ++; }
     } else {
-      failed++;
+      printf("a = %d, b = %d, Timeout", a, b);
+      failed ++;
     }
     tfp->dump(contextp->time());
     if (passed + failed) { break; }
