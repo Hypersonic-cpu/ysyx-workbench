@@ -49,6 +49,7 @@ main() {
       contextp->timeInc(1);
       single_cycle(top);
     }
+    printf("a = %d, b = %d, GCD = %d\n", a, b, top->io_outputGCD);
     if (contextp->time() < TimeMax) {
       printf("a = %d, b = %d, GCD = %d\n", a, b, top->io_outputGCD);
       passed++;
