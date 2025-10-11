@@ -1,21 +1,20 @@
+## Directories
+# dir for generated Verilog
 BUILD_DIR = ./build
-
+# project source dir
 PRJ = playground
 
 ## Verilator related
-# VERILATOR = verilator
-# VERILATOR_COVERAGE = verilator_coverage
-#
-# VERILATOR_CFLAGS += -MMD --build -cc  \
-# 				-O3 --x-assign fast --x-initial fast --noassert
+VERILATOR = verilator
+VERILATOR_COVERAGE = verilator_coverage
+VERILATOR_CFLAGS += -MMD --build -cc  \
+				-O3 --x-assign fast --x-initial fast --noassert
 
 ## NV Board related 
 
 # TOPNAME = top
-# NXDC_FILES = constr/top.nxdc
-# INC_PATH ?=
-#
-# VERILATOR = verilator
+NXDC_FILES = $(PRJ)/constr/top.nxdc
+INC_PATH ?=
 #
 # NVB_BUILD_DIR = ./build/
 # OBJ_DIR = $(BUILD_DIR)/obj_dir
