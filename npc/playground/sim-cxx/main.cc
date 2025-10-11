@@ -44,8 +44,8 @@ main() {
   constexpr vluint64_t TimeMax = 100U;
   srand(time(0));
   while (contextp->time() < TimeMax && !contextp->gotFinish()) {
-    int a = rand() % 16;
-    int b = rand() & 16;
+    int a = rand() % 15 + 1;
+    int b = rand() % 15 + 1;
     top->io_value1 = a;
     top->io_value2 = b;
     top->io_loadingValues = 1;
