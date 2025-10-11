@@ -1,6 +1,7 @@
 ## Directories
 # project name (also source dir)
 PRJ ?= playground
+TOPNAME ?= GCD
 # dir for generated Verilog
 BUILD_SV_DIR = ./build-sv/$(PRJ)
 # dir for C++ compiled by Verilator
@@ -18,7 +19,7 @@ VERILATOR_COVERAGE = verilator_coverage
 VERILATOR_CFLAGS += -MMD --build -cc  \
 										-O3 --x-assign fast --x-initial fast --noassert
 INCFLAGS = $(addprefix -I, $(INC_PATH))
-CXXFLAGS += $(INCFLAGS) -DTOP_NAME="\"V$(PRJ)\""
+CXXFLAGS += $(INCFLAGS) -DTOP_NAME="\"V$(TOPNAME)\""
 
 ## NV Board related 
 NXDC_FILES = $(PRJ)/constr/top.nxdc
@@ -43,7 +44,7 @@ endif
 $(SIM_BIN): $(VSRCS) $(CSRCS) $(NVB_ARCHIVE)
 	@rm -rf $(BUILD_OBJ_DIR)
 	$(VERILATOR) $(VERILATOR_CFLAGS) \
-		--top-module $(PRJ) $^ \
+		--top-module $(TOPNAME) $^ \
 		$(addprefix -CFLAGS , $(CXXFLAGS)) $(addprefix -LDFLAGS , $(LDFLAGS)) \
 		--Mdir $(BUILD_OBJ_DIR) --exe -o $(abspath $(SIM_BIN))
 
@@ -81,6 +82,7 @@ clean:
 sim: verilog
 	@echo "VSRCS " $(VSRCS)
 	@echo "CSRCS " $(CSRCS)
+	$(SIM_BIN)
 	# TODO: Add tracing back
 	# $(call git_commit, "sim RTL") # DO NOT REMOVE THIS LINE!!!
 	@echo "Write this Makefile by yourself."
