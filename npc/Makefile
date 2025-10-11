@@ -79,10 +79,9 @@ clean:
 
 .PHONY: test verilog help reformat checkformat clean
 
-sim: verilog
+sim: verilog $(SIM_BIN)
 	@echo "VSRCS " $(VSRCS)
 	@echo "CSRCS " $(CSRCS)
-	$(SIM_BIN)
 	# TODO: Add tracing back
 	# $(call git_commit, "sim RTL") # DO NOT REMOVE THIS LINE!!!
 	@echo "Write this Makefile by yourself."
