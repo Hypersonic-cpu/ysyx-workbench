@@ -47,9 +47,9 @@ main() {
     single_cycle(top);
     while (!top->io_outputValid && contextp->time() < TimeMax) {
       contextp->timeInc(1);
+      printf("%lu: a = %d, b = %d, GCD = %d\n", contextp->time(), a, b, top->io_outputGCD);
       single_cycle(top);
     }
-    printf("a = %d, b = %d, GCD = %d\n", a, b, top->io_outputGCD);
     if (contextp->time() < TimeMax) {
       printf("a = %d, b = %d, GCD = %d\n", a, b, top->io_outputGCD);
       passed++;
