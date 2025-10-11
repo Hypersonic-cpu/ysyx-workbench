@@ -10,8 +10,10 @@
 
 // vluint64_t glb_time { 0 };
 // double sc_time_stamp() { return glb_time; }
+//
 
-void single_cycle(const std::unique_ptr<TOP_NAME>& top) {
+inline void 
+single_cycle(const std::unique_ptr<TOP_NAME>& top) {
     top->clock = 1;
     top->eval();
     top->clock = 0;
@@ -44,6 +46,9 @@ main() {
     top->io_value1 = a;
     top->io_value2 = b;
     top->io_loadingValues = 1;
+    single_cycle(top);
+    printf("%lu: V %d, a = %d, b = %d, GCD = %d\n", contextp->time(), top->io_outputValid, top->io_value1, top->io_value2, top->io_outputGCD);
+    contextp->timeInc(1);
     single_cycle(top);
     top->io_loadingValues = 0;
     printf("%lu: V %d, a = %d, b = %d, GCD = %d\n", contextp->time(), top->io_outputValid, top->io_value1, top->io_value2, top->io_outputGCD);
