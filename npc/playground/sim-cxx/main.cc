@@ -11,6 +11,13 @@
 // vluint64_t glb_time { 0 };
 // double sc_time_stamp() { return glb_time; }
 
+void single_cycle(const std::unique_ptr<TOP_NAME>& top) {
+    top->clock = 1;
+    top->eval();
+    top->clock = 0;
+    top->eval();
+}
+
 int 
 main() {
   const std::unique_ptr<VerilatedContext> contextp { new VerilatedContext };
@@ -37,10 +44,10 @@ main() {
     top->io_value1 = a;
     top->io_value2 = b;
     top->io_loadingValues = 1;
-    top->eval();
+    single_cycle(top);
     while (!top->io_outputValid && contextp->time() < TimeMax) {
       contextp->timeInc(1);
-      top->eval();
+      single_cycle(top);
     }
     if (contextp->time() < TimeMax) {
       printf("a = %d, b = %d, GCD = %d\n", a, b, top->io_outputGCD);
