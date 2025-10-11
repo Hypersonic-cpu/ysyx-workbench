@@ -2,6 +2,28 @@ BUILD_DIR = ./build
 
 PRJ = playground
 
+## Verilator related
+# VERILATOR = verilator
+# VERILATOR_COVERAGE = verilator_coverage
+#
+# VERILATOR_CFLAGS += -MMD --build -cc  \
+# 				-O3 --x-assign fast --x-initial fast --noassert
+
+## NV Board related 
+
+# TOPNAME = top
+# NXDC_FILES = constr/top.nxdc
+# INC_PATH ?=
+#
+# VERILATOR = verilator
+#
+# NVB_BUILD_DIR = ./build/
+# OBJ_DIR = $(BUILD_DIR)/obj_dir
+# BIN = $(BUILD_DIR)/$(TOPNAME)
+
+##< NVBoard end
+
+
 test:
 	mill -i $(PRJ).test
 
