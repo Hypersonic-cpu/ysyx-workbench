@@ -83,7 +83,7 @@ verilate:
 	@mkdir -p $(BUILD_OBJ_DIR)
 	@mkdir -p $(BUILD_SIM_DIR)
 
-sim: verilate verilog $(SIM_BIN)
+sim: verilate verilog # $(SIM_BIN)
 	@echo "VSRCS " $(VSRCS)
 	@echo "CSRCS " $(CSRCS)
 	# TODO: Add tracing back
