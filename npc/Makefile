@@ -37,9 +37,9 @@ ifeq ($(WITH_NVBOARD),0)
 NVB_ARCHIVE=
 # LDFLAGS=
 else
+include $(NVBOARD_HOME)/scripts/nvboard.mk
 NVB_ARCHIVE=$(NVBOARD_ARCHIVE)
 CSRCS += $(SRC_AUTO_BIND)
-include $(NVBOARD_HOME)/scripts/nvboard.mk
 endif
 
 $(SIM_BIN): $(VSRCS) $(CSRCS) $(NVB_ARCHIVE)
