@@ -10,7 +10,7 @@ BUILD_OBJ_DIR = $(BUILD_SIM_DIR)/obj_dir
 # simulation elf or nvboard elf
 SIM_BIN = $(BUILD_SIM_DIR)/$(PRJ).elf
 
-WITH_NVBOARD ?=0
+WITH_NVBOARD ?= 0
 
 ifeq ($(WITH_NVBOARD),0)
 SIM_CXX_DIR = $(PRJ)/sim-cxx
