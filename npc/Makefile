@@ -9,9 +9,9 @@ BUILD_SIM_DIR = ./build-sim/$(PRJ)
 BUILD_OBJ_DIR = $(BUILD_SIM_DIR)/obj_dir
 # simulation elf or nvboard elf
 SIM_BIN = $(BUILD_SIM_DIR)/$(PRJ).elf
-SIM_CXX_DIR = $(PRJ)/sim-cxx
+SIM_CXX_DIR ?= $(PRJ)/sim-cxx
 # will this build involve NV Board 
-WITH_NVBOARD=0
+WITH_NVBOARD ?=0
 
 ## Verilator related
 VERILATOR = verilator
@@ -85,10 +85,10 @@ verilate:
 	@mkdir -p $(BUILD_SIM_DIR)
 
 sim: verilate verilog $(SIM_BIN)
-	@echo "VSRCS " $(VSRCS)
-	@echo "CSRCS " $(CSRCS)
+	# @echo "VSRCS " $(VSRCS)
+	# @echo "CSRCS " $(CSRCS)
 	# TODO: Add tracing back
-	# $(call git_commit, "sim RTL") # DO NOT REMOVE THIS LINE!!!
-	@echo "Write this Makefile by yourself."
+	$(call git_commit, "sim RTL") # DO NOT REMOVE THIS LINE!!!
+	$(SIM_BIN)
 
 -include ../Makefile
