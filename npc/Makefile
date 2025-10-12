@@ -85,8 +85,8 @@ verilate:
 	@mkdir -p $(BUILD_SIM_DIR)
 
 sim: verilate verilog $(SIM_BIN)
-	# @echo "VSRCS " $(VSRCS)
-	# @echo "CSRCS " $(CSRCS)
+	@echo "VSRCS " $(VSRCS)
+	@echo "CSRCS " $(CSRCS)
 	# TODO: Add tracing back
 	$(call git_commit, "sim RTL") # DO NOT REMOVE THIS LINE!!!
 	$(SIM_BIN)
