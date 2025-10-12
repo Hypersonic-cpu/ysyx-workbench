@@ -9,9 +9,15 @@ BUILD_SIM_DIR = ./build-sim/$(PRJ)
 BUILD_OBJ_DIR = $(BUILD_SIM_DIR)/obj_dir
 # simulation elf or nvboard elf
 SIM_BIN = $(BUILD_SIM_DIR)/$(PRJ).elf
+
+WITH_NVBOARD ?=0
+
+ifeq ($(WITH_NVBOARD),0)
 SIM_CXX_DIR = $(PRJ)/sim-cxx
+else
+SIM_CXX_DIR = $(PRJ)/sim-nvboard
+endif
 # will this build involve NV Board 
-WITH_NVBOARD=0
 
 ## Verilator related
 VERILATOR = verilator
@@ -23,7 +29,7 @@ INCFLAGS = $(addprefix -I, $(INC_PATH))
 CXXFLAGS += $(INCFLAGS) -DTOP_NAME="\"V$(TOPNAME)\""
 
 ## NV Board related 
-NXDC_FILES = $(PRJ)/constr/top.nxdc
+NXDC_FILES = $(PRJ)/constr/$(TOPNAME).nxdc
 INC_PATH ?=
 
 SRC_AUTO_BIND = $(abspath $(BUILD_SIM_DIR)/auto_bind.cpp)
@@ -37,9 +43,9 @@ ifeq ($(WITH_NVBOARD),0)
 NVB_ARCHIVE=
 # LDFLAGS=
 else
+include $(NVBOARD_HOME)/scripts/nvboard.mk
 NVB_ARCHIVE=$(NVBOARD_ARCHIVE)
 CSRCS += $(SRC_AUTO_BIND)
-include $(NVBOARD_HOME)/scripts/nvboard.mk
 endif
 
 $(SIM_BIN): $(VSRCS) $(CSRCS) $(NVB_ARCHIVE)
@@ -87,8 +93,7 @@ verilate:
 sim: verilate verilog $(SIM_BIN)
 	@echo "VSRCS " $(VSRCS)
 	@echo "CSRCS " $(CSRCS)
-	# TODO: Add tracing back
-	# $(call git_commit, "sim RTL") # DO NOT REMOVE THIS LINE!!!
-	@echo "Write this Makefile by yourself."
+	$(call git_commit, "sim RTL") # DO NOT REMOVE THIS LINE!!!
+	$(SIM_BIN)
 
 -include ../Makefile
