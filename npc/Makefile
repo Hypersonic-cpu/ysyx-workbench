@@ -1,7 +1,7 @@
 ## Directories
 # project name (also source dir)
-PRJ ?= playground
-TOPNAME ?= GCD
+PRJ ?= njuprojn2
+TOPNAME ?= EncoderFpga
 # dir for generated Verilog
 BUILD_SV_DIR = ./build-sv/$(PRJ)
 # dir for C++ compiled by Verilator
@@ -10,7 +10,7 @@ BUILD_OBJ_DIR = $(BUILD_SIM_DIR)/obj_dir
 # simulation elf or nvboard elf
 SIM_BIN = $(BUILD_SIM_DIR)/$(PRJ).elf
 
-WITH_NVBOARD ?=0
+WITH_NVBOARD ?= 0
 
 ifeq ($(WITH_NVBOARD),0)
 SIM_CXX_DIR = $(PRJ)/sim-cxx
@@ -91,8 +91,6 @@ verilate:
 	@mkdir -p $(BUILD_SIM_DIR)
 
 sim: verilate verilog $(SIM_BIN)
-	@echo "VSRCS " $(VSRCS)
-	@echo "CSRCS " $(CSRCS)
 	$(call git_commit, "sim RTL") # DO NOT REMOVE THIS LINE!!!
 	$(SIM_BIN)
 
