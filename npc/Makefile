@@ -1,6 +1,6 @@
 ## Directories
 # project name (also source dir)
-PRJ ?= playground
+PRJ ?= njuprojn2
 TOPNAME ?= GCD
 # dir for generated Verilog
 BUILD_SV_DIR = ./build-sv/$(PRJ)
