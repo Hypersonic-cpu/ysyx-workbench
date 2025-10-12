@@ -1,0 +1,12 @@
+top=GCD
+
+#          15   14                                  7
+io_value1 (SW7, SW7, SW7, SW7, SW7, SW7, SW7, SW7, SW7, SW6, SW5, SW4, SW3, SW2, SW1, SW0)
+#          15   14                                           7
+io_value2 (SW15, SW15, SW15, SW15, SW15, SW15, SW15, SW15, SW15, SW14, SW13, SW12, SW11, SW10, SW9, SW8)
+
+io_loadingValues BTNC
+
+io_outputGCD (LD7, LD7, LD7, LD7, LD7, LD7, LD7, LD7, LD7, LD6, LD5, LD4, LD3, LD2, LD1, LD0)
+
+io_outputValid LD15
