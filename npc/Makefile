@@ -23,7 +23,7 @@ INCFLAGS = $(addprefix -I, $(INC_PATH))
 CXXFLAGS += $(INCFLAGS) -DTOP_NAME="\"V$(TOPNAME)\""
 
 ## NV Board related 
-NXDC_FILES = $(PRJ)/constr/top.nxdc
+NXDC_FILES = $(PRJ)/constr/$(TOPNAME).nxdc
 INC_PATH ?=
 
 SRC_AUTO_BIND = $(abspath $(BUILD_SIM_DIR)/auto_bind.cpp)
