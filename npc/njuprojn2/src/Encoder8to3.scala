@@ -14,5 +14,6 @@ class Encoder8to3 extends Module {
   for (i <- 1 until 8) {
     cum(i) := Mux(io.in(i), i.U, 0.U) | cum(i-1)
   }
-  io.out := cum(7)
+  val out = cum(7)
+  io.out := out
 }
