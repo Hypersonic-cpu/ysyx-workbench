@@ -10,7 +10,7 @@ class HexTo7Seg extends Module {
     val segMsbA = Output(UInt(7.W))
   })
 
-  io.segMsbA := Mux(io.ena, 0x3f.U(7.W), 0x0.U(7.W)) &
+  io.segMsbA := Mux(io.ena, 0x7f.U(7.W), 0x0.U(7.W)) &
     MuxLookup(io.in, 0.U) (
       Seq(
         0.U(4.W)  -> (0b1111110).U(7.W),
