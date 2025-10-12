@@ -7,6 +7,7 @@ class EncoderFpga extends Module {
   val io = IO(new Bundle {
     val in    = Input(UInt(8.W))
     val seg7MsbA   = Output(UInt(7.W))
+    val out        = Output(UInt(3.W))
     val valid      = Output(Bool())
   })
   
@@ -21,6 +22,7 @@ class EncoderFpga extends Module {
   trans.io.in  := logic.io.out 
 
   // Output
-  io.seg7MsbA  := trans.io.segMsbA
+  io.out       := logic.io.out
+  io.seg7MsbA  := ~trans.io.segMsbA
   io.valid     := logic.io.valid
 }
