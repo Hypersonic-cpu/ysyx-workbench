@@ -11,7 +11,7 @@ class Encoder8to3 extends Module {
 
   val cum = Wire(Vec(8, UInt(3.W)))
   cum(0) := 0.U
-  for (i <- 0 until 8) {
+  for (i <- 1 until 8) {
     cum(i) := Mux(io.in(i), i.U, 0.U) | cum(i-1)
   }
   io.out := cum(7)
