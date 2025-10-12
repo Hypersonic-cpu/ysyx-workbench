@@ -12,9 +12,9 @@ class EncoderFpga extends Module {
   
   val logic = Module(new Encoder8to3())
   val trans = Module(new HexTo7Seg())
-  io.valid := logic.io.valid
-  io.in    := logic.io.in
+  logic.io.valid := io.valid
+  logic.io.in    := io.in
   trans.io.in  := logic.io.out 
   trans.io.ena := logic.io.valid 
-  io.seg7MsbA := trans.io.segMsbA
+  trans.io.segMsbA := io.seg7MsbA
 }
