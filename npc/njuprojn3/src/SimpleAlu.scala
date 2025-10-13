@@ -29,7 +29,7 @@ class SimpleAlu extends Module {
   )
 
   // Add-Sub
-  val sumAll  = in1Op + in2Op 
+  val sumAll  = in1Op.pad(5) + in2Op.pad(5)
   val sumRes  = sumAll(3, 0)
   val sumCflg = sumAll(4)
   val sumZflg = ~sumCflg.orR
