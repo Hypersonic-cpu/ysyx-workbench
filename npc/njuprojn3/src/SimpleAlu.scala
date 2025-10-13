@@ -36,7 +36,7 @@ class SimpleAlu extends Module {
   val sumOflg = (~(in1Op(3) ^ in2Op(3))) & (sumRes(3) ^ in1Op(3))
 
   // Comp
-  val ltRes = sumRes(3).pad(4)
+  val ltRes = sumRes(3, 3).pad(4)
   val eqRes = sumZflg.pad(4)
 
   // Logical
