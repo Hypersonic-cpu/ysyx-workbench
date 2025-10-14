@@ -12,14 +12,14 @@ class LfsrFpga extends Module {
   })
   
   val lfsr = Module(new Lfsr())
-  val disp = Vec(2, Module(new HexTo7Seg()).io)
+  val disp = for { x <- 0 until 2} yield Module(new HexTo7Seg())
 
-  disp(0).ena := 1.B
-  disp(1).ena := 1.B
-  disp(0).in  := lfsr.io.out(3, 0)
-  disp(1).in  := lfsr.io.out(7, 4)
-  io.segs(1) := disp(0).segMsbA
-  io.segs(0) := disp(1).segMsbA
+  disp(0).io.ena := 1.B
+  disp(1).io.ena := 1.B
+  disp(0).io.in  := lfsr.io.out(3, 0)
+  disp(1).io.in  := lfsr.io.out(7, 4)
+  io.segs(1) := disp(0).io.segMsbA
+  io.segs(0) := disp(1).io.segMsbA
 
   lfsr.io.load := io.load
   lfsr.io.ldVal := io.ldVal
