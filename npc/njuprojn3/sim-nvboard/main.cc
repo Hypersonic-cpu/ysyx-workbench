@@ -1,4 +1,6 @@
 #include <nvboard.h>
+#include <chrono>
+#include <thread>
 #include "VSimpleAluFpga.h"
 
 static TOP_NAME dut;
@@ -16,6 +18,8 @@ static void reset(int n) {
   dut.reset = 0;
 }
 
+constexpr auto SleepTime = std::chrono::milliseconds(50);
+
 int main() {
   nvboard_bind_all_pins(&dut);
   nvboard_init();
@@ -24,6 +28,7 @@ int main() {
 
   while(1) {
     nvboard_update();
+    std::this_thread::sleep_for(SleepTime);
     single_cycle();
   }
 }
