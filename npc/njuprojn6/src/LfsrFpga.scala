@@ -18,8 +18,8 @@ class LfsrFpga extends Module {
   disp(1).io.ena := 1.B
   disp(0).io.in  := lfsr.io.out(3, 0)
   disp(1).io.in  := lfsr.io.out(7, 4)
-  io.segs(1) := ~disp(0).io.segMsbA
-  io.segs(0) := ~disp(1).io.segMsbA
+  io.segs(0) := ~disp(0).io.segMsbA
+  io.segs(1) := ~disp(1).io.segMsbA
 
   lfsr.io.load := io.load
   lfsr.io.ldVal := io.ldVal
