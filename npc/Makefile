@@ -1,7 +1,7 @@
 ## Directories
 # project name (also source dir)
-PRJ ?= njuprojn2
-TOPNAME ?= EncoderFpga
+PRJ ?= njuprojn3
+TOPNAME ?= SimpleAluFpga
 # dir for generated Verilog
 BUILD_SV_DIR = ./build-sv/$(PRJ)
 # dir for C++ compiled by Verilator
