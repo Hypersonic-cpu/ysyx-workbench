@@ -8,13 +8,17 @@ static TOP_NAME dut;
 void nvboard_bind_all_pins(TOP_NAME* top);
 
 static void single_cycle() {
-  dut.clock = 0; dut.eval();
-  dut.clock = 1; dut.eval();
+  dut.eval()
+  // dut.clock = 0; dut.eval();
+  // dut.clock = 1; dut.eval();
 }
 
 static void reset(int n) {
   dut.reset = 1;
-  while (n -- > 0) single_cycle();
+  while (n -- > 0) {
+    dut.clock = 1; dut.eval();
+    dut.clock = 0; dut.eval();
+  }
   dut.reset = 0;
 }
 
