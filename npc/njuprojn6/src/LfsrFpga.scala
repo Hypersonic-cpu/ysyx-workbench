@@ -12,7 +12,7 @@ class LfsrFpga extends Module {
   })
   
   val lfsr = Module(new Lfsr())
-  val disp = Vec(2, new HexTo7Seg().io)
+  val disp = Vec(2, Module(new HexTo7Seg()).io)
 
   disp(0).ena := 1.B
   disp(1).ena := 1.B
