@@ -32,6 +32,8 @@ object Driver {
       val curOflg = dut.io.oflg.peekValue().asBigInt
       val curZflg = dut.io.zflg.peekValue().asBigInt
 
+      // TODO: dprintf control
+      dut.io.clk.step()
       val curCmp = (curOut, curCflg, curOflg, curZflg)
       // print(s"#$taskPoint: in = $curIn, expect $stdOut (V $validB), recv $curOut (V $validOut) ")
       if (curCmp == stdOut) {
@@ -48,44 +50,44 @@ object Driver {
 }
 
 class SimpleAluSpec extends AnyFreeSpec with Matchers {
-  // "SimpleAlu Add should pass" in {
-  //   simulate(new SimpleAlu()) { dut =>
-  //     val toInt = if (_) 1 else 0
-  //     val testGolden = {(x:Int , y:Int) =>
-  //       val sx = if (x >= 8) (x - 16) else x
-  //       val sy = if (y >= 8) (y - 16) else y
-  //
-  //       val ures = (x + y) % 16
-  //
-  //       (
-  //         ures, 
-  //         toInt ((x + y) >= 16), // carry out
-  //         toInt (sx + sy >= 8 || sx + sy < -8), // overflow
-  //         toInt (ures == 0)
-  //       )
-  //     }
-  //
-  //     val failedList = Driver.drv(testGolden, Cmd.Add) (dut)
-  //     for (elem <- failedList) {
-  //       println(s"Task Failed: In ${elem._1} Exp ${elem._2} Recv ${elem._3}")
-  //     }
-  //     assert(failedList.size == 0)
-  //   }
-  // }
+  "SimpleAlu Add should pass" in {
+    simulate(new SimpleAlu()) { dut =>
+      val toInt = if (_) 1 else 0
+      val testGolden = {(x:Int , y:Int) =>
+        val sx = if (x >= 8) (x - 16) else x
+        val sy = if (y >= 8) (y - 16) else y
+
+        val ures = (x + y) % 16
+
+        (
+          ures, 
+          toInt ((x + y) >= 16), // carry out
+          toInt (sx + sy >= 8 || sx + sy < -8), // overflow
+          toInt (ures == 0)
+        )
+      }
+
+      val failedList = Driver.drv(testGolden, Cmd.Add) (dut)
+      for (elem <- failedList) {
+        println(s"Task Failed: In ${elem._1} Exp ${elem._2} Recv ${elem._3}")
+      }
+      assert(failedList.size == 0)
+    }
+  }
 
   "SimpleAlu Sub should pass" in {
     simulate(new SimpleAlu()) { dut =>
       val toInt = if (_) 1 else 0
       val testGolden = { (x:Int, y:Int) =>
         val ux = x 
-        val uy = (y ^ 0b1111) + 1
+        val uy = ((y ^ 0b1111) + 1) % 16
         val sx = if (x >= 8) (x - 16) else x
         val sy = if (y >= 8) (y - 16) else y
 
         val ures = (ux + uy) % 16
         (
           ures, 
-          toInt ((ux + uy) >= 16), // carry out
+          toInt (sx >= sy), // sub with carry (ARM)
           toInt (sx - sy >= 8 || sx - sy < -8), // overflow
           toInt (ures == 0)
           )
@@ -97,4 +99,94 @@ class SimpleAluSpec extends AnyFreeSpec with Matchers {
       assert(failedList.size == 0)
     }
   }
+
+  "SimpleAlu BitwiseNot should pass" in {
+    simulate(new SimpleAlu()) { dut =>
+      val toInt = if (_) 1 else 0
+      val testGolden = { (x:Int, y:Int) =>
+        ( x ^ 0b1111, 0, 0, 0 )
+      }
+      val failedList = Driver.drv(testGolden, Cmd.Not) (dut)
+      for (elem <- failedList) {
+        println(s"Task Failed: In ${elem._1} Exp ${elem._2} Recv ${elem._3}")
+      }
+      assert(failedList.size == 0)
+    }
+  }
+
+  "SimpleAlu BitwiseAnd should pass" in {
+    simulate(new SimpleAlu()) { dut =>
+      val toInt = if (_) 1 else 0
+      val testGolden = { (x:Int, y:Int) =>
+        ( x.&(y), 0, 0, 0 )
+      }
+      val failedList = Driver.drv(testGolden, Cmd.And) (dut)
+      for (elem <- failedList) {
+        println(s"Task Failed: In ${elem._1} Exp ${elem._2} Recv ${elem._3}")
+      }
+      assert(failedList.size == 0)
+    }
+  }
+
+  "SimpleAlu BitwiseOr should pass" in {
+    simulate(new SimpleAlu()) { dut =>
+      val toInt = if (_) 1 else 0
+      val testGolden = { (x:Int, y:Int) =>
+        ( x.|(y), 0, 0, 0 )
+      }
+      val failedList = Driver.drv(testGolden, Cmd.Or ) (dut)
+      for (elem <- failedList) {
+        println(s"Task Failed: In ${elem._1} Exp ${elem._2} Recv ${elem._3}")
+      }
+      assert(failedList.size == 0)
+    }
+  }
+
+  "SimpleAlu BitwiseXor should pass" in {
+    simulate(new SimpleAlu()) { dut =>
+      val toInt = if (_) 1 else 0
+      val testGolden = { (x:Int, y:Int) =>
+        ( x.^(y), 0, 0, 0 )
+      }
+      val failedList = Driver.drv(testGolden, Cmd.Xor) (dut)
+      for (elem <- failedList) {
+        println(s"Task Failed: In ${elem._1} Exp ${elem._2} Recv ${elem._3}")
+      }
+      assert(failedList.size == 0)
+    }
+  }
+
+  "SimpleAlu LessThan should pass" in {
+    simulate(new SimpleAlu()) { dut =>
+      val toInt = if (_) 1 else 0
+      val testGolden = { (x:Int, y:Int) =>
+        val sx = if (x >= 8) (x - 16) else x
+        val sy = if (y >= 8) (y - 16) else y
+        ( toInt(sx < sy), 0, 0, 0 )
+      }
+      val failedList = Driver.drv(testGolden, Cmd.Lt) (dut)
+      for (elem <- failedList) {
+        println(s"Task Failed: In ${elem._1} Exp ${elem._2} Recv ${elem._3}")
+      }
+      assert(failedList.size == 0)
+    }
+  }
+
+  "SimpleAlu Equals should pass" in {
+    simulate(new SimpleAlu()) { dut =>
+      val toInt = if (_) 1 else 0
+      val testGolden = { (x:Int, y:Int) =>
+        val sx = if (x >= 8) (x - 16) else x
+        val sy = if (y >= 8) (y - 16) else y
+        ( toInt (sx == sy), 0, 0, 0 )
+      }
+      val failedList = Driver.drv(testGolden, Cmd.Eq) (dut)
+      for (elem <- failedList) {
+        println(s"Task Failed: In ${elem._1} Exp ${elem._2} Recv ${elem._3}")
+      }
+      assert(failedList.size == 0)
+    }
+  }
+
+  
 }
