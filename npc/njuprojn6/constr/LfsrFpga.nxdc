@@ -1,6 +1,9 @@
 top=LfsrFpga
 
-io_load BTNC
+reset BTND
+clock BTNC
+
+io_load SW15
 io_ldVal (SW7, SW6, SW5, SW4, SW3, SW2, SW1, SW0)
 io_leds  (LD7, LD6, LD5, LD4, LD3, LD2, LD1, LD0)
 
