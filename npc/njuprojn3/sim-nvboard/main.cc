@@ -28,7 +28,6 @@ int main() {
 
   while(1) {
     nvboard_update();
-    sleep(1);
     single_cycle();
   }
 }
