@@ -27,6 +27,7 @@ class SimpleAluFpga extends Module {
   alu.io.in1 := io.in1
   alu.io.in2 := io.in2
   alu.io.fn := io.fn
+  alu.io.clk := 0.B
   val aluOut = alu.io.out
   io.cflag := alu.io.cflg
   io.oflag := alu.io.oflg
