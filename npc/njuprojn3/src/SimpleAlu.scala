@@ -17,7 +17,7 @@ class SimpleAlu extends Module {
     val cflg  = Output(Bool())
     val oflg  = Output(Bool())
     val zflg  = Output(Bool())
-    val clk   = Input(Clock())
+    // val clk   = Input(Clock())
   })
 
   val aluOp = Cmd(io.fn)
