@@ -1,5 +1,5 @@
 #include <nvboard.h>
-#include "VEncoderFpga.h"
+#include "VSimpleAluFpga.h"
 
 static TOP_NAME dut;
 
