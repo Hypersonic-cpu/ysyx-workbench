@@ -9,14 +9,14 @@ class SimpleAluFpga extends Module {
     val in1        = Input(UInt(4.W))
     val in2        = Input(UInt(4.W))
     val fn         = Input(UInt(3.W))
-    val in1DSgn    = Output(UInt(7.W))
-    val in1Disp    = Output(UInt(7.W))
-    val in2DSgn    = Output(UInt(7.W))
-    val in2Disp    = Output(UInt(7.W))
-    val emptyD1    = Output(UInt(7.W))
-    val emptyD2    = Output(UInt(7.W))
-    val outDSgn    = Output(UInt(7.W))
-    val outDisp    = Output(UInt(7.W))
+    val in1DSgn    = Output(UInt(8.W))
+    val in1Disp    = Output(UInt(8.W))
+    val in2DSgn    = Output(UInt(8.W))
+    val in2Disp    = Output(UInt(8.W))
+    val emptyD1    = Output(UInt(8.W))
+    val emptyD2    = Output(UInt(8.W))
+    val outDSgn    = Output(UInt(8.W))
+    val outDisp    = Output(UInt(8.W))
     val out        = Output(UInt(4.W))
     val cflag      = Output(Bool())
     val oflag      = Output(Bool())
@@ -50,10 +50,10 @@ class SimpleAluFpga extends Module {
   io.in1Disp := ~enc1.io.segMsbA
   io.in2Disp := ~enc2.io.segMsbA
   io.outDisp := ~enco.io.segMsbA
-  io.in1DSgn := ~(0b0.U(6.W) ## io.in1(3))
-  io.in2DSgn := ~(0b0.U(6.W) ## io.in2(3))
-  io.outDSgn := ~(0b0.U(6.W) ## aluOut(3))
+  io.in1DSgn := ~(0b0.U(6.W) ## io.in1(3) ## 0b0.U(1.W))
+  io.in2DSgn := ~(0b0.U(6.W) ## io.in2(3) ## 0b0.U(1.W))
+  io.outDSgn := ~(0b0.U(6.W) ## aluOut(3) ## 0b0.U(1.W))
 
-  io.emptyD1 := 0b111_1111.U(7.W)
-  io.emptyD2 := 0b111_1111.U(7.W)
+  io.emptyD1 := 0b1111_1111.U(8.W)
+  io.emptyD2 := 0b1111_1111.U(8.W)
 }
