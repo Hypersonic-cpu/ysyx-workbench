@@ -21,22 +21,22 @@ class SimpleAlu extends Module {
   })
 
   val aluOp = Cmd(io.fn)
-
   val in1Op = io.in1 
-  val in2Op = io.in2 ^ Mux(
-    aluOp === Cmd.Sub || aluOp === Cmd.Lt || aluOp === Cmd.Eq, 
-    0b1111.U(4.W), 0.U(4.W)
-  )
+  val needFlip = aluOp === Cmd.Sub || aluOp === Cmd.Lt || aluOp === Cmd.Eq
+  val in2Op = io.in2 ^ Mux(needFlip, 0b1111.U(4.W), 0.U(4.W)) + Mux(needFlip, 0b0001.U(4.W), 0.U(4.W))
+  when (true.B) {
+  printf(p"Debug: ${io.in1} ${io.in2} (Op ${io.fn}) => ${in1Op} ${in2Op}")
+  }
 
   // Add-Sub
   val sumAll  = in1Op.pad(5) + in2Op.pad(5)
   val sumRes  = sumAll(3, 0)
-  val sumCflg = sumAll(4)
-  val sumZflg = ~sumCflg.orR
+  val sumCflg = sumAll(4, 4)
+  val sumZflg = ~sumRes.orR
   val sumOflg = (~(in1Op(3) ^ in2Op(3))) & (sumRes(3) ^ in1Op(3))
 
   // Comp
-  val ltRes = sumRes(3, 3).pad(4)
+  val ltRes = (sumRes(3, 3) ^ sumCflg(0, 0)).pad(4)
   val eqRes = sumZflg(0, 0).pad(4)
 
   // Logical

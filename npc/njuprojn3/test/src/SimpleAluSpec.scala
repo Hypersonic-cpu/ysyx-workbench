@@ -7,82 +7,94 @@ import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
 import chisel3.util.log2Ceil
 
-/** This is a trivial example of how to run this Specification From within sbt use:
-  * {{{
-  * testOnly gcd.GCDSpec
-  * }}}
-  * From a terminal shell use:
-  * {{{
-  * sbt 'testOnly gcd.GCDSpec'
-  * }}}
-  * Testing from mill:
-  * {{{
-  * mill %NAME%.test.testOnly gcd.GCDSpec
-  * }}}
-  */
-class Encoder8to3Spec extends AnyFreeSpec with Matchers {
-  // "Gcd should calculate proper greatest common denominator" in {
-  "Encoder8to3 should pass" in {
-    simulate(new Encoder8to3()) { dut =>
-      val testInputs = for { x <- 0 until 256 } yield (x)
-      val testGolden = testInputs.map ( x => math.max(log2Ceil(x+1).toInt - 1, 0) )
-      val testValidB = testInputs.map ( x => (x != 0) )
+object Driver {
+  def drv (golden: (Int, Int) => (Int, Int, Int, Int), op: Cmd.Type) = { dut: SimpleAlu =>
+    val testInputs = for { 
+      x <- 0 until 16 
+      y <- 0 until 16
+    } yield (x, y)
 
-      // println(testInputs)
-      // println(testGolden)
+    val testGolden = testInputs.map { case (x, y) => golden(x,y) }
 
-      // val inputSeq   = testValues.map { case (x) => (new Encoder8to3()).Lit(_.value1 -> x.U) }
-      // val resultSeq  = testValues.map { case (x) =>
-      //   (new GcdOutputBundle(16)).Lit(_.value1 -> x.U, _.value2 -> y.U, _.gcd -> BigInt(x).gcd(BigInt(y)).U)
-      // }
+    var failedTasks:List[((Int,Int),(Int,Int,Int,Int),(BigInt,BigInt,BigInt,BigInt))] = Nil
 
-      var successCnt: Int = 0
-      val totalCnt: Int = testGolden.size
-      for (taskPoint <- 0 until totalCnt) {
-        val curIn = testInputs(taskPoint)
-        val stdOut = testGolden(taskPoint)
-        val validB = testValidB(taskPoint)
+    // var successCnt: Int = 0
+    val totalCnt: Int = testGolden.size
+    for (taskPoint <- 0 until totalCnt) {
+      val curIn = testInputs(taskPoint)
+      val stdOut = testGolden(taskPoint)
 
-        dut.io.in.poke(curIn)
-        val curOut = dut.io.out.peekValue().asBigInt
-        val validOut = dut.io.valid.peekValue().asBigInt == 1
+      dut.io.in1.poke(curIn._1)
+      dut.io.in2.poke(curIn._2)
+      dut.io.fn.poke(op.litValue)
+      val curOut = dut.io.out.peekValue().asBigInt
+      val curCflg = dut.io.cflg.peekValue().asBigInt
+      val curOflg = dut.io.oflg.peekValue().asBigInt
+      val curZflg = dut.io.zflg.peekValue().asBigInt
 
-        print(s"#$taskPoint: in = $curIn, expect $stdOut (V $validB), recv $curOut (V $validOut) ")
-        if (curOut === stdOut && validB === validOut) {
-          println("Passed")
-          successCnt += 1
-        } else {
-          println("Failed")
-        }
+      val curCmp = (curOut, curCflg, curOflg, curZflg)
+      // print(s"#$taskPoint: in = $curIn, expect $stdOut (V $validB), recv $curOut (V $validOut) ")
+      if (curCmp == stdOut) {
+        // print(s"#$taskPoint: op $op , in = $curIn, expect $stdOut, recv $curCmp ")
+        // println("Passed")
+      } else {
+        // print(s"#$taskPoint: op $op , in = $curIn, expect $stdOut, recv $curCmp ")
+        // println("Failed")
+        failedTasks = (curIn, stdOut, curCmp) :: failedTasks
       }
-      println(s"Total $totalCnt, passed $successCnt, failed ${totalCnt-successCnt}")
-      assert(totalCnt == successCnt)
+    }
+    failedTasks
+  }
+}
 
-      // var sent, received, cycles: Int = 0
-      // while (sent != 100 && received != 100) {
-      //   assert(cycles <= 1000, "timeout reached")
-      //
-      //   if (sent < 100) {
-      //     dut.input.valid.poke(true.B)
-      //     dut.input.bits.value1.poke(testValues(sent)._1.U)
-      //     dut.input.bits.value2.poke(testValues(sent)._2.U)
-      //     if (dut.input.ready.peek().litToBoolean) {
-      //       sent += 1
-      //     }
-      //   }
-      //
-      //   if (received < 100) {
-      //     dut.output.ready.poke(true.B)
-      //     if (dut.output.valid.peekValue().asBigInt == 1) {
-      //       dut.output.bits.gcd.expect(BigInt(testValues(received)._1).gcd(testValues(received)._2))
-      //       received += 1
-      //     }
-      //   }
-      //
-      //   // Step the simulation forward.
-      //   dut.clock.step()
-      //   cycles += 1
-      // }
+class SimpleAluSpec extends AnyFreeSpec with Matchers {
+  // "SimpleAlu Add should pass" in {
+  //   simulate(new SimpleAlu()) { dut =>
+  //     val toInt = if (_) 1 else 0
+  //     val testGolden = {(x:Int , y:Int) =>
+  //       val sx = if (x >= 8) (x - 16) else x
+  //       val sy = if (y >= 8) (y - 16) else y
+  //
+  //       val ures = (x + y) % 16
+  //
+  //       (
+  //         ures, 
+  //         toInt ((x + y) >= 16), // carry out
+  //         toInt (sx + sy >= 8 || sx + sy < -8), // overflow
+  //         toInt (ures == 0)
+  //       )
+  //     }
+  //
+  //     val failedList = Driver.drv(testGolden, Cmd.Add) (dut)
+  //     for (elem <- failedList) {
+  //       println(s"Task Failed: In ${elem._1} Exp ${elem._2} Recv ${elem._3}")
+  //     }
+  //     assert(failedList.size == 0)
+  //   }
+  // }
+
+  "SimpleAlu Sub should pass" in {
+    simulate(new SimpleAlu()) { dut =>
+      val toInt = if (_) 1 else 0
+      val testGolden = { (x:Int, y:Int) =>
+        val ux = x 
+        val uy = (y ^ 0b1111) + 1
+        val sx = if (x >= 8) (x - 16) else x
+        val sy = if (y >= 8) (y - 16) else y
+
+        val ures = (ux + uy) % 16
+        (
+          ures, 
+          toInt ((ux + uy) >= 16), // carry out
+          toInt (sx - sy >= 8 || sx - sy < -8), // overflow
+          toInt (ures == 0)
+          )
+      }
+      val failedList = Driver.drv(testGolden, Cmd.Sub) (dut)
+      for (elem <- failedList) {
+        println(s"Task Failed: In ${elem._1} Exp ${elem._2} Recv ${elem._3}")
+      }
+      assert(failedList.size == 0)
     }
   }
 }
