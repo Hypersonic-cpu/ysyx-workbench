@@ -1,4 +1,4 @@
-top=SimpleAluFpga
+top=LfsrFpga
 
 io_in2 (SW3, SW2, SW1, SW0)
 io_in1 (SW7, SW6, SW5, SW4)
