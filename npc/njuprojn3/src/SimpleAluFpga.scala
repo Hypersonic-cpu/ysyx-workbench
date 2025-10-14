@@ -23,7 +23,7 @@ class SimpleAluFpga extends Module {
     val zflag      = Output(Bool())
   })
   /** Functional Unit */
-  val alu = new SimpleAlu()
+  val alu = Module(new SimpleAlu())
   alu.io.in1 := io.in1
   alu.io.in2 := io.in2
   alu.io.fn := io.fn
@@ -34,9 +34,9 @@ class SimpleAluFpga extends Module {
   io.out   := aluOut
   
   /** Display */
-  val enc1 = new HexTo7Seg()
-  val enc2 = new HexTo7Seg()
-  val enco = new HexTo7Seg()
+  val enc1 = Module(new HexTo7Seg())
+  val enc2 = Module(new HexTo7Seg())
+  val enco = Module(new HexTo7Seg())
   val in1v = Mux(io.in1(3), (~io.in1) + 1.U, io.in1)
   val in2v = Mux(io.in2(3), (~io.in2) + 1.U, io.in2)
   val outv = Mux(aluOut(3), (~aluOut) + 1.U, aluOut)
