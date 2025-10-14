@@ -18,7 +18,7 @@ static void reset(int n) {
   dut.reset = 0;
 }
 
-constexpr auto SleepTime = std::chrono::milliseconds(50);
+// constexpr auto SleepTime = std::chrono::milliseconds(50);
 
 int main() {
   nvboard_bind_all_pins(&dut);
@@ -28,7 +28,7 @@ int main() {
 
   while(1) {
     nvboard_update();
-    std::this_thread::sleep_for(SleepTime);
+    sleep(1);
     single_cycle();
   }
 }
