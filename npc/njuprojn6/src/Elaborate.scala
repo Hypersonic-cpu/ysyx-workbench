@@ -8,5 +8,5 @@ object Elaborate extends App {
       "locationInfoStyle=wrapInAtSquareBracket"
     ).reduce(_ + "," + _)
   )
-  circt.stage.ChiselStage.emitSystemVerilogFile(new NjuProjN7.Ps2Detector(), args, firtoolOptions)
+  circt.stage.ChiselStage.emitSystemVerilogFile(new NjuProjN6.LfsrFpga(), args, firtoolOptions)
 }
