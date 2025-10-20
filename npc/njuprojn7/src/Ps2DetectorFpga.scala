@@ -8,8 +8,8 @@ class Ps2DetectorFpga extends Module {
   val io = IO(new Bundle {
     val ps2Clk = Input(Bool())
     val ps2Dat = Input(Bool())
-    // val acqOut = Input(Bool())
-    // val outEn = Output(Bool())
+    val bufOverflow = Output(Bool())
+    val segDisplay = Output(Vec(8, UInt(8.W)))
     // val outDt = Output(UInt(8.W))
     // val oOvfl = Output(Bool())
   })
@@ -61,5 +61,9 @@ class Ps2DetectorFpga extends Module {
       pressState := pressed
       keycodeState := currOut(1)
     }
+  }
+
+  for (i <- 0 until 8) {
+    io.segDisplay(i) := segDecode(i).io.segMsbA
   }
 }

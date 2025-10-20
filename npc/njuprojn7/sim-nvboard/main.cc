@@ -1,7 +1,7 @@
 #include <nvboard.h>
 #include <chrono>
 #include <thread>
-#include "VSimpleAluFpga.h"
+#include "VPs2DetectorFpga.h"
 
 static TOP_NAME dut;
 
