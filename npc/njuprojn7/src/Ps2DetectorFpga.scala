@@ -22,7 +22,7 @@ class Ps2DetectorFpga extends Module {
   io.keyPressed := pressState
 
   val acqOut = WireInit(false.B)
-  val lastEn = RegInit(false.B)
+  // val lastEn = RegInit(false.B)
   val currOut = Reg(Vec(2, UInt(8.W)))
   currOut := VecInit(0xF0.U, 0xF0.U)
   // val currOut = Reg(VecInit())
@@ -40,8 +40,9 @@ class Ps2DetectorFpga extends Module {
     * [1] stored ready into register, acqOut = hi
     * [2] got output
     */
-  lastEn := det.io.outEn 
-  acqOut := lastEn
+  // lastEn := det.io.outEn 
+  // acqOut := lastEn
+  acqOut := det.io.outEn
   currOut(0) := Mux(acqOut, currOut(0), det.io.outDt)
   currOut(1) := Mux(acqOut, currOut(1), currOut(0)  )
 
