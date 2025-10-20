@@ -28,6 +28,9 @@ class Ps2Detector extends Module {
   io.outDt := outBuffer(bufReadPtr)
   io.oOvfl := bufOverflow
   
+  when (inFallingEdge) {
+    printf(cf"Cnt $inCount%d B ${io.ps2Dat}%d Cum ${inDatSeq}%x\n")
+  }
   when (outReady & io.acqOut) {
     // We can process one output per cycle
     bufReadPtr := Mux(io.ps2Dat, bufReadPtr+1.U, bufReadPtr)
