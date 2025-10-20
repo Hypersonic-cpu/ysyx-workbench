@@ -24,6 +24,7 @@ class Ps2DetectorFpga extends Module {
   // val currOut = Reg(VecInit())
 
   val det = Module(new Ps2Detector())
+  io.bufOverflow := det.io.oOvfl
   det.io.ps2Clk := io.ps2Clk
   det.io.ps2Dat := io.ps2Dat
   det.io.acqOut := acqOut
