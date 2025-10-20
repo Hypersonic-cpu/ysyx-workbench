@@ -12,7 +12,6 @@ class Ps2DetectorFpga extends Module {
     val keyPressed = Output(Bool())
     val segDisplay = Output(Vec(8, UInt(8.W)))
     val ready = Output(Bool())
-    val acqOutReg = Output(Bool())
     val ps2Code = Output(UInt(8.W))
     // val outDt = Output(UInt(8.W))
     // val oOvfl = Output(Bool())
@@ -34,7 +33,6 @@ class Ps2DetectorFpga extends Module {
   det.io.ps2Dat := io.ps2Dat
   det.io.acqOut := acqOut
   io.ready := det.io.outEn
-  io.acqOutReg := acqOut
   io.ps2Code := det.io.outDt
 
   /** cycles 
