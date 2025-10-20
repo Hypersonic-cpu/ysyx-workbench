@@ -49,8 +49,8 @@ class Ps2DetectorFpga extends Module {
 
   when (det.io.outEn) {
     printf(cf"Out enable: ${det.io.outDt}%x\n")
-    printf(cf">>> ${currOut(3)}%x ${currOut(2)}%x ${currOut(1)}%x ${currOut(0)}%x\n")
   }
+  printf(cf">>> ${currOut(3)}%x ${currOut(2)}%x ${currOut(1)}%x ${currOut(0)}%x\n")
 
   val segDecode = for {
     i <- 0 until 8
