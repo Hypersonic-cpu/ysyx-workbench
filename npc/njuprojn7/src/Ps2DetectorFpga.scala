@@ -7,7 +7,7 @@ import chisel3.experimental._
 class Ps2DetectorFpga extends Module {
   val io = IO(new Bundle {
     val ps2Clk = Input(Bool())
-    val ps2Dat = Input(UInt(8.W))
+    val ps2Dat = Input(Bool())
     val bufOverflow = Output(Bool())
     val keyPressed = Output(Bool())
     val segDisplay = Output(Vec(8, UInt(8.W)))
