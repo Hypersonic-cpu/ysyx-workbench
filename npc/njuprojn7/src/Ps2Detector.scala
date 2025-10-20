@@ -27,6 +27,7 @@ class Ps2Detector extends Module {
   io.outEn := outReady
   io.outDt := outBuffer(bufReadPtr)
   io.oOvfl := bufOverflow
+  val inCount = RegInit(0.U(4.W))
   
   when (inFallingEdge) {
     printf(cf"Cnt $inCount%d B ${io.ps2Dat}%d Cum ${inDatSeq}%x\n")
@@ -37,7 +38,6 @@ class Ps2Detector extends Module {
     outReady := ((bufReadPtr + 1.U)(2, 0) =/= bufWritePtr)
   }
 
-  val inCount = RegInit(0.U(4.W))
   when (inFallingEdge) {
     when (inCount === 10.U && 
       ~inDatSeq(0) && // Start flag = 0
