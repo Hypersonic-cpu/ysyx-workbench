@@ -19,7 +19,10 @@ class Ps2DetectorFpga extends Module {
 
   val acqOut = WireInit(false.B)
   val lastEn = RegInit(false.B)
-  val currOut = RegInit(Vec(2, 0xF0.U(8.W)))
+  val currOut = Reg(Vec(2, UInt(8.W)))
+  currOut := VecInit(0xF0.U, 0xF0.U)
+  // val currOut = Reg(VecInit())
+
   val det = Module(new Ps2Detector())
   det.io.ps2Clk := io.ps2Clk
   det.io.ps2Dat := io.ps2Dat
