@@ -26,15 +26,15 @@ static void reset(int n) {
 int main() {
   nvboard_bind_all_pins(&dut);
 
+  nvboard_init();
+
+  reset(10);
+
   const std::unique_ptr<VerilatedContext> contextp { new VerilatedContext };
   Verilated::traceEverOn(true);
   VerilatedFstC* tfp = new VerilatedFstC;
   dut.trace(tfp, 99);
   tfp->open("/mnt/hgfs/Arch-PA/ysyx-workbench/npc/build-sim/njuprojn7/log.fst");
-
-  nvboard_init();
-
-  reset(10);
 
   while(1) {
     nvboard_update();
