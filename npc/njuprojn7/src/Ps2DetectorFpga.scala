@@ -38,8 +38,8 @@ class Ps2DetectorFpga extends Module {
     */
   lastEn := det.io.outEn 
   acqOut := lastEn
-  currOut(0) := det.io.outDt 
-  currOut(1) := currOut(0)
+  currOut(0) := Mux(acqOut, currOut(0), det.io.outDt)
+  currOut(1) := Mux(acqOut, currOut(1), currOut(0)  )
 
   val segDecode = for {
     i <- 0 until 8
