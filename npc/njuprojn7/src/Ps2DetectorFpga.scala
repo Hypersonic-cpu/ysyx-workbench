@@ -23,8 +23,8 @@ class Ps2DetectorFpga extends Module {
 
   val acqOut = WireInit(false.B)
   // val lastEn = RegInit(false.B)
-  val currOut = Reg(Vec(2, UInt(8.W)))
-  currOut := VecInit(0xF0.U, 0xF0.U)
+  val currOut = Reg(Vec(4, UInt(8.W)))
+  currOut := VecInit(0xF0.U, 0xF0.U, 0xF0.U, 0xF0.U)
   // val currOut = Reg(VecInit())
 
   val det = Module(new Ps2Detector())
@@ -45,9 +45,12 @@ class Ps2DetectorFpga extends Module {
   acqOut := det.io.outEn
   currOut(0) := Mux(acqOut, currOut(0), det.io.outDt)
   currOut(1) := Mux(acqOut, currOut(1), currOut(0)  )
+  currOut(2) := Mux(acqOut, currOut(2), currOut(1)  )
+  currOut(3) := Mux(acqOut, currOut(3), currOut(2)  )
 
   when (det.io.outEn) {
     printf(cf"Out enable: ${det.io.outDt}%x\n")
+    printf(cf">>> ${currOut(3)}%x ${currOut(2)}%x ${currOut(1)}%x ${currOut(0)}%x\n")
   }
 
   val segDecode = for {
