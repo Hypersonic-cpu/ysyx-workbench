@@ -45,6 +45,10 @@ class Ps2DetectorFpga extends Module {
   currOut(0) := Mux(acqOut, currOut(0), det.io.outDt)
   currOut(1) := Mux(acqOut, currOut(1), currOut(0)  )
 
+  when (det.io.outEn) {
+    printf(cf"Out enable: ${det.io.outDt}%x")
+  }
+
   val segDecode = for {
     i <- 0 until 8
   } yield (Module(new HexTo7Seg()))
