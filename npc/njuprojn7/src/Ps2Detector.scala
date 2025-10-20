@@ -29,10 +29,10 @@ class Ps2Detector extends Module {
   io.oOvfl := bufOverflow
   val inCount = RegInit(0.U(4.W))
   
-  val debugCnt = RegInit(0.U(4.W))
+  val debugCnt = RegInit(0.U(2.W))
   when (inFallingEdge) {
-    printf(cf"[$debugCnt%x] Cnt $inCount%d B ${io.ps2Dat}%d Cum ${inDatSeq}%x\n")
-    debugCnt := Mux(debugCnt === 10.U, 0.U, debugCnt + 1.U)
+    printf(cf"[$debugCnt%b] Cnt $inCount%d B ${io.ps2Dat}%d Cum ${inDatSeq}%x\n")
+    debugCnt := debugCnt + 1.U
   }
   when (outReady & io.acqOut) {
     // We can process one output per cycle
