@@ -32,7 +32,7 @@ class Ps2Detector extends Module {
   val debugCnt = RegInit(0.U(4.W))
   when (inFallingEdge) {
     printf(cf"[$debugCnt%x] Cnt $inCount%d B ${io.ps2Dat}%d Cum ${inDatSeq}%x\n")
-    debugCnt := Mux(debugCnt === 12.U, 0.U, debugCnt + 1.U)
+    debugCnt := Mux(debugCnt === 10.U, 0.U, debugCnt + 1.U)
   }
   when (outReady & io.acqOut) {
     // We can process one output per cycle
