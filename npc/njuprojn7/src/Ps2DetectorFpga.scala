@@ -42,10 +42,10 @@ class Ps2DetectorFpga extends Module {
   // lastEn := det.io.outEn 
   // acqOut := lastEn
   acqOut := det.io.outEn
-  currOut(0) := Mux(acqOut, currOut(0), det.io.outDt)
-  currOut(1) := Mux(acqOut, currOut(1), currOut(0)  )
-  currOut(2) := Mux(acqOut, currOut(2), currOut(1)  )
-  currOut(3) := Mux(acqOut, currOut(3), currOut(2)  )
+  currOut(0) := Mux(~acqOut, currOut(0), det.io.outDt)
+  currOut(1) := Mux(~acqOut, currOut(1), currOut(0)  )
+  currOut(2) := Mux(~acqOut, currOut(2), currOut(1)  )
+  currOut(3) := Mux(~acqOut, currOut(3), currOut(2)  )
 
   when (det.io.outEn) {
     printf(cf"Out enable: ${det.io.outDt}%x\n")
