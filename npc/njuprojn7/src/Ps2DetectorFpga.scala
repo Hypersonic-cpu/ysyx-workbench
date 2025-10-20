@@ -67,6 +67,6 @@ class Ps2DetectorFpga extends Module {
   }
 
   for (i <- 0 until 8) {
-    io.segDisplay(i) := segDecode(i).io.segMsbA
+    io.segDisplay(i) := ~segDecode(i).io.segMsbA
   }
 }
