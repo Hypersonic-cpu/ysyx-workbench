@@ -16,14 +16,14 @@ class Ps2Detector extends Module {
   // Shift register, fill in LSB
   val inDatSeq     = RegInit(0.U(10.W))
   val outBuffer    = Reg(Vec(8, UInt(8.W)))
-  val bufReadPtr   = RegInit(0.U(3.W))
+  val bufReadPtr   = RegInit(7.U(3.W))
   val bufWritePtr  = RegInit(0.U(3.W))
   val bufOverflow  = RegInit(false.B)
   val inClkSmp = RegInit(0.U(3.W))
   inClkSmp := inClkSmp(1, 0) ## io.ps2Clk
-  val inRisingEdge = inClkSmp(2) & (~inClkSmp(1));
+  val inFallingEdge = inClkSmp(2) & (~inClkSmp(1));
 
-  val outReady = RegInit(true.B)
+  val outReady = RegInit(false.B)
   io.outEn := outReady
   io.outDt := outBuffer(bufReadPtr)
   io.oOvfl := bufOverflow
@@ -31,11 +31,11 @@ class Ps2Detector extends Module {
   when (outReady & io.acqOut) {
     // We can process one output per cycle
     bufReadPtr := Mux(io.ps2Dat, bufReadPtr+1.U, bufReadPtr)
-    outReady := ((bufReadPtr + 1.U).head(3) =/= bufWritePtr)
+    outReady := ((bufReadPtr + 1.U)(2, 0) =/= bufWritePtr)
   }
 
   val inCount = RegInit(0.U(4.W))
-  when (inRisingEdge) {
+  when (inFallingEdge) {
     when (inCount === 10.U && 
       ~inDatSeq(0) && // Start flag = 0
       io.ps2Dat &&    // Stop flag = 1
@@ -45,11 +45,11 @@ class Ps2Detector extends Module {
       outReady := true.B
       inCount := 0.U
       bufOverflow := bufOverflow | 
-        ((bufWritePtr + 1.U).head(3) === bufReadPtr)
+        ((bufWritePtr + 1.U)(2, 0) === bufReadPtr)
     } .elsewhen (inCount === 10.U) {
       inCount := 0.U
     } .otherwise {
-      val mask = (1.U(10.W) << inCount)
+      val mask = (1.U(10.W) << inCount)(9, 0)
       inDatSeq := (inDatSeq & ~mask) | Mux(io.ps2Dat, mask, 0.U)
       inCount := inCount + 1.U
     }

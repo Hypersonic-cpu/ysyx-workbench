@@ -6,5 +6,57 @@ import chisel3.experimental._
 
 class Ps2DetectorFpga extends Module {
   val io = IO(new Bundle {
+    val ps2Clk = Input(Bool())
+    val ps2Dat = Input(Bool())
+    // val acqOut = Input(Bool())
+    // val outEn = Output(Bool())
+    // val outDt = Output(UInt(8.W))
+    // val oOvfl = Output(Bool())
   })
+
+  val pressState = RegInit(false.B)
+  val keycodeState = RegInit(0.U(8.W))
+
+  val acqOut = WireInit(false.B)
+  val lastEn = RegInit(false.B)
+  val currOut = RegInit(Vec(2, 0xF0.U(8.W)))
+  val det = Module(new Ps2Detector())
+  det.io.ps2Clk := io.ps2Clk
+  det.io.ps2Dat := io.ps2Dat
+  det.io.acqOut := acqOut
+
+  /** cycles 
+    * [0] output ready
+    * [1] stored ready into register, acqOut = hi
+    * [2] got output
+    */
+  lastEn := det.io.outEn 
+  acqOut := lastEn
+  currOut(0) := det.io.outDt 
+  currOut(1) := currOut(0)
+
+  val segDecode = for {
+    i <- 0 until 8
+  } yield (Module(new HexTo7Seg()))
+
+  for (i <- 2 until 8) {
+    segDecode(i).io.in := 0.U
+    segDecode(i).io.ena := false.B
+  }
+  segDecode(1).io.in := keycodeState(7, 4)
+  segDecode(0).io.in := keycodeState(3, 0)
+  segDecode(1).io.ena := pressState
+  segDecode(0).io.ena := pressState
+  
+  switch (pressState) {
+    is (true.B) {
+      val released = (currOut(1) === 0xF0.U) & (currOut(0) === keycodeState)
+      pressState := ~released
+    }
+    is (false.B) {
+      val pressed = (currOut(1) =/= 0xF0.U)
+      pressState := pressed
+      keycodeState := currOut(1)
+    }
+  }
 }
