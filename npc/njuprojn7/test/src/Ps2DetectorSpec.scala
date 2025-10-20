@@ -6,55 +6,72 @@ import chisel3.simulator.EphemeralSimulator._
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
 import chisel3.util.log2Ceil
+import chiseltest.ChiselScalatestTester
+import chiseltest.simulator.WriteVcdAnnotation
 
 object Driver {
-  def drv () = { dut: Ps2Decoder =>
-    val testInputs = for { 
-      x <- 0 until 16 
-      y <- 0 until 16
-    } yield (x, y)
-
-    // val testGolden = testInputs.map { case (x, y) => golden(x,y) }
-    //
-    // var failedTasks:List[((Int,Int),(Int,Int,Int,Int),(BigInt,BigInt,BigInt,BigInt))] = Nil
-    //
-    // // var successCnt: Int = 0
-    // val totalCnt: Int = testGolden.size
-    // for (taskPoint <- 0 until totalCnt) {
-    //   val curIn = testInputs(taskPoint)
-    //   val stdOut = testGolden(taskPoint)
-    //
-    //   dut.io.in1.poke(curIn._1)
-    //   dut.io.in2.poke(curIn._2)
-    //   dut.io.fn.poke(op.litValue)
-    //   val curOut = dut.io.out.peekValue().asBigInt
-    //   val curCflg = dut.io.cflg.peekValue().asBigInt
-    //   val curOflg = dut.io.oflg.peekValue().asBigInt
-    //   val curZflg = dut.io.zflg.peekValue().asBigInt
-    //
-    //   // TODO: dprintf control
-    //
-    //   dut.io.clk.step()
-    //   val curCmp = (curOut, curCflg, curOflg, curZflg)
-    //   // print(s"#$taskPoint: in = $curIn, expect $stdOut (V $validB), recv $curOut (V $validOut) ")
-    //   if (curCmp == stdOut) {
-    //     // print(s"#$taskPoint: op $op , in = $curIn, expect $stdOut, recv $curCmp ")
-    //     // println("Passed")
-    //   } else {
-    //     // print(s"#$taskPoint: op $op , in = $curIn, expect $stdOut, recv $curCmp ")
-    //     // println("Failed")
-    //     failedTasks = (curIn, stdOut, curCmp) :: failedTasks
-    //   }
-    // }
-    // failedTasks
-  }
 }
 
-class Ps2DecoderSpec extends AnyFreeSpec with Matchers {
-  "SimpleAlu Add should pass" in {
-    simulate(new Ps2Detector()) { dut =>
-    }
+class Ps2DetectorSpec extends AnyFreeSpec with Matchers with ChiselScalatestTester {
+  "PS2 decoder should pass" in {
+    test(new Ps2Detector()).withAnnotations(Seq(
+      WriteVcdAnnotation
+    )){ dut =>
+      val ps2Val = List(0x12, 0x1f, 0xAA)
+      val n = 6
+      // Postive edge clock
+      dut.clock.step(n)
+      println(f"\t1")
+      dut.reset.poke(1)
+      println(f"\t1")
+      dut.clock.step(n)
+      println(f"\t1")
+      dut.reset.poke(0)
+      println(f"\t1")
+      dut.io.acqOut.poke(0)
+      println(f"\t1")
+      dut.clock.step(n)
+      println(f"\t1")
+      // for (ps2v <- ps2Val) {
+      //   println(f"\tProcessing input ${ps2v}%x")
+      //   dut.io.ps2Dat.poke(0)
+      //   dut.clock.step(n)
+      //   dut.io.ps2Clk.poke(1)
+      //   dut.clock.step(n)
+      //   dut.io.ps2Clk.poke(0)
+      //
+      //
+      //   var parity = 0x1
+      //   for (i <- 0 until 8) {
+      //     val bit = (ps2v >> i) & 0x1
+      //     parity = parity ^ bit
+      //     dut.io.ps2Dat.poke(bit)
+      //     dut.clock.step(n)
+      //     dut.io.ps2Clk.poke(1)
+      //     dut.clock.step(n)
+      //     dut.io.ps2Clk.poke(0)
+      //   }
+      //   dut.io.ps2Dat.poke(parity & 0x1)
+      //   dut.clock.step(n)
+      //   dut.io.ps2Clk.poke(1)
+      //   dut.clock.step(n)
+      //   dut.io.ps2Clk.poke(0)
+      //   // assert(dut.io.outEn.peekValue().asBigInt == 1)
+      // }
+      //
+      // dut.clock.step(n)
+      // var retList: List[BigInt] = Nil
+      // for (ps2v <- ps2Val) {
+      //   // assert(dut.io.outEn.peekValue().asBigInt == 1)
+      //   dut.io.acqOut.poke(1)
+      //   dut.clock.step(n)
+      //   val outData = dut.io.outDt.peekValue().asBigInt
+      //   println(f"\tExpect ${ps2v}%x, get ${outData}%x")
+      //   retList = outData :: retList
+      //   // assert(outData == ps2v)
+      // }
+      // val retLis = retList.reverse
+      // println(retList)
+    } 
   }
-
-  
 }
