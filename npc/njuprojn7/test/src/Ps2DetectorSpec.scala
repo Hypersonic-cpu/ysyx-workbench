@@ -20,7 +20,7 @@ class Ps2DetectorSpec extends AnyFreeSpec with Matchers with ChiselScalatestTest
       val ps2Val = List(0x12, 0x1f, 0xAA)
       val n = 6
       // Postive edge clock
-      dut.clock.step(n)
+      dut.clock.step()
       println(f"\t1")
       dut.reset.poke(1)
       println(f"\t1")
