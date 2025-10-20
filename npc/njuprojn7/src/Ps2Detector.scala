@@ -31,7 +31,7 @@ class Ps2Detector extends Module {
   
   val debugCnt = RegInit(0.U(4.W))
   when (inFallingEdge) {
-    printf(cf"Cnt $inCount%d B ${io.ps2Dat}%d Cum ${inDatSeq}%x\n")
+    printf(cf"[$debugCnt%x] Cnt $inCount%d B ${io.ps2Dat}%d Cum ${inDatSeq}%x\n")
     debugCnt := debugCnt + 1.U
   }
   when (outReady & io.acqOut) {
