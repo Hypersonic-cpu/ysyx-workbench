@@ -14,5 +14,4 @@ io_segDisplay_7 (SEG7A, SEG7B, SEG7C, SEG7D, SEG7E, SEG7F, SEG7G, DEC7P)
 
 io_bufOverflow LD15
 io_keyPressed LD14
-io_ready LD12
 io_ps2Code (LD7, LD6, LD5, LD4, LD3, LD2, LD1, LD0)
