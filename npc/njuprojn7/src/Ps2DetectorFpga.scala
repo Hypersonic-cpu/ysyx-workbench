@@ -9,10 +9,9 @@ class Ps2DetectorFpga extends Module {
     val ps2Clk = Input(Bool())
     val ps2Dat = Input(Bool())
     val bufOverflow = Output(Bool())
-    val keyPressed = Output(Bool())
-    val segDisplay = Output(Vec(8, UInt(8.W)))
-    val ready = Output(Bool())
-    val ps2Code = Output(UInt(8.W))
+    val keyPressed  = Output(Bool())
+    val ps2Code     = Output(UInt(8.W))
+    val segDisplay  = Output(Vec(8, UInt(8.W)))
     // val outDt = Output(UInt(8.W))
     // val oOvfl = Output(Bool())
   })
@@ -31,21 +30,17 @@ class Ps2DetectorFpga extends Module {
   det.io.ps2Clk := io.ps2Clk
   det.io.ps2Dat := io.ps2Dat
   det.io.acqOut := acqOut
-  io.ready := det.io.outEn
+  // io.ready := det.io.outEn
   io.ps2Code := det.io.outDt
 
-  /** cycles 
-    * [0] output ready
-    * [1] stored ready into register, acqOut = hi
-    * [2] got output
-    */
-  // lastEn := det.io.outEn 
-  // acqOut := lastEn
   acqOut := det.io.outEn
   currOut(0) := Mux(~acqOut, currOut(0), det.io.outDt)
   currOut(1) := Mux(~acqOut, currOut(1), currOut(0)  )
   currOut(2) := Mux(~acqOut, currOut(2), currOut(1)  )
   currOut(3) := Mux(~acqOut, currOut(3), currOut(2)  )
+
+  val ascii = Module(new KeyToASCII())
+  ascii.io.keycode := keycodeState
 
   // when (det.io.outEn) {
   //   printf(cf"Out enable: ${det.io.outDt}%x\n")
@@ -56,14 +51,20 @@ class Ps2DetectorFpga extends Module {
     i <- 0 until 8
   } yield (Module(new HexTo7Seg()))
 
-  for (i <- 2 until 8) {
-    segDecode(i).io.in := 0.U
-    segDecode(i).io.ena := false.B
+  val pressCount = RegInit(0.U(16.W))
+  for (i <- 4 until 8) {
+    segDecode(i).io.in := pressCount(4*(i-4)+3, 4*(i-4)+0)
+    segDecode(i).io.ena := true.B
   }
   segDecode(1).io.in := keycodeState(7, 4)
   segDecode(0).io.in := keycodeState(3, 0)
   segDecode(1).io.ena := pressState
   segDecode(0).io.ena := pressState
+
+  segDecode(3).io.in := ascii.io.ascii(7, 4)
+  segDecode(2).io.in := ascii.io.ascii(3, 0)
+  segDecode(3).io.ena := pressState
+  segDecode(2).io.ena := pressState
   
   // printf(cf"$pressState%d, Hi = ${currOut(1)}%x, Lo = ${currOut(0)}%x\n")
   switch (pressState) {
@@ -73,6 +74,7 @@ class Ps2DetectorFpga extends Module {
     }
     is (false.B) {
       val pressed = (currOut(1) =/= 0xF0.U)
+      pressCount := pressCount + pressed.asUInt
       pressState := pressed
       keycodeState := currOut(0)
     }
