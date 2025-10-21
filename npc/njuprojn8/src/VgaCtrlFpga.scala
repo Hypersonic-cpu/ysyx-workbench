@@ -16,8 +16,8 @@ class ImageROM(
     val data = Output(UInt(dataWidth.W))
   })
 
-  val total = imageWidth * imageHeight
-  val rom = SyncReadMem(total, UInt(dataWidth.W))
+  val depth = imageWidth * imageHeight
+  val rom = SyncReadMem(depth, UInt(dataWidth.W))
   io.data := rom.read(io.addr)
 
   loadMemoryFromFileInline(
