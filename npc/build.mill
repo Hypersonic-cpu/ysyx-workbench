@@ -34,14 +34,49 @@ trait BuildSettings extends ScalaModule with ScalafmtModule {
 }
 
 // object playground extends ScalaModule with ScalafmtModule { m =>
-object njuprojn8 extends BuildSettings { m =>
 
+object njuprojn8 extends BuildSettings { m =>
   object test extends ScalaTests with TestModule.ScalaTest with ScalafmtModule {
     override def ivyDeps = m.ivyDeps() ++ Agg(
       ivy"org.scalatest::scalatest::3.2.19",
-      // for formal flow in future
       ivy"edu.berkeley.cs::chiseltest:6.0.0"
     )
   }
-
 }
+
+object njuprojn7 extends BuildSettings { m =>
+  object test extends ScalaTests with TestModule.ScalaTest with ScalafmtModule {
+    override def ivyDeps = m.ivyDeps() ++ Agg(
+      ivy"org.scalatest::scalatest::3.2.19",
+      ivy"edu.berkeley.cs::chiseltest:6.0.0"
+    )
+  }
+}
+
+object njuprojn6 extends BuildSettings { m =>
+  object test extends ScalaTests with TestModule.ScalaTest with ScalafmtModule {
+    override def ivyDeps = m.ivyDeps() ++ Agg(
+      ivy"org.scalatest::scalatest::3.2.19",
+      ivy"edu.berkeley.cs::chiseltest:6.0.0"
+    )
+  }
+}
+
+object njuprojn3 extends BuildSettings { m =>
+  object test extends ScalaTests with TestModule.ScalaTest with ScalafmtModule {
+    override def ivyDeps = m.ivyDeps() ++ Agg(
+      ivy"org.scalatest::scalatest::3.2.19",
+      ivy"edu.berkeley.cs::chiseltest:6.0.0"
+    )
+  }
+}
+
+object njuprojn2 extends BuildSettings { m =>
+  object test extends ScalaTests with TestModule.ScalaTest with ScalafmtModule {
+    override def ivyDeps = m.ivyDeps() ++ Agg(
+      ivy"org.scalatest::scalatest::3.2.19",
+      ivy"edu.berkeley.cs::chiseltest:6.0.0"
+    )
+  }
+}
+
