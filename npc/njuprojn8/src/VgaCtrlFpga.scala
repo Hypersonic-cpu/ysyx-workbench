@@ -3,6 +3,26 @@ package NjuProjN8
 import chisel3._
 import chisel3.util._
 import chisel3.experimental._
+import chisel3.util.experimental.loadMemoryFromFileInline
+import firrtl.annotations.MemoryLoadFileType
+
+class ImageROM(
+  imageWidth: Int,
+  imageHeight: Int,
+  dataWidth: Int,
+  imageBinFilePath: String) extends Module {
+  val io = IO(new Bundle {
+    val addr = Input(UInt(log2Ceil(imageWidth * imageHeight).W))
+    val data = Output(UInt(dataWidth.W))
+  })
+
+  val total = imageWidth * imageHeight
+  val rom = SyncReadMem(total, UInt(dataWidth.W))
+  io.data := rom.read(io.addr)
+
+  loadMemoryFromFileInline(
+    rom, imageBinFilePath, MemoryLoadFileType.Hex)
+}
 
 class VgaCtrlFpga extends Module {
   val io = IO(new Bundle {
@@ -16,8 +36,12 @@ class VgaCtrlFpga extends Module {
   // maybe_unused
   val xPos = vgaCtrl.io.posHor
   val yPos = vgaCtrl.io.posVer
-  // TODO: should be F(xpos, ypos)
-  vgaCtrl.io.rawData := 0xff0000.U
+
+  val imgRom = Module(new ImageROM(640, 480, 32,
+    "/mnt/hgfs/Arch-PA/ysyx-workbench/npc/njuprojn8/img-bin/JiaoTongUniversity.mif"))
+  imgRom.io.addr := Mux(vgaCtrl.io.oValid, xPos + yPos * 640.U, 0.U)
+
+  vgaCtrl.io.rawData := imgRom.io.data
 
   io.syncHor := vgaCtrl.io.syncHor
   io.syncVer := vgaCtrl.io.syncVer
