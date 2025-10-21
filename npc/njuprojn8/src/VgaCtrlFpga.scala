@@ -37,11 +37,11 @@ class VgaCtrlFpga extends Module {
   val xPos = vgaCtrl.io.posHor
   val yPos = vgaCtrl.io.posVer
 
-  val imgRom = Module(new ImageROM(640, 480, 32,
+  val imgRom = Module(new ImageROM(480, 640, 32,
     "/mnt/hgfs/Arch-PA/ysyx-workbench/npc/njuprojn8/img-bin/JiaoTongUniversity.hex"))
-  imgRom.io.addr := Mux(vgaCtrl.io.oValid, xPos * 640.U + yPos, 0.U)
+  imgRom.io.addr := Mux(vgaCtrl.io.oValid, xPos + yPos * 640.U + 1.U, 0.U)
 
-  vgaCtrl.io.rawData := imgRom.io.data
+  vgaCtrl.io.rawData := imgRom.io.data(23, 0)
 
   io.syncHor := vgaCtrl.io.syncHor
   io.syncVer := vgaCtrl.io.syncVer
