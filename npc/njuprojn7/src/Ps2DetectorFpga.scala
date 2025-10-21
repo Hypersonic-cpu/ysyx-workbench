@@ -66,7 +66,7 @@ class Ps2DetectorFpga extends Module {
   segDecode(3).io.ena := pressState
   segDecode(2).io.ena := pressState
   
-  // printf(cf"$pressState%d, Hi = ${currOut(1)}%x, Lo = ${currOut(0)}%x\n")
+  printf(cf"$pressState%d, Hi = ${currOut(1)}%x, Lo = ${currOut(0)}%x\n")
   switch (pressState) {
     is (true.B) {
       val released = (currOut(1) === 0xF0.U) //  & (currOut(0) === keycodeState)
