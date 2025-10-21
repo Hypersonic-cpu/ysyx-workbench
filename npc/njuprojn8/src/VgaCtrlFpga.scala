@@ -37,7 +37,7 @@ class VgaCtrlFpga extends Module {
   val xPos = vgaCtrl.io.posHor
   val yPos = vgaCtrl.io.posVer
 
-  val imgRom = Module(new ImageROM(480, 640, 32,
+  val imgRom = Module(new ImageROM(640, 480, 32,
     "/mnt/hgfs/Arch-PA/ysyx-workbench/npc/njuprojn8/img-bin/JiaoTongUniversity.hex"))
   imgRom.io.addr := Mux(vgaCtrl.io.oValid, xPos * 480.U + yPos, 0.U)
 
