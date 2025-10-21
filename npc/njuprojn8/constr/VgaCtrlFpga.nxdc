@@ -1,4 +1,4 @@
-top=Ps2DetectorFpga
+top=VgaCtrlFpga
 
 # VGA_CLK is set to clk in this example
 io_syncHor VGA_HSYNC
