@@ -70,10 +70,16 @@ class Ps2DetectorFpga extends Module {
   switch (pressState) {
     is (true.B) {
       val released = (currOut(1) === 0xF0.U) //  & (currOut(0) === keycodeState)
+      when (released) {
+        printf(cf">>> R ${currOut(3)}%x ${currOut(2)}%x ${currOut(1)}%x ${currOut(0)}%x\n")
+      }
       pressState := ~released
     }
     is (false.B) {
       val pressed = (currOut(1) =/= 0xF0.U)
+      when (pressed) {
+        printf(cf">>> P ${currOut(3)}%x ${currOut(2)}%x ${currOut(1)}%x ${currOut(0)}%x\n")
+      }
       pressCount := pressCount + pressed.asUInt
       pressState := pressed
       keycodeState := currOut(0)
