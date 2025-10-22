@@ -15,7 +15,7 @@ class sCPUFpga extends Module {
   core.io.regProbe := io.probePin
 
   val rend   = for { i <- 0 until 8 } yield Module(new HexTo7Seg())
-  for (i <- Seq(1, 3, 7)) {
+  for (i <- Seq(1, 3, 6)) {
     rend(i).io.ena := false.B
     rend(i).io.in := 0.U
   }
@@ -27,8 +27,8 @@ class sCPUFpga extends Module {
   rend(4).io.in  := dispReg(3, 0) // core.io.dispVal(3, 0)
   rend(5).io.in  := dispReg(7, 4) // core.io.dispVal(7, 4)
 
-  rend(6).io.ena := true.B
-  rend(6).io.in  := core.io.outPC
+  rend(7).io.ena := true.B
+  rend(7).io.in  := core.io.outPC
 
   rend(0).io.ena := io.probeEna
   rend(2).io.ena := io.probeEna
