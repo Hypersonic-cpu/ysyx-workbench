@@ -1,7 +1,7 @@
 #include <nvboard.h>
 #include <chrono>
 #include <thread>
-#include "VVgaCtrlFpga.h"
+#include "VsCPUFpga.h"
 
 static TOP_NAME dut;
 
@@ -17,8 +17,6 @@ static void reset(int n) {
   while (n -- > 0) single_cycle();
   dut.reset = 0;
 }
-
-// constexpr auto SleepTime = std::chrono::milliseconds(50);
 
 int main() {
   nvboard_bind_all_pins(&dut);

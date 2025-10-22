@@ -52,27 +52,32 @@ class sDecode extends Module {
   io.rs2  := io.inst(1, 0)
   io.rd   := io.inst(5, 4)
 
+  printf(cf"   Decode[${io.inst(7, 6)}%x] ")
   switch (io.inst(7, 6)) {
-    is (0x00.U) {
+    is (0b00.U) {
       // add 
+      printf(cf"add rs1 ${io.rs1}%d rs2 ${io.rs2}%d rd ${io.rd}%d\n")
       io.wren := true.B
       io.wrs  := WrSource.FromAlu
     }
-    is (0x01.U) {
+    is (0b01.U) {
       // out 
+      printf(cf"out rs2 ${io.rs2}\n")
       io.disp := true.B
     }
-    is (0x10.U) {
+    is (0b10.U) {
       // li
       io.imm := io.inst(3, 0)
       io.wren := true.B
       io.wrs  := WrSource.FromImm
+      printf(cf"li  imm ${io.imm}%d rd ${io.rd}%d\n")
     }
-    is (0x11.U) {
+    is (0b11.U) {
       // bner0
       io.rs1 := 0.U
       io.imm := io.inst(5, 2)
       io.jmp := PcSource.FromJmp
+      printf(cf"jner0 addr ${io.imm}%d rs2 ${io.rs2}%d\n")
     }
   }
 }
@@ -82,18 +87,27 @@ class sRegFile extends Module {
     val idx1 = Input(UInt(sISA.RegIdx.W))
     val idx2 = Input(UInt(sISA.RegIdx.W))
     val idxW = Input(UInt(sISA.RegIdx.W))
+    val iPrb = Input(UInt(sISA.RegIdx.W))
     val datW = Input(UInt(sISA.RegLen.W))
     val wrEn = Input(Bool())
     val rs1V = Output(UInt(sISA.RegLen.W))
     val rs2V = Output(UInt(sISA.RegLen.W))
+    val prbV = Output(UInt(sISA.RegLen.W))
   })
 
   val regs = Reg(Vec(sISA.RegNum, UInt(sISA.RegLen.W)))
   io.rs1V := regs(io.idx1)
   io.rs2V := regs(io.idx2)
 
+  io.prbV := regs(io.iPrb)
+
   when (io.wrEn) {
     regs(io.idxW) := io.datW
+  }
+
+  printf(" >>RegFile decimal\n")
+  for (i <- 0 until sISA.RegNum) {
+    printf(cf"   [${i}] ${regs(i)}%d\n")
   }
 }
 
@@ -110,13 +124,16 @@ class sAlu extends Module {
 
 class sCPU(romFile: String) extends Module {
   val io = IO(new Bundle{
+    val regProbe = Input(UInt(sISA.RegIdx.W))
     val dispVal = Output(UInt(sISA.RegLen.W))
     val dispEna = Output(Bool())
+    val outPC   = Output(UInt(sISA.PCLen.W))
+    val outProbe= Output(UInt(sISA.RegLen.W))
   })
 
   val pc    = RegInit(0.U(sISA.PCLen.W))
   val iROM  = Mem((1 << sISA.PCLen), UInt(sISA.InstLen.W))
-  loadMemoryFromFileInline(iROM, romFile, MemoryLoadFileType.Hex)
+  loadMemoryFromFileInline(iROM, romFile, MemoryLoadFileType.Binary)
 
   val readInst  = iROM.read(pc)
   val iDec  = Module(new sDecode())
@@ -143,12 +160,18 @@ class sCPU(romFile: String) extends Module {
   sReg.io.datW := Mux(iDec.io.wrs === WrSource.FromImm, 
     immV, sAlu.io.sum)
   sReg.io.wrEn := iDec.io.wren
-  printf(cf"   R[${iDec.io.rd}%d] <- 0x${sReg.io.datW}%x\n")
+  when (sReg.io.wrEn) {
+    printf(cf"   R[${iDec.io.rd}%d] <- 0x${sReg.io.datW}%x immEn ${iDec.io.wrs}\n")
+  }
 
   pc := Mux(
-    (iDec.io.jmp === PcSource.FromJmp) & sAlu.io.isEq, 
-    rs2V, pc + 1.U)
+    (iDec.io.jmp === PcSource.FromJmp) & ~sAlu.io.isEq, 
+    immV, pc + 1.U)
 
   io.dispEna := iDec.io.disp
   io.dispVal := rs2V
+
+  sReg.io.iPrb := io.regProbe
+  io.outProbe := sReg.io.prbV
+  io.outPC := pc
 }

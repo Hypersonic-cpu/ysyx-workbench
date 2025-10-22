@@ -1,4 +1,4 @@
-package NjuProjN8
+package sCPU
 
 import chisel3._
 import chisel3.util._
