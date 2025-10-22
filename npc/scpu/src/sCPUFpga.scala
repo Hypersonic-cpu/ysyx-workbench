@@ -34,7 +34,7 @@ class sCPUFpga extends Module {
   rend(1).io.ena := io.probeEna
   rend(2).io.ena := io.probeEna
   rend(0).io.in  := core.io.outProbe(3, 0)
-  rend(1).io.ena := core.io.outProbe(7, 4)
+  rend(1).io.in  := core.io.outProbe(7, 4)
   rend(2).io.in  := io.probePin
 
   for (i <- 0 until 8) {
