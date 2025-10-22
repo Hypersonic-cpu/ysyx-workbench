@@ -20,10 +20,12 @@ class sCPUFpga extends Module {
     rend(i).io.in := 0.U
   }
 
-  rend(4).io.ena := core.io.dispEna
-  rend(4).io.in  := core.io.dispVal(3, 0)
-  rend(5).io.ena := core.io.dispEna
-  rend(5).io.in  := core.io.dispVal(7, 4)
+  val dispReg = RegInit(0.U(8.W))
+  dispReg := Mux(core.io.dispEna, core.io.dispVal, dispReg)
+  rend(4).io.ena := true.B // core.io.dispEna
+  rend(5).io.ena := true.B // core.io.dispEna
+  rend(4).io.in  := dispReg(3, 0) // core.io.dispVal(3, 0)
+  rend(5).io.in  := dispReg(7, 4) // core.io.dispVal(7, 4)
 
   rend(6).io.ena := true.B
   rend(6).io.in  := core.io.outPC
