@@ -348,7 +348,6 @@ static word_t eval(int l, int r, bool* valid) {
       res = (lret * rret);
       break;
     case '/': 
-      // TODO: Div 0 exception
       res = (lret / rret);
       break;
     case TK_EQ:
