@@ -20,8 +20,12 @@
 
 static inline int check_reg_idx(int idx) {
   IFDEF(CONFIG_RT_CHECK, 
-      printf("Reg index %d out of bound\n", idx), 
-      assert(idx >= 0 && idx < MUXDEF(CONFIG_RVE, 16, 32)));
+      do {
+          bool success = (idx >= 0 && idx < MUXDEF(CONFIG_RVE, 16, 32));
+          if (!success) { printf("Reg index %d out of bound\n", idx); }
+      } while (0);
+      assert(idx >= 0 && idx < MUXDEF(CONFIG_RVE, 16, 32))
+  );
   return idx;
 }
 
