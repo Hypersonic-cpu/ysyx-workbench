@@ -75,6 +75,7 @@ expr_eval_test_unsigned(const char *const path)
     free(ln);
     ln = NULL;
   }
+  free(ln); // the `free' in while loop is not executed when cond=false
   fclose(fp);
   fprintf(stderr, "\n=== Total %d Error %d ===\n", cnt, errcnt);
   return success;
