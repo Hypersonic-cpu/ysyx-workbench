@@ -40,9 +40,9 @@ expr_eval_test_unsigned(const char *const path)
   ssize_t read_strlen;
   
   while ((read_strlen = getline(&ln, &malloc_sz, fp)) > 0) {
-    printf("Malloc %lu\n", malloc_sz);
-    printf("%s\n", ln);
-    printf("%lu\n", strlen(ln));
+    // printf("Malloc %lu\n", malloc_sz);
+    // printf("%s\n", ln);
+    // printf("%lu\n", strlen(ln));
     ln[read_strlen-1] = 0;
     cnt ++;
     fprintf(stderr, "\rTesting case #%6d: ", cnt);
@@ -107,7 +107,7 @@ int main(int argc, char *argv[]) {
   init_monitor(argc, argv);
 #endif
    
-  return !do_expr_tests();
+  // return !do_expr_tests();
   
   /* Start engine. */
   engine_start();
