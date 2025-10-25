@@ -102,8 +102,14 @@ static int cmd_x(char *args) {
     printf("Invalid arguments, type `help x` for more info\n");
     return 1;
   }
-  vaddr_t base_addr = strtoull(arg, NULL, 16);
-  // printf("Scan base : %#x\n", base_addr);
+  // vaddr_t base_addr = strtoull(arg, NULL, 16);
+  bool success = true;
+  vaddr_t base_addr = expr(arg, &success);
+  if (!success) {
+    printf("Eval failed\n");
+    return 1;
+  }
+  printf("Scan base : %#x\n", base_addr);
 
   for (size_t idx = 0; idx < scan_num; ++idx) {
     vaddr_t cur = base_addr + idx * sizeof(word_t);

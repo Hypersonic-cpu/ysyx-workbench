@@ -63,7 +63,7 @@ expr_eval_test_unsigned(const char *const path)
       errcnt ++;
       // return false;
     } else if (expected != ret) {
-      fprintf(stderr, "\n[WA:%6d] Expr parse error\n", cnt);
+      fprintf(stderr, "\n[WA:%6d] Expr eval error\n", cnt);
       fprintf(stderr, "Test Case:\n\"%s\"\n", exprstr);
       fprintf(stderr, "Expected: %u, Read %u\n", expected, ret);
       success = false;
@@ -75,6 +75,7 @@ expr_eval_test_unsigned(const char *const path)
     free(ln);
     ln = NULL;
   }
+  free(ln); // the `free' in while loop is not executed when cond=false
   fclose(fp);
   fprintf(stderr, "\n=== Total %d Error %d ===\n", cnt, errcnt);
   return success;
@@ -107,7 +108,7 @@ int main(int argc, char *argv[]) {
   init_monitor(argc, argv);
 #endif
    
-  // return !do_expr_tests();
+  return !do_expr_tests();
   
   /* Start engine. */
   engine_start();
