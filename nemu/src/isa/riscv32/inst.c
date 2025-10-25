@@ -118,10 +118,10 @@ static int decode_exec(Decode *s) {
           slli   , I, R(rd) = src1 << BITS(imm, 4, 0));
   INSTPAT("0000000 ????? ????? 101 ????? 00100 11", 
           srli   , I, R(rd) = src1 >> BITS(imm, 4, 0));
-  // INSTPAT("0100000 ????? ????? 101 ????? 00100 11", 
-  //         srai   , I, 
-  //         R(rd) = (word_t) ((sword_t)src1 >> BITS(imm, 4, 0)) 
-  //         );
+  INSTPAT("0100000 ????? ????? 101 ????? 00100 11", 
+          srai   , I, 
+          R(rd) = (word_t) ((sword_t)src1 >> BITS(imm, 4, 0)) 
+          );
 
   INSTPAT("0000000 ????? ????? 000 ????? 01100 11", 
           add    , R, R(rd) = src1 + src2);
