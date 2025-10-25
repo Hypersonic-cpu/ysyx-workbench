@@ -80,7 +80,7 @@ expr_eval_test_unsigned(const char *const path)
   return success;
 }
 
-static size_t const TEST_NUMS = 1;
+static size_t const TEST_NUMS = 3;
 static const char* const test_files[] = {
   // "tools/gen-expr/input_all_arith_3251_nemu.txt", 
   "tools/gen-expr/input_nemu.txt",
