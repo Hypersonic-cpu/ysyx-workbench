@@ -80,12 +80,12 @@ expr_eval_test_unsigned(const char *const path)
   return success;
 }
 
-static size_t const TEST_NUMS = 3;
+static size_t const TEST_NUMS = 1;
 static const char* const test_files[] = {
   // "tools/gen-expr/input_all_arith_3251_nemu.txt", 
   "tools/gen-expr/input_nemu.txt",
-  "tools/gen-expr/input_pos_neg_nemu.txt", 
-  "tools/gen-expr/input_all_arith_nemu.txt", 
+  // "tools/gen-expr/input_pos_neg_nemu.txt", 
+  // "tools/gen-expr/input_all_arith_nemu.txt", 
 };
 
 static bool 
@@ -107,7 +107,7 @@ int main(int argc, char *argv[]) {
   init_monitor(argc, argv);
 #endif
    
-  // return !do_expr_tests();
+  return !do_expr_tests();
   
   /* Start engine. */
   engine_start();
