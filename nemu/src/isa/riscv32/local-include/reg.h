@@ -19,7 +19,14 @@
 #include <common.h>
 
 static inline int check_reg_idx(int idx) {
-  IFDEF(CONFIG_RT_CHECK, assert(idx >= 0 && idx < MUXDEF(CONFIG_RVE, 16, 32)));
+  IFDEF(CONFIG_RT_CHECK, 
+      // TODO: Comment it out.
+      do {
+          bool success = (idx >= 0 && idx < MUXDEF(CONFIG_RVE, 16, 32));
+          if (!success) { printf("Reg index %d out of bound\n", idx); }
+      } while (0);
+      assert(idx >= 0 && idx < MUXDEF(CONFIG_RVE, 16, 32))
+  );
   return idx;
 }
 
