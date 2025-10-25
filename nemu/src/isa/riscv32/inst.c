@@ -213,7 +213,7 @@ static int decode_exec(Decode *s) {
           inv    , N, INV(s->pc));
   INSTPAT_END();
 
-  R(0) = 0; // reset $zero to 0
+  R(0) = 0; // NOTE: reset $zero to 0
 
   return 0;
 }
