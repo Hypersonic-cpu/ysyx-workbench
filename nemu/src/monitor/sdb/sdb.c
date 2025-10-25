@@ -215,6 +215,7 @@ void sdb_mainloop() {
   // RV32IM inst debug 
   {
     cmd_si("  9  ");
+    return;
   }
 
   if (is_batch_mode) {
