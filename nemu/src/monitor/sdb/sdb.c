@@ -109,7 +109,7 @@ static int cmd_x(char *args) {
     printf("Eval failed\n");
     return 1;
   }
-  printf("Scan base : %#x\n", base_addr);
+  // printf("Scan base : %#x\n", base_addr);
 
   for (size_t idx = 0; idx < scan_num; ++idx) {
     vaddr_t cur = base_addr + idx * sizeof(word_t);
