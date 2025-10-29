@@ -81,18 +81,18 @@ class RegFile extends Module {
     val rs2  = Input(Tp.RegIdxType())
     val rd   = Input(Tp.RegIdxType())
     val data = Input(Tp.RegType())
-    val wrEn = Output(Bool())
+    val wrEn = Input(Bool())
     val rs1V = Output(Tp.RegType())
     val rs2V = Output(Tp.RegType())
   })
 
-  val iReg = Reg(Vec(ISA.RegNum, Tp.RegType()))
+  val regs = Reg(Vec(ISA.RegNum, Tp.RegType()))
 
-  io.rs1V := Mux(io.rs1.orR, iReg(io.rs1), 0.U)
-  io.rs2V := Mux(io.rs2.orR, iReg(io.rs2), 0.U)
+  io.rs1V := Mux(io.rs1.orR, regs(io.rs1), 0.U)
+  io.rs2V := Mux(io.rs2.orR, regs(io.rs2), 0.U)
 
   when (io.wrEn && io.rd.orR) {
-    iReg(io.rd) := io.data
+    regs(io.rd) := io.data
   }
 }
 
