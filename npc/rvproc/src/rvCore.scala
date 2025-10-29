@@ -175,10 +175,10 @@ class LSU extends Module {
 // MUX, Write data selection
 class WBU extends Module {
   val io = IO(new Bundle {
-    val brCmp = Input(new BrCmpBundle())
+    // val brCmp = Input(new BrCmpBundle())
     val pc    = Input(Tp.PCType())
     val aluV  = Input(Tp.RegType())
-    val memV  = Input(Tp.RegType())
+    // val memV  = Input(Tp.RegType())
     val nxpc  = Output(Tp.PCType())
     val data  = Output(Tp.RegType())
   })
@@ -253,7 +253,7 @@ class rvCore(romFile: String) extends Module {
   iExe.io.sel  := sel
   // EXU out
   val res = iExe.io.res
-  val br  = iExe.io.brCmp
+  // val br  = iExe.io.brCmp
 
   // LSU in
   // NOTE: No such inst that stores a calculated result.
@@ -265,10 +265,10 @@ class rvCore(romFile: String) extends Module {
   val loadV = iLsu.io.load
 
   // WB in
-  iWrite.io.brCmp := br
+  // iWrite.io.brCmp := br
   iWrite.io.pc   := pc
   iWrite.io.aluV := res
-  iWrite.io.memV := loadV
+  // iWrite.io.memV := loadV
   // WB out 
   pc := iWrite.io.nxpc
   iReg.io.data := iWrite.io.data
