@@ -43,22 +43,32 @@ char *strcat(char *dst, const char *src) {
 }
 
 int strcmp(const char *s1, const char *s2) {
-  while (*s1 != '\0' && *s2 != '\0') {
-    int c1 = *((const unsigned char*) s1++);
-    int c2 = *((const unsigned char*) s2++);
+  const unsigned char* uc1 = (const unsigned char*) s1;
+  const unsigned char* uc2 = (const unsigned char*) s2;
+  while (*uc1 != '\0' && *uc2 != '\0') {
+    int c1 = *(uc1++);
+    int c2 = *(uc2++);
     if (c1 == c2) { continue; }
     return c1 - c2;
   }
-  return 0;
+  return (int)(*uc1) - (int)(*uc2);
 }
 
 int strncmp(const char *s1, const char *s2, size_t n) {
-  size_t len = 0;
-  while (*s1 != '\0' && *s2 != '\0' && len++ < n) {
-    int c1 = *((const unsigned char*) s1++);
-    int c2 = *((const unsigned char*) s2++);
-    if (c1 == c2) { continue; }
-    return c1 - c2;
+  const unsigned char* uc1 = (const unsigned char*) s1;
+  const unsigned char* uc2 = (const unsigned char*) s2;
+  while (n--) {
+    int c1 = *(uc1++);
+    int c2 = *(uc2++);
+    /** Either a mis-match or termination
+     *  c1   c2   res 
+     *  0    N    ret
+     *  N    0    not equal, ret
+     *  0    0    ret 0
+     */
+    if (c1 != c2 || c1 == 0) {
+      return c1 - c2;
+    }
   }
   return 0;
 }
@@ -106,7 +116,15 @@ void *memcpy(void *out, const void *in, size_t n) {
 }
 
 int memcmp(const void *s1, const void *s2, size_t n) {
-  panic("Not implemented");
+  // TODO: Optimize 
+  const unsigned char* uc1 = (const unsigned char*) s1;
+  const unsigned char* uc2 = (const unsigned char*) s2;
+  while (n--) {
+    int c1 = *(uc1++);
+    int c2 = *(uc2++);
+    if (c1 == c2) { continue; }
+    return c1 - c2;
+  }
   return 0;
 }
 
