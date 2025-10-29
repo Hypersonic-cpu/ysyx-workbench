@@ -40,6 +40,11 @@ enum {
   TK_UPOS,
   TK_UNEG,
   TK_LAND, // &&
+  TK_LOR,
+  // TK_LNOT,
+  TK_BAND,
+  TK_BOR,
+  // TK_BNOT,
   TK_BRA, // (
   TK_KET, // )
   TK_DEREF, // *pointer
@@ -59,7 +64,9 @@ static struct rule {
   {"\\/", '/'},         // div
   {"\\(", TK_BRA },
   {"\\)", TK_KET },
+  // match before '&'
   {"&&", TK_LAND}, 
+  {"||", TK_LOR }, 
   // Hex, must come before decimal to prevent match 
   // of '0' in '0xff'
   {"0[xX][0-9A-Fa-f]+", TK_NUM }, 
@@ -73,7 +80,9 @@ static struct rule {
   {"==", TK_EQ },        // equal
   {"!=", TK_NEQ},
   {">", TK_GT},
-  {"<", TK_LT}
+  {"<", TK_LT},
+  {"&", TK_BAND},
+  {"|", TK_BOR },
 };
 
 #define NR_REGEX ARRLEN(rules)
