@@ -91,13 +91,16 @@ class RegFile extends Module {
 
   val regs = Reg(Vec(ISA.RegNum, Tp.RegType()))
 
-  io.rs1V := Mux(io.rs1.orR, regs(io.rs1), 0.U)
-  io.rs2V := Mux(io.rs2.orR, regs(io.rs2), 0.U)
-  io.regPrb := Mux(io.rsPin.orR, regs(io.rsPin), 0.U)
+  io.rs1V := 0.U
+  io.rs2V := 0.U
+  io.regPrb := 0.U
+  // io.rs1V := Mux(io.rs1.orR, regs(io.rs1), 0.U)
+  // io.rs2V := Mux(io.rs2.orR, regs(io.rs2), 0.U)
+  // io.regPrb := Mux(io.rsPin.orR, regs(io.rsPin), 0.U)
 
-  when (io.wrEn && io.rd.orR) {
-    regs(io.rd) := io.data
-  }
+  // when (io.wrEn && io.rd.orR) {
+  //   regs(io.rd) := io.data
+  // }
 }
 
 /** Decoder, NOT responsible for read register */
@@ -152,13 +155,13 @@ class EXU extends Module {
   io.brCmp.brEq := false.B
   io.brCmp.brUn := false.B
   io.brCmp.brLt := false.B
-  val src1 = Mux(io.sel.rs1SelPC, io.pc, io.rs1V)
-  val src2 = Mux(io.sel.rs2SelImm, io.imm, io.rs2V)
-  switch (io.op) {
-    is (IntAluOp.Add) {
-      io.res := src1 + src2
-    }
-  }
+  // val src1 = Mux(io.sel.rs1SelPC, io.pc, io.rs1V)
+  // val src2 = Mux(io.sel.rs2SelImm, io.imm, io.rs2V)
+  // switch (io.op) {
+  //   is (IntAluOp.Add) {
+  //     io.res := src1 + src2
+  //   }
+  // }
 }
 
 class LSU extends Module {
