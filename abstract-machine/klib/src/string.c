@@ -4,6 +4,9 @@
 
 #if !defined(__ISA_NATIVE__) || defined(__NATIVE_USE_KLIB__)
 
+// WARN: 没有测试过 empty/non-null-terminated 等特殊情况.
+
+
 size_t strlen(const char *s) {
   size_t len = 0;
   while (*s != '\0') { ++len, ++s; }
