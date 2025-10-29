@@ -129,7 +129,7 @@ class IDU extends Module {
   io.memWr  := false.B
   io.regWr  := true.B
 
-  printf(cf"Decode: inst ${io.inst}%8x alu${io.aluOp}%d " + 
+  printf(cf"Decode: inst ${io.inst}%x alu${io.aluOp}%d " + 
     cf"wr[M|W] = ${io.memWr}|${io.regWr}\n")
 }
 
