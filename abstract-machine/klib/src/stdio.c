@@ -36,14 +36,22 @@ int sprintf(char *out, const char *fmt, ...) {
         case 'd': 
           {
             int outv = va_arg(args, int);
+            // int64_t have 20 digits at most (including neg sign)
+            // so 20 Byte buffer is enough
+            char outbuf[20] = {0};
+            unsigned bufptr = 0;
             if (outv < 0) {
               *out++ = '-';
               outv = -outv;
             }
             do {
-              *out++ = (outv % 10) + '0';
+              outbuf[bufptr++] = (outv % 10) + '0';
               outv /= 10;
             } while (outv);
+
+            while (bufptr--) {
+              *out++ = outbuf[bufptr];
+            }
           }
           break;
         case 's': 
