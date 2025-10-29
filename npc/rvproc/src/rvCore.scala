@@ -75,33 +75,33 @@ object Tp {
 //   val FromPC, FromRs1 = Value
 // }
 //
-// class RegFile extends Module {
-//   val io = IO(new Bundle {
-//     val rs1  = Input(Tp.RegIdxType())
-//     val rs2  = Input(Tp.RegIdxType())
-//     val rd   = Input(Tp.RegIdxType())
-//     val data = Input(Tp.RegType())
-//     val wrEn = Input(Bool())
-//     val rs1V = Output(Tp.RegType())
-//     val rs2V = Output(Tp.RegType())
-//
-//     val rsPin   = Input(Tp.RegIdxType())
-//     val regPrb  = Output(Tp.RegType())
-//   })
-//
-//   val regs = Reg(Vec(ISA.RegNum, Tp.RegType()))
-//
-//   io.rs1V := 0.U
-//   io.rs2V := 0.U
-//   io.regPrb := 0.U
-//   // io.rs1V := Mux(io.rs1.orR, regs(io.rs1), 0.U)
-//   // io.rs2V := Mux(io.rs2.orR, regs(io.rs2), 0.U)
-//   // io.regPrb := Mux(io.rsPin.orR, regs(io.rsPin), 0.U)
-//
-//   // when (io.wrEn && io.rd.orR) {
-//   //   regs(io.rd) := io.data
-//   // }
-// }
+class RegFile extends Module {
+  val io = IO(new Bundle {
+    val rs1  = Input(Tp.RegIdxType())
+    val rs2  = Input(Tp.RegIdxType())
+    val rd   = Input(Tp.RegIdxType())
+    val data = Input(Tp.RegType())
+    val wrEn = Input(Bool())
+    val rs1V = Output(Tp.RegType())
+    val rs2V = Output(Tp.RegType())
+
+    val rsPin   = Input(Tp.RegIdxType())
+    val regPrb  = Output(Tp.RegType())
+  })
+
+  val regs = Reg(Vec(ISA.RegNum, Tp.RegType()))
+
+  io.rs1V := 0.U
+  io.rs2V := 0.U
+  io.regPrb := 0.U
+  // io.rs1V := Mux(io.rs1.orR, regs(io.rs1), 0.U)
+  // io.rs2V := Mux(io.rs2.orR, regs(io.rs2), 0.U)
+  // io.regPrb := Mux(io.rsPin.orR, regs(io.rsPin), 0.U)
+
+  // when (io.wrEn && io.rd.orR) {
+  //   regs(io.rd) := io.data
+  // }
+}
 //
 // /** Decoder, NOT responsible for read register */
 // class IDU extends Module {
@@ -210,7 +210,7 @@ class rvCore(romFile: String) extends Module {
 
   // State
   val pc     = RegInit(0.U(ISA.PCBits.W))
-  // val iReg   = Module(new RegFile())
+  val iReg   = Module(new RegFile())
 
   // Func
   // val iFetch = Module(new InstROM(romFile))
@@ -242,11 +242,15 @@ class rvCore(romFile: String) extends Module {
   // // Reg read 
   // iReg.io.rs1 := rs1
   // iReg.io.rs2 := rs2
+  iReg.io.rs1 := 0.U
+  iReg.io.rs2 := 0.U
   // val rs1V = iReg.io.rs1V
   // val rs2V = iReg.io.rs2V
   // // Reg write
   // iReg.io.rd := iDec.io.rd
   // iReg.io.wrEn := iDec.io.regWr
+  iReg.io.rd := 0.U
+  iReg.io.wrEn := 0.U
   //
   // // EXU in
   // iExe.io.rs1V := rs1V
