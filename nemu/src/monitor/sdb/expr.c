@@ -43,6 +43,7 @@ enum {
   TK_LOR,
   // TK_LNOT,
   TK_BAND,
+  TK_BXOR,
   TK_BOR,
   // TK_BNOT,
   TK_BRA, // (
@@ -82,6 +83,7 @@ static struct rule {
   {">", TK_GT},
   {"<", TK_LT},
   {"&", TK_BAND},
+  {"\\^", TK_BXOR}, 
   {"|", TK_BOR },
 };
 
@@ -258,9 +260,11 @@ static int choose_pivot(int l, int r, bool* valid) {
       // operators
       int8_t cur_preced = 0;
       switch (tokens[i].type) {
-        case TK_LAND:
-          cur_preced = 14;
-          break;
+        case TK_LOR : cur_preced = 15; break;
+        case TK_LAND: cur_preced = 14; break;
+        case TK_BOR : cur_preced = 13; break;
+        case TK_BXOR: cur_preced = 12; break;
+        case TK_BAND: cur_preced = 11; break;
         case TK_EQ: case TK_NEQ:
           cur_preced = 10;
           break;
@@ -369,6 +373,10 @@ static word_t eval(int l, int r, bool* valid) {
     case TK_LEQ: res = (lret <= rret); break;
     case TK_NEQ: res = (lret != rret); break;
     case TK_LAND: res = (lret && rret); break;
+    case TK_LOR : res = (lret || rret); break;
+    case TK_BAND: res = (lret & rret); break;
+    case TK_BXOR: res = (lret ^ rret); break;
+    case TK_BOR : res = (lret | rret); break;
     case TK_DEREF:
       res = vaddr_read(rret, sizeof(word_t));
       break;
