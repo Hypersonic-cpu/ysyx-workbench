@@ -28,11 +28,24 @@
 
 enum {
   TK_NOTYPE = 256, 
+  /** Left-to-right */
   TK_EQ, // ==
   TK_NEQ, // != 
+  TK_GT,
+  TK_LT,
+  TK_GEQ,
+  TK_LEQ,
+  TK_SLL,
+  TK_SRL, // logical, for uint
   TK_UPOS,
   TK_UNEG,
   TK_LAND, // &&
+  TK_LOR,
+  TK_LNOT,
+  TK_BAND,
+  TK_BXOR,
+  TK_BOR,
+  TK_BNOT,
   TK_BRA, // (
   TK_KET, // )
   TK_DEREF, // *pointer
@@ -45,10 +58,6 @@ static struct rule {
   int token_type;
 } rules[] = {
 
-  /* TODO: Add more rules.
-   * Pay attention to the precedence level of different rules.
-   */
-
   {" +", TK_NOTYPE},    // spaces
   {"\\+", '+'},         // plus
   {"-", '-'},           // minus
@@ -56,14 +65,28 @@ static struct rule {
   {"\\/", '/'},         // div
   {"\\(", TK_BRA },
   {"\\)", TK_KET },
+  // match before '&'
   {"&&", TK_LAND}, 
+  {"\\|\\|", TK_LOR }, 
   // Hex, must come before decimal to prevent match 
   // of '0' in '0xff'
   {"0[xX][0-9A-Fa-f]+", TK_NUM }, 
   {"[0-9]+", TK_NUM }, 
   {"\\$[A-Za-z0-9]+", TK_REG },
+  // match before > and <
+  {">>", TK_SRL},
+  {"<<", TK_SLL},
+  {">=", TK_GEQ},
+  {"<=", TK_LEQ},
   {"==", TK_EQ },        // equal
-  {"!=", TK_NEQ },
+  {"!=", TK_NEQ},
+  {">", TK_GT},
+  {"<", TK_LT},
+  {"&", TK_BAND},
+  {"\\^", TK_BXOR}, 
+  {"\\|", TK_BOR },
+  {"!", TK_LNOT},
+  {"~", TK_BNOT},
 };
 
 #define NR_REGEX ARRLEN(rules)
@@ -98,7 +121,9 @@ static int nr_token __attribute__((used))  = 0;
 static inline bool 
 is_unary(Token* tk) {
   switch (tk->type) {
-    case TK_UPOS: case TK_UNEG: case TK_DEREF: return true;
+    case TK_UPOS: case TK_UNEG: case TK_DEREF: 
+    case TK_LNOT: case TK_BNOT:
+      return true;
     default: return false;
   }
 }
@@ -126,11 +151,6 @@ static bool make_token(char *e) {
 
         // printf("position %d += %d\n", position, substr_len);
         position += substr_len;
-
-        /* TODO: Now a new token is recognized with rules[i]. Add codes
-         * to record the token in the array `tokens'. For certain types
-         * of tokens, some extra actions should be performed.
-         */
 
         // printf("cur nr_token = %d\n", nr_token);
         switch (rules[i].token_type) {
@@ -224,8 +244,10 @@ static int choose_pivot(int l, int r, bool* valid) {
   // X. precedence: 
   //    0: Highest, None
   //    3: Unary *deref, +pos, -neg
-  //    5: '*/' 
-  //    6: '+-'  
+  //    5: '*/'
+  //    6: '+-'
+  //    7: '>>' '<<'
+  //    9:  > < >= <=
   //    10: '==', '!=' 
   //    14: Logical &&
 
@@ -242,11 +264,19 @@ static int choose_pivot(int l, int r, bool* valid) {
       // operators
       int8_t cur_preced = 0;
       switch (tokens[i].type) {
-        case TK_LAND:
-          cur_preced = 14;
-          break;
+        case TK_LOR : cur_preced = 15; break;
+        case TK_LAND: cur_preced = 14; break;
+        case TK_BOR : cur_preced = 13; break;
+        case TK_BXOR: cur_preced = 12; break;
+        case TK_BAND: cur_preced = 11; break;
         case TK_EQ: case TK_NEQ:
           cur_preced = 10;
+          break;
+        case TK_GT: case TK_LT: case TK_GEQ: case TK_LEQ:
+          cur_preced = 9;
+          break;
+        case TK_SLL: case TK_SRL:
+          cur_preced = 7; 
           break;
         case '+': case '-': 
           cur_preced = 6;
@@ -255,6 +285,7 @@ static int choose_pivot(int l, int r, bool* valid) {
           cur_preced = 5;
           break;
         case TK_UPOS: case TK_UNEG: case TK_DEREF:
+        case TK_LNOT: case TK_BNOT:
           cur_preced = 3;
           break;
         default:
@@ -332,33 +363,27 @@ static word_t eval(int l, int r, bool* valid) {
 
   word_t res = 0;
   switch (tokens[pivot_pos].type) {
-    case '+': 
-      res = (lret + rret);
-      break;
-    case '-': 
-      res = (lret - rret);
-      break;
-    case TK_UPOS:
-      res = rret;
-      break;
-    case TK_UNEG:
-      res = -rret;
-      break;
-    case '*': 
-      res = (lret * rret);
-      break;
-    case '/': 
-      res = (lret / rret);
-      break;
-    case TK_EQ:
-      res = (lret == rret);
-      break;
-    case TK_NEQ:
-      res = (lret != rret);
-      break;
-    case TK_LAND:
-      res = (lret && rret);
-      break;
+    case '+': res = (lret + rret); break;
+    case '-': res = (lret - rret); break;
+    case TK_UPOS: res = rret; break;
+    case TK_UNEG: res = -rret; break;
+    case '*': res = (lret * rret); break;
+    case '/': res = (lret / rret); break;
+    case TK_SLL: res = (lret << rret); break;
+    case TK_SRL: res = (lret >> rret); break;
+    case TK_EQ: res = (lret == rret); break;
+    case TK_GT: res = (lret > rret); break;
+    case TK_LT: res = (lret < rret); break;
+    case TK_GEQ: res = (lret >= rret); break;
+    case TK_LEQ: res = (lret <= rret); break;
+    case TK_NEQ: res = (lret != rret); break;
+    case TK_LAND: res = (lret && rret); break;
+    case TK_LOR : res = (lret || rret); break;
+    case TK_BAND: res = (lret & rret); break;
+    case TK_BXOR: res = (lret ^ rret); break;
+    case TK_BOR : res = (lret | rret); break;
+    case TK_LNOT: res = !rret; break;
+    case TK_BNOT: res = ~rret; break;
     case TK_DEREF:
       res = vaddr_read(rret, sizeof(word_t));
       break;
