@@ -116,7 +116,7 @@ class IDU extends Module {
     val regWr = Output(Bool())
     val memWr = Output(Bool())
     val aluOp = Output(IntAluOp())
-    val aluSel = Output(new AluSelBundle())
+    val aluSel = Output(new AluSelBundle)
   })
 
   val opcode = io.inst(6, 0)
@@ -146,10 +146,10 @@ class EXU extends Module {
     val rs2V = Input(Tp.RegType())
     val pc   = Input(Tp.PCType())
     val imm  = Input(Tp.RegType())
-    val sel  = Input(new AluSelBundle())
+    val sel  = Input(new AluSelBundle)
     val op   = Input(IntAluOp())
     val res  = Output(Tp.RegType())
-    val brCmp = Output(new BrCmpBundle())
+    val brCmp = Output(new BrCmpBundle)
   })
   io.res := 0.U
   io.brCmp.brEq := false.B
