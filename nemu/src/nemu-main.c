@@ -108,7 +108,11 @@ int main(int argc, char *argv[]) {
   init_monitor(argc, argv);
 #endif
    
-  // return !do_expr_tests();
+  for (size_t i = 1; i < argc; i++) {
+    if (!strcmp(argv[i], "--expr-tests")) {
+      return !do_expr_tests();
+    }
+  }
   
   /* Start engine. */
   engine_start();
