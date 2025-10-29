@@ -189,17 +189,17 @@ class IDU extends Module {
 //   io.data := io.aluV
 // }
 //
-// class InstROM(romFile: String) extends Module {
-//   val io = IO(new Bundle{
-//     val pc   = Input(Tp.PCType())
-//     val inst = Output(Tp.InstType())
-//   })
-//   // TODO: How to correctly write combinatinal 'memory' ??
-//   val iROM  = Mem((1 << ISA.PCBits), Tp.InstType())
-//   loadMemoryFromFileInline(iROM, romFile, MemoryLoadFileType.Binary)
-//   io.inst := iROM.read(io.pc)
-//   printf(cf"[ PC = ${io.pc}%x ] inst = ${io.inst}%x\n")
-// }
+class InstROM(romFile: String) extends Module {
+  val io = IO(new Bundle{
+    val pc   = Input(Tp.PCType())
+    val inst = Output(Tp.InstType())
+  })
+  // TODO: How to correctly write combinatinal 'memory' ??
+  val iROM  = Mem((1 << ISA.PCBits), Tp.InstType())
+  loadMemoryFromFileInline(iROM, romFile, MemoryLoadFileType.Binary)
+  io.inst := iROM.read(io.pc)
+  printf(cf"[ PC = ${io.pc}%x ] inst = ${io.inst}%x\n")
+}
 
 class rvCore(romFile: String) extends Module {
   val io = IO(new Bundle{
@@ -213,7 +213,7 @@ class rvCore(romFile: String) extends Module {
   val iReg   = Module(new RegFile())
 
   // Func
-  // val iFetch = Module(new InstROM(romFile))
+  val iFetch = Module(new InstROM(romFile))
   val iDec   = Module(new IDU())
   // val iExe   = Module(new EXU()) 
   // val iLsu   = Module(new LSU())
@@ -226,13 +226,12 @@ class rvCore(romFile: String) extends Module {
   io.regPrb := 0.U
 
   // // IFU in
-  // iFetch.io.pc := pc
+  iFetch.io.pc := pc
   // // IFU out
-  // val inst = iFetch.io.inst
+  val inst = iFetch.io.inst
   //
   // // IDU in
-  // iDec.io.inst := inst
-  iDec.io.inst := io.regPin.pad(32)
+  iDec.io.inst := inst
   // // IDU out 
   // val rs1 = iDec.io.rs1
   // val rs2 = iDec.io.rs2
