@@ -67,7 +67,7 @@ static struct rule {
   {"\\)", TK_KET },
   // match before '&'
   {"&&", TK_LAND}, 
-  {"||", TK_LOR }, 
+  {"\\|\\|", TK_LOR }, 
   // Hex, must come before decimal to prevent match 
   // of '0' in '0xff'
   {"0[xX][0-9A-Fa-f]+", TK_NUM }, 
@@ -84,7 +84,7 @@ static struct rule {
   {"<", TK_LT},
   {"&", TK_BAND},
   {"\\^", TK_BXOR}, 
-  {"|", TK_BOR },
+  {"\\|", TK_BOR },
 };
 
 #define NR_REGEX ARRLEN(rules)
