@@ -84,12 +84,16 @@ class RegFile extends Module {
     val wrEn = Input(Bool())
     val rs1V = Output(Tp.RegType())
     val rs2V = Output(Tp.RegType())
+
+    val rsPin   = Input(Tp.RegIdxType())
+    val regPrb  = Output(Tp.RegType())
   })
 
   val regs = Reg(Vec(ISA.RegNum, Tp.RegType()))
 
   io.rs1V := Mux(io.rs1.orR, regs(io.rs1), 0.U)
   io.rs2V := Mux(io.rs2.orR, regs(io.rs2), 0.U)
+  io.regPrb := Mux(io.rsPin.orR, regs(io.regPrb), 0.U)
 
   when (io.wrEn && io.rd.orR) {
     regs(io.rd) := io.data
@@ -196,11 +200,9 @@ class InstROM(romFile: String) extends Module {
 
 class rvCore(romFile: String) extends Module {
   val io = IO(new Bundle{
-    val regProbe = Input(Tp.RegIdxType())
-    val dispVal = Output(Tp.RegType())
-    val dispEna = Output(Bool())
+    val regPin  = Input(Tp.RegIdxType())
+    val regPrb  = Output(Tp.RegType())
     val outPC   = Output(Tp.PCType())
-    val outProbe= Output(Tp.RegType())
   })
 
   // State
@@ -213,6 +215,11 @@ class rvCore(romFile: String) extends Module {
   val iExe   = Module(new EXU()) 
   val iLsu   = Module(new LSU())
   val iWrite = Module(new WBU())
+
+  // Probing 
+  io.outPC := pc 
+  iReg.io.rsPin := io.regPin 
+  io.regPrb := iReg.io.regPrb
 
   // IFU in
   iFetch.io.pc := pc
@@ -257,6 +264,7 @@ class rvCore(romFile: String) extends Module {
   val loadV = iLsu.io.load
 
   // WB in
+  iWrite.io.brCmp := br
   iWrite.io.pc   := pc
   iWrite.io.aluV := res
   iWrite.io.memV := loadV
