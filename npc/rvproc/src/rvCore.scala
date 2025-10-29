@@ -163,10 +163,10 @@ class EXU extends Module {
 
 class LSU extends Module {
   val io = IO(new Bundle {
-    val addr   = Input(Tp.AddrType())
-    val data   = Input(Tp.RegType())
-    val ldEn   = Input(Bool())
-    val wrEn   = Input(Bool())
+    // val addr   = Input(Tp.AddrType())
+    // val data   = Input(Tp.RegType())
+    // val ldEn   = Input(Bool())
+    // val wrEn   = Input(Bool())
     val load   = Output(Tp.RegType())
   })
   io.load := 0.U
@@ -257,10 +257,10 @@ class rvCore(romFile: String) extends Module {
 
   // LSU in
   // NOTE: No such inst that stores a calculated result.
-  iLsu.io.addr := res
-  iLsu.io.data := rs2V
-  iLsu.io.ldEn := false.B // TODO: 
-  iLsu.io.wrEn := iDec.io.memWr
+  // iLsu.io.addr := res
+  // iLsu.io.data := rs2V
+  // iLsu.io.ldEn := false.B // TODO: 
+  // iLsu.io.wrEn := iDec.io.memWr
   // LSU out
   val loadV = iLsu.io.load
 
