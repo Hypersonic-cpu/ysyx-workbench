@@ -259,6 +259,7 @@ class rvCore(romFile: String) extends Module {
   // NOTE: No such inst that stores a calculated result.
   iLsu.io.addr := res
   iLsu.io.data := rs2V
+  iLsu.io.ldEn := false.B // TODO: 
   iLsu.io.wrEn := iDec.io.memWr
   // LSU out
   val loadV = iLsu.io.load
