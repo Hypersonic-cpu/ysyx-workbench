@@ -93,7 +93,7 @@ class RegFile extends Module {
 
   io.rs1V := Mux(io.rs1.orR, regs(io.rs1), 0.U)
   io.rs2V := Mux(io.rs2.orR, regs(io.rs2), 0.U)
-  io.regPrb := Mux(io.rsPin.orR, regs(io.regPrb), 0.U)
+  io.regPrb := Mux(io.rsPin.orR, regs(io.rsPin), 0.U)
 
   when (io.wrEn && io.rd.orR) {
     regs(io.rd) := io.data
