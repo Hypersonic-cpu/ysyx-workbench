@@ -1,4 +1,4 @@
-package NjuProjN7
+package rvCPU
 
 import chisel3._ 
 import chisel3.util._
