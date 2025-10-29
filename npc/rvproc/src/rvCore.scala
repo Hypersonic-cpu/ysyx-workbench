@@ -165,6 +165,7 @@ class LSU extends Module {
     val wrEn   = Input(Bool())
     val load   = Output(Tp.RegType())
   })
+  io.load := 0.U
 }
 
 // MUX, Write data selection
