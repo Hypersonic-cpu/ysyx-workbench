@@ -27,6 +27,10 @@ object ISA {
   val AddrBits    = 32
 }
 
+object MEM {
+  val PhysBits    = 10
+}
+
 object Tp {
   def PCType() = UInt(ISA.PCBits.W)
   def RegType() = UInt(ISA.RegBits.W)
@@ -195,7 +199,7 @@ class InstROM(romFile: String) extends Module {
     val inst = Output(Tp.InstType())
   })
   // TODO: How to correctly write combinatinal 'memory' ??
-  val iROM  = Mem((1 << ISA.PCBits), Tp.InstType())
+  val iROM  = Mem((1 << MEM.PhysBits), Tp.InstType())
   loadMemoryFromFileInline(iROM, romFile, MemoryLoadFileType.Binary)
   io.inst := iROM.read(io.pc)
   // printf(cf"[ PC = ${io.pc}%x ] inst = ${io.inst}%x\n")
