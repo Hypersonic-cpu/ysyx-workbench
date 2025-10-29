@@ -42,26 +42,26 @@ object Tp {
 //   val brLt = Bool()
 // }
 //
-// class AluSelBundle extends Bundle {
-//   val rs1SelPC  = Bool()
-//   val rs2SelImm = Bool()
-//   val rs2Invert = Bool()
-// }
+class AluSelBundle extends Bundle {
+  val rs1SelPC  = Bool()
+  val rs2SelImm = Bool()
+  val rs2Invert = Bool()
+}
 //
 // class PcSelBundle extends Bundle {
 //   val jmpEq = Bool()
 // }
 //
-// object IntAluOp extends ChiselEnum {
-//   val Add  = Value(0b000.U)
-//   val Sll  = Value(0b001.U) // Shift left
-//   val Slt  = Value(0b010.U)
-//   val Sltu = Value(0b011.U)
-//   val Xor  = Value(0b100.U)
-//   val Srr  = Value(0b101.U) // Shift right
-//   val Or   = Value(0b110.U)
-//   val And  = Value(0b111.U)
-// }
+object IntAluOp extends ChiselEnum {
+  val Add  = Value(0b000.U)
+  val Sll  = Value(0b001.U) // Shift left
+  val Slt  = Value(0b010.U)
+  val Sltu = Value(0b011.U)
+  val Xor  = Value(0b100.U)
+  val Srr  = Value(0b101.U) // Shift right
+  val Or   = Value(0b110.U)
+  val And  = Value(0b111.U)
+}
 //
 // object WbSource extends ChiselEnum {
 //   val FromImm, FromAlu = Value
@@ -102,44 +102,44 @@ class RegFile extends Module {
   //   regs(io.rd) := io.data
   // }
 }
-//
-// /** Decoder, NOT responsible for read register */
-// class IDU extends Module {
-//   val io = IO(new Bundle {
-//     val inst = Input(Tp.InstType())
-//     val rs1  = Output(Tp.RegIdxType())
-//     val rs2  = Output(Tp.RegIdxType())
-//     val rd   = Output(Tp.RegIdxType())
-//     val imm  = Output(Tp.RegType())
-//     // val wrs  = Output(WrSource())
-//     // val jmp  = Output(PcSource())
-//     val regWr = Output(Bool())
-//     val memWr = Output(Bool())
-//     val aluOp = Output(IntAluOp())
-//     val aluSel = Output(new AluSelBundle)
-//   })
-//
-//   val opcode = io.inst(6, 0)
-//   val funct3 = io.inst(14, 12)
-//   val funct7 = io.inst(31, 25)
-//   val rvBase  = opcode === 0b11.U(2.W)
-//   val arithOp = opcode === 0b100.U(3.W)
-//   io.aluOp  := IntAluOp(funct3)
-//   io.aluSel.rs2Invert := funct7(5).asBool
-//   io.aluSel.rs2SelImm := true.B
-//   io.aluSel.rs1SelPC  := false.B
-//
-//   io.rs1    := io.inst(19, 15)
-//   io.rs2    := io.inst(24, 20)
-//   io.rd     := io.inst(11,  7)
-//   io.imm    := io.inst(31, 20)
-//   io.memWr  := false.B
-//   io.regWr  := true.B
-//
-//   printf(cf"Decode: inst ${io.inst}%x alu${io.aluOp} " + 
-//     cf"wr[M|W] = ${io.memWr}|${io.regWr}\n")
-// }
-//
+
+/** Decoder, NOT responsible for read register */
+class IDU extends Module {
+  val io = IO(new Bundle {
+    val inst = Input(Tp.InstType())
+    val rs1  = Output(Tp.RegIdxType())
+    val rs2  = Output(Tp.RegIdxType())
+    val rd   = Output(Tp.RegIdxType())
+    val imm  = Output(Tp.RegType())
+    // val wrs  = Output(WrSource())
+    // val jmp  = Output(PcSource())
+    val regWr = Output(Bool())
+    val memWr = Output(Bool())
+    val aluOp = Output(IntAluOp())
+    val aluSel = Output(new AluSelBundle)
+  })
+
+  val opcode = io.inst(6, 0)
+  val funct3 = io.inst(14, 12)
+  val funct7 = io.inst(31, 25)
+  val rvBase  = opcode === 0b11.U(2.W)
+  val arithOp = opcode === 0b100.U(3.W)
+  io.aluOp  := IntAluOp(funct3)
+  io.aluSel.rs2Invert := funct7(5).asBool
+  io.aluSel.rs2SelImm := true.B
+  io.aluSel.rs1SelPC  := false.B
+
+  io.rs1    := io.inst(19, 15)
+  io.rs2    := io.inst(24, 20)
+  io.rd     := io.inst(11,  7)
+  io.imm    := io.inst(31, 20)
+  io.memWr  := false.B
+  io.regWr  := true.B
+
+  printf(cf"Decode: inst ${io.inst}%x alu${io.aluOp} " + 
+    cf"wr[M|W] = ${io.memWr}|${io.regWr}\n")
+}
+
 // class EXU extends Module {
 //   val io = IO(new Bundle {
 //     val rs1V = Input(Tp.RegType())
@@ -214,7 +214,7 @@ class rvCore(romFile: String) extends Module {
 
   // Func
   // val iFetch = Module(new InstROM(romFile))
-  // val iDec   = Module(new IDU())
+  val iDec   = Module(new IDU())
   // val iExe   = Module(new EXU()) 
   // val iLsu   = Module(new LSU())
   // val iWrite = Module(new WBU())
@@ -232,6 +232,7 @@ class rvCore(romFile: String) extends Module {
   //
   // // IDU in
   // iDec.io.inst := inst
+  iDec.io.inst := io.regPin.pad(32)
   // // IDU out 
   // val rs1 = iDec.io.rs1
   // val rs2 = iDec.io.rs2
