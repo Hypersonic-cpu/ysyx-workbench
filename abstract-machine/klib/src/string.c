@@ -38,8 +38,8 @@ char *strncpy(char *dst, const char *src, size_t n) {
 }
 
 char *strcat(char *dst, const char *src) {
-  panic("Not implemented");
-  return NULL;
+  strcpy(dst + strlen(dst), src);
+  return dst;
 }
 
 int strcmp(const char *s1, const char *s2) {
@@ -64,18 +64,45 @@ int strncmp(const char *s1, const char *s2, size_t n) {
 }
 
 void *memset(void *s, int c, size_t n) {
-  panic("Not implemented");
-  return NULL;
+  unsigned char* ptr = (unsigned char*) s;
+  while (n--) {
+    *ptr = (unsigned char) c;
+    ptr++;
+  }
+  return s;
 }
 
 void *memmove(void *dst, const void *src, size_t n) {
-  panic("Not implemented");
-  return NULL;
+  if (dst == src) { return dst; }
+  unsigned char* bdst = dst;
+  const unsigned char* bsrc = src;
+  /**
+   * src [=======rrr]
+   * dst    [==========www]
+   *
+   * src    [rrrr======]
+   * dst [wwww======]
+   */
+  if (dst > src) {
+    for (size_t i = n; i > 0; i--) {
+      bdst[i-1] = bsrc[i-1];
+    }
+  } else {
+    for (size_t i = 0; i < n; i++) {
+      bdst[i] = bsrc[i];
+    }
+  }
+  return dst;
 }
 
 void *memcpy(void *out, const void *in, size_t n) {
-  panic("Not implemented");
-  return NULL;
+  unsigned char* bdst = out;
+  const unsigned char* bsrc = in;
+  // TODO: Optimize it 
+  while (n--) {
+    *(bdst++) = *(bsrc++);
+  }
+  return out;
 }
 
 int memcmp(const void *s1, const void *s2, size_t n) {
