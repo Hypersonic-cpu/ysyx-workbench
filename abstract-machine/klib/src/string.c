@@ -17,6 +17,7 @@ char *strcpy(char *dst, const char *src) {
     *tar = *cur;
     tar++, cur++;
   }
+  *tar = '\0';
   return dst;
 }
 
@@ -28,6 +29,7 @@ char *strncpy(char *dst, const char *src, size_t n) {
     *tar = *cur;
     tar++, cur++, now++;
   }
+  // TODO: change to memset
   while (now < n) {
     *tar = '\0';
     tar++, now++;
@@ -36,7 +38,7 @@ char *strncpy(char *dst, const char *src, size_t n) {
 }
 
 char *strcat(char *dst, const char *src) {
-  // panic("Not implemented");
+  panic("Not implemented");
   return NULL;
 }
 
