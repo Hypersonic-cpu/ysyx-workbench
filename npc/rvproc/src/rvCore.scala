@@ -198,7 +198,7 @@ class InstROM(romFile: String) extends Module {
   val iROM  = Mem((1 << ISA.PCBits), Tp.InstType())
   loadMemoryFromFileInline(iROM, romFile, MemoryLoadFileType.Binary)
   io.inst := iROM.read(io.pc)
-  printf(cf"[ PC = ${io.pc}%x ] inst = ${io.inst}%x\n")
+  // printf(cf"[ PC = ${io.pc}%x ] inst = ${io.inst}%x\n")
 }
 
 class rvCore(romFile: String) extends Module {
