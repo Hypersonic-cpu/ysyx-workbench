@@ -1,4 +1,4 @@
-package sCPU
+package rvProc
 
 import chisel3._
 import chisel3.util._
@@ -122,7 +122,7 @@ class sAlu extends Module {
   io.isEq := io.rs1V === io.rs2V
 }
 
-class sCPU(romFile: String) extends Module {
+class rvCore(romFile: String) extends Module {
   val io = IO(new Bundle{
     val regProbe = Input(UInt(sISA.RegIdx.W))
     val dispVal = Output(UInt(sISA.RegLen.W))

@@ -1,13 +1,13 @@
-package sCPU
+package rvProc
 
 import chisel3._
 import chiseltest._
 import org.scalatest.flatspec.AnyFlatSpec
 
 
-class Ps2DecoderSpec extends AnyFlatSpec with ChiselScalatestTester {
-  "sCPU" should "exec successfully" in {
-    test (new sCPU.sCPU("/mnt/hgfs/Arch-PA/ysyx-workbench/npc/scpu/prog-rom/Add1To10.sCPU.bin"))
+class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
+  "rvCore" should "exec successfully" in {
+    test (new rvProc.rvCore("/mnt/hgfs/Arch-PA/ysyx-workbench/npc/rvproc/prog-rom/Add1To10.sCPU.bin"))
       .withAnnotations(Seq(
       WriteVcdAnnotation
     )) { dut =>
