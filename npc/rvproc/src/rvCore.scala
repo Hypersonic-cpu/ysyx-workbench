@@ -210,7 +210,7 @@ class rvCore(romFile: String) extends Module {
 
   // State
   val pc     = RegInit(0.U(ISA.PCBits.W))
-  val iReg   = Module(new RegFile())
+  // val iReg   = Module(new RegFile())
 
   // Func
   // val iFetch = Module(new InstROM(romFile))
