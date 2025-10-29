@@ -5,14 +5,6 @@ import chisel3.util._
 import chisel3.util.experimental.loadMemoryFromFileInline
 import firrtl.annotations.MemoryLoadFileType
 
-// class sROM(size: Int, paBits: Int) extends Module {
-//   val io = IO(new Module {
-//     val byteAddr = Input(UInt(paBits.W))
-//     val 
-//   })
-//
-// }
-
 /** TODO:
   * 需要把 Control 单独拿出来吗? UCB 的课件看起来
   * 比自己画的好看.
@@ -39,23 +31,23 @@ object Tp {
   // Now it equals RegType() so no padding is needed.
   def AddrType() = UInt(ISA.AddrBits.W)
 }
-//
-// class BrCmpBundle extends Bundle {
-//   val brEq = Bool()
-//   val brUn = Bool() 
-//   val brLt = Bool()
-// }
-//
+
+class BrCmpBundle extends Bundle {
+  val brEq = Bool()
+  val brUn = Bool() 
+  val brLt = Bool()
+}
+
 class AluSelBundle extends Bundle {
   val rs1SelPC  = Bool()
   val rs2SelImm = Bool()
   val rs2Invert = Bool()
 }
-//
-// class PcSelBundle extends Bundle {
-//   val jmpEq = Bool()
-// }
-//
+
+class PcSelBundle extends Bundle {
+  val jmpEq = Bool()
+}
+
 object IntAluOp extends ChiselEnum {
   val Add  = Value(0b000.U)
   val Sll  = Value(0b001.U) // Shift left
@@ -66,19 +58,19 @@ object IntAluOp extends ChiselEnum {
   val Or   = Value(0b110.U)
   val And  = Value(0b111.U)
 }
-//
-// object WbSource extends ChiselEnum {
-//   val FromImm, FromAlu = Value
-// }
-//
-// object PcSource extends ChiselEnum {
-//   val FromJmp, FromPC = Value
-// }
-//
-// object Rs1Source extends ChiselEnum {
-//   val FromPC, FromRs1 = Value
-// }
-//
+
+object WbSource extends ChiselEnum {
+  val FromImm, FromAlu = Value
+}
+
+object PcSource extends ChiselEnum {
+  val FromJmp, FromPC = Value
+}
+
+object Rs1Source extends ChiselEnum {
+  val FromPC, FromRs1 = Value
+}
+
 class RegFile extends Module {
   val io = IO(new Bundle {
     val rs1  = Input(Tp.RegIdxType())
@@ -95,16 +87,13 @@ class RegFile extends Module {
 
   val regs = Reg(Vec(ISA.RegNum, Tp.RegType()))
 
-  io.rs1V := 0.U
-  io.rs2V := 0.U
-  io.regPrb := 0.U
-  // io.rs1V := Mux(io.rs1.orR, regs(io.rs1), 0.U)
-  // io.rs2V := Mux(io.rs2.orR, regs(io.rs2), 0.U)
-  // io.regPrb := Mux(io.rsPin.orR, regs(io.rsPin), 0.U)
+  io.rs1V := Mux(io.rs1.orR, regs(io.rs1), 0.U)
+  io.rs2V := Mux(io.rs2.orR, regs(io.rs2), 0.U)
+  io.regPrb := Mux(io.rsPin.orR, regs(io.rsPin), 0.U)
 
-  // when (io.wrEn && io.rd.orR) {
-  //   regs(io.rd) := io.data
-  // }
+  when (io.wrEn && io.rd.orR) {
+    regs(io.rd) := io.data
+  }
 }
 
 /** Decoder, NOT responsible for read register */
@@ -144,55 +133,55 @@ class IDU extends Module {
     cf"wr[M|W] = ${io.memWr}|${io.regWr}\n")
 }
 
-// class EXU extends Module {
-//   val io = IO(new Bundle {
-//     val rs1V = Input(Tp.RegType())
-//     val rs2V = Input(Tp.RegType())
-//     val pc   = Input(Tp.PCType())
-//     val imm  = Input(Tp.RegType())
-//     val sel  = Input(new AluSelBundle)
-//     val op   = Input(IntAluOp())
-//     val res  = Output(Tp.RegType())
-//     val brCmp = Output(new BrCmpBundle)
-//   })
-//   io.res := 0.U
-//   io.brCmp.brEq := false.B
-//   io.brCmp.brUn := false.B
-//   io.brCmp.brLt := false.B
-//   // val src1 = Mux(io.sel.rs1SelPC, io.pc, io.rs1V)
-//   // val src2 = Mux(io.sel.rs2SelImm, io.imm, io.rs2V)
-//   // switch (io.op) {
-//   //   is (IntAluOp.Add) {
-//   //     io.res := src1 + src2
-//   //   }
-//   // }
-// }
-//
-// class LSU extends Module {
-//   val io = IO(new Bundle {
-//     // val addr   = Input(Tp.AddrType())
-//     // val data   = Input(Tp.RegType())
-//     // val ldEn   = Input(Bool())
-//     // val wrEn   = Input(Bool())
-//     val load   = Output(Tp.RegType())
-//   })
-//   io.load := 0.U
-// }
-//
-// // MUX, Write data selection
-// class WBU extends Module {
-//   val io = IO(new Bundle {
-//     // val brCmp = Input(new BrCmpBundle())
-//     val pc    = Input(Tp.PCType())
-//     val aluV  = Input(Tp.RegType())
-//     // val memV  = Input(Tp.RegType())
-//     val nxpc  = Output(Tp.PCType())
-//     val data  = Output(Tp.RegType())
-//   })
-//   io.nxpc := io.pc + 4.U
-//   io.data := io.aluV
-// }
-//
+class EXU extends Module {
+  val io = IO(new Bundle {
+    val rs1V = Input(Tp.RegType())
+    val rs2V = Input(Tp.RegType())
+    val pc   = Input(Tp.PCType())
+    val imm  = Input(Tp.RegType())
+    val sel  = Input(new AluSelBundle)
+    val op   = Input(IntAluOp())
+    val res  = Output(Tp.RegType())
+    val brCmp = Output(new BrCmpBundle)
+  })
+  io.res := 0.U
+  io.brCmp.brEq := false.B
+  io.brCmp.brUn := false.B
+  io.brCmp.brLt := false.B
+  val src1 = Mux(io.sel.rs1SelPC, io.pc, io.rs1V)
+  val src2 = Mux(io.sel.rs2SelImm, io.imm, io.rs2V)
+  switch (io.op) {
+    is (IntAluOp.Add) {
+      io.res := src1 + src2
+    }
+  }
+}
+
+class LSU extends Module {
+  val io = IO(new Bundle {
+    val addr   = Input(Tp.AddrType())
+    val data   = Input(Tp.RegType())
+    val ldEn   = Input(Bool())
+    val wrEn   = Input(Bool())
+    val load   = Output(Tp.RegType())
+  })
+  io.load := 0.U
+}
+
+// MUX, Write data selection
+class WBU extends Module {
+  val io = IO(new Bundle {
+    // val brCmp = Input(new BrCmpBundle())
+    val pc    = Input(Tp.PCType())
+    val aluV  = Input(Tp.RegType())
+    // val memV  = Input(Tp.RegType())
+    val nxpc  = Output(Tp.PCType())
+    val data  = Output(Tp.RegType())
+  })
+  io.nxpc := io.pc + 4.U
+  io.data := io.aluV
+}
+
 class InstROM(romFile: String) extends Module {
   val io = IO(new Bundle{
     val pc   = Input(Tp.PCType())
@@ -202,7 +191,7 @@ class InstROM(romFile: String) extends Module {
   val iROM  = Mem((1 << MEM.PhysBits), Tp.InstType())
   loadMemoryFromFileInline(iROM, romFile, MemoryLoadFileType.Binary)
   io.inst := iROM.read(io.pc)
-  // printf(cf"[ PC = ${io.pc}%x ] inst = ${io.inst}%x\n")
+  printf(cf"[ PC = ${io.pc}%x ] inst = ${io.inst}%x\n")
 }
 
 class rvCore(romFile: String) extends Module {
@@ -219,73 +208,67 @@ class rvCore(romFile: String) extends Module {
   // Func
   val iFetch = Module(new InstROM(romFile))
   val iDec   = Module(new IDU())
-  // val iExe   = Module(new EXU()) 
-  // val iLsu   = Module(new LSU())
-  // val iWrite = Module(new WBU())
+  val iExe   = Module(new EXU()) 
+  val iLsu   = Module(new LSU())
+  val iWrite = Module(new WBU())
 
   // Probing 
   io.outPC := pc 
   iReg.io.rsPin := io.regPin 
-  // io.regPrb := iReg.io.regPrb
-  io.regPrb := 0.U
+  io.regPrb := iReg.io.regPrb
 
-  // // IFU in
+  // IFU in
   iFetch.io.pc := pc
-  // // IFU out
+  // IFU out
   val inst = iFetch.io.inst
-  //
-  // // IDU in
+
+  // IDU in
   iDec.io.inst := inst
-  // // IDU out 
-  // val rs1 = iDec.io.rs1
-  // val rs2 = iDec.io.rs2
-  // val imm = iDec.io.imm
-  // val op  = iDec.io.aluOp
-  // val sel = iDec.io.aluSel
-  //
-  // // Reg read 
-  // iReg.io.rs1 := rs1
-  // iReg.io.rs2 := rs2
-  iReg.io.rs1 := 0.U
-  iReg.io.rs2 := 0.U
-  // val rs1V = iReg.io.rs1V
-  // val rs2V = iReg.io.rs2V
-  // // Reg write
-  // iReg.io.rd := iDec.io.rd
-  // iReg.io.wrEn := iDec.io.regWr
-  iReg.io.rd := 0.U
-  iReg.io.wrEn := 0.U
-  //
-  // // EXU in
-  // iExe.io.rs1V := rs1V
-  // iExe.io.rs2V := rs1V
-  // iExe.io.imm  := imm 
-  // iExe.io.pc   := pc
-  // iExe.io.op   := op 
-  // iExe.io.sel  := sel
-  // // EXU out
-  // val res = iExe.io.res
-  // // val br  = iExe.io.brCmp
-  //
-  // // LSU in
-  // // NOTE: No such inst that stores a calculated result.
-  // // iLsu.io.addr := res
-  // // iLsu.io.data := rs2V
-  // // iLsu.io.ldEn := false.B // TODO: 
-  // // iLsu.io.wrEn := iDec.io.memWr
-  // // LSU out
-  // val loadV = iLsu.io.load
-  //
-  // // WB in
-  // // iWrite.io.brCmp := br
-  // iWrite.io.pc   := pc
-  // iWrite.io.aluV := res
-  // // iWrite.io.memV := loadV
-  // // WB out 
-  // pc := iWrite.io.nxpc
-  // iReg.io.data := iWrite.io.data
-  iReg.io.data := 0.U
-  //
-  // // printf(cf"   R[${iDec.io.rs1}%d]=0x${rs1V}%x R[${iDec.io.rs2}%d]=0x${rs2V}%x "
-  // //     + cf"Alu=${sAlu.io.sum}%x Eq=${sAlu.io.isEq}\n")
+  // IDU out 
+  val rs1 = iDec.io.rs1
+  val rs2 = iDec.io.rs2
+  val imm = iDec.io.imm
+  val op  = iDec.io.aluOp
+  val sel = iDec.io.aluSel
+
+  // Reg read 
+  iReg.io.rs1 := rs1
+  iReg.io.rs2 := rs2
+  val rs1V = iReg.io.rs1V
+  val rs2V = iReg.io.rs2V
+  // Reg write
+  iReg.io.rd := iDec.io.rd
+  iReg.io.wrEn := iDec.io.regWr
+
+  // EXU in
+  iExe.io.rs1V := rs1V
+  iExe.io.rs2V := rs1V
+  iExe.io.imm  := imm 
+  iExe.io.pc   := pc
+  iExe.io.op   := op 
+  iExe.io.sel  := sel
+  // EXU out
+  val res = iExe.io.res
+  val br  = iExe.io.brCmp
+
+  // LSU in
+  // NOTE: No such inst that stores a calculated result.
+  iLsu.io.addr := res
+  iLsu.io.data := rs2V
+  iLsu.io.ldEn := false.B // TODO: 
+  iLsu.io.wrEn := iDec.io.memWr
+  // LSU out
+  val loadV = iLsu.io.load
+
+  // WB in
+  iWrite.io.brCmp := br
+  iWrite.io.pc   := pc
+  iWrite.io.aluV := res
+  iWrite.io.memV := loadV
+  // WB out 
+  pc := iWrite.io.nxpc
+  iReg.io.data := iWrite.io.data
+
+  // printf(cf"   R[${iDec.io.rs1}%d]=0x${rs1V}%x R[${iDec.io.rs2}%d]=0x${rs2V}%x "
+  //     + cf"Alu=${sAlu.io.sum}%x Eq=${sAlu.io.isEq}\n")
 }
