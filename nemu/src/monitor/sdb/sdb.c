@@ -124,16 +124,24 @@ static int cmd_x(char *args) {
   return 0;
 }
 
-static int cmd_p(char *args) {
+static int cmd_p(char *args, bool outhex) {
   bool success = false;
   word_t val = expr(args, &success);
   if (success) {
-    printf("%u\n", val);
+    printf(outhex ? "%#x\n" : "%u\n", val);
     return 0;
   } else {
     printf("Expression eval failed\n");
     return 1;
   }
+}
+
+static int cmd_p_hex(char *args) {
+  return cmd_p(args, true);
+}
+
+static int cmd_p_dec(char *args) {
+  return cmd_p(args, false);
 }
 
 static int cmd_w(char *args) {
@@ -177,7 +185,8 @@ static struct {
   { "si", "Arg [$N=1], execute `$N` steps", cmd_si },
   { "info", "Arg <r|w>, show info of registers|watchpoints", cmd_info }, 
   { "x", "Arg <$nw> <$VA(hex)> scan next $nw words from mem $VA", cmd_x }, 
-  { "p", "Arg <$expr> evaluate expression", cmd_p }, 
+  { "p/x", "Arg <$expr> evaluate expression", cmd_p_hex }, 
+  { "p", "Arg <$expr> evaluate expression", cmd_p_dec }, 
   { "w", "Arg <$expr> watchpoint, pause when $expr changes", cmd_w },
   { "d", "Arg <$N> delete watchpoint $N", cmd_d }
 };
