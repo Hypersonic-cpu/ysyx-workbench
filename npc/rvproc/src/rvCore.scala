@@ -171,10 +171,10 @@ class LSU extends Module {
 // MUX, Write data selection
 class WBU extends Module {
   val io = IO(new Bundle {
-    // val brCmp = Input(new BrCmpBundle())
+    val brCmp = Input(new BrCmpBundle())
     val pc    = Input(Tp.PCType())
     val aluV  = Input(Tp.RegType())
-    // val memV  = Input(Tp.RegType())
+    val memV  = Input(Tp.RegType())
     val nxpc  = Output(Tp.PCType())
     val data  = Output(Tp.RegType())
   })
