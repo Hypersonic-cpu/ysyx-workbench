@@ -41,11 +41,11 @@ enum {
   TK_UNEG,
   TK_LAND, // &&
   TK_LOR,
-  // TK_LNOT,
+  TK_LNOT,
   TK_BAND,
   TK_BXOR,
   TK_BOR,
-  // TK_BNOT,
+  TK_BNOT,
   TK_BRA, // (
   TK_KET, // )
   TK_DEREF, // *pointer
@@ -85,6 +85,8 @@ static struct rule {
   {"&", TK_BAND},
   {"\\^", TK_BXOR}, 
   {"\\|", TK_BOR },
+  {"!", TK_LNOT},
+  {"~", TK_BNOT},
 };
 
 #define NR_REGEX ARRLEN(rules)
@@ -119,7 +121,9 @@ static int nr_token __attribute__((used))  = 0;
 static inline bool 
 is_unary(Token* tk) {
   switch (tk->type) {
-    case TK_UPOS: case TK_UNEG: case TK_DEREF: return true;
+    case TK_UPOS: case TK_UNEG: case TK_DEREF: 
+    case TK_LNOT: case TK_BNOT:
+      return true;
     default: return false;
   }
 }
@@ -281,6 +285,7 @@ static int choose_pivot(int l, int r, bool* valid) {
           cur_preced = 5;
           break;
         case TK_UPOS: case TK_UNEG: case TK_DEREF:
+        case TK_LNOT: case TK_BNOT:
           cur_preced = 3;
           break;
         default:
@@ -377,6 +382,8 @@ static word_t eval(int l, int r, bool* valid) {
     case TK_BAND: res = (lret & rret); break;
     case TK_BXOR: res = (lret ^ rret); break;
     case TK_BOR : res = (lret | rret); break;
+    case TK_LNOT: res = !rret; break;
+    case TK_BNOT: res = ~rret; break;
     case TK_DEREF:
       res = vaddr_read(rret, sizeof(word_t));
       break;
