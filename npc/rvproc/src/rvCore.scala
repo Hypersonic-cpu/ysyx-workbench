@@ -221,7 +221,7 @@ class rvCore(romFile: String) extends Module {
 
   // Probing 
   io.outPC := pc 
-  // iReg.io.rsPin := io.regPin 
+  iReg.io.rsPin := io.regPin 
   // io.regPrb := iReg.io.regPrb
   io.regPrb := 0.U
 
@@ -280,6 +280,7 @@ class rvCore(romFile: String) extends Module {
   // // WB out 
   // pc := iWrite.io.nxpc
   // iReg.io.data := iWrite.io.data
+  iReg.io.data := 0.U
   //
   // // printf(cf"   R[${iDec.io.rs1}%d]=0x${rs1V}%x R[${iDec.io.rs2}%d]=0x${rs2V}%x "
   // //     + cf"Alu=${sAlu.io.sum}%x Eq=${sAlu.io.isEq}\n")
