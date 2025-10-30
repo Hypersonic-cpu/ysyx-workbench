@@ -10,7 +10,9 @@ import mill.scalalib._
 // support BSP
 import mill.bsp._
 
-trait RV32CoreSettings extends ScalaModule with ScalafmtModule {
+import $ivy.`com.github.uwerat::mill-chisel::0.1.0`
+
+trait RV32CoreSettings extends ChiselModule with ScalafmtModule {
 
   override def scalaVersion = "2.13.15"
 
