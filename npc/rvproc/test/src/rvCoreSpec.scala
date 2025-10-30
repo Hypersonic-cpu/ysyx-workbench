@@ -9,6 +9,7 @@ import chiseltest.simulator.VerilatorFlags
 import chiseltest.simulator.VerilatorLinkFlags
 
 import java.nio.file
+import chiseltest.simulator.VerilatorCFlags
 
 object IntCvt {
   def twosC (x:Int) = (0xffffffffL ^ x) + 1L
@@ -16,6 +17,7 @@ object IntCvt {
 
 object PathCfg {
   def workDir() = "/mnt/hgfs/Arch-PA/ysyx-workbench/npc/rvproc"
+  def vltDir() =  "/mnt/hgfs/Arch-PA/ysyx-workbench/build-sim/rvproc/obj_dir"
   def hexDir() = workDir() + "/prog-rom"
   def dpiDir() = workDir() + "/dpic"
   def hexFile(s: String) = file.Paths.get(hexDir(), s).toString()
@@ -24,7 +26,11 @@ object PathCfg {
 
 object VerilatorOpGen {
   def getFlags () = 
-    VerilatorFlags(Seq("--trace-depth", "99", PathCfg.dpiFile()))
+    VerilatorFlags(Seq("--trace-depth", "99", 
+      "-CFLAGS", s"-I${PathCfg.vltDir()}"))
+
+  def getCFlags () = 
+    VerilatorCFlags(Seq(PathCfg.dpiFile()))
 
 }
 
@@ -95,7 +101,8 @@ class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
       .withAnnotations(Seq(
         WriteVcdAnnotation,
         VerilatorBackendAnnotation,
-        VerilatorOpGen.getFlags()
+        VerilatorOpGen.getFlags(),
+        VerilatorOpGen.getCFlags()
       )
     ) { dut =>
       try {

@@ -10,9 +10,7 @@ import mill.scalalib._
 // support BSP
 import mill.bsp._
 
-import $ivy.`com.github.uwerat::mill-chisel::0.1.0`
-
-trait RV32CoreSettings extends ChiselModule with ScalafmtModule {
+trait RV32CoreSettings extends ScalaModule with ScalafmtModule {
 
   override def scalaVersion = "2.13.15"
 
@@ -33,11 +31,6 @@ trait RV32CoreSettings extends ChiselModule with ScalafmtModule {
       coursier.MavenRepository("https://oss.sonatype.org/content/repositories/snapshots")
     ) ++ super.repositoriesTask()
   }
-
-  override def cSources = T.sources(
-      super.cSources(),
-      T.source(os.Path("/mnt/hgfs/Arch-PA/ysyx-workbench/npc/rvproc/dpic/simcalls.cc"))
-    )
 }
 
 object rvproc extends RV32CoreSettings { m =>
