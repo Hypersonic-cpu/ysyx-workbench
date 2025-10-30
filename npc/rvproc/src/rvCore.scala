@@ -125,7 +125,7 @@ class IDU extends Module {
   io.rs1    := io.inst(19, 15)
   io.rs2    := io.inst(24, 20)
   io.rd     := io.inst(11,  7)
-  io.imm    := io.inst(31, 20)
+  io.imm    := io.inst(31, 20).asSInt.pad(32).asUInt
   io.memWr  := false.B
   io.regWr  := true.B
 
@@ -189,7 +189,7 @@ class InstROM(romFile: String) extends Module {
   })
   // TODO: How to correctly write combinatinal 'memory' ??
   val iROM  = Mem((1 << MEM.PhysBits), Tp.InstType())
-  loadMemoryFromFileInline(iROM, romFile, MemoryLoadFileType.Binary)
+  loadMemoryFromFileInline(iROM, romFile, MemoryLoadFileType.Hex)
   io.inst := iROM.read(io.pc)
   printf(cf"[ PC = ${io.pc}%x ] inst = ${io.inst}%x\n")
 }
