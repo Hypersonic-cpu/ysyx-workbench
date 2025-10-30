@@ -95,3 +95,5 @@ sim: verilate verilog $(SIM_BIN)
 	$(SIM_BIN)
 
 -include ../Makefile
+
+-include $(PRJ)/MakeTest.mk
