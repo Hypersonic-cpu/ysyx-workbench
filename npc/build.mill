@@ -31,6 +31,11 @@ trait RV32CoreSettings extends ScalaModule with ScalafmtModule {
       coursier.MavenRepository("https://oss.sonatype.org/content/repositories/snapshots")
     ) ++ super.repositoriesTask()
   }
+
+  override def cSources = T.sources(
+      super.cSources(),
+      T.source(os.Path("/mnt/hgfs/Arch-PA/ysyx-workbench/npc/rvproc/dpic/simcalls.cc"))
+    )
 }
 
 object rvproc extends RV32CoreSettings { m =>

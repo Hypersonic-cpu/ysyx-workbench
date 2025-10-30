@@ -12,7 +12,7 @@ module EcallBox (
     input bit [31:0] a10reg
   );
 
-  always @(posedge clk or posedge reset) begin
+  always @(posedge clock or posedge reset) begin
     if (reset) begin end
     else begin
       if (isEbreak) begin
