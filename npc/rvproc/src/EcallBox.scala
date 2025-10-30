@@ -2,10 +2,9 @@ package rvProc
 
 import chisel3._
 import chisel3.util._
-import chisel3.util.HasBlackBoxResource
-import chisel3.util.experimental.loadMemoryFromFileInline
+import chisel3.util.HasBlackBoxPath
 
-class EcallBox extends BlackBox with HasBlackBoxResource {
+class EcallBox extends BlackBox with HasBlackBoxPath {
   val io = IO(new Bundle {
     val clock = Input(Clock())
     val reset = Input(Reset())
@@ -15,5 +14,5 @@ class EcallBox extends BlackBox with HasBlackBoxResource {
     val a10in = Input(Tp.RegType())
   })
   
-  addResource("/EcallBox.sv")
+  addPath("/mnt/hgfs/Arch-PA/ysyx-workbench/npc/rvproc/dpic/EcallBox.sv")
 }
