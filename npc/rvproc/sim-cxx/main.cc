@@ -7,11 +7,6 @@
 #include <verilated_fst_c.h>
 
 #include "VrvCore.h"
-// #include "verilatedos.h"
-
-// vluint64_t glb_time { 0 };
-// double sc_time_stamp() { return glb_time; }
-//
 
 inline void 
 single_cycle(
@@ -36,8 +31,9 @@ main() {
   const std::unique_ptr<TOP_NAME> top{new TOP_NAME{contextp.get(), "TOP"}};
   // Trace 99 levels of hierarchy (or see below)
   top->trace(tfp, 99);
-                        // tfp->dumpvars(1, "t"); // trace 1 level under "t"
-  tfp->open("/mnt/hgfs/Arch-PA/ysyx-workbench/npc/build-sim/playground/logs/log.fst");
+  // tfp->dumpvars(1, "t"); // trace 1 level under "t"
+  //
+  tfp->open("/mnt/hgfs/Arch-PA/ysyx-workbench/npc/build-sim/rvproc/logs/jalr.log");
   
   // int passed = 0;
   // int failed = 0;
@@ -70,7 +66,15 @@ main() {
   //   if (passed + failed) { break; }
   // }
   //
-  // top->final();
-  // tfp->close();
+
+  constexpr size_t MaxCyc{ 10U };
+  size_t currCyc{ 0U };
+  while (currCyc < MaxCyc) {
+    single_cycle(top, contextp);
+
+    currCyc++;
+  }
+  top->final();
+  tfp->close();
   return 0;
 }
