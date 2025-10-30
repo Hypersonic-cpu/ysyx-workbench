@@ -15,5 +15,5 @@ class EcallBox extends BlackBox with HasBlackBoxResource {
     val a10in = Input(Tp.RegType())
   })
   
-  addResource("/vsrc/EcallBox.sv")
+  addResource("EcallBox.sv")
 }
