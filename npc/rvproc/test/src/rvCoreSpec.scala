@@ -7,21 +7,15 @@ import org.scalatest.flatspec.AnyFlatSpec
 
 class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
   "rvCore" should "exec successfully" in {
-    test (new rvProc.rvCore("/mnt/hgfs/Arch-PA/ysyx-workbench/npc/rvproc/prog-rom/Add1To10.sCPU.bin"))
+    test (new rvProc.rvCore("/mnt/hgfs/Arch-PA/ysyx-workbench/npc/rvproc/prog-rom/addi.hex"))
       .withAnnotations(Seq(
       WriteVcdAnnotation
     )) { dut =>
-      dut.io.regProbe.poke(2)
-      var cyc = 0 
-      while (cyc <= 70 && dut.io.outPC.peekInt() != 7) {
-        dut.clock.step(1)
-        cyc = cyc + 1
-      }
-      dut.io.dispEna.expect(1)
-      dut.io.dispVal.expect(55)
-      dut.clock.step(10)
-      dut.io.outProbe.expect(55)
-      dut.io.outPC.expect(8)
+      dut.io.regPin.poke(5)  // t0
+      dut.io.outPC.expect(0)
+      dut.clock.step()
+      dut.io.regPrb.expect(1)
+      ()
     }
   }
 }

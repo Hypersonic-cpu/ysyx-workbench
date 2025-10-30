@@ -4,6 +4,7 @@
 !Makefile
 !*.mk
 !*.scala
+!*.S
 !*.[cSh]
 !*.v
 !*.cpp
