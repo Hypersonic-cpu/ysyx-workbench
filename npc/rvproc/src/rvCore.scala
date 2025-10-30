@@ -309,7 +309,7 @@ class rvCore(romFile: String) extends Module {
   iEcall.io.reset := this.reset
   iEcall.io.pcin  := pc
   iEcall.io.a10in := rs1V
-  iEcall.io.isEbreak := iDec.isEbreak
+  iEcall.io.isEbreak := iDec.io.ebreak
   iEcall.io.isEcall  := false.B
 
   dontTouch(iFetch.io)
