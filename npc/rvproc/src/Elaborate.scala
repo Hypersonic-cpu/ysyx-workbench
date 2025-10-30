@@ -8,5 +8,5 @@ object Elaborate extends App {
       "locationInfoStyle=wrapInAtSquareBracket"
     ).reduce(_ + "," + _)
   )
-  circt.stage.ChiselStage.emitSystemVerilogFile(new rvProc.rvCore("/mnt/hgfs/Arch-PA/ysyx-workbench/npc/rvproc/prog-rom/Add1To10.sCPU.bin"), args, firtoolOptions)
+  circt.stage.ChiselStage.emitSystemVerilogFile(new rvProc.rvCore("/mnt/hgfs/Arch-PA/ysyx-workbench/npc/rvproc/prog-rom/jalr.hex"), args, firtoolOptions)
 }

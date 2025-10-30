@@ -32,20 +32,27 @@ object Tp {
   def AddrType() = UInt(ISA.AddrBits.W)
 }
 
+object ITYPE extends ChiselEnum {
+  val tR, tI, tS, tB, tU, tJ, tN = Value
+}
+
 class BrCmpBundle extends Bundle {
-  val brEq = Bool()
-  val brUn = Bool() 
-  val brLt = Bool()
+  val beq = Bool()
+  val blt = Bool()
+}
+
+class PcJmpBundle extends Bundle {
+  val jIfeq = Bool()
+  val jIfne = Bool()
+  val jIflt = Bool()
+  val jIfge = Bool()
+  val jUncond = Bool()
 }
 
 class AluSelBundle extends Bundle {
   val rs1SelPC  = Bool()
   val rs2SelImm = Bool()
   val rs2Invert = Bool()
-}
-
-class PcSelBundle extends Bundle {
-  val jmpEq = Bool()
 }
 
 object IntAluOp extends ChiselEnum {
@@ -57,18 +64,6 @@ object IntAluOp extends ChiselEnum {
   val Srr  = Value(0b101.U) // Shift right
   val Or   = Value(0b110.U)
   val And  = Value(0b111.U)
-}
-
-object WbSource extends ChiselEnum {
-  val FromImm, FromAlu = Value
-}
-
-object PcSource extends ChiselEnum {
-  val FromJmp, FromPC = Value
-}
-
-object Rs1Source extends ChiselEnum {
-  val FromPC, FromRs1 = Value
 }
 
 class RegFile extends Module {
@@ -104,33 +99,50 @@ class IDU extends Module {
     val rs2  = Output(Tp.RegIdxType())
     val rd   = Output(Tp.RegIdxType())
     val imm  = Output(Tp.RegType())
-    // val wrs  = Output(WrSource())
-    // val jmp  = Output(PcSource())
     val regWr = Output(Bool())
     val memWr = Output(Bool())
     val aluOp = Output(IntAluOp())
-    val aluSel = Output(new AluSelBundle)
+    val aluSel = Output(new AluSelBundle())
+    val pcJmp = Output(new PcJmpBundle())
   })
 
   val opcode = io.inst(6, 0)
   val funct3 = io.inst(14, 12)
   val funct7 = io.inst(31, 25)
   val rvBase  = opcode === 0b11.U(2.W)
-  val arithOp = opcode === 0b100.U(3.W)
+
+  val arithOp = opcode(4, 2) === 0b100.U(3.W)
+  val jalrOp  = opcode(4, 2) === 0b001.U(3.W)
+  // TODO:
+  val instTp  = ITYPE.tI // Mux(arithOp, ITYPE.tI, ITYPE.tJ)
   io.aluOp  := IntAluOp(funct3)
   io.aluSel.rs2Invert := funct7(5).asBool
-  io.aluSel.rs2SelImm := true.B
-  io.aluSel.rs1SelPC  := false.B
+  io.aluSel.rs2SelImm := instTp === ITYPE.tI
+  io.aluSel.rs1SelPC  := jalrOp
 
   io.rs1    := io.inst(19, 15)
   io.rs2    := io.inst(24, 20)
   io.rd     := io.inst(11,  7)
-  io.imm    := io.inst(31, 20).asSInt.pad(32).asUInt
-  io.memWr  := false.B
-  io.regWr  := true.B
+  val immIS  = io.inst(31, 20).asSInt.pad(32).asUInt
+  val immIU  = io.inst(31, 20).pad(32)
 
-  printf(cf"Decode: inst ${io.inst}%x alu${io.aluOp} " + 
-    cf"wr[M|W] = ${io.memWr}|${io.regWr}\n")
+  io.imm    := Mux(true.B, immIS, immIU)
+  io.memWr  := false.B
+  io.regWr  := ~(
+    instTp === ITYPE.tN || 
+    instTp === ITYPE.tB || 
+    instTp === ITYPE.tS)
+
+  io.pcJmp.jIfeq := false.B
+  io.pcJmp.jIfne := false.B
+  io.pcJmp.jIflt := false.B
+  io.pcJmp.jIfge := false.B
+  io.pcJmp.jUncond := jalrOp
+
+  printf(cf"Decode: inst ${io.inst}%x type${instTp} alu${io.aluOp} " + 
+    cf"wr[M|R] = ${io.memWr}|${io.regWr} jmp ${io.pcJmp.jUncond}\n")
+  printf(cf"\trs1 ${io.rs1}%d, rs2 ${io.rs2}%d, imm ${io.imm}%x\n");
+
 }
 
 class EXU extends Module {
@@ -139,15 +151,16 @@ class EXU extends Module {
     val rs2V = Input(Tp.RegType())
     val pc   = Input(Tp.PCType())
     val imm  = Input(Tp.RegType())
-    val sel  = Input(new AluSelBundle)
+    val sel  = Input(new AluSelBundle())
     val op   = Input(IntAluOp())
     val res  = Output(Tp.RegType())
-    val brCmp = Output(new BrCmpBundle)
+    val brCmp = Output(new BrCmpBundle())
   })
+
+  printf(cf"\trs1V ${io.rs1V}%x, rs2V ${io.rs2V}%x, imm ${io.imm}%x\n");
   io.res := 0.U
-  io.brCmp.brEq := false.B
-  io.brCmp.brUn := false.B
-  io.brCmp.brLt := false.B
+  io.brCmp.beq := false.B
+  io.brCmp.blt := false.B
   val src1 = Mux(io.sel.rs1SelPC, io.pc, io.rs1V)
   val src2 = Mux(io.sel.rs2SelImm, io.imm, io.rs2V)
   switch (io.op) {
@@ -155,6 +168,7 @@ class EXU extends Module {
       io.res := src1 + src2
     }
   }
+  printf(cf"\t${src1}%x op ${src2}%x = ${io.res}%x\n")
 }
 
 class LSU extends Module {
@@ -172,14 +186,19 @@ class LSU extends Module {
 class WBU extends Module {
   val io = IO(new Bundle {
     val brCmp = Input(new BrCmpBundle())
+    val pcJmp = Input(new PcJmpBundle())
     val pc    = Input(Tp.PCType())
     val aluV  = Input(Tp.RegType())
     val memV  = Input(Tp.RegType())
     val nxpc  = Output(Tp.PCType())
     val data  = Output(Tp.RegType())
   })
-  io.nxpc := io.pc + 4.U
-  io.data := io.aluV
+  val jmp = io.pcJmp.jUncond
+  val snpc = io.pc + 4.U
+  io.nxpc := Mux(jmp, io.aluV, snpc)
+  // NOTE: Once PC jumps, try store its next pc
+  // For B-type insts, wrEn had been set to false.
+  io.data := Mux(jmp, snpc, io.aluV)
 }
 
 class InstROM(romFile: String) extends Module {
@@ -190,8 +209,8 @@ class InstROM(romFile: String) extends Module {
   // TODO: How to correctly write combinatinal 'memory' ??
   val iROM  = Mem((1 << MEM.PhysBits), Tp.InstType())
   loadMemoryFromFileInline(iROM, romFile, MemoryLoadFileType.Hex)
-  io.inst := iROM.read(io.pc)
   printf(cf"[ PC = ${io.pc}%x ] inst = ${io.inst}%x\n")
+  io.inst := iROM.read(io.pc >> 2)
 }
 
 class rvCore(romFile: String) extends Module {
@@ -265,10 +284,17 @@ class rvCore(romFile: String) extends Module {
   iWrite.io.pc   := pc
   iWrite.io.aluV := res
   iWrite.io.memV := loadV
+  iWrite.io.pcJmp := iDec.io.pcJmp
   // WB out 
   pc := iWrite.io.nxpc
   iReg.io.data := iWrite.io.data
 
   // printf(cf"   R[${iDec.io.rs1}%d]=0x${rs1V}%x R[${iDec.io.rs2}%d]=0x${rs2V}%x "
   //     + cf"Alu=${sAlu.io.sum}%x Eq=${sAlu.io.isEq}\n")
+
+  dontTouch(iFetch.io)
+  dontTouch(iWrite.io)
+  dontTouch(iDec.io)
+  dontTouch(iExe.io)
+  dontTouch(iLsu.io)
 }
