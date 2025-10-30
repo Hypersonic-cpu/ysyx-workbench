@@ -1,19 +1,37 @@
-package rvProc
+package rvProc.Test
 
 import chisel3._
 import chiseltest._
 import org.scalatest.flatspec.AnyFlatSpec
 import circt.stage.FirtoolOption
+import chiseltest.simulator.VerilatorBackendAnnotation
+import chiseltest.simulator.VerilatorFlags
+import chiseltest.simulator.VerilatorLinkFlags
+
+import java.nio.file
+
+object VerilatorOpGen {
+  def getFlags () = 
+    VerilatorFlags(Seq("--trace-depth", "99"))
+
+}
 
 object IntCvt {
   def twosC (x:Int) = (0xffffffffL ^ x) + 1L
 }
 
+object PathCfg {
+  def hexDir() = "/mnt/hgfs/Arch-PA/ysyx-workbench/npc/rvproc/prog-rom/"
+  def hexFile(s: String) = file.Paths.get(hexDir(), s).toString()
+}
+
 class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
   "rvCore" should "pass Addi" in {
-    test (new rvProc.rvCore("/mnt/hgfs/Arch-PA/ysyx-workbench/npc/rvproc/prog-rom/addi.hex"))
+    test (new rvProc.rvCore(PathCfg.hexFile("addi.hex")))
       .withAnnotations(Seq(
-      WriteVcdAnnotation
+      WriteVcdAnnotation,
+      VerilatorBackendAnnotation,
+      VerilatorOpGen.getFlags()
     )) { dut =>
       dut.io.outPC.expect(0)
 
@@ -45,9 +63,11 @@ class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
   }
 
   "rvCore" should "pass Jalr" in {
-    test (new rvProc.rvCore("/mnt/hgfs/Arch-PA/ysyx-workbench/npc/rvproc/prog-rom/jalr.hex"))
+    test (new rvProc.rvCore(PathCfg.hexFile("jalr.hex")))
       .withAnnotations(Seq(
-        WriteVcdAnnotation
+        WriteVcdAnnotation,
+        VerilatorBackendAnnotation,
+        VerilatorOpGen.getFlags()
       )
     ) { dut =>
       dut.clock.step(3)
@@ -59,7 +79,7 @@ class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
       dut.io.regPrb.expect(0x10)
 
       dut.clock.step(3)
-      // dut.io.outPC.expect(0x10)
+      dut.io.outPC.expect(0x10)
       
       dut.io.regPin.poke(7)
       dut.clock.step(2)

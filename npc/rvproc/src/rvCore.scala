@@ -103,7 +103,8 @@ class IDU extends Module {
     val memWr = Output(Bool())
     val aluOp = Output(IntAluOp())
     val aluSel = Output(new AluSelBundle())
-    val pcJmp = Output(new PcJmpBundle())
+    val pcJmp  = Output(new PcJmpBundle())
+    val ebreak = Output(Bool())
   })
 
   val opcode = io.inst(6, 0)
@@ -113,18 +114,26 @@ class IDU extends Module {
 
   val arithOp = opcode(4, 2) === 0b100.U(3.W)
   val jalrOp  = opcode(4, 2) === 0b001.U(3.W)
-  // TODO:
-  val instTp  = ITYPE.tI // Mux(arithOp, ITYPE.tI, ITYPE.tJ)
-  io.aluOp  := IntAluOp(funct3)
-  io.aluSel.rs2Invert := funct7(5).asBool
-  io.aluSel.rs2SelImm := instTp === ITYPE.tI
-  io.aluSel.rs1SelPC  := jalrOp
+  val sysOp   = 
+    (opcode(6, 2) === 0b11100.U(5.W)) &&
+    (~(io.inst(31, 21) ## io.inst(19, 7)).orR)
+  val isEbreak = sysOp && io.inst(20)
+  val isEcall  = sysOp && (~io.inst(20))
+  io.ebreak := isEbreak
 
-  io.rs1    := io.inst(19, 15)
+  // On ECALL we prepare reg a0 (x10)
+  io.rs1    := Mux(isEcall, 10.U, io.inst(19, 15))
   io.rs2    := io.inst(24, 20)
   io.rd     := io.inst(11,  7)
   val immIS  = io.inst(31, 20).asSInt.pad(32).asUInt
   val immIU  = io.inst(31, 20).pad(32)
+
+  // TODO:
+  val instTp  = Mux(sysOp, ITYPE.tN, ITYPE.tI) // Mux(arithOp, ITYPE.tI, ITYPE.tJ)
+  io.aluOp  := IntAluOp(funct3)
+  io.aluSel.rs2Invert := funct7(5).asBool
+  io.aluSel.rs2SelImm := instTp === ITYPE.tI
+  io.aluSel.rs1SelPC  := false.B
 
   io.imm    := Mux(true.B, immIS, immIU)
   io.memWr  := false.B
@@ -207,6 +216,8 @@ class InstROM(romFile: String) extends Module {
     val inst = Output(Tp.InstType())
   })
   // TODO: How to correctly write combinatinal 'memory' ??
+  // BUG: Mem too large will cause a crash (not warn/abort)
+  // of firtool. (Hard to debug ...)
   val iROM  = Mem((1 << MEM.PhysBits), Tp.InstType())
   loadMemoryFromFileInline(iROM, romFile, MemoryLoadFileType.Hex)
   printf(cf"[ PC = ${io.pc}%x ] inst = ${io.inst}%x\n")
@@ -230,6 +241,7 @@ class rvCore(romFile: String) extends Module {
   val iExe   = Module(new EXU()) 
   val iLsu   = Module(new LSU())
   val iWrite = Module(new WBU())
+  val iEcall = Module(new EcallBox())
 
   // Probing 
   io.outPC := pc 
@@ -291,6 +303,14 @@ class rvCore(romFile: String) extends Module {
 
   // printf(cf"   R[${iDec.io.rs1}%d]=0x${rs1V}%x R[${iDec.io.rs2}%d]=0x${rs2V}%x "
   //     + cf"Alu=${sAlu.io.sum}%x Eq=${sAlu.io.isEq}\n")
+
+
+  iEcall.io.clock := this.clock
+  iEcall.io.reset := this.reset
+  iEcall.io.pcin  := pc
+  iEcall.io.a10in := rs1V
+  iEcall.io.isEbreak := iDec.isEbreak
+  iEcall.io.isEcall  := false.B
 
   dontTouch(iFetch.io)
   dontTouch(iWrite.io)
