@@ -308,7 +308,7 @@ class rvCore(romFile: String) extends Module {
   iEcall.io.clock := this.clock
   iEcall.io.reset := this.reset
   iEcall.io.pcin  := pc
-  iEcall.io.a10in := rs1V
+  iEcall.io.a0in  := rs1V
   iEcall.io.isEbreak := iDec.io.ebreak
   iEcall.io.isEcall  := false.B
 
