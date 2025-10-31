@@ -16,8 +16,8 @@ module EcallBox (
     if (reset) begin end
     else begin
       if (isEbreak) begin
-        // $display(">>>>>> %x\n", pcin);
-        // $display(">>>>>> %x\n", a0in);
+        $display(">>>>>> %x\n", pcin);
+        $display(">>>>>> %x\n", a0in);
         call_ebreak(pcin, a0in);
         // $finish;
       end
