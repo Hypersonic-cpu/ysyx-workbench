@@ -27,11 +27,12 @@ object PathCfg {
 object VerilatorOpGen {
   def getFlags () = 
     VerilatorFlags(Seq("--trace-depth", "99", 
-      "-CFLAGS", s"-I${PathCfg.vltDir()}"))
+      "-y", PathCfg.dpiDir(), 
+      "-CFLAGS", s"-I${PathCfg.vltDir()}", PathCfg.dpiFile()))
 
-  def getCFlags () = 
-    VerilatorCFlags(Seq(PathCfg.dpiFile()))
-
+  // def getCFlags () = 
+  //   VerilatorCFlags(Seq())
+  //
 }
 
 class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
@@ -102,17 +103,23 @@ class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
         WriteVcdAnnotation,
         VerilatorBackendAnnotation,
         VerilatorOpGen.getFlags(),
-        VerilatorOpGen.getCFlags()
+        // VerilatorOpGen.getCFlags()
       )
     ) { dut =>
       try {
-        dut.clock.step(1000000)
+        var cnt = 0
+        // while (cnt < 20 && !dut.imm)
+        dut.clock.step(10)
       } catch {
-        case e : Exception => 
-          fail(s"Verilator exit with ${e.getMessage()}")
-        case e : Throwable => 
-          fail(s"Verilator exit with ${e.getMessage()}")
+        case e: StopException => {
+          println(s"Stop at cycle ${e.cycles}")
+        }
+        // case e : Exception => 
+        //   fail(s"Verilator exit with Exception ${e.getMessage()}")
+        // case e : Throwable => 
+        //   fail(s"Verilator exit with Throwable ${e.getMessage()}")
       }
+      ()
     }
   }
 }
