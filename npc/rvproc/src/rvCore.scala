@@ -148,9 +148,9 @@ class IDU extends Module {
   io.pcJmp.jIfge := false.B
   io.pcJmp.jUncond := jalrOp
 
-  printf(cf"Decode: inst ${io.inst}%x type${instTp} alu${io.aluOp} " + 
-    cf"wr[M|R] = ${io.memWr}|${io.regWr} jmp ${io.pcJmp.jUncond}\n")
-  printf(cf"\trs1 ${io.rs1}%d, rs2 ${io.rs2}%d, imm ${io.imm}%x\n");
+  // printf(cf"Decode: inst ${io.inst}%x type${instTp} alu${io.aluOp} " + 
+  //   cf"wr[M|R] = ${io.memWr}|${io.regWr} jmp ${io.pcJmp.jUncond}\n")
+  // printf(cf"\trs1 ${io.rs1}%d, rs2 ${io.rs2}%d, imm ${io.imm}%x\n");
 
 }
 
@@ -166,7 +166,7 @@ class EXU extends Module {
     val brCmp = Output(new BrCmpBundle())
   })
 
-  printf(cf"\trs1V ${io.rs1V}%x, rs2V ${io.rs2V}%x, imm ${io.imm}%x\n");
+  // printf(cf"\trs1V ${io.rs1V}%x, rs2V ${io.rs2V}%x, imm ${io.imm}%x\n");
   io.res := 0.U
   io.brCmp.beq := false.B
   io.brCmp.blt := false.B
@@ -177,7 +177,7 @@ class EXU extends Module {
       io.res := src1 + src2
     }
   }
-  printf(cf"\t${src1}%x op ${src2}%x = ${io.res}%x\n")
+  // printf(cf"\t${src1}%x op ${src2}%x = ${io.res}%x\n")
 }
 
 class LSU extends Module {
@@ -220,7 +220,7 @@ class InstROM(romFile: String) extends Module {
   // of firtool. (Hard to debug ...)
   val iROM  = Mem((1 << MEM.PhysBits), Tp.InstType())
   loadMemoryFromFileInline(iROM, romFile, MemoryLoadFileType.Hex)
-  printf(cf"[ PC = ${io.pc}%x ] inst = ${io.inst}%x\n")
+  // printf(cf"[ PC = ${io.pc}%x ] inst = ${io.inst}%x\n")
   io.inst := iROM.read(io.pc >> 2)
 }
 

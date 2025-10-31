@@ -59,6 +59,7 @@ $(SIM_BIN): $(VSRCS) $(CSRCS) $(NVB_ARCHIVE)
 
 
 test:
+	$(call git_commit, "test RTL") # DO NOT REMOVE THIS LINE!!!
 	mill -i $(PRJ).test
 
 verilog:

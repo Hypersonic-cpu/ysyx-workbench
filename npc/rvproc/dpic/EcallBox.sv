@@ -4,19 +4,22 @@ module EcallBox (
   input isEcall,
   input isEbreak,
   input bit [31:0] pcin,
-  input bit [31:0] a10in
+  input bit [31:0] a0in
 );
 
   import "DPI-C" function void call_ebreak(
-    input bit [31:0] pc,
-    input bit [31:0] a10reg
+    input int unsigned pc,
+    input int unsigned a0reg
   );
 
   always @(posedge clock or posedge reset) begin
     if (reset) begin end
     else begin
       if (isEbreak) begin
-        call_ebreak(pcin, a10in);
+        // $display(">>>>>> %x\n", pcin);
+        // $display(">>>>>> %x\n", a0in);
+        call_ebreak(pcin, a0in);
+        // $finish;
       end
 
       if (isEcall) begin
