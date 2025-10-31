@@ -106,6 +106,7 @@ class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
         // VerilatorOpGen.getCFlags()
       )
     ) { dut =>
+      dut.io.regPin.poke(10)
       try {
         var cnt = 0
         // while (cnt < 20 && !dut.imm)
