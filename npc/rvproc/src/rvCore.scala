@@ -122,7 +122,7 @@ class IDU extends Module {
   io.ebreak := isEbreak
 
   // On ECALL we prepare reg a0 (x10)
-  io.rs1    := Mux(isEcall, 10.U, io.inst(19, 15))
+  io.rs1    := Mux(sysOp, 10.U, io.inst(19, 15))
   io.rs2    := io.inst(24, 20)
   io.rd     := io.inst(11,  7)
   val immIS  = io.inst(31, 20).asSInt.pad(32).asUInt
