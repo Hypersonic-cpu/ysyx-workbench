@@ -181,7 +181,7 @@ class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
   }
 
   "rvCore" should "pass Load" in {
-    PathCfg.doLinkRam("loadstore.hex")
+    PathCfg.doLinkRam("loads.hex")
     test (new rvProc.rvCore())
       .withAnnotations(Seq(
         // WriteVcdAnnotation,
