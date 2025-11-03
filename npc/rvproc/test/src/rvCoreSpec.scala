@@ -81,7 +81,8 @@ class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
   }
 
   "rvCore" should "pass Jalr" in {
-    test (new rvProc.rvCore(PathCfg.doLinkRam("jalr.hex")))
+    PathCfg.doLinkRam("jalr.hex")
+    test (new rvProc.rvCore())
       .withAnnotations(Seq(
         // WriteVcdAnnotation,
         VerilatorBackendAnnotation,
@@ -106,7 +107,8 @@ class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
   }
 
   "rvCore" should "exit at Ebreak" in {
-    test (new rvProc.rvCore(PathCfg.doLinkRam("ebreak.hex")))
+    PathCfg.doLinkRam("ebreak.hex")
+    test (new rvProc.rvCore())
       .withAnnotations(Seq(
         // WriteVcdAnnotation,
         VerilatorBackendAnnotation,
