@@ -201,7 +201,7 @@ class IDU extends Module {
     funct3(1, 0), 0b11.U
   ))
   io.memAcc.isLd := opName === InstOp.Load 
-  io.memAcc.sExt := funct3(2)
+  io.memAcc.sExt := ~funct3(2)
 
   io.regWr  := ~(
     instTp === ITYPE.tN || 
@@ -283,8 +283,8 @@ class LSU extends Module {
   iMem.io.wrEn  := ~io.memAcc.isLd
 
   val lraw = iMem.io.loadRaw
-  printf(cf"DPI Chisel Raw ${lraw}%x\n")
   val sext = io.memAcc.sExt
+  printf(cf"DPI Chisel Raw ${lraw}%x SEXT ${sext}\n")
   io.inst := iMem.io.instRaw
   io.load := MuxLookup(io.memAcc.lenOp, 0.U) (Seq(
     MemLenOp.Byte -> Mux(sext, lraw(8, 0).asSInt.pad(32).asUInt, lraw(8, 0)),
