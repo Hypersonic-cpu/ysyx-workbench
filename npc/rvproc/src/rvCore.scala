@@ -142,6 +142,7 @@ class IDU extends Module {
     val aluOp  = Output(IntAluOp())
     val aluSel = Output(new AluSelBundle())
     val pcJmp  = Output(new PcJmpBundle())
+    val wbSel  = Output(WbSrcOp())
     val ebreak = Output(Bool())
   })
 
@@ -211,7 +212,13 @@ class IDU extends Module {
   io.pcJmp.jIfne   := false.B
   io.pcJmp.jIflt   := false.B
   io.pcJmp.jIfge   := false.B
+  // TODO: JAL
   io.pcJmp.jUncond := opName === InstOp.Jalr
+
+  io.wbSel := MuxCase(WbSrcOp.fromAlu, Seq(
+    (opName === InstOp.Jalr) -> WbSrcOp.fromPC,
+    (opName === InstOp.Load) -> WbSrcOp.fromMem
+  ))
 
   printf(cf"Decode: inst ${io.inst}%x type${instTp} alu${io.aluOp} " + 
     cf"wr[M|R] = ${io.memAcc.lenOp}|${io.regWr} jmp ${io.pcJmp.jUncond}\n")
@@ -384,6 +391,7 @@ class rvCore() extends Module {
   iWrite.io.aluV := res
   iWrite.io.memV := loadV
   iWrite.io.pcJmp := iDec.io.pcJmp
+  iWrite.io.wbSel := iDec.io.wbSel
   // WB out 
   pc           := iWrite.io.nxpc
   iReg.io.data := iWrite.io.data
