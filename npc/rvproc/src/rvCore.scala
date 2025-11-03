@@ -158,7 +158,7 @@ class IDU extends Module {
     InstOp.System -> ITYPE.tN
     ))
   io.aluOp            := IntAluOp(funct3)
-  io.aluSel.rs2Invert := false.B // funct7(5).asBool
+  io.aluSel.rs2Invert := funct7(5).asBool
   io.aluSel.rs2SelImm := ~(instTp === ITYPE.tN || instTp === ITYPE.tR)
   io.aluSel.rs1SelPC  := false.B // TODO: JAL
 
@@ -307,7 +307,7 @@ class rvCore() extends Module {
 
   // EXU in
   iExe.io.rs1V := rs1V
-  iExe.io.rs2V := rs1V
+  iExe.io.rs2V := rs2V
   iExe.io.imm  := imm 
   iExe.io.pc   := pc
   iExe.io.op   := op 
