@@ -44,7 +44,8 @@ object VerilatorOpGen {
 
 class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
   "rvCore" should "pass Addi" in {
-    test (new rvProc.rvCore(PathCfg.doLinkRam("addi.hex")))
+    PathCfg.doLinkRam("addi.hex")
+    test (new rvProc.rvCore())
       .withAnnotations(Seq(
       // WriteVcdAnnotation,
       VerilatorBackendAnnotation,
