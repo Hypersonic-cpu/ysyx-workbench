@@ -289,7 +289,7 @@ class LSU extends Module {
   io.load := MuxLookup(io.memAcc.lenOp, 0.U) (Seq(
     MemLenOp.Byte -> Mux(sext, lraw(8, 0).asSInt.pad(32).asUInt, lraw(8, 0)),
     MemLenOp.Half -> Mux(sext, lraw(16, 0).asSInt.pad(32).asUInt, lraw(16, 0)),
-    MemLenOp.Byte -> lraw
+    MemLenOp.Word -> lraw
     )
   )
 }
