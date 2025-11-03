@@ -263,6 +263,7 @@ class rvCore() extends Module {
   val pc     = RegInit(0.U(ISA.PCBits.W))
   val iReg   = Module(new RegFile())
 
+  printf(cf"[ PC = ${pc}%8x ]\n")
   // Func
   val iDec   = Module(new IDU())
   val iExe   = Module(new EXU()) 
