@@ -53,16 +53,16 @@ class AluSelBundle extends Bundle {
 }
 
 object InstOp extends ChiselEnum {
+  val Load   = Value(0b00000.U)
   val OpImm  = Value(0b00100.U)
+  val Auipc  = Value(0b00101.U)
+  val Store  = Value(0b01000.U)
   val OpReg  = Value(0b01100.U)
   // val OpFP   = Value(0b10100.U)
-  val System = Value(0b11100.U)
-  val Auipc  = Value(0b00101.U)
   val Lui    = Value(0b01101.U)
-  val Load   = Value(0b00000.U)
-  val Store  = Value(0b01000.U)
   // val Branch = Value(0b11000.U)
   val Jalr   = Value(0b11001.U)
+  val System = Value(0b11100.U)
   // val Jal    = Value(0b11011.U)
 }
 
