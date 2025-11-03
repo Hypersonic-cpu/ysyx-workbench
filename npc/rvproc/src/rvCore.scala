@@ -199,6 +199,7 @@ class LSU extends Module {
   val iMem = Module(new PMemBox())
   iMem.io.clock := clock
   iMem.io.reset := reset
+  iMem.io.pcin  := io.pcin
   iMem.io.addr  := io.addr
   iMem.io.data  := io.data
   iMem.io.byteMask := 0xf.U
