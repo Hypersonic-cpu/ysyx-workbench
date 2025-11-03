@@ -304,8 +304,8 @@ class rvCore(romFile: String) extends Module {
   pc := iWrite.io.nxpc
   iReg.io.data := iWrite.io.data
 
-  printf(cf"   R[${iDec.io.rs1}%d]=0x${rs1V}%x R[${iDec.io.rs2}%d]=0x${rs2V}%x "
-      + cf"Alu=${sAlu.io.sum}%x Eq=${sAlu.io.isEq}\n")
+  // printf(cf"   R[${iDec.io.rs1}%d]=0x${rs1V}%x R[${iDec.io.rs2}%d]=0x${rs2V}%x "
+  //     + cf"Alu=${sAlu.io.sum}%x Eq=${sAlu.io.isEq}\n")
 
   iEcall.io.clock := this.clock
   iEcall.io.reset := this.reset
