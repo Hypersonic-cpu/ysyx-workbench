@@ -2,7 +2,7 @@ package rvProc
 
 import chisel3._
 import chisel3.util._
-import chisel3.util.experimental.loadMemoryFromFileInline
+// import chisel3.util.experimental.loadMemoryFromFileInline
 // import firrtl.annotations.MemoryLoadFileType
 
 object PATH {
@@ -48,7 +48,22 @@ class PcJmpBundle extends Bundle {
 class AluSelBundle extends Bundle {
   val rs1SelPC  = Bool()
   val rs2SelImm = Bool()
+  // NOTE: This field also represents SRA
   val rs2Invert = Bool()
+}
+
+object InstOp extends ChiselEnum {
+  val OpImm  = Value(0b00100.U)
+  val OpReg  = Value(0b01100.U)
+  // val OpFP   = Value(0b10100.U)
+  val System = Value(0b11100.U)
+  val Auipc  = Value(0b00101.U)
+  val Lui    = Value(0b01101.U)
+  val Load   = Value(0b00000.U)
+  val Store  = Value(0b01000.U)
+  // val Branch = Value(0b11000.U)
+  val Jalr   = Value(0b11001.U)
+  // val Jal    = Value(0b11011.U)
 }
 
 object IntAluOp extends ChiselEnum {
@@ -113,26 +128,34 @@ class IDU extends Module {
   val funct3 = io.inst(14, 12)
   val funct7 = io.inst(31, 25)
   val rvBase  = opcode === 0b11.U(2.W)
+  assert(rvBase, cf"Inst[2:1] is not 0b11: opcode=$opcode")
 
-  val arithOp = opcode(4, 2) === 0b100.U(3.W)
-  val jalrOp  = opcode(4, 2) === 0b001.U(3.W)
-  val sysOp   = 
-    (opcode(6, 2) === 0b11100.U(5.W)) &&
-    (~(io.inst(31, 21) ## io.inst(19, 7)).orR)
-  val isEbreak = sysOp && io.inst(20)
-  val isEcall  = sysOp && (~io.inst(20))
+  val (opName, opValid) = InstOp.safe(opcode(6, 2))
+  assert(opValid, cf"Invalid opcode encountered: opcode=$opcode")
+  // val isEbreak = sysOp && io.inst(20)
+  // val isEcall  = sysOp && (~io.inst(20))
+  val isEbreak = opName === InstOp.System && io.inst(20)
   io.ebreak := isEbreak
 
   // On ECALL we prepare reg a0 (x10)
-  io.rs1    := Mux(sysOp, 10.U, io.inst(19, 15))
+  io.rs1    := Mux(isEbreak, 10.U, io.inst(19, 15))
   io.rs2    := io.inst(24, 20)
   io.rd     := io.inst(11,  7)
   val immIS  = io.inst(31, 20).asSInt.pad(32).asUInt
   val immIU  = io.inst(31, 20).pad(32)
 
   // TODO:
-  val instTp  = Mux(sysOp, ITYPE.tN, ITYPE.tI) // Mux(arithOp, ITYPE.tI, ITYPE.tJ)
-  io.aluOp  := IntAluOp(funct3)
+  val instTp  = MuxLookup(opName, ITYPE.tN) ( Seq(
+    InstOp.OpImm  -> ITYPE.tI,
+    InstOp.OpReg  -> ITYPE.tR,
+    InstOp.Jalr   -> ITYPE.tJ,
+    InstOp.Lui    -> ITYPE.tU,
+    InstOp.Auipc  -> ITYPE.tU,
+    InstOp.Load   -> ITYPE.tI,
+    InstOp.Store  -> ITYPE.tS,
+    InstOp.System -> ITYPE.tN
+    ))
+  io.aluOp            := IntAluOp(funct3)
   io.aluSel.rs2Invert := funct7(5).asBool
   io.aluSel.rs2SelImm := instTp === ITYPE.tI
   io.aluSel.rs1SelPC  := false.B
@@ -144,11 +167,11 @@ class IDU extends Module {
     instTp === ITYPE.tB || 
     instTp === ITYPE.tS)
 
-  io.pcJmp.jIfeq := false.B
-  io.pcJmp.jIfne := false.B
-  io.pcJmp.jIflt := false.B
-  io.pcJmp.jIfge := false.B
-  io.pcJmp.jUncond := jalrOp
+  io.pcJmp.jIfeq   := false.B
+  io.pcJmp.jIfne   := false.B
+  io.pcJmp.jIflt   := false.B
+  io.pcJmp.jIfge   := false.B
+  io.pcJmp.jUncond := opName === InstOp.Jalr
 
   printf(cf"Decode: inst ${io.inst}%x type${instTp} alu${io.aluOp} " + 
     cf"wr[M|R] = ${io.memWr}|${io.regWr} jmp ${io.pcJmp.jUncond}\n")
