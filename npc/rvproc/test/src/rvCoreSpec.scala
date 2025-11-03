@@ -89,7 +89,16 @@ class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
         VerilatorOpGen.getFlags()
       )
     ) { dut =>
-      dut.clock.step(3)
+      dut.io.regPin.poke(1)
+      dut.clock.step(1)
+      dut.io.regPrb.expect(IntCvt.twosC(1))
+
+      dut.io.regPin.poke(2)
+      dut.clock.step(1)
+      dut.io.regPrb.expect(1)
+
+      dut.clock.step(1)
+
       dut.io.regPin.poke(10)
       dut.clock.step(1)
       dut.io.regPrb.expect(0)
