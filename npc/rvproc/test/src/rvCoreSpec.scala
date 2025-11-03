@@ -21,16 +21,18 @@ object PathCfg {
   def hexDir() = workDir() + "/prog-rom"
   def dpiDir() = workDir() + "/dpic"
   def hexFile(s: String) = file.Paths.get(hexDir(), s).toString()
-  def dpiFile() = " "
-    // file.Paths.get(dpiDir(), "simcalls.cc").toString() + " " + 
-    // file.Paths.get(dpiDir(), "pmemacc.cc").toString()
+  def dpiFiles() = Seq(
+    file.Paths.get(dpiDir(), "simcalls.cc").toString(),
+    file.Paths.get(dpiDir(), "pmemacc.cc").toString(),
+  )
 }
 
 object VerilatorOpGen {
   def getFlags () = 
     VerilatorFlags(Seq("--trace-depth", "99", 
       "-y", PathCfg.dpiDir(), 
-      "-CFLAGS", s"-I${PathCfg.vltDir()}", PathCfg.dpiFile()))
+      "-CFLAGS", s"-I${PathCfg.vltDir()}") 
+    ++ PathCfg.dpiFiles())
 }
 
 class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
