@@ -22,7 +22,7 @@ object PathCfg {
   def dpiDir() = workDir() + "/dpic"
   def hexFile(s: String) = file.Paths.get(hexDir(), s).toString()
   def dpiFile() = 
-    file.Paths.get(dpiDir(), "simcalls.cc").toString() + " "
+    file.Paths.get(dpiDir(), "simcalls.cc").toString() + " " + 
     file.Paths.get(dpiDir(), "pmemacc.cc").toString()
 }
 
