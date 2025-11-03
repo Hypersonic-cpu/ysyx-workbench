@@ -1,7 +1,7 @@
 ## Directories
 # project name (also source dir)
-PRJ ?= njuprojn8
-TOPNAME ?= VgaCtrlFpga
+PRJ ?= rvproc
+TOPNAME ?= rvCore
 # dir for generated Verilog
 BUILD_SV_DIR = ./build-sv/$(PRJ)
 # dir for C++ compiled by Verilator
@@ -59,6 +59,7 @@ $(SIM_BIN): $(VSRCS) $(CSRCS) $(NVB_ARCHIVE)
 
 
 test:
+	$(call git_commit, "test RTL") # DO NOT REMOVE THIS LINE!!!
 	mill -i $(PRJ).test
 
 verilog:
@@ -95,3 +96,5 @@ sim: verilate verilog $(SIM_BIN)
 	$(SIM_BIN)
 
 -include ../Makefile
+
+-include $(PRJ)/MakeTest.mk
