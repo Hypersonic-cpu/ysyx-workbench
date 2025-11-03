@@ -298,6 +298,9 @@ class rvCore() extends Module {
   iReg.io.rs2 := rs2
   val rs1V = iReg.io.rs1V
   val rs2V = iReg.io.rs2V
+  printf(cf"<<Main>> R[${rs1}] = ${rs1V}%x\n")
+  printf(cf"<<Main>> R[${rs2}] = ${rs2V}%x\n")
+
   // Reg write
   iReg.io.rd := iDec.io.rd
   iReg.io.wrEn := iDec.io.regWr
