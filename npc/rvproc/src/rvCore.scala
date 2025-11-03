@@ -5,11 +5,6 @@ import chisel3.util._
 import chisel3.util.experimental.loadMemoryFromFileInline
 import firrtl.annotations.MemoryLoadFileType
 
-/** TODO:
-  * 需要把 Control 单独拿出来吗? UCB 的课件看起来
-  * 比自己画的好看.
-  */
-
 object ISA {
   val InstBits    = 32
   val RegBits     = 32
@@ -91,17 +86,23 @@ class RegFile extends Module {
   }
 }
 
-/** Decoder, NOT responsible for read register */
+/** NOTE: 3 Nov 2025
+  *  放弃把 Control 单独放在一个 unit 的想法. 因为
+  *  Ctrl 仍然需要输入 inst, 不能直接获得 IDU 的输出.
+  *  所以把 Ctrl 集成进入 IDU 更加合适. pcSel 由 WBU
+  *  根据 pcJmp 和 branch result 生成.
+  */
+
 class IDU extends Module {
   val io = IO(new Bundle {
-    val inst = Input(Tp.InstType())
-    val rs1  = Output(Tp.RegIdxType())
-    val rs2  = Output(Tp.RegIdxType())
-    val rd   = Output(Tp.RegIdxType())
-    val imm  = Output(Tp.RegType())
-    val regWr = Output(Bool())
-    val memWr = Output(Bool())
-    val aluOp = Output(IntAluOp())
+    val inst   = Input(Tp.InstType())
+    val rs1    = Output(Tp.RegIdxType())
+    val rs2    = Output(Tp.RegIdxType())
+    val rd     = Output(Tp.RegIdxType())
+    val imm    = Output(Tp.RegType())
+    val regWr  = Output(Bool())
+    val memWr  = Output(Bool())
+    val aluOp  = Output(IntAluOp())
     val aluSel = Output(new AluSelBundle())
     val pcJmp  = Output(new PcJmpBundle())
     val ebreak = Output(Bool())
