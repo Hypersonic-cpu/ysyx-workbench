@@ -30,6 +30,7 @@ pmem_init() {
 
 extern "C" uint32_t 
 pmem_read(uint32_t raddr) {
+  std::cout << "DPI-C >> pmem_read called" << std::endl;
   uint32_t aligned_index = raddr >> 2;
   assert(aligned_index < (PMemSize >> 2) && "PMem out of bound");
   return pmem_raw[aligned_index];
