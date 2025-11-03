@@ -77,6 +77,21 @@ object IntAluOp extends ChiselEnum {
   val And  = Value(0b111.U)
 }
 
+object MemLenOp extends ChiselEnum {
+  val Byte = Value(0b00.U)
+  val Half = Value(0b01.U)
+  val Word = Value(0b10.U)
+  val None = Value(0b11.U)
+}
+
+class MemAccBundle extends Bundle {
+  // Whether enable mem access is ctrl by 
+  // lenOp =?= None
+  val lenOp = MemLenOp()
+  val sExt  = Bool()
+  val isLd  = Bool()
+}
+
 class RegFile extends Module {
   val io = IO(new Bundle {
     val rs1  = Input(Tp.RegIdxType())
@@ -119,7 +134,7 @@ class IDU extends Module {
     val rd     = Output(Tp.RegIdxType())
     val imm    = Output(Tp.RegType())
     val regWr  = Output(Bool())
-    val memWr  = Output(Bool())
+    val memAcc = Output(new MemAccBundle())
     val aluOp  = Output(IntAluOp())
     val aluSel = Output(new AluSelBundle())
     val pcJmp  = Output(new PcJmpBundle())
@@ -176,7 +191,13 @@ class IDU extends Module {
     ITYPE.tU -> immU
   ))
 
-  io.memWr  := false.B
+  io.memAcc.lenOp := MemLenOp(Mux(
+    opName === InstOp.Load || opName === InstOp.Store,
+    funct3(1, 0), 0b11.U
+  ))
+  io.memAcc.isLd := opName === InstOp.Load 
+  io.memAcc.sExt := funct3(2)
+
   io.regWr  := ~(
     instTp === ITYPE.tN || 
     instTp === ITYPE.tB || 
@@ -189,7 +210,7 @@ class IDU extends Module {
   io.pcJmp.jUncond := opName === InstOp.Jalr
 
   printf(cf"Decode: inst ${io.inst}%x type${instTp} alu${io.aluOp} " + 
-    cf"wr[M|R] = ${io.memWr}|${io.regWr} jmp ${io.pcJmp.jUncond}\n")
+    cf"wr[M|R] = ${io.memAcc.lenOp}|${io.regWr} jmp ${io.pcJmp.jUncond}\n")
   printf(cf"\trs1 ${io.rs1}%d, rs2 ${io.rs2}%d, imm ${io.imm}%x\n");
 
 }
