@@ -101,7 +101,7 @@ class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
         VerilatorOpGen.getFlags(),
         // VerilatorOpGen.getCFlags()
       )
-    ) { dut => 
+    ) { dut =>
       assertThrows[java.lang.RuntimeException] {
         dut.io.regPin.poke(10)
         try {
