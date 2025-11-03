@@ -21,7 +21,7 @@ module PMemBox(
       input int unsigned wdata,
       input byte unsigned wmask);
 
-  always @(posedge reset) begin
+  initial begin
     pmem_init();
   end
 
