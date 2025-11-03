@@ -396,6 +396,8 @@ class rvCore() extends Module {
   pc           := iWrite.io.nxpc
   iReg.io.data := iWrite.io.data
 
+  printf(cf"<<<WB>>> rd ${iReg.io.rd} data ${iReg.io.data}%x\n")
+
   // printf(cf"   R[${iDec.io.rs1}%d]=0x${rs1V}%x R[${iDec.io.rs2}%d]=0x${rs2V}%x "
   //     + cf"Alu=${sAlu.io.sum}%x Eq=${sAlu.io.isEq}\n")
 
