@@ -4,8 +4,10 @@
 !Makefile
 !*.mk
 !*.scala
+!*.S
 !*.[cSh]
 !*.v
+!*.sv
 !*.cpp
 !*.cc
 !.gitignore
