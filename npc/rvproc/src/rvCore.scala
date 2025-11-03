@@ -288,8 +288,8 @@ class LSU extends Module {
   printf(cf"DPI Chisel Raw ${lraw}%x SEXT ${sext}\n")
   io.inst := iMem.io.instRaw
   io.load := MuxLookup(lenOp, 0.U) (Seq(
-    MemLenOp.Byte -> Mux(sext, lraw(8, 0).asSInt.pad(32).asUInt, lraw(8, 0)),
-    MemLenOp.Half -> Mux(sext, lraw(16, 0).asSInt.pad(32).asUInt, lraw(16, 0)),
+    MemLenOp.Byte -> Mux(sext, lraw(7, 0).asSInt.pad(32).asUInt, lraw(7, 0)),
+    MemLenOp.Half -> Mux(sext, lraw(15, 0).asSInt.pad(32).asUInt, lraw(15, 0)),
     MemLenOp.Word -> lraw
     )
   )
