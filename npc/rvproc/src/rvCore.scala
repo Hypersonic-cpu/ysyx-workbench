@@ -97,6 +97,8 @@ class RegFile extends Module {
   io.rs2V := Mux(io.rs2.orR, regs(io.rs2), 0.U)
   io.regPrb := Mux(io.rsPin.orR, regs(io.rsPin), 0.U)
 
+  printf(cf"<<REG>> R[${io.rs1}] = ${io.rs1V}%x\n")
+  printf(cf"<<REG>> R[${io.rs2}] = ${io.rs2V}%x\n")
   when (io.wrEn && io.rd.orR) {
     regs(io.rd) := io.data
   }
