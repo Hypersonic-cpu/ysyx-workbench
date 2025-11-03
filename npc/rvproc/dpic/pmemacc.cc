@@ -33,7 +33,7 @@ pmem_read(uint32_t raddr) {
   std::cout << "DPI-C >> pmem_read addr " << std::hex << raddr;
   uint32_t aligned_index = raddr >> 2;
   assert(aligned_index < (PMemSize >> 2) && "PMem out of bound");
-  std::cout << " ret = " << std::hex << pmem_raw[aligned_index];
+  std::cout << " ret = " << std::hex << pmem_raw[aligned_index] << std::endl;
   return pmem_raw[aligned_index];
 }
 
