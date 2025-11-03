@@ -140,11 +140,16 @@ class IDU extends Module {
   io.ebreak := isEbreak
 
   // On ECALL we prepare reg a0 (x10)
-  io.rs1    := Mux(isEbreak, 10.U, io.inst(19, 15))
+  io.rs1    := MuxCase(io.inst(19, 15), Seq(
+    isEbreak                -> 10.U,
+    (opName === InstOp.Lui) -> 0.U
+  ))
+  // (isEbreak, 10.U, io.inst(19, 15))
   io.rs2    := io.inst(24, 20)
   io.rd     := io.inst(11,  7)
   val immIS  = io.inst(31, 20).asSInt.pad(32).asUInt
   val immIU  = io.inst(31, 20).pad(32)
+  val immU   = io.inst(31, 12) << 12
 
   // TODO:
   val instTp  = MuxLookup(opName, ITYPE.tN) ( Seq(
@@ -163,7 +168,11 @@ class IDU extends Module {
   io.aluSel.rs1SelPC  := false.B // TODO: JAL
 
   // TODO: SEXT
-  io.imm    := Mux(true.B, immIS, immIU)
+  io.imm    := MuxLookup(instTp, 0.U) (Seq(
+    ITYPE.tI -> Mux(true.B, immIS, immIU), 
+    ITYPE.tU -> immU
+  ))
+
   io.memWr  := false.B
   io.regWr  := ~(
     instTp === ITYPE.tN || 
@@ -298,9 +307,6 @@ class rvCore() extends Module {
   iReg.io.rs2 := rs2
   val rs1V = iReg.io.rs1V
   val rs2V = iReg.io.rs2V
-  printf(cf"<<Main>> R[${rs1}] = ${rs1V}%x\n")
-  printf(cf"<<Main>> R[${rs2}] = ${rs2V}%x\n")
-
   // Reg write
   iReg.io.rd := iDec.io.rd
   iReg.io.wrEn := iDec.io.regWr
