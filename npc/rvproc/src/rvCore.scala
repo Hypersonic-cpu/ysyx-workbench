@@ -249,8 +249,7 @@ class LSU extends Module {
     val pcin   = Input(Tp.PCType())
     val addr   = Input(Tp.AddrType())
     val data   = Input(Tp.RegType())
-    val memEn  = Input(Bool())
-    val wrEn   = Input(Bool())
+    val memAcc = Input(new MemAccBundle())
     val load   = Output(Tp.RegType())
     val inst   = Output(Tp.InstType())
   })
@@ -261,9 +260,16 @@ class LSU extends Module {
   iMem.io.pcin  := io.pcin
   iMem.io.addr  := io.addr
   iMem.io.data  := io.data
-  iMem.io.byteMask := 0xf.U
-  iMem.io.memEn := io.memEn
-  iMem.io.wrEn := io.wrEn
+  iMem.io.byteMask := MuxLookup(io.memAcc.lenOp, 0.U) (
+    Seq(
+      MemLenOp.Byte -> 0x1.U,
+      MemLenOp.Half -> 0x3.U,
+      MemLenOp.Word -> 0xf.U
+    )
+  )
+  iMem.io.memEn := io.memAcc.lenOp =/= MemLenOp.None
+  // Load and store should not happen together
+  iMem.io.wrEn  := ~io.memAcc.isLd
 
   io.inst := iMem.io.instRaw
   io.load := iMem.io.loadRaw
