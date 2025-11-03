@@ -158,7 +158,7 @@ class IDU extends Module {
     InstOp.System -> ITYPE.tN
     ))
   io.aluOp            := IntAluOp(funct3)
-  io.aluSel.rs2Invert := funct7(5).asBool
+  io.aluSel.rs2Invert := false.B // funct7(5).asBool
   io.aluSel.rs2SelImm := ~(instTp === ITYPE.tN || instTp === ITYPE.tR)
   io.aluSel.rs1SelPC  := false.B // TODO: JAL
 
