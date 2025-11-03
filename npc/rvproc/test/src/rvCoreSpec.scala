@@ -117,7 +117,6 @@ class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
     }
   }
 
-  /**
   "rvCore" should "pass Jalr" in {
     PathCfg.doLinkRam("jalr.hex")
     test (new rvProc.rvCore())
@@ -141,6 +140,43 @@ class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
       dut.io.regPin.poke(7)
       dut.clock.step(2)
       dut.io.regPrb.expect(99)
+    }
+  }
+
+  "rvCore" should "exit at Ebreak" in {
+    PathCfg.doLinkRam("lui.hex")
+    test (new rvProc.rvCore())
+      .withAnnotations(Seq(
+        // WriteVcdAnnotation,
+        VerilatorBackendAnnotation,
+        VerilatorOpGen.getFlags(),
+      )
+    ) { dut =>
+      dut.io.regPin.poke(1)
+      dut.clock.step()
+      dut.io.regPrb.expect(0)
+
+      dut.io.regPin.poke(2)
+      dut.clock.step()
+      dut.io.regPrb.expect(IntCvt.twosC(4096))
+
+      dut.io.regPin.poke(3)
+      dut.clock.step()
+      dut.io.regPrb.expect(0x12345000)
+
+      dut.io.regPin.poke(4)
+      dut.clock.step()
+      dut.io.regPrb.expect(-(1 << 31))
+
+      dut.io.regPin.poke(5)
+      dut.clock.step()
+      dut.io.regPrb.expect(0x7ffff000)
+
+      dut.clock.step()
+
+      dut.io.regPin.poke(15)
+      dut.clock.step()
+      dut.io.regPrb.expect(0x7AAAA000)
     }
   }
 
@@ -173,5 +209,4 @@ class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
       ()
     }
   }
-  */
 }
