@@ -266,27 +266,28 @@ class LSU extends Module {
   })
 
   val iMem = Module(new PMemBox())
+  val lenOp = io.memAcc.lenOp
   iMem.io.clock := clock
   iMem.io.reset := reset
   iMem.io.pcin  := io.pcin
   iMem.io.addr  := io.addr
   iMem.io.data  := io.data
-  iMem.io.byteMask := MuxLookup(io.memAcc.lenOp, 0.U) (
+  iMem.io.byteMask := MuxLookup(lenOp, 0.U) (
     Seq(
       MemLenOp.Byte -> 0x1.U,
       MemLenOp.Half -> 0x3.U,
       MemLenOp.Word -> 0xf.U
     )
   )
-  iMem.io.memEn := io.memAcc.lenOp =/= MemLenOp.None
+  iMem.io.memEn := lenOp =/= MemLenOp.None
   // Load and store should not happen together
   iMem.io.wrEn  := ~io.memAcc.isLd
 
-  val lraw = iMem.io.loadRaw
+  val lraw = iMem.io.loadRaw >> (io.addr(1, 0) << 3)
   val sext = io.memAcc.sExt
   printf(cf"DPI Chisel Raw ${lraw}%x SEXT ${sext}\n")
   io.inst := iMem.io.instRaw
-  io.load := MuxLookup(io.memAcc.lenOp, 0.U) (Seq(
+  io.load := MuxLookup(lenOp, 0.U) (Seq(
     MemLenOp.Byte -> Mux(sext, lraw(8, 0).asSInt.pad(32).asUInt, lraw(8, 0)),
     MemLenOp.Half -> Mux(sext, lraw(16, 0).asSInt.pad(32).asUInt, lraw(16, 0)),
     MemLenOp.Word -> lraw
