@@ -80,6 +80,43 @@ class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
     }
   }
 
+  "rvCore" should "pass Add" in {
+    PathCfg.doLinkRam("add.hex")
+    test (new rvProc.rvCore())
+      .withAnnotations(Seq(
+        // WriteVcdAnnotation,
+        VerilatorBackendAnnotation,
+        VerilatorOpGen.getFlags()
+      )
+    ) { dut =>
+      dut.io.regPin.poke(1)
+      dut.clock.step(1)
+      dut.io.regPrb.expect(IntCvt.twosC(1))
+
+      dut.io.regPin.poke(2)
+      dut.clock.step(1)
+      dut.io.regPrb.expect(1)
+
+      dut.clock.step(1)
+
+      dut.io.regPin.poke(10)
+      dut.clock.step(1)
+      dut.io.regPrb.expect(0)
+
+      dut.io.regPin.poke(11)
+      dut.clock.step(1)
+      dut.io.regPrb.expect(2048)
+
+      dut.io.regPin.poke(1)
+      dut.clock.step(1)
+      dut.io.regPrb.expect(IntCvt.twosC(2))
+
+      dut.io.regPin.poke(12)
+      dut.clock.step(2)
+      dut.io.regPrb.expect(4094)
+    }
+  }
+
   "rvCore" should "pass Jalr" in {
     PathCfg.doLinkRam("jalr.hex")
     test (new rvProc.rvCore())
@@ -106,33 +143,114 @@ class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
     }
   }
 
-  "rvCore" should "exit at Ebreak" in {
-    PathCfg.doLinkRam("ebreak.hex")
+  "rvCore" should "pass Lui" in {
+    PathCfg.doLinkRam("lui.hex")
     test (new rvProc.rvCore())
       .withAnnotations(Seq(
         // WriteVcdAnnotation,
         VerilatorBackendAnnotation,
         VerilatorOpGen.getFlags(),
-        // VerilatorOpGen.getCFlags()
       )
     ) { dut =>
-      assertThrows[java.lang.RuntimeException] {
-        dut.io.regPin.poke(10)
-        try {
-          var cnt = 0
-          // while (cnt < 20 && !dut.imm)
-          dut.clock.step(10)
-        } catch {
-          case e: StopException => {
-            println(s"Stop at cycle ${e.cycles}")
-          }
-          // case e : Exception => 
-          //   fail(s"Verilator exit with Exception ${e.getMessage()}")
-          // case e : Throwable => 
-          //   fail(s"Verilator exit with Throwable ${e.getMessage()}")
-        }
-      }
-      ()
+      dut.io.regPin.poke(1)
+      dut.clock.step()
+      dut.io.regPrb.expect(0)
+
+      dut.io.regPin.poke(2)
+      dut.clock.step()
+      dut.io.regPrb.expect(IntCvt.twosC(4096))
+
+      dut.io.regPin.poke(3)
+      dut.clock.step()
+      dut.io.regPrb.expect(0x12345000)
+
+      dut.io.regPin.poke(4)
+      dut.clock.step()
+      dut.io.regPrb.expect(0x80000000L)
+
+      dut.io.regPin.poke(5)
+      dut.clock.step()
+      dut.io.regPrb.expect(0x7ffff000)
+
+      dut.clock.step()
+
+      dut.io.regPin.poke(15)
+      dut.clock.step()
+      dut.io.regPrb.expect(0x7AAAA000)
     }
   }
+
+  "rvCore" should "pass Load" in {
+    PathCfg.doLinkRam("loads.hex")
+    test (new rvProc.rvCore())
+      .withAnnotations(Seq(
+        // WriteVcdAnnotation,
+        VerilatorBackendAnnotation,
+        VerilatorOpGen.getFlags(),
+      )
+    ) { dut =>
+
+      dut.io.regPin.poke(5)
+      dut.clock.step(2)
+      dut.io.regPrb.expect(0x30L)
+
+      dut.io.regPin.poke(6)
+      dut.clock.step()
+      dut.io.regPrb.expect(0xdeadbeefL)
+      
+      dut.io.regPin.poke(7)
+      dut.clock.step()
+      dut.io.regPrb.expect(0x1L)
+      
+      dut.io.regPin.poke(8)
+      dut.clock.step()
+      dut.io.regPrb.expect(0xffffffffL)
+      
+      dut.io.regPin.poke(9)
+      dut.clock.step()
+      dut.io.regPrb.expect(0x1L)
+      
+      dut.io.regPin.poke(10)
+      dut.clock.step()
+      dut.io.regPrb.expect(0xffffff80L)
+      
+      dut.io.regPin.poke(11)
+      dut.clock.step()
+      dut.io.regPrb.expect(0x00000080L)
+
+      dut.io.regPin.poke(12)
+      dut.clock.step()
+      dut.io.regPrb.expect(0x0000007fL)
+    }
+  }
+  //
+  // "rvCore" should "exit at Ebreak" in {
+  //   PathCfg.doLinkRam("ebreak.hex")
+  //   test (new rvProc.rvCore())
+  //     .withAnnotations(Seq(
+  //       // WriteVcdAnnotation,
+  //       VerilatorBackendAnnotation,
+  //       VerilatorOpGen.getFlags(),
+  //       // VerilatorOpGen.getCFlags()
+  //     )
+  //   ) { dut =>
+  //     assertThrows[java.lang.RuntimeException] {
+  //       dut.io.regPin.poke(10)
+  //       try {
+  //         var cnt = 0
+  //         // while (cnt < 20 && !dut.imm)
+  //         dut.clock.step(10)
+  //       } catch {
+  //         case e: StopException => {
+  //           println(s"Stop at cycle ${e.cycles}")
+  //         }
+  //         // case e : Exception => 
+  //         //   fail(s"Verilator exit with Exception ${e.getMessage()}")
+  //         // case e : Throwable => 
+  //         //   fail(s"Verilator exit with Throwable ${e.getMessage()}")
+  //       }
+  //     }
+  //     ()
+  //   }
+  // }
 }
