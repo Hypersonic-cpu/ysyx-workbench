@@ -14,5 +14,5 @@ class EcallBox extends BlackBox with HasBlackBoxPath {
     val a0in = Input(Tp.RegType())
   })
   
-  addPath("/mnt/hgfs/Arch-PA/ysyx-workbench/npc/rvproc/dpic/EcallBox.sv")
+  addPath(PATH.dpic("EcallBox.sv"))
 }
