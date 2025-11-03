@@ -29,9 +29,9 @@ module PMemBox(
 
   always_comb begin
     if (memEn) begin
-      rdata = pmem_read(raddr);
+      rdata = pmem_read(addr);
       if (wrEn) begin
-        pmem_write(waddr, wdata, wmask);
+        pmem_write(addr, data, byteMask);
       end
     end
     else begin
