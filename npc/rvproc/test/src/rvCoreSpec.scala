@@ -143,7 +143,7 @@ class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
     }
   }
 
-  "rvCore" should "exit at Ebreak" in {
+  "rvCore" should "pass Lui" in {
     PathCfg.doLinkRam("lui.hex")
     test (new rvProc.rvCore())
       .withAnnotations(Seq(
