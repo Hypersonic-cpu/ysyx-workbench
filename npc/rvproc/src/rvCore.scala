@@ -155,7 +155,7 @@ class IDU extends Module {
   val instTp  = MuxLookup(opName, ITYPE.tN) ( Seq(
     InstOp.OpImm  -> ITYPE.tI,
     InstOp.OpReg  -> ITYPE.tR,
-    InstOp.Jalr   -> ITYPE.tJ,
+    InstOp.Jalr   -> ITYPE.tI,
     InstOp.Lui    -> ITYPE.tU,
     InstOp.Auipc  -> ITYPE.tU,
     InstOp.Load   -> ITYPE.tI,
