@@ -92,6 +92,10 @@ class MemAccBundle extends Bundle {
   val isLd  = Bool()
 }
 
+object WbSrcOp extends ChiselEnum {
+  val fromAlu, fromPC, fromMem = Value
+}
+
 class RegFile extends Module {
   val io = IO(new Bundle {
     val rs1  = Input(Tp.RegIdxType())
@@ -271,8 +275,15 @@ class LSU extends Module {
   // Load and store should not happen together
   iMem.io.wrEn  := ~io.memAcc.isLd
 
+  val lraw = iMem.io.loadRaw
+  val sext = io.memAcc.sExt
   io.inst := iMem.io.instRaw
-  io.load := iMem.io.loadRaw
+  io.load := MuxLookup(io.memAcc.lenOp, 0.U) (Seq(
+    MemLenOp.Byte -> Mux(sext, lraw(8, 0).asSInt.pad(32).asUInt, lraw(8, 0)),
+    MemLenOp.Half -> Mux(sext, lraw(16, 0).asSInt.pad(32).asUInt, lraw(16, 0)),
+    MemLenOp.Byte -> lraw
+    )
+  )
 }
 
 // MUX, Write data selection
@@ -280,6 +291,7 @@ class WBU extends Module {
   val io = IO(new Bundle {
     val brCmp = Input(new BrCmpBundle())
     val pcJmp = Input(new PcJmpBundle())
+    val wbSel = Input(WbSrcOp())
     val pc    = Input(Tp.PCType())
     val aluV  = Input(Tp.RegType())
     val memV  = Input(Tp.RegType())
@@ -291,7 +303,13 @@ class WBU extends Module {
   io.nxpc := Mux(jmp, io.aluV, snpc)
   // NOTE: Once PC jumps, try store its next pc
   // For B-type insts, wrEn had been set to false.
-  io.data := Mux(jmp, snpc, io.aluV)
+  // FIXME: 目前的思路: 需要存储PC的Jmp(Link)不可能
+  // 是有条件的, 所以RegWB不需要考虑branch.
+  io.data := MuxLookup(io.wbSel, 0.U) (Seq(
+    WbSrcOp.fromAlu -> io.aluV, 
+    WbSrcOp.fromMem -> io.memV,
+    WbSrcOp.fromPC  -> snpc
+  ))
 }
 
 class rvCore() extends Module {
@@ -367,7 +385,7 @@ class rvCore() extends Module {
   iWrite.io.memV := loadV
   iWrite.io.pcJmp := iDec.io.pcJmp
   // WB out 
-  pc := iWrite.io.nxpc
+  pc           := iWrite.io.nxpc
   iReg.io.data := iWrite.io.data
 
   // printf(cf"   R[${iDec.io.rs1}%d]=0x${rs1V}%x R[${iDec.io.rs2}%d]=0x${rs2V}%x "
