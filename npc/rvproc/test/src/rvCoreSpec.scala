@@ -1,5 +1,7 @@
 package rvProc.Test
 
+import scala.sys.process._
+
 import chisel3._
 import chiseltest._
 import org.scalatest.flatspec.AnyFlatSpec
@@ -25,6 +27,11 @@ object PathCfg {
     file.Paths.get(dpiDir(), "simcalls.cc").toString(),
     file.Paths.get(dpiDir(), "pmemacc.cc").toString(),
   )
+  def doLinkRam(s: String) = {
+    val cmd_str = s"ln -sfn ${hexFile(s)} ${hexFile("meminit.hex")}"
+    val cmd_res = cmd_str.!! // Raise RuntimeException if failed
+    ()
+  }
 }
 
 object VerilatorOpGen {
@@ -37,7 +44,7 @@ object VerilatorOpGen {
 
 class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
   "rvCore" should "pass Addi" in {
-    test (new rvProc.rvCore(PathCfg.hexFile("addi.hex")))
+    test (new rvProc.rvCore(PathCfg.doLinkRam("addi.hex")))
       .withAnnotations(Seq(
       // WriteVcdAnnotation,
       VerilatorBackendAnnotation,
@@ -73,7 +80,7 @@ class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
   }
 
   "rvCore" should "pass Jalr" in {
-    test (new rvProc.rvCore(PathCfg.hexFile("jalr.hex")))
+    test (new rvProc.rvCore(PathCfg.doLinkRam("jalr.hex")))
       .withAnnotations(Seq(
         // WriteVcdAnnotation,
         VerilatorBackendAnnotation,
@@ -98,7 +105,7 @@ class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
   }
 
   "rvCore" should "exit at Ebreak" in {
-    test (new rvProc.rvCore(PathCfg.hexFile("ebreak.hex")))
+    test (new rvProc.rvCore(PathCfg.doLinkRam("ebreak.hex")))
       .withAnnotations(Seq(
         // WriteVcdAnnotation,
         VerilatorBackendAnnotation,
