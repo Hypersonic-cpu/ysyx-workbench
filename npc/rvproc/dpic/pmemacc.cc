@@ -14,7 +14,7 @@ static uint32_t pmem_raw[PMemSize >> 2];
 
 extern "C" void 
 pmem_init() {
-  std::cout << "DPI-C >> pmem_init called" << std::endl;
+  // std::cout << "DPI-C >> pmem_init called" << std::endl;
   std::ifstream ifs (PMemFile);
   assert(ifs.is_open());
 
@@ -30,7 +30,7 @@ pmem_init() {
 
 extern "C" uint32_t 
 pmem_read(uint32_t raddr) {
-  std::cout << "DPI-C >> pmem_read called" << std::endl;
+  // std::cout << "DPI-C >> pmem_read called" << std::endl;
   uint32_t aligned_index = raddr >> 2;
   assert(aligned_index < (PMemSize >> 2) && "PMem out of bound");
   return pmem_raw[aligned_index];
