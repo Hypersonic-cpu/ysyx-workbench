@@ -2,7 +2,8 @@
 #include <cstdint>
 
 #include <fstream>
-#include <ios>
+#include <iostream>
+#include <ostream>
 #include <sstream>
 #include <string>
 #include <verilated.h>
@@ -13,6 +14,7 @@ static uint32_t pmem_raw[PMemSize >> 2];
 
 extern "C" void 
 pmem_init() {
+  std::cout << "DPI-C >> pmem_init called" << std::endl;
   std::ifstream ifs (PMemFile);
   assert(ifs.is_open());
 

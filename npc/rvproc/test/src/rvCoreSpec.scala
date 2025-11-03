@@ -32,7 +32,7 @@ object VerilatorOpGen {
     VerilatorFlags(Seq("--trace-depth", "99", 
       "-y", PathCfg.dpiDir(), 
       "-CFLAGS", s"-I${PathCfg.vltDir()}") 
-    ++ PathCfg.dpiFiles())
+      ++ PathCfg.dpiFiles())
 }
 
 class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
