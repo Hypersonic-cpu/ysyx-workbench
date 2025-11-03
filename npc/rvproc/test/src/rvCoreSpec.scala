@@ -35,7 +35,7 @@ class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
   "rvCore" should "pass Addi" in {
     test (new rvProc.rvCore(PathCfg.hexFile("addi.hex")))
       .withAnnotations(Seq(
-      WriteVcdAnnotation,
+      // WriteVcdAnnotation,
       VerilatorBackendAnnotation,
       VerilatorOpGen.getFlags()
     )) { dut =>
@@ -71,7 +71,7 @@ class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
   "rvCore" should "pass Jalr" in {
     test (new rvProc.rvCore(PathCfg.hexFile("jalr.hex")))
       .withAnnotations(Seq(
-        WriteVcdAnnotation,
+        // WriteVcdAnnotation,
         VerilatorBackendAnnotation,
         VerilatorOpGen.getFlags()
       )
@@ -96,7 +96,7 @@ class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
   "rvCore" should "exit at Ebreak" in {
     test (new rvProc.rvCore(PathCfg.hexFile("ebreak.hex")))
       .withAnnotations(Seq(
-        WriteVcdAnnotation,
+        // WriteVcdAnnotation,
         VerilatorBackendAnnotation,
         VerilatorOpGen.getFlags(),
         // VerilatorOpGen.getCFlags()
