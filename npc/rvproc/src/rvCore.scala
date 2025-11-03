@@ -283,6 +283,7 @@ class LSU extends Module {
   iMem.io.wrEn  := ~io.memAcc.isLd
 
   val lraw = iMem.io.loadRaw
+  printf(cf"DPI Chisel Raw ${lraw}%x\n")
   val sext = io.memAcc.sExt
   io.inst := iMem.io.instRaw
   io.load := MuxLookup(io.memAcc.lenOp, 0.U) (Seq(
@@ -384,6 +385,7 @@ class rvCore() extends Module {
   iLsu.io.memAcc := iDec.io.memAcc
   // LSU out
   val loadV = iLsu.io.load
+  printf(cf"DPI Chisel loadval ${loadV}%x\n")
 
   // WB in
   iWrite.io.brCmp := br
