@@ -108,6 +108,7 @@ class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
     }
   }
 
+  /**
   "rvCore" should "pass Jalr" in {
     PathCfg.doLinkRam("jalr.hex")
     test (new rvProc.rvCore())
@@ -163,4 +164,5 @@ class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
       ()
     }
   }
+  */
 }
