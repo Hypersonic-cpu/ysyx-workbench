@@ -1,0 +1,320 @@
+package rvProc
+
+import chisel3._
+import chisel3.util._
+import chisel3.util.experimental.loadMemoryFromFileInline
+import firrtl.annotations.MemoryLoadFileType
+
+/** TODO:
+  * 需要把 Control 单独拿出来吗? UCB 的课件看起来
+  * 比自己画的好看.
+  */
+
+object ISA {
+  val InstBits    = 32
+  val RegBits     = 32
+  val PCBits      = 32
+  val RegNum      = 16
+  val RegIdxBits  =  4
+  val AddrBits    = 32
+}
+
+object MEM {
+  val PhysBits    = 10
+}
+
+object Tp {
+  def PCType() = UInt(ISA.PCBits.W)
+  def RegType() = UInt(ISA.RegBits.W)
+  def InstType() = UInt(ISA.InstBits.W)
+  def RegIdxType() = UInt(ISA.RegIdxBits.W)
+  // Now it equals RegType() so no padding is needed.
+  def AddrType() = UInt(ISA.AddrBits.W)
+}
+
+object ITYPE extends ChiselEnum {
+  val tR, tI, tS, tB, tU, tJ, tN = Value
+}
+
+class BrCmpBundle extends Bundle {
+  val beq = Bool()
+  val blt = Bool()
+}
+
+class PcJmpBundle extends Bundle {
+  val jIfeq = Bool()
+  val jIfne = Bool()
+  val jIflt = Bool()
+  val jIfge = Bool()
+  val jUncond = Bool()
+}
+
+class AluSelBundle extends Bundle {
+  val rs1SelPC  = Bool()
+  val rs2SelImm = Bool()
+  val rs2Invert = Bool()
+}
+
+object IntAluOp extends ChiselEnum {
+  val Add  = Value(0b000.U)
+  val Sll  = Value(0b001.U) // Shift left
+  val Slt  = Value(0b010.U)
+  val Sltu = Value(0b011.U)
+  val Xor  = Value(0b100.U)
+  val Srr  = Value(0b101.U) // Shift right
+  val Or   = Value(0b110.U)
+  val And  = Value(0b111.U)
+}
+
+class RegFile extends Module {
+  val io = IO(new Bundle {
+    val rs1  = Input(Tp.RegIdxType())
+    val rs2  = Input(Tp.RegIdxType())
+    val rd   = Input(Tp.RegIdxType())
+    val data = Input(Tp.RegType())
+    val wrEn = Input(Bool())
+    val rs1V = Output(Tp.RegType())
+    val rs2V = Output(Tp.RegType())
+
+    val rsPin   = Input(Tp.RegIdxType())
+    val regPrb  = Output(Tp.RegType())
+  })
+
+  val regs = Reg(Vec(ISA.RegNum, Tp.RegType()))
+
+  io.rs1V := Mux(io.rs1.orR, regs(io.rs1), 0.U)
+  io.rs2V := Mux(io.rs2.orR, regs(io.rs2), 0.U)
+  io.regPrb := Mux(io.rsPin.orR, regs(io.rsPin), 0.U)
+
+  when (io.wrEn && io.rd.orR) {
+    regs(io.rd) := io.data
+  }
+}
+
+/** Decoder, NOT responsible for read register */
+class IDU extends Module {
+  val io = IO(new Bundle {
+    val inst = Input(Tp.InstType())
+    val rs1  = Output(Tp.RegIdxType())
+    val rs2  = Output(Tp.RegIdxType())
+    val rd   = Output(Tp.RegIdxType())
+    val imm  = Output(Tp.RegType())
+    val regWr = Output(Bool())
+    val memWr = Output(Bool())
+    val aluOp = Output(IntAluOp())
+    val aluSel = Output(new AluSelBundle())
+    val pcJmp  = Output(new PcJmpBundle())
+    val ebreak = Output(Bool())
+  })
+
+  val opcode = io.inst(6, 0)
+  val funct3 = io.inst(14, 12)
+  val funct7 = io.inst(31, 25)
+  val rvBase  = opcode === 0b11.U(2.W)
+
+  val arithOp = opcode(4, 2) === 0b100.U(3.W)
+  val jalrOp  = opcode(4, 2) === 0b001.U(3.W)
+  val sysOp   = 
+    (opcode(6, 2) === 0b11100.U(5.W)) &&
+    (~(io.inst(31, 21) ## io.inst(19, 7)).orR)
+  val isEbreak = sysOp && io.inst(20)
+  val isEcall  = sysOp && (~io.inst(20))
+  io.ebreak := isEbreak
+
+  // On ECALL we prepare reg a0 (x10)
+  io.rs1    := Mux(sysOp, 10.U, io.inst(19, 15))
+  io.rs2    := io.inst(24, 20)
+  io.rd     := io.inst(11,  7)
+  val immIS  = io.inst(31, 20).asSInt.pad(32).asUInt
+  val immIU  = io.inst(31, 20).pad(32)
+
+  // TODO:
+  val instTp  = Mux(sysOp, ITYPE.tN, ITYPE.tI) // Mux(arithOp, ITYPE.tI, ITYPE.tJ)
+  io.aluOp  := IntAluOp(funct3)
+  io.aluSel.rs2Invert := funct7(5).asBool
+  io.aluSel.rs2SelImm := instTp === ITYPE.tI
+  io.aluSel.rs1SelPC  := false.B
+
+  io.imm    := Mux(true.B, immIS, immIU)
+  io.memWr  := false.B
+  io.regWr  := ~(
+    instTp === ITYPE.tN || 
+    instTp === ITYPE.tB || 
+    instTp === ITYPE.tS)
+
+  io.pcJmp.jIfeq := false.B
+  io.pcJmp.jIfne := false.B
+  io.pcJmp.jIflt := false.B
+  io.pcJmp.jIfge := false.B
+  io.pcJmp.jUncond := jalrOp
+
+  // printf(cf"Decode: inst ${io.inst}%x type${instTp} alu${io.aluOp} " + 
+  //   cf"wr[M|R] = ${io.memWr}|${io.regWr} jmp ${io.pcJmp.jUncond}\n")
+  // printf(cf"\trs1 ${io.rs1}%d, rs2 ${io.rs2}%d, imm ${io.imm}%x\n");
+
+}
+
+class EXU extends Module {
+  val io = IO(new Bundle {
+    val rs1V = Input(Tp.RegType())
+    val rs2V = Input(Tp.RegType())
+    val pc   = Input(Tp.PCType())
+    val imm  = Input(Tp.RegType())
+    val sel  = Input(new AluSelBundle())
+    val op   = Input(IntAluOp())
+    val res  = Output(Tp.RegType())
+    val brCmp = Output(new BrCmpBundle())
+  })
+
+  // printf(cf"\trs1V ${io.rs1V}%x, rs2V ${io.rs2V}%x, imm ${io.imm}%x\n");
+  io.res := 0.U
+  io.brCmp.beq := false.B
+  io.brCmp.blt := false.B
+  val src1 = Mux(io.sel.rs1SelPC, io.pc, io.rs1V)
+  val src2 = Mux(io.sel.rs2SelImm, io.imm, io.rs2V)
+  switch (io.op) {
+    is (IntAluOp.Add) {
+      io.res := src1 + src2
+    }
+  }
+  // printf(cf"\t${src1}%x op ${src2}%x = ${io.res}%x\n")
+}
+
+class LSU extends Module {
+  val io = IO(new Bundle {
+    val addr   = Input(Tp.AddrType())
+    val data   = Input(Tp.RegType())
+    val ldEn   = Input(Bool())
+    val wrEn   = Input(Bool())
+    val load   = Output(Tp.RegType())
+  })
+  io.load := 0.U
+}
+
+// MUX, Write data selection
+class WBU extends Module {
+  val io = IO(new Bundle {
+    val brCmp = Input(new BrCmpBundle())
+    val pcJmp = Input(new PcJmpBundle())
+    val pc    = Input(Tp.PCType())
+    val aluV  = Input(Tp.RegType())
+    val memV  = Input(Tp.RegType())
+    val nxpc  = Output(Tp.PCType())
+    val data  = Output(Tp.RegType())
+  })
+  val jmp = io.pcJmp.jUncond
+  val snpc = io.pc + 4.U
+  io.nxpc := Mux(jmp, io.aluV, snpc)
+  // NOTE: Once PC jumps, try store its next pc
+  // For B-type insts, wrEn had been set to false.
+  io.data := Mux(jmp, snpc, io.aluV)
+}
+
+class InstROM(romFile: String) extends Module {
+  val io = IO(new Bundle{
+    val pc   = Input(Tp.PCType())
+    val inst = Output(Tp.InstType())
+  })
+  // TODO: How to correctly write combinatinal 'memory' ??
+  // BUG: Mem too large will cause a crash (not warn/abort)
+  // of firtool. (Hard to debug ...)
+  val iROM  = Mem((1 << MEM.PhysBits), Tp.InstType())
+  loadMemoryFromFileInline(iROM, romFile, MemoryLoadFileType.Hex)
+  // printf(cf"[ PC = ${io.pc}%x ] inst = ${io.inst}%x\n")
+  io.inst := iROM.read(io.pc >> 2)
+}
+
+class rvCore(romFile: String) extends Module {
+  val io = IO(new Bundle{
+    val regPin  = Input(Tp.RegIdxType())
+    val regPrb  = Output(Tp.RegType())
+    val outPC   = Output(Tp.PCType())
+  })
+
+  // State
+  val pc     = RegInit(0.U(ISA.PCBits.W))
+  val iReg   = Module(new RegFile())
+
+  // Func
+  val iFetch = Module(new InstROM(romFile))
+  val iDec   = Module(new IDU())
+  val iExe   = Module(new EXU()) 
+  val iLsu   = Module(new LSU())
+  val iWrite = Module(new WBU())
+  val iEcall = Module(new EcallBox())
+
+  // Probing 
+  io.outPC := pc 
+  iReg.io.rsPin := io.regPin 
+  io.regPrb := iReg.io.regPrb
+
+  // IFU in
+  iFetch.io.pc := pc
+  // IFU out
+  val inst = iFetch.io.inst
+
+  // IDU in
+  iDec.io.inst := inst
+  // IDU out 
+  val rs1 = iDec.io.rs1
+  val rs2 = iDec.io.rs2
+  val imm = iDec.io.imm
+  val op  = iDec.io.aluOp
+  val sel = iDec.io.aluSel
+
+  // Reg read 
+  iReg.io.rs1 := rs1
+  iReg.io.rs2 := rs2
+  val rs1V = iReg.io.rs1V
+  val rs2V = iReg.io.rs2V
+  // Reg write
+  iReg.io.rd := iDec.io.rd
+  iReg.io.wrEn := iDec.io.regWr
+
+  // EXU in
+  iExe.io.rs1V := rs1V
+  iExe.io.rs2V := rs1V
+  iExe.io.imm  := imm 
+  iExe.io.pc   := pc
+  iExe.io.op   := op 
+  iExe.io.sel  := sel
+  // EXU out
+  val res = iExe.io.res
+  val br  = iExe.io.brCmp
+
+  // LSU in
+  // NOTE: No such inst that stores a calculated result.
+  iLsu.io.addr := res
+  iLsu.io.data := rs2V
+  iLsu.io.ldEn := false.B // TODO: 
+  iLsu.io.wrEn := iDec.io.memWr
+  // LSU out
+  val loadV = iLsu.io.load
+
+  // WB in
+  iWrite.io.brCmp := br
+  iWrite.io.pc   := pc
+  iWrite.io.aluV := res
+  iWrite.io.memV := loadV
+  iWrite.io.pcJmp := iDec.io.pcJmp
+  // WB out 
+  pc := iWrite.io.nxpc
+  iReg.io.data := iWrite.io.data
+
+  // printf(cf"   R[${iDec.io.rs1}%d]=0x${rs1V}%x R[${iDec.io.rs2}%d]=0x${rs2V}%x "
+  //     + cf"Alu=${sAlu.io.sum}%x Eq=${sAlu.io.isEq}\n")
+
+
+  iEcall.io.clock := this.clock
+  iEcall.io.reset := this.reset
+  iEcall.io.pcin  := pc
+  iEcall.io.a0in  := rs1V
+  iEcall.io.isEbreak := iDec.io.ebreak
+  iEcall.io.isEcall  := false.B
+
+  dontTouch(iFetch.io)
+  dontTouch(iWrite.io)
+  dontTouch(iDec.io)
+  dontTouch(iExe.io)
+  dontTouch(iLsu.io)
+}
