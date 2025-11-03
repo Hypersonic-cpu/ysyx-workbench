@@ -229,7 +229,7 @@ class WBU extends Module {
   io.data := Mux(jmp, snpc, io.aluV)
 }
 
-class rvCore(romFile: String) extends Module {
+class rvCore() extends Module {
   val io = IO(new Bundle{
     val regPin  = Input(Tp.RegIdxType())
     val regPrb  = Output(Tp.RegType())
