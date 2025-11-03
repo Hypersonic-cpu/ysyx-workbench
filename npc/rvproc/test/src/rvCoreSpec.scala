@@ -80,6 +80,34 @@ class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
     }
   }
 
+  "rvCore" should "pass Add" in {
+    PathCfg.doLinkRam("add.hex")
+    test (new rvProc.rvCore())
+      .withAnnotations(Seq(
+        // WriteVcdAnnotation,
+        VerilatorBackendAnnotation,
+        VerilatorOpGen.getFlags()
+      )
+    ) { dut =>
+      dut.clock.step(3)
+      dut.io.regPin.poke(10)
+      dut.clock.step(1)
+      dut.io.regPrb.expect(0)
+
+      dut.io.regPin.poke(11)
+      dut.clock.step(1)
+      dut.io.regPrb.expect(2048)
+
+      dut.io.regPin.poke(1)
+      dut.clock.step(1)
+      dut.io.regPrb.expect(IntCvt.twosC(2))
+
+      dut.io.regPin.poke(1)
+      dut.clock.step(2)
+      dut.io.regPrb.expect(4094)
+    }
+  }
+
   "rvCore" should "pass Jalr" in {
     PathCfg.doLinkRam("jalr.hex")
     test (new rvProc.rvCore())

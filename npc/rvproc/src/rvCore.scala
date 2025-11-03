@@ -157,9 +157,10 @@ class IDU extends Module {
     ))
   io.aluOp            := IntAluOp(funct3)
   io.aluSel.rs2Invert := funct7(5).asBool
-  io.aluSel.rs2SelImm := instTp === ITYPE.tI || instTp === ITYPE.tJ
+  io.aluSel.rs2SelImm := ~(instTp === ITYPE.tN || instTp === ITYPE.tR)
   io.aluSel.rs1SelPC  := false.B // TODO: JAL
 
+  // TODO: SEXT
   io.imm    := Mux(true.B, immIS, immIU)
   io.memWr  := false.B
   io.regWr  := ~(
