@@ -166,7 +166,7 @@ class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
 
       dut.io.regPin.poke(4)
       dut.clock.step()
-      dut.io.regPrb.expect(-(1 << 31))
+      dut.io.regPrb.expect(0x80000000)
 
       dut.io.regPin.poke(5)
       dut.clock.step()
