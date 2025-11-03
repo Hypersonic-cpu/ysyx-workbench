@@ -1,0 +1,47 @@
+#include <cassert>
+#include <cstdint>
+
+#include <fstream>
+#include <ios>
+#include <sstream>
+#include <string>
+#include <verilated.h>
+
+const char PMemFile[] = "/mnt/hgfs/Arch-PA/ysyx-workbench/npc/rvproc/prog-rom/meminit.hex";
+constexpr size_t PMemSize{ 1U << 25 }; // 32 MiB
+static uint32_t pmem_raw[PMemSize >> 2];
+
+extern "C" void 
+pmem_init() {
+  std::ifstream ifs (PMemFile);
+  assert(ifs.is_open());
+
+  std::string rline{};
+  size_t pos{ 0U };
+  while (std::getline(ifs, rline)) {
+    assert (pos < (PMemSize >> 2) && "Mem init out of bound");
+    std::stringstream ss {rline};
+    ss >> std::hex >> pmem_raw[pos++];
+  }
+  ifs.close();
+}
+
+extern "C" uint32_t 
+pmem_read(uint32_t raddr) {
+  uint32_t aligned_index = raddr >> 2;
+  assert(aligned_index < (PMemSize >> 2) && "PMem out of bound");
+  return pmem_raw[aligned_index];
+}
+
+extern "C" void
+pmem_write(uint32_t waddr, uint32_t wdata, uint8_t wmask) {
+  uint32_t aligned_index = waddr >> 2;
+  assert(aligned_index < (PMemSize >> 2) && "PMem out of bound");
+  uint32_t m = 0U;
+  for (int i = 0; i < 4; i++) {
+    if (wmask & (1 << i)) {
+      m |= (0xff << (i * 8));
+    }
+  }
+  pmem_raw[aligned_index] = (m & wdata);
+}

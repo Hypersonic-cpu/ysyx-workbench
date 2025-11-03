@@ -3,7 +3,12 @@ package rvProc
 import chisel3._
 import chisel3.util._
 import chisel3.util.experimental.loadMemoryFromFileInline
-import firrtl.annotations.MemoryLoadFileType
+// import firrtl.annotations.MemoryLoadFileType
+
+object PATH {
+  val dpicPath = "/mnt/hgfs/Arch-PA/ysyx-workbench/npc/rvproc/dpic/"
+  def dpic(s: String) = java.nio.file.Paths.get(dpicPath, s).toString()
+}
 
 object ISA {
   val InstBits    = 32
@@ -12,10 +17,6 @@ object ISA {
   val RegNum      = 16
   val RegIdxBits  =  4
   val AddrBits    = 32
-}
-
-object MEM {
-  val PhysBits    = 10
 }
 
 object Tp {
@@ -149,9 +150,9 @@ class IDU extends Module {
   io.pcJmp.jIfge := false.B
   io.pcJmp.jUncond := jalrOp
 
-  // printf(cf"Decode: inst ${io.inst}%x type${instTp} alu${io.aluOp} " + 
-  //   cf"wr[M|R] = ${io.memWr}|${io.regWr} jmp ${io.pcJmp.jUncond}\n")
-  // printf(cf"\trs1 ${io.rs1}%d, rs2 ${io.rs2}%d, imm ${io.imm}%x\n");
+  printf(cf"Decode: inst ${io.inst}%x type${instTp} alu${io.aluOp} " + 
+    cf"wr[M|R] = ${io.memWr}|${io.regWr} jmp ${io.pcJmp.jUncond}\n")
+  printf(cf"\trs1 ${io.rs1}%d, rs2 ${io.rs2}%d, imm ${io.imm}%x\n");
 
 }
 
@@ -167,7 +168,7 @@ class EXU extends Module {
     val brCmp = Output(new BrCmpBundle())
   })
 
-  // printf(cf"\trs1V ${io.rs1V}%x, rs2V ${io.rs2V}%x, imm ${io.imm}%x\n");
+  printf(cf"\trs1V ${io.rs1V}%x, rs2V ${io.rs2V}%x, imm ${io.imm}%x\n");
   io.res := 0.U
   io.brCmp.beq := false.B
   io.brCmp.blt := false.B
@@ -178,18 +179,34 @@ class EXU extends Module {
       io.res := src1 + src2
     }
   }
-  // printf(cf"\t${src1}%x op ${src2}%x = ${io.res}%x\n")
+  printf(cf"\t${src1}%x op ${src2}%x = ${io.res}%x\n")
 }
 
+/**
+  * NOTE: 内置了 iMem 为了防止 memory 接口暴露在顶层.
+  */
 class LSU extends Module {
   val io = IO(new Bundle {
+    val pcin   = Input(Tp.PCType())
     val addr   = Input(Tp.AddrType())
     val data   = Input(Tp.RegType())
-    val ldEn   = Input(Bool())
+    val memEn  = Input(Bool())
     val wrEn   = Input(Bool())
     val load   = Output(Tp.RegType())
+    val inst   = Output(Tp.InstType())
   })
-  io.load := 0.U
+
+  val iMem = Module(new PMemBox())
+  iMem.io.clock := clock
+  iMem.io.reset := reset
+  iMem.io.addr  := io.addr
+  iMem.io.data  := io.data
+  iMem.io.byteMask := 0xf.U
+  iMem.io.memEn := io.memEn
+  iMem.io.wrEn := io.wrEn
+
+  io.inst := iMem.io.instRaw
+  io.load := iMem.io.loadRaw
 }
 
 // MUX, Write data selection
@@ -211,20 +228,6 @@ class WBU extends Module {
   io.data := Mux(jmp, snpc, io.aluV)
 }
 
-class InstROM(romFile: String) extends Module {
-  val io = IO(new Bundle{
-    val pc   = Input(Tp.PCType())
-    val inst = Output(Tp.InstType())
-  })
-  // TODO: How to correctly write combinatinal 'memory' ??
-  // BUG: Mem too large will cause a crash (not warn/abort)
-  // of firtool. (Hard to debug ...)
-  val iROM  = Mem((1 << MEM.PhysBits), Tp.InstType())
-  loadMemoryFromFileInline(iROM, romFile, MemoryLoadFileType.Hex)
-  // printf(cf"[ PC = ${io.pc}%x ] inst = ${io.inst}%x\n")
-  io.inst := iROM.read(io.pc >> 2)
-}
-
 class rvCore(romFile: String) extends Module {
   val io = IO(new Bundle{
     val regPin  = Input(Tp.RegIdxType())
@@ -237,7 +240,6 @@ class rvCore(romFile: String) extends Module {
   val iReg   = Module(new RegFile())
 
   // Func
-  val iFetch = Module(new InstROM(romFile))
   val iDec   = Module(new IDU())
   val iExe   = Module(new EXU()) 
   val iLsu   = Module(new LSU())
@@ -250,9 +252,9 @@ class rvCore(romFile: String) extends Module {
   io.regPrb := iReg.io.regPrb
 
   // IFU in
-  iFetch.io.pc := pc
+  iLsu.io.pcin := pc
   // IFU out
-  val inst = iFetch.io.inst
+  val inst = iLsu.io.inst
 
   // IDU in
   iDec.io.inst := inst
@@ -287,7 +289,7 @@ class rvCore(romFile: String) extends Module {
   // NOTE: No such inst that stores a calculated result.
   iLsu.io.addr := res
   iLsu.io.data := rs2V
-  iLsu.io.ldEn := false.B // TODO: 
+  iLsu.io.memEn := true.B // TODO: 
   iLsu.io.wrEn := iDec.io.memWr
   // LSU out
   val loadV = iLsu.io.load
@@ -302,9 +304,8 @@ class rvCore(romFile: String) extends Module {
   pc := iWrite.io.nxpc
   iReg.io.data := iWrite.io.data
 
-  // printf(cf"   R[${iDec.io.rs1}%d]=0x${rs1V}%x R[${iDec.io.rs2}%d]=0x${rs2V}%x "
-  //     + cf"Alu=${sAlu.io.sum}%x Eq=${sAlu.io.isEq}\n")
-
+  printf(cf"   R[${iDec.io.rs1}%d]=0x${rs1V}%x R[${iDec.io.rs2}%d]=0x${rs2V}%x "
+      + cf"Alu=${sAlu.io.sum}%x Eq=${sAlu.io.isEq}\n")
 
   iEcall.io.clock := this.clock
   iEcall.io.reset := this.reset
@@ -313,7 +314,6 @@ class rvCore(romFile: String) extends Module {
   iEcall.io.isEbreak := iDec.io.ebreak
   iEcall.io.isEcall  := false.B
 
-  dontTouch(iFetch.io)
   dontTouch(iWrite.io)
   dontTouch(iDec.io)
   dontTouch(iExe.io)
