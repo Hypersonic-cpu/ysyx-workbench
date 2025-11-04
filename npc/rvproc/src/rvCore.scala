@@ -338,7 +338,6 @@ class rvCore() extends Module {
   val pc     = RegInit(0.U(ISA.PCBits.W))
   val iReg   = Module(new RegFile())
 
-  printf(cf"[ PC = ${pc}%x ]\n")
   // Func
   val iDec   = Module(new IDU())
   val iExe   = Module(new EXU()) 
@@ -355,6 +354,7 @@ class rvCore() extends Module {
   iLsu.io.pcin := pc
   // IFU out
   val inst = iLsu.io.inst
+  printf(cf"[ PC = ${pc}%x ] inst = ${inst}%x\n")
 
   // IDU in
   iDec.io.inst := inst
