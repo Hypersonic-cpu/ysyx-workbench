@@ -18,29 +18,35 @@ constexpr auto ValidAccess = [](size_t idx) -> bool {
 
 extern "C" void 
 pmem_init() {
+#if PRINTF_COND
   std::cout << "DPI-C >> pmem_init called" << std::endl;
+#endif
   std::ifstream ifs(PMemFile, std::ios::binary | std::ios::in);
   assert(ifs.is_open());
 
   ifs.seekg(0, std::ios::end);
   auto const file_size = ifs.tellg();
+#if PRINTF_COND
   std::cout << "DPI-C >> file size " << std::dec << file_size << std::endl;
+#endif
   assert(file_size != std::ifstream::pos_type(-1));
   ifs.seekg(0, std::ios::beg);
 
   ifs.read((char *) pmem_raw, file_size);
+#if PRINTF_COND
   std::cout << "DPI-C >> fail " << ifs.fail() << " eof " << ifs.eof() << std::endl;
+#endif
   assert(!ifs.fail());
 
-  for (size_t i = 0x0; i < 0x20; i++) {
-    if (i % 4 == 0) {
-      std::cout << std::hex << i << ":\t";
-    }
-    std::cout << std::hex << std::setfill('0') << std::setw(8) << pmem_raw[i] << " ";
-    if (i % 4 == 3) {
-      std::cout << std::endl;
-    }
-  }
+  // for (size_t i = 0x0; i < 0x20; i++) {
+  //   if (i % 4 == 0) {
+  //     std::cout << std::hex << i << ":\t";
+  //   }
+  //   std::cout << std::hex << std::setfill('0') << std::setw(8) << pmem_raw[i] << " ";
+  //   if (i % 4 == 3) {
+  //     std::cout << std::endl;
+  //   }
+  // }
 }
 
 // pmem_init() {
