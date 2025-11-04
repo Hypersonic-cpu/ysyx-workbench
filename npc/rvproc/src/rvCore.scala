@@ -240,7 +240,7 @@ class EXU extends Module {
     val brCmp = Output(new BrCmpBundle())
   })
 
-  printf(cf"\trs1V ${io.rs1V}%x, rs2V ${io.rs2V}%x, imm ${io.imm}%x\n");
+  // printf(cf"\trs1V ${io.rs1V}%x, rs2V ${io.rs2V}%x, imm ${io.imm}%x\n");
   io.res := 0.U
   io.brCmp.beq := false.B
   io.brCmp.blt := false.B
@@ -291,7 +291,7 @@ class LSU extends Module {
 
   val lraw = iMem.io.loadRaw >> (io.addr(1, 0) << 3)
   val sext = io.memAcc.sExt
-  printf(cf"DPI Chisel Raw ${lraw}%x SEXT ${sext}\n")
+  // printf(cf"DPI Chisel Raw ${lraw}%x SEXT ${sext}\n")
   io.inst := iMem.io.instRaw
   io.load := MuxLookup(lenOp, 0.U) (Seq(
     MemLenOp.Byte -> Mux(sext, lraw(7, 0).asSInt.pad(32).asUInt, lraw(7, 0)),
@@ -392,7 +392,7 @@ class rvCore() extends Module {
   iLsu.io.memAcc := iDec.io.memAcc
   // LSU out
   val loadV = iLsu.io.load
-  printf(cf"DPI Chisel loadval ${loadV}%x\n")
+  // printf(cf"DPI Chisel loadval ${loadV}%x\n")
 
   // WB in
   iWrite.io.brCmp := br
@@ -405,7 +405,7 @@ class rvCore() extends Module {
   pc           := iWrite.io.nxpc
   iReg.io.data := iWrite.io.data
 
-  printf(cf"<<<WB>>> rd ${iReg.io.rd} data ${iReg.io.data}%x\n")
+  // printf(cf"<<<WB>>> rd ${iReg.io.rd} data ${iReg.io.data}%x\n")
 
   // printf(cf"   R[${iDec.io.rs1}%d]=0x${rs1V}%x R[${iDec.io.rs2}%d]=0x${rs2V}%x "
   //     + cf"Alu=${sAlu.io.sum}%x Eq=${sAlu.io.isEq}\n")
