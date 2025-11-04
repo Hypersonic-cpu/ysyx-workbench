@@ -60,6 +60,7 @@ test:
 	mill -i $(PRJ).test.testOnly $(PRJ).test.$(TOPNAME)Spec
 
 runam:
+	$(call git_commit, "run with AM")
 	mill -i $(PRJ).test.testOnly $(PRJ).test.$(TOPNAME)Am 
 	# @echo $(CHISEL_DPIC_MEMPATH)
 

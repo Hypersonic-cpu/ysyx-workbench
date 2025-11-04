@@ -18,11 +18,11 @@ class rvCoreAm extends AnyFlatSpec with ChiselScalatestTester {
   "rvCore" should "pass am-kernel" in {
     test (new rvproc.rvCore())
       .withAnnotations(Seq(
-      // WriteVcdAnnotation,
+      WriteVcdAnnotation,
       VerilatorBackendAnnotation,
-      VerilatorOpGen.getFlags()
+      VerilatorOpGen.getFlags(false)
     )) { dut =>
-      dut.clock.step()
+      dut.clock.step(40)
       ()
     }
   }

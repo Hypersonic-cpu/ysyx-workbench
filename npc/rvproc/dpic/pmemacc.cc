@@ -5,7 +5,7 @@
 #include <iomanip>
 #include <iostream>
 #include <verilated.h>
-#define PRINTF_COND 1
+// #define PRINTF_COND 1
 
 const char PMemFile[] = "/mnt/hgfs/Arch-PA/ysyx-workbench/npc/rvproc/prog-rom/meminit.bin";
 constexpr size_t PMemSize{ 0x1000'0000U }; // 32 MiB
@@ -65,6 +65,7 @@ pmem_read(uint32_t raddr) {
 #if PRINTF_COND
   std::cout << "DPI-C >> pmem_read addr " << std::hex << raddr << std::endl;
 #endif
+  if (raddr == 0) { return 0; }
   uint32_t aln_idx = (raddr - BaseAddr) >> 2;
   assert(ValidAccess(aln_idx) && "PMem out of bound");
 #if PRINTF_COND
