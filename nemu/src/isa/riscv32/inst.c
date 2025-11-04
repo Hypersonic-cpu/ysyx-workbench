@@ -200,7 +200,7 @@ static int decode_exec(Decode *s) {
           divu   , R, R(rd) = (src2==0) ? (word_t)(-1) : src1/src2);
   INSTPAT("0000001 ????? ????? 110 ????? 01100 11", 
           rem    , R,
-          Assert(false, "ON PURPOSE");
+          // Assert(false, "ON PURPOSE");
           if ((sword_t) src2 == 0) {
               R(rd) = src1;
           } else if ((sword_t)src2 == -1 && (sword_t)src1 == INT32_MIN) {
