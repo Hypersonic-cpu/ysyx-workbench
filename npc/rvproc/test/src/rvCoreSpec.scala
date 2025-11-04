@@ -256,7 +256,6 @@ class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
         // WriteVcdAnnotation,
         VerilatorBackendAnnotation,
         VerilatorOpGen.getFlags(),
-        // VerilatorOpGen.getCFlags()
       )
     ) { dut =>
       assertThrows[java.lang.RuntimeException] {
@@ -269,13 +268,28 @@ class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
           case e: StopException => {
             println(s"Stop at cycle ${e.cycles}")
           }
-          // case e : Exception => 
-          //   fail(s"Verilator exit with Exception ${e.getMessage()}")
-          // case e : Throwable => 
-          //   fail(s"Verilator exit with Throwable ${e.getMessage()}")
         }
       }
-      ()
+    }
+  }
+
+  "rvCore" should "hit good trap sum.hex" in {
+    PathCfg.doLinkRam("ebreak.hex")
+    test (new rvProc.rvCore())
+      .withAnnotations(Seq(
+        // WriteVcdAnnotation,
+        VerilatorBackendAnnotation,
+        VerilatorOpGen.getFlags(),
+      )
+    ) { dut =>
+      dut.io.regPin.poke(10)
+      try {
+        dut.clock.step(6000)
+      } catch {
+        case e: StopException => {
+          println(s"Stop at cycle ${e.cycles}")
+        }
+      }
     }
   }
 }
