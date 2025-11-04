@@ -285,8 +285,9 @@ class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
       )
     ) { dut =>
       dut.io.regPin.poke(10)
+      dut.clock.step(1)
+
       try {
-        dut.clock.step(1)
       } catch {
         case e: StopException => {
           println(s"Stop at cycle ${e.cycles}")
