@@ -88,8 +88,8 @@ void itrace_logging(Decode *s) {
   disassemble(p, s->logbuf + sizeof(s->logbuf) - p,
       MUXDEF(CONFIG_ISA_x86, s->snpc, s->pc), (uint8_t *)&s->isa.inst, ilen);
 
-  // strncpy(iringbuf[iringptr], s->logbuf, 128);
-  // iringptr = (iringptr+1) % IRING_BUF_LEN;
+  strncpy(iringbuf[iringptr], s->logbuf, 128);
+  iringptr = (iringptr+1) % IRING_BUF_LEN;
 #endif
 }
 
