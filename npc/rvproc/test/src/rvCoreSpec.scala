@@ -35,11 +35,13 @@ object PathCfg {
 }
 
 object VerilatorOpGen {
-  def getFlags () = 
+  def getFlags (noDbg: Boolean = false) = 
     VerilatorFlags(Seq("--trace-depth", "99", 
       "-y", PathCfg.dpiDir(), 
       "-CFLAGS", s"-I${PathCfg.vltDir()}") 
-      ++ PathCfg.dpiFiles())
+      ++ PathCfg.dpiFiles()
+      ++ (if (noDbg) Seq("-DPRINTF_COND=0") else Nil) 
+    )
 }
 
 class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
@@ -49,7 +51,7 @@ class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
       .withAnnotations(Seq(
       // WriteVcdAnnotation,
       VerilatorBackendAnnotation,
-      VerilatorOpGen.getFlags()
+      VerilatorOpGen.getFlags(true)
     )) { dut =>
       dut.io.outPC.expect(0)
 
@@ -86,7 +88,7 @@ class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
       .withAnnotations(Seq(
         // WriteVcdAnnotation,
         VerilatorBackendAnnotation,
-        VerilatorOpGen.getFlags()
+        VerilatorOpGen.getFlags(true)
       )
     ) { dut =>
       dut.io.regPin.poke(1)
@@ -123,7 +125,7 @@ class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
       .withAnnotations(Seq(
         // WriteVcdAnnotation,
         VerilatorBackendAnnotation,
-        VerilatorOpGen.getFlags()
+        VerilatorOpGen.getFlags(true)
       )
     ) { dut =>
       dut.clock.step(3)
@@ -149,7 +151,7 @@ class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
       .withAnnotations(Seq(
         // WriteVcdAnnotation,
         VerilatorBackendAnnotation,
-        VerilatorOpGen.getFlags(),
+        VerilatorOpGen.getFlags(true),
       )
     ) { dut =>
       dut.io.regPin.poke(1)
@@ -186,7 +188,7 @@ class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
       .withAnnotations(Seq(
         // WriteVcdAnnotation,
         VerilatorBackendAnnotation,
-        VerilatorOpGen.getFlags(),
+        VerilatorOpGen.getFlags(true),
       )
     ) { dut =>
 
@@ -230,7 +232,7 @@ class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
       .withAnnotations(Seq(
         // WriteVcdAnnotation,
         VerilatorBackendAnnotation,
-        VerilatorOpGen.getFlags(),
+        VerilatorOpGen.getFlags(true),
       )
     ) { dut =>
       dut.clock.step(9)
@@ -255,7 +257,7 @@ class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
       .withAnnotations(Seq(
         // WriteVcdAnnotation,
         VerilatorBackendAnnotation,
-        VerilatorOpGen.getFlags(),
+        VerilatorOpGen.getFlags(true),
       )
     ) { dut =>
       assertThrows[java.lang.RuntimeException] {
@@ -279,7 +281,7 @@ class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
       .withAnnotations(Seq(
         // WriteVcdAnnotation,
         VerilatorBackendAnnotation,
-        VerilatorOpGen.getFlags(),
+        VerilatorOpGen.getFlags(true),
       )
     ) { dut =>
       dut.io.regPin.poke(10)
