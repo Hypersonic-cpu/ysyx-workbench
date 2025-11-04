@@ -276,8 +276,8 @@ class LSU extends Module {
   iMem.io.data  := io.data
   iMem.io.byteMask := MuxLookup(lenOp, 0.U) (
     Seq(
-      MemLenOp.Byte -> (0x1.U << (io.addr(1, 0) << 3.U)),
-      MemLenOp.Half -> (0x3.U << (io.addr(1, 1) << 4.U)),
+      MemLenOp.Byte -> (0x1.U << io.addr(1, 0)),
+      MemLenOp.Half -> (0x3.U << (io.addr(1, 1) << 1.U)),
       MemLenOp.Word -> 0xf.U
     )
   )
