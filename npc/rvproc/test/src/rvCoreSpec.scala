@@ -35,11 +35,13 @@ object PathCfg {
 }
 
 object VerilatorOpGen {
-  def getFlags () = 
+  def getFlags (noDbg: Boolean = false) = 
     VerilatorFlags(Seq("--trace-depth", "99", 
       "-y", PathCfg.dpiDir(), 
       "-CFLAGS", s"-I${PathCfg.vltDir()}") 
-      ++ PathCfg.dpiFiles())
+      ++ PathCfg.dpiFiles()
+      ++ (if (noDbg) Seq("-DPRINTF_COND=0") else Nil) 
+    )
 }
 
 class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
@@ -49,7 +51,7 @@ class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
       .withAnnotations(Seq(
       // WriteVcdAnnotation,
       VerilatorBackendAnnotation,
-      VerilatorOpGen.getFlags()
+      VerilatorOpGen.getFlags(true)
     )) { dut =>
       dut.io.outPC.expect(0)
 
@@ -86,7 +88,7 @@ class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
       .withAnnotations(Seq(
         // WriteVcdAnnotation,
         VerilatorBackendAnnotation,
-        VerilatorOpGen.getFlags()
+        VerilatorOpGen.getFlags(true)
       )
     ) { dut =>
       dut.io.regPin.poke(1)
@@ -123,7 +125,7 @@ class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
       .withAnnotations(Seq(
         // WriteVcdAnnotation,
         VerilatorBackendAnnotation,
-        VerilatorOpGen.getFlags()
+        VerilatorOpGen.getFlags(true)
       )
     ) { dut =>
       dut.clock.step(3)
@@ -149,7 +151,7 @@ class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
       .withAnnotations(Seq(
         // WriteVcdAnnotation,
         VerilatorBackendAnnotation,
-        VerilatorOpGen.getFlags(),
+        VerilatorOpGen.getFlags(true),
       )
     ) { dut =>
       dut.io.regPin.poke(1)
@@ -186,7 +188,7 @@ class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
       .withAnnotations(Seq(
         // WriteVcdAnnotation,
         VerilatorBackendAnnotation,
-        VerilatorOpGen.getFlags(),
+        VerilatorOpGen.getFlags(true),
       )
     ) { dut =>
 
@@ -197,23 +199,23 @@ class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
       dut.io.regPin.poke(6)
       dut.clock.step()
       dut.io.regPrb.expect(0xdeadbeefL)
-      
+
       dut.io.regPin.poke(7)
       dut.clock.step()
       dut.io.regPrb.expect(0x1L)
-      
+
       dut.io.regPin.poke(8)
       dut.clock.step()
       dut.io.regPrb.expect(0xffffffffL)
-      
+
       dut.io.regPin.poke(9)
       dut.clock.step()
       dut.io.regPrb.expect(0x1L)
-      
+
       dut.io.regPin.poke(10)
       dut.clock.step()
       dut.io.regPrb.expect(0xffffff80L)
-      
+
       dut.io.regPin.poke(11)
       dut.clock.step()
       dut.io.regPrb.expect(0x00000080L)
@@ -223,34 +225,93 @@ class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
       dut.io.regPrb.expect(0x0000007fL)
     }
   }
-  //
-  // "rvCore" should "exit at Ebreak" in {
-  //   PathCfg.doLinkRam("ebreak.hex")
-  //   test (new rvProc.rvCore())
-  //     .withAnnotations(Seq(
-  //       // WriteVcdAnnotation,
-  //       VerilatorBackendAnnotation,
-  //       VerilatorOpGen.getFlags(),
-  //       // VerilatorOpGen.getCFlags()
-  //     )
-  //   ) { dut =>
-  //     assertThrows[java.lang.RuntimeException] {
-  //       dut.io.regPin.poke(10)
-  //       try {
-  //         var cnt = 0
-  //         // while (cnt < 20 && !dut.imm)
-  //         dut.clock.step(10)
-  //       } catch {
-  //         case e: StopException => {
-  //           println(s"Stop at cycle ${e.cycles}")
-  //         }
-  //         // case e : Exception => 
-  //         //   fail(s"Verilator exit with Exception ${e.getMessage()}")
-  //         // case e : Throwable => 
-  //         //   fail(s"Verilator exit with Throwable ${e.getMessage()}")
-  //       }
-  //     }
-  //     ()
-  //   }
-  // }
+
+  "rvCore" should "pass Store" in {
+    PathCfg.doLinkRam("stores.hex")
+    test (new rvProc.rvCore())
+      .withAnnotations(Seq(
+        // WriteVcdAnnotation,
+        VerilatorBackendAnnotation,
+        VerilatorOpGen.getFlags(true),
+      )
+    ) { dut =>
+      dut.clock.step(9)
+
+      dut.io.regPin.poke(9)
+      dut.clock.step()
+      dut.io.regPrb.expect(0xdeadbeefL)
+
+      dut.io.regPin.poke(10)
+      dut.clock.step()
+      dut.io.regPrb.expect(0xffffffffL)
+
+      dut.io.regPin.poke(11)
+      dut.clock.step()
+      dut.io.regPrb.expect(0x0000007fL)
+    }
+  }
+
+  "rvCore" should "exit at Ebreak" in {
+    PathCfg.doLinkRam("ebreak.hex")
+    test (new rvProc.rvCore())
+      .withAnnotations(Seq(
+        // WriteVcdAnnotation,
+        VerilatorBackendAnnotation,
+        VerilatorOpGen.getFlags(true),
+      )
+    ) { dut =>
+      assertThrows[java.lang.RuntimeException] {
+        dut.io.regPin.poke(10)
+        try {
+          dut.clock.step(10)
+        } catch {
+          case e: StopException => {
+            println(s"Stop at cycle ${e.cycles}")
+          }
+        }
+      }
+    }
+  }
+
+  "rvCore" should "hit good trap sum.hex" in {
+    PathCfg.doLinkRam("sum_v3.hex")
+    test (new rvProc.rvCore())
+      .withAnnotations(Seq(
+        // WriteVcdAnnotation,
+        VerilatorBackendAnnotation,
+        VerilatorOpGen.getFlags(true),
+      )
+    ) { dut =>
+      dut.io.regPin.poke(10)
+      dut.clock.setTimeout(7000)
+      try {
+        dut.clock.step(6000)
+      } catch {
+        case e: StopException => {
+          println(s"Stop at cycle ${e.cycles}")
+        }
+      }
+    }
+  }
+
+  "rvCore" should "hit good trap mem.hex" in {
+    PathCfg.doLinkRam("mem_v3.hex")
+    test (new rvProc.rvCore())
+      .withAnnotations(Seq(
+        // WriteVcdAnnotation,
+        VerilatorBackendAnnotation,
+        VerilatorOpGen.getFlags(true),
+      )
+    ) { dut =>
+      dut.io.regPin.poke(10)
+      dut.clock.setTimeout(7000)
+      try {
+        dut.clock.step(6000)
+      } catch {
+        case e: StopException => {
+          println(s"Stop at cycle ${e.cycles}")
+        }
+      }
+    }
+  }
 }

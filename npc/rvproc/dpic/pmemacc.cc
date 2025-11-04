@@ -14,7 +14,9 @@ static uint32_t pmem_raw[PMemSize >> 2];
 
 extern "C" void 
 pmem_init() {
+#if PRINTF_COND
   std::cout << "DPI-C >> pmem_init called" << std::endl;
+#endif
   std::ifstream ifs (PMemFile);
   assert(ifs.is_open());
 
@@ -30,10 +32,14 @@ pmem_init() {
 
 extern "C" uint32_t 
 pmem_read(uint32_t raddr) {
+#if PRINTF_COND
   std::cout << "DPI-C >> pmem_read addr " << std::hex << raddr;
+#endif
   uint32_t aligned_index = raddr >> 2;
   assert(aligned_index < (PMemSize >> 2) && "PMem out of bound");
+#if PRINTF_COND
   std::cout << " ret = " << std::hex << pmem_raw[aligned_index] << std::endl;
+#endif
   return pmem_raw[aligned_index];
 }
 
@@ -47,5 +53,19 @@ pmem_write(uint32_t waddr, uint32_t wdata, uint8_t wmask) {
       m |= (0xff << (i * 8));
     }
   }
-  pmem_raw[aligned_index] = (m & wdata);
+  pmem_raw[aligned_index] = 
+    (pmem_raw[aligned_index] & ~m) | (wdata & m);
+
+#if PRINTF_COND
+  std::cout << "DPI-C >> pmem_write addr" << std::hex << waddr << " : " << wdata << " mask = " << m << std::endl;
+  for (size_t i = 0x100 >> 2; i < (0x100+20) >> 2; i++) {
+    if (i % 4 == 0) {
+      std::cout << std::hex << i << ":\t";
+    }
+    std::cout << std::hex << pmem_raw[i] << " ";
+    if (i % 4 == 3) {
+      std::cout << std::endl;
+    }
+  }
+#endif
 }
