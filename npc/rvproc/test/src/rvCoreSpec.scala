@@ -32,6 +32,12 @@ object PathCfg {
     val cmd_res = cmd_str.!! // Raise RuntimeException if failed
     ()
   }
+
+  def doLinkBin(abspath: String) = {
+    val cmd_str = s"ln -sfn ${abspath} ${hexFile("meminit.bin")}"
+    val cmd_res = cmd_str.!! // Raise RuntimeException if failed
+    ()
+  }
 }
 
 object VerilatorOpGen {
