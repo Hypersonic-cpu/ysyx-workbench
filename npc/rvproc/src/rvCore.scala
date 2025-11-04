@@ -417,8 +417,8 @@ class rvCore() extends Module {
   iEcall.io.isEbreak := iDec.io.ebreak
   iEcall.io.isEcall  := false.B
 
-  dontTouch(iWrite.io)
-  dontTouch(iDec.io)
-  dontTouch(iExe.io)
-  dontTouch(iLsu.io)
+  // dontTouch(iWrite.io)
+  // dontTouch(iDec.io)
+  // dontTouch(iExe.io)
+  // dontTouch(iLsu.io)
 }
