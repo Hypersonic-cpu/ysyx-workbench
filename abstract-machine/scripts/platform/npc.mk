@@ -25,7 +25,9 @@ image: image-dep
 	@echo + OBJCOPY "->" $(IMAGE_REL).bin
 	@$(OBJCOPY) -S --set-section-flags .bss=alloc,contents -O binary $(IMAGE).elf $(IMAGE).bin
 
-run: insert-arg runam #  soft-link runam
-	# TODO: 
+-include $(NPC_HOME)/MakeAmRun.mk
+run: insert-arg
+	@ln -sfn $(IMAGE).bin $(CHISEL_DPIC_MEMPATH)
+	@$(MAKE) -C $(NPC_HOME) runam
 
 .PHONY: insert-arg
