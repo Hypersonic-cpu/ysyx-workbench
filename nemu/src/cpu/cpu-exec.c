@@ -18,18 +18,26 @@
 #include <cpu/decode.h>
 #include <cpu/difftest.h>
 #include <locale.h>
+#include <string.h>
 
 /* The assembly code of instructions executed is only output to the screen
  * when the number of instructions executed is less than this value.
  * This is useful when you use the `si' command.
  * You can modify this value as you want.
  */
-#define MAX_INST_TO_PRINT 1000
+#define MAX_INST_TO_PRINT 10
 
 CPU_state cpu = {};
 uint64_t g_nr_guest_inst = 0;
 static uint64_t g_timer = 0; // unit: us
 static bool g_print_step = false;
+
+#ifdef CONFIG_ITRACE
+#define IRING_BUF_LEN 16
+static char iringbuf[IRING_BUF_LEN][128];
+static unsigned iringptr;
+#endif
+
 
 void device_update();
 bool trig_wp();
@@ -52,6 +60,10 @@ static void exec_once(Decode *s, vaddr_t pc) {
   s->snpc = pc;
   isa_exec_once(s);
   cpu.pc = s->dnpc;
+  // TODO: 这个 Ring trace 记录不到出错的命令本身...
+}
+
+void itrace_logging(Decode *s) {
 #ifdef CONFIG_ITRACE
   char *p = s->logbuf;
   p += snprintf(p, sizeof(s->logbuf), FMT_WORD ":", s->pc);
@@ -75,6 +87,9 @@ static void exec_once(Decode *s, vaddr_t pc) {
   void disassemble(char *str, int size, uint64_t pc, uint8_t *code, int nbyte);
   disassemble(p, s->logbuf + sizeof(s->logbuf) - p,
       MUXDEF(CONFIG_ISA_x86, s->snpc, s->pc), (uint8_t *)&s->isa.inst, ilen);
+
+  strncpy(iringbuf[iringptr], s->logbuf, 128);
+  iringptr = (iringptr+1) % IRING_BUF_LEN;
 #endif
 }
 
@@ -98,8 +113,18 @@ static void statistic() {
   else Log("Finish running in less than 1 us and can not calculate the simulation frequency");
 }
 
+static void 
+inst_ringbuf_display() {
+  printf("\n === Recent %d Insts === \n", IRING_BUF_LEN);
+  for (unsigned i = iringptr, n = IRING_BUF_LEN; n > 0;
+    n--, i = (i+1) % IRING_BUF_LEN) {
+    printf("%s\n", iringbuf[i]);
+  }
+}
+
 void assert_fail_msg() {
   isa_reg_display();
+  IFDEF(CONFIG_ITRACE, inst_ringbuf_display());
   statistic();
 }
 
