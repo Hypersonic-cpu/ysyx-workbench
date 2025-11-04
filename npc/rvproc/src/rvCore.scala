@@ -335,7 +335,7 @@ class rvCore() extends Module {
   })
 
   // State
-  val pc     = RegInit(0.U(ISA.PCBits.W))
+  val pc     = RegInit(0x80000000L.U(ISA.PCBits.W))
   val iReg   = Module(new RegFile())
 
   // Func

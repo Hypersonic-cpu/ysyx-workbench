@@ -1,7 +1,7 @@
+include MakeAmRun.mk
+
 ## Directories
 # project name (also source dir)
-PRJ ?= rvproc
-TOPNAME ?= rvCore
 # dir for generated Verilog
 BUILD_SV_DIR = ./build-sv/$(PRJ)
 # dir for C++ compiled by Verilator
@@ -54,11 +54,6 @@ $(SIM_BIN): $(VSRCS) $(CSRCS) $(NVB_ARCHIVE)
 		--top-module $(TOPNAME) $^ \
 		$(addprefix -CFLAGS , $(CXXFLAGS)) $(addprefix -LDFLAGS , $(LDFLAGS)) \
 		--Mdir $(BUILD_OBJ_DIR) --exe -o $(abspath $(SIM_BIN))
-
-# Chisel & AM constants
-CHISEL_DPIC_MEMPATH=$(abspath $(PRJ)/prog-rom/meminit.bin)
-## constant end
-
 
 test:
 	$(call git_commit, "test RTL") # DO NOT REMOVE THIS LINE!!!
