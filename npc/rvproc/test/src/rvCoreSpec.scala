@@ -263,8 +263,6 @@ class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
       assertThrows[java.lang.RuntimeException] {
         dut.io.regPin.poke(10)
         try {
-          var cnt = 0
-          // while (cnt < 20 && !dut.imm)
           dut.clock.step(10)
         } catch {
           case e: StopException => {
@@ -279,20 +277,19 @@ class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
     PathCfg.doLinkRam("sum_v3.hex")
     test (new rvProc.rvCore())
       .withAnnotations(Seq(
-        WriteVcdAnnotation,
+        // WriteVcdAnnotation,
         VerilatorBackendAnnotation,
         VerilatorOpGen.getFlags(false),
       )
     ) { dut =>
       dut.io.regPin.poke(10)
-      dut.clock.step(1)
-
-      // try {
-      // } catch {
-      //   case e: StopException => {
-      //     println(s"Stop at cycle ${e.cycles}")
-      //   }
-      // }
+      try {
+        dut.clock.step(6000)
+      } catch {
+        case e: StopException => {
+          println(s"Stop at cycle ${e.cycles}")
+        }
+      }
     }
   }
 }
