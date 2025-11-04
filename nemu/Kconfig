@@ -217,4 +217,8 @@ config WP_ENABLE
   bool "Enable watchpoint"
   default y
 
+config MTRACE_ENABLE
+  bool "Enable mem access trace"
+  default n
+
 endmenu

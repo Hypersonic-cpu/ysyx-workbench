@@ -13,6 +13,7 @@
 * See the Mulan PSL v2 for more details.
 ***************************************************************************************/
 
+#include "common.h"
 #include <memory/host.h>
 #include <memory/paddr.h>
 #include <device/mmio.h>
@@ -44,6 +45,14 @@ static void out_of_bound(paddr_t addr) {
       addr, PMEM_LEFT, PMEM_RIGHT, cpu.pc);
 }
 
+static void 
+mtrace_logging(paddr_t addr, word_t val, int len, bool is_read) {
+#ifdef CONFIG_MTRACE_ENABLE
+  fprintf(stdout, "mtrace %s Addr " FMT_PADDR " Len %d Val " FMT_WORD "\n", 
+          is_read ? "READ" : "WRITE", addr, len, val);
+#endif
+}
+
 void init_mem() {
 #if   defined(CONFIG_PMEM_MALLOC)
   pmem = malloc(CONFIG_MSIZE);
@@ -54,14 +63,35 @@ void init_mem() {
 }
 
 word_t paddr_read(paddr_t addr, int len) {
-  if (likely(in_pmem(addr))) return pmem_read(addr, len);
-  IFDEF(CONFIG_DEVICE, return mmio_read(addr, len));
-  out_of_bound(addr);
-  return 0;
+  word_t retval = 0;
+  bool handle = false;
+  if (likely(in_pmem(addr))) {
+    retval = pmem_read(addr, len);
+    handle = true;
+  } else {
+    IFDEF(CONFIG_DEVICE, retval = mmio_read(addr, len), handle = true; );
+  }
+  mtrace_logging(addr, retval, len, true);
+  if (!handle) { out_of_bound(addr); }
+  return retval;
+
+  // if (likely(in_pmem(addr))) return pmem_read(addr, len);
+  // IFDEF(CONFIG_DEVICE, return mmio_read(addr, len));
+  // out_of_bound(addr);
+  // return 0;
 }
 
 void paddr_write(paddr_t addr, int len, word_t data) {
-  if (likely(in_pmem(addr))) { pmem_write(addr, len, data); return; }
-  IFDEF(CONFIG_DEVICE, mmio_write(addr, len, data); return);
-  out_of_bound(addr);
+  bool handle = false;
+  if (likely(in_pmem(addr))) { 
+    pmem_write(addr, len, data); 
+    handle = true;
+  } else {
+    IFDEF(CONFIG_DEVICE, mmio_write(addr, len, data), handle=true; );
+  }
+  mtrace_logging(addr, data, len, false);
+  if (!handle) { out_of_bound(addr); }
+  // if (likely(in_pmem(addr))) { pmem_write(addr, len, data); return; }
+  // IFDEF(CONFIG_DEVICE, mmio_write(addr, len, data); return);
+  // out_of_bound(addr);
 }

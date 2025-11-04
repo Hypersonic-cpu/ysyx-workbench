@@ -14,6 +14,7 @@
 ***************************************************************************************/
 
 #include "common.h"
+#include "debug.h"
 #include "local-include/reg.h"
 #include <cpu/cpu.h>
 #include <cpu/ifetch.h>
@@ -198,7 +199,8 @@ static int decode_exec(Decode *s) {
   INSTPAT("0000001 ????? ????? 101 ????? 01100 11", 
           divu   , R, R(rd) = (src2==0) ? (word_t)(-1) : src1/src2);
   INSTPAT("0000001 ????? ????? 110 ????? 01100 11", 
-          rem    , R, 
+          rem    , R,
+          // Assert(false, "ON PURPOSE");
           if ((sword_t) src2 == 0) {
               R(rd) = src1;
           } else if ((sword_t)src2 == -1 && (sword_t)src1 == INT32_MIN) {
@@ -220,5 +222,7 @@ static int decode_exec(Decode *s) {
 
 int isa_exec_once(Decode *s) {
   s->isa.inst = inst_fetch(&s->snpc, 4);
+  void itrace_logging(Decode *s);
+  itrace_logging(s);
   return decode_exec(s);
 }
