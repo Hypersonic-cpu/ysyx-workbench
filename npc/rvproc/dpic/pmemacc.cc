@@ -2,13 +2,16 @@
 #include <cstdint>
 
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <verilated.h>
+#define PRINTF_COND 1
 
 const char PMemFile[] = "/mnt/hgfs/Arch-PA/ysyx-workbench/npc/rvproc/prog-rom/meminit.bin";
-constexpr size_t PMemSize{ 1U << 25 }; // 32 MiB
+constexpr size_t PMemSize{ 0x1000'0000U }; // 32 MiB
 static uint32_t pmem_raw[PMemSize >> 2];
 
+constexpr uint32_t BaseAddr{ 0x8000'0000U };
 constexpr auto ValidAccess = [](size_t idx) -> bool {
   return idx < (PMemSize >> 2);
 };
@@ -19,8 +22,9 @@ pmem_init() {
   std::ifstream ifs(PMemFile, std::ios::binary | std::ios::in);
   assert(ifs.is_open());
 
+  ifs.seekg(0, std::ios::end);
   auto const file_size = ifs.tellg();
-  std::cout << "DPI-C >> file size" << std::dec << file_size << std::endl;
+  std::cout << "DPI-C >> file size " << std::dec << file_size << std::endl;
   assert(file_size != std::ifstream::pos_type(-1));
   ifs.seekg(0, std::ios::beg);
 
@@ -32,13 +36,12 @@ pmem_init() {
     if (i % 4 == 0) {
       std::cout << std::hex << i << ":\t";
     }
-    std::cout << std::hex << pmem_raw[i] << " ";
+    std::cout << std::hex << std::setfill('0') << std::setw(8) << pmem_raw[i] << " ";
     if (i % 4 == 3) {
       std::cout << std::endl;
     }
   }
 }
-// TODO: 0x8000000
 
 // pmem_init() {
 // #if PRINTF_COND
@@ -60,9 +63,9 @@ pmem_init() {
 extern "C" uint32_t 
 pmem_read(uint32_t raddr) {
 #if PRINTF_COND
-  std::cout << "DPI-C >> pmem_read addr " << std::hex << raddr;
+  std::cout << "DPI-C >> pmem_read addr " << std::hex << raddr << std::endl;
 #endif
-  uint32_t aln_idx = raddr >> 2;
+  uint32_t aln_idx = (raddr - BaseAddr) >> 2;
   assert(ValidAccess(aln_idx) && "PMem out of bound");
 #if PRINTF_COND
   std::cout << " ret = " << std::hex << pmem_raw[aln_idx] << std::endl;
@@ -72,7 +75,7 @@ pmem_read(uint32_t raddr) {
 
 extern "C" void
 pmem_write(uint32_t waddr, uint32_t wdata, uint8_t wmask) {
-  uint32_t aln_idx = waddr >> 2;
+  uint32_t aln_idx = (waddr - BaseAddr) >> 2;
   assert(ValidAccess(aln_idx) && "PMem out of bound");
   uint32_t m = 0U;
   for (int i = 0; i < 4; i++) {
