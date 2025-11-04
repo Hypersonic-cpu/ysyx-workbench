@@ -116,8 +116,8 @@ class RegFile extends Module {
   io.rs2V := Mux(io.rs2.orR, regs(io.rs2), 0.U)
   io.regPrb := Mux(io.rsPin.orR, regs(io.rsPin), 0.U)
 
-  printf(cf"<<REG>> R[${io.rs1}] = ${io.rs1V}%x\n")
-  printf(cf"<<REG>> R[${io.rs2}] = ${io.rs2V}%x\n")
+  // printf(cf"<<REG>> R[${io.rs1}] = ${io.rs1V}%x\n")
+  // printf(cf"<<REG>> R[${io.rs2}] = ${io.rs2V}%x\n")
   when (io.wrEn && io.rd.orR) {
     regs(io.rd) := io.data
   }
@@ -222,9 +222,9 @@ class IDU extends Module {
     (opName === InstOp.Load) -> WbSrcOp.fromMem
   ))
 
-  printf(cf"Decode: inst ${io.inst}%x type${instTp} alu${io.aluOp} " + 
-    cf"wr[M|R] = ${io.memAcc.lenOp}|${io.regWr} jmp ${io.pcJmp.jUncond}\n")
-  printf(cf"\trs1 ${io.rs1}%d, rs2 ${io.rs2}%d, imm ${io.imm}%x\n");
+  // printf(cf"Decode: inst ${io.inst}%x type${instTp} alu${io.aluOp} " + 
+  //   cf"wr[M|R] = ${io.memAcc.lenOp}|${io.regWr} jmp ${io.pcJmp.jUncond}\n")
+  // printf(cf"\trs1 ${io.rs1}%d, rs2 ${io.rs2}%d, imm ${io.imm}%x\n");
 
 }
 
