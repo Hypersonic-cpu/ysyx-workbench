@@ -49,11 +49,11 @@ pmem_write(uint32_t waddr, uint32_t wdata, uint8_t wmask) {
   }
   pmem_raw[aligned_index] = (m & wdata);
 
-  for (size_t i = 0; i < 40; i++) {
+  for (size_t i = 0x100; i < 0x100+20; i++) {
     if (i % 4 == 0) {
       std::cout << std::hex << i << ":\t";
     }
-    std::cout << std::hex << pmem_raw[i];
+    std::cout << std::hex << pmem_raw[i] << " ";
     if (i % 4 == 3) {
       std::cout << std::endl;
     }
