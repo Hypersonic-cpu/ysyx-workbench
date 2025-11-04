@@ -111,7 +111,7 @@ static void statistic() {
 
 static void 
 inst_ringbuf_display() {
-  printf("Recent %d insts: \n", IRING_BUF_LEN);
+  printf("\n === Recent %d Insts === \n", IRING_BUF_LEN);
   for (unsigned i = iringptr, n = IRING_BUF_LEN; n > 0;
     n--, i = (i+1) % IRING_BUF_LEN) {
     printf("%s\n", iringbuf[i]);
