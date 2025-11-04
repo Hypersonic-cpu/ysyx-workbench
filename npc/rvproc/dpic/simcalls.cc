@@ -15,7 +15,6 @@ call_ebreak(uint32_t pc, uint32_t a0reg) {
     << " with a0 = 0x" << std::hex << a0reg << std::endl;
   if (a0reg) {
     vl_fatal(__FILE__, __LINE__, "EcallBox:call_ebreak", "ebreak with nonzero a10");
-    vl_finish(__FILE__, __LINE__, "EcallBox:call_ebreak");
   } else {
     vl_finish(__FILE__, __LINE__, "EcallBox:call_ebreak");
   }
