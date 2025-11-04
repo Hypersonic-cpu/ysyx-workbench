@@ -197,15 +197,15 @@ static int decode_exec(Decode *s) {
           });
   INSTPAT("0000001 ????? ????? 101 ????? 01100 11", 
           divu   , R, R(rd) = (src2==0) ? (word_t)(-1) : src1/src2);
-  INSTPAT("0000001 ????? ????? 110 ????? 01100 11", 
-          rem    , R, 
-          if ((sword_t) src2 == 0) {
-              R(rd) = src1;
-          } else if ((sword_t)src2 == -1 && (sword_t)src1 == INT32_MIN) {
-              R(rd) = 0;
-          } else {
-              R(rd) = (word_t) ((sword_t)src1 % (sword_t)src2); 
-          });
+  // INSTPAT("0000001 ????? ????? 110 ????? 01100 11", 
+  //         rem    , R, 
+  //         if ((sword_t) src2 == 0) {
+  //             R(rd) = src1;
+  //         } else if ((sword_t)src2 == -1 && (sword_t)src1 == INT32_MIN) {
+  //             R(rd) = 0;
+  //         } else {
+  //             R(rd) = (word_t) ((sword_t)src1 % (sword_t)src2); 
+  //         });
   INSTPAT("0000001 ????? ????? 111 ????? 01100 11", 
           remu   , R, 
           R(rd) = (src2 == 0U) ? src1 : (src1 % src2));
