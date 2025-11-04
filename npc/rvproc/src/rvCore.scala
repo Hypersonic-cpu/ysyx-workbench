@@ -182,11 +182,11 @@ class IDU extends Module {
     InstOp.Store  -> ITYPE.tS,
     InstOp.System -> ITYPE.tN
     ))
-  io.aluOp := Mux(
-    opName === InstOp.OpReg || opName === InstOp.OpImm,
-    IntAluOp(funct3), IntAluOp.Add
-  )
-  io.aluSel.rs2Invert := funct7(5).asBool
+  val instArith = 
+    opName === InstOp.OpReg || opName === InstOp.OpImm
+  io.aluOp := Mux(instArith, 
+    IntAluOp(funct3), IntAluOp.Add)
+  io.aluSel.rs2Invert := instArith && funct7(5).asBool
   io.aluSel.rs2SelImm := ~(instTp === ITYPE.tN || instTp === ITYPE.tR)
   io.aluSel.rs1SelPC  := false.B // TODO: JAL
 
