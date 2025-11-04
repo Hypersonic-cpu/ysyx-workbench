@@ -220,5 +220,7 @@ static int decode_exec(Decode *s) {
 
 int isa_exec_once(Decode *s) {
   s->isa.inst = inst_fetch(&s->snpc, 4);
+  void itrace_logging(Decode *s);
+  itrace_logging(s);
   return decode_exec(s);
 }
