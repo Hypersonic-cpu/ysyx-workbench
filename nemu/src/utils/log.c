@@ -21,13 +21,16 @@ extern uint64_t g_nr_guest_inst;
 FILE *log_fp = NULL;
 
 void init_log(const char *log_file) {
-  log_fp = stdout;
+  // FIXME: NEMU LOG DISPLAY
+  // log_fp = stdout;
+  log_fp = NULL;
   if (log_file != NULL) {
     FILE *fp = fopen(log_file, "w");
     Assert(fp, "Can not open '%s'", log_file);
     log_fp = fp;
   }
-  Log("Log is written to %s", log_file ? log_file : "stdout");
+  // Log("Log is written to %s", log_file ? log_file : "stdout");
+  Log("Log is written to %s", log_file ? log_file : "NULL");
 }
 
 bool log_enable() {
