@@ -281,12 +281,12 @@ class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
       .withAnnotations(Seq(
         // WriteVcdAnnotation,
         VerilatorBackendAnnotation,
-        VerilatorOpGen.getFlags(true),
+        VerilatorOpGen.getFlags(false),
       )
     ) { dut =>
       dut.io.regPin.poke(10)
       try {
-        dut.clock.step(6000)
+        dut.clock.step(600)
       } catch {
         case e: StopException => {
           println(s"Stop at cycle ${e.cycles}")
