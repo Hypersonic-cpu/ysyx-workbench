@@ -8,7 +8,7 @@
 #include <string>
 #include <verilated.h>
 
-const char PMemFile[] = "/mnt/hgfs/Arch-PA/ysyx-workbench/npc/rvproc/prog-rom/meminit.hex";
+const char PMemFile[] = "/mnt/hgfs/Arch-PA/ysyx-workbench/npc/rvproc/prog-rom/meminit.bin";
 constexpr size_t PMemSize{ 1U << 25 }; // 32 MiB
 static uint32_t pmem_raw[PMemSize >> 2];
 
