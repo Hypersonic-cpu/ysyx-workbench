@@ -53,7 +53,7 @@ pmem_write(uint32_t waddr, uint32_t wdata, uint8_t wmask) {
     if (i % 4 == 0) {
       std::cout << std::hex << i << ":\t";
     }
-    std::cout << std::hex << pmem_raw[aligned_index];
+    std::cout << std::hex << pmem_raw[i];
     if (i % 4 == 3) {
       std::cout << std::endl;
     }
