@@ -170,6 +170,7 @@ class IDU extends Module {
   val immIS  = io.inst(31, 20).asSInt.pad(32).asUInt
   val immIU  = io.inst(31, 20).pad(32)
   val immU   = io.inst(31, 12) << 12
+  val immS   = (io.inst(31, 25) ## io.inst(11, 7)).asSInt.pad(32).asUInt
 
   // TODO:
   val instTp  = MuxLookup(opName, ITYPE.tN) ( Seq(
@@ -193,7 +194,8 @@ class IDU extends Module {
   // TODO: SEXT
   io.imm    := MuxLookup(instTp, 0.U) (Seq(
     ITYPE.tI -> Mux(true.B, immIS, immIU), 
-    ITYPE.tU -> immU
+    ITYPE.tU -> immU,
+    ITYPE.tS -> immS
   ))
 
   io.memAcc.lenOp := MemLenOp(Mux(
