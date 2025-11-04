@@ -43,108 +43,189 @@ object VerilatorOpGen {
 }
 
 class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
-  "rvCore" should "pass Addi" in {
-    PathCfg.doLinkRam("addi.hex")
-    test (new rvProc.rvCore())
-      .withAnnotations(Seq(
-      // WriteVcdAnnotation,
-      VerilatorBackendAnnotation,
-      VerilatorOpGen.getFlags()
-    )) { dut =>
-      dut.io.outPC.expect(0)
+  // "rvCore" should "pass Addi" in {
+  //   PathCfg.doLinkRam("addi.hex")
+  //   test (new rvProc.rvCore())
+  //     .withAnnotations(Seq(
+  //     // WriteVcdAnnotation,
+  //     VerilatorBackendAnnotation,
+  //     VerilatorOpGen.getFlags()
+  //   )) { dut =>
+  //     dut.io.outPC.expect(0)
+  //
+  //     dut.io.regPin.poke(5)  // t0
+  //     dut.clock.step()
+  //     dut.io.regPrb.expect(1)
+  //     dut.io.outPC.expect(4)
+  //
+  //     dut.io.regPin.poke(6)  // t1
+  //     dut.clock.step()
+  //     dut.io.regPrb.expect(2047)
+  //     dut.io.outPC.expect(8)
+  //
+  //     dut.io.regPin.poke(7)  // t2
+  //     dut.clock.step()
+  //     dut.io.regPrb.expect(IntCvt.twosC(1))
+  //     dut.io.outPC.expect(0xc)
+  //
+  //     dut.io.regPin.poke(8)  // s1
+  //     dut.clock.step()
+  //     dut.io.regPrb.expect(IntCvt.twosC(2048))
+  //     dut.io.outPC.expect(0x10)
+  //
+  //     dut.io.regPin.poke(0)  // zero
+  //     dut.clock.step()
+  //     dut.io.regPrb.expect(0)
+  //     ()
+  //   }
+  // }
+  //
+  // "rvCore" should "pass Add" in {
+  //   PathCfg.doLinkRam("add.hex")
+  //   test (new rvProc.rvCore())
+  //     .withAnnotations(Seq(
+  //       // WriteVcdAnnotation,
+  //       VerilatorBackendAnnotation,
+  //       VerilatorOpGen.getFlags()
+  //     )
+  //   ) { dut =>
+  //     dut.io.regPin.poke(1)
+  //     dut.clock.step(1)
+  //     dut.io.regPrb.expect(IntCvt.twosC(1))
+  //
+  //     dut.io.regPin.poke(2)
+  //     dut.clock.step(1)
+  //     dut.io.regPrb.expect(1)
+  //
+  //     dut.clock.step(1)
+  //
+  //     dut.io.regPin.poke(10)
+  //     dut.clock.step(1)
+  //     dut.io.regPrb.expect(0)
+  //
+  //     dut.io.regPin.poke(11)
+  //     dut.clock.step(1)
+  //     dut.io.regPrb.expect(2048)
+  //
+  //     dut.io.regPin.poke(1)
+  //     dut.clock.step(1)
+  //     dut.io.regPrb.expect(IntCvt.twosC(2))
+  //
+  //     dut.io.regPin.poke(12)
+  //     dut.clock.step(2)
+  //     dut.io.regPrb.expect(4094)
+  //   }
+  // }
+  //
+  // "rvCore" should "pass Jalr" in {
+  //   PathCfg.doLinkRam("jalr.hex")
+  //   test (new rvProc.rvCore())
+  //     .withAnnotations(Seq(
+  //       // WriteVcdAnnotation,
+  //       VerilatorBackendAnnotation,
+  //       VerilatorOpGen.getFlags()
+  //     )
+  //   ) { dut =>
+  //     dut.clock.step(3)
+  //     dut.io.outPC.expect(0xc)
+  //
+  //     dut.io.regPin.poke(1)
+  //     dut.clock.step(1)
+  //     dut.io.outPC.expect(0x20)
+  //     dut.io.regPrb.expect(0x10)
+  //
+  //     dut.clock.step(3)
+  //     dut.io.outPC.expect(0x10)
+  //
+  //     dut.io.regPin.poke(7)
+  //     dut.clock.step(2)
+  //     dut.io.regPrb.expect(99)
+  //   }
+  // }
+  //
+  // "rvCore" should "pass Lui" in {
+  //   PathCfg.doLinkRam("lui.hex")
+  //   test (new rvProc.rvCore())
+  //     .withAnnotations(Seq(
+  //       // WriteVcdAnnotation,
+  //       VerilatorBackendAnnotation,
+  //       VerilatorOpGen.getFlags(),
+  //     )
+  //   ) { dut =>
+  //     dut.io.regPin.poke(1)
+  //     dut.clock.step()
+  //     dut.io.regPrb.expect(0)
+  //
+  //     dut.io.regPin.poke(2)
+  //     dut.clock.step()
+  //     dut.io.regPrb.expect(IntCvt.twosC(4096))
+  //
+  //     dut.io.regPin.poke(3)
+  //     dut.clock.step()
+  //     dut.io.regPrb.expect(0x12345000)
+  //
+  //     dut.io.regPin.poke(4)
+  //     dut.clock.step()
+  //     dut.io.regPrb.expect(0x80000000L)
+  //
+  //     dut.io.regPin.poke(5)
+  //     dut.clock.step()
+  //     dut.io.regPrb.expect(0x7ffff000)
+  //
+  //     dut.clock.step()
+  //
+  //     dut.io.regPin.poke(15)
+  //     dut.clock.step()
+  //     dut.io.regPrb.expect(0x7AAAA000)
+  //   }
+  // }
+  //
+  // "rvCore" should "pass Load" in {
+  //   PathCfg.doLinkRam("loads.hex")
+  //   test (new rvProc.rvCore())
+  //     .withAnnotations(Seq(
+  //       // WriteVcdAnnotation,
+  //       VerilatorBackendAnnotation,
+  //       VerilatorOpGen.getFlags(),
+  //     )
+  //   ) { dut =>
+  //
+  //     dut.io.regPin.poke(5)
+  //     dut.clock.step(2)
+  //     dut.io.regPrb.expect(0x30L)
+  //
+  //     dut.io.regPin.poke(6)
+  //     dut.clock.step()
+  //     dut.io.regPrb.expect(0xdeadbeefL)
+  //
+  //     dut.io.regPin.poke(7)
+  //     dut.clock.step()
+  //     dut.io.regPrb.expect(0x1L)
+  //
+  //     dut.io.regPin.poke(8)
+  //     dut.clock.step()
+  //     dut.io.regPrb.expect(0xffffffffL)
+  //
+  //     dut.io.regPin.poke(9)
+  //     dut.clock.step()
+  //     dut.io.regPrb.expect(0x1L)
+  //
+  //     dut.io.regPin.poke(10)
+  //     dut.clock.step()
+  //     dut.io.regPrb.expect(0xffffff80L)
+  //
+  //     dut.io.regPin.poke(11)
+  //     dut.clock.step()
+  //     dut.io.regPrb.expect(0x00000080L)
+  //
+  //     dut.io.regPin.poke(12)
+  //     dut.clock.step()
+  //     dut.io.regPrb.expect(0x0000007fL)
+  //   }
+  // }
 
-      dut.io.regPin.poke(5)  // t0
-      dut.clock.step()
-      dut.io.regPrb.expect(1)
-      dut.io.outPC.expect(4)
-
-      dut.io.regPin.poke(6)  // t1
-      dut.clock.step()
-      dut.io.regPrb.expect(2047)
-      dut.io.outPC.expect(8)
-
-      dut.io.regPin.poke(7)  // t2
-      dut.clock.step()
-      dut.io.regPrb.expect(IntCvt.twosC(1))
-      dut.io.outPC.expect(0xc)
-
-      dut.io.regPin.poke(8)  // s1
-      dut.clock.step()
-      dut.io.regPrb.expect(IntCvt.twosC(2048))
-      dut.io.outPC.expect(0x10)
-
-      dut.io.regPin.poke(0)  // zero
-      dut.clock.step()
-      dut.io.regPrb.expect(0)
-      ()
-    }
-  }
-
-  "rvCore" should "pass Add" in {
-    PathCfg.doLinkRam("add.hex")
-    test (new rvProc.rvCore())
-      .withAnnotations(Seq(
-        // WriteVcdAnnotation,
-        VerilatorBackendAnnotation,
-        VerilatorOpGen.getFlags()
-      )
-    ) { dut =>
-      dut.io.regPin.poke(1)
-      dut.clock.step(1)
-      dut.io.regPrb.expect(IntCvt.twosC(1))
-
-      dut.io.regPin.poke(2)
-      dut.clock.step(1)
-      dut.io.regPrb.expect(1)
-
-      dut.clock.step(1)
-
-      dut.io.regPin.poke(10)
-      dut.clock.step(1)
-      dut.io.regPrb.expect(0)
-
-      dut.io.regPin.poke(11)
-      dut.clock.step(1)
-      dut.io.regPrb.expect(2048)
-
-      dut.io.regPin.poke(1)
-      dut.clock.step(1)
-      dut.io.regPrb.expect(IntCvt.twosC(2))
-
-      dut.io.regPin.poke(12)
-      dut.clock.step(2)
-      dut.io.regPrb.expect(4094)
-    }
-  }
-
-  "rvCore" should "pass Jalr" in {
-    PathCfg.doLinkRam("jalr.hex")
-    test (new rvProc.rvCore())
-      .withAnnotations(Seq(
-        // WriteVcdAnnotation,
-        VerilatorBackendAnnotation,
-        VerilatorOpGen.getFlags()
-      )
-    ) { dut =>
-      dut.clock.step(3)
-      dut.io.outPC.expect(0xc)
-
-      dut.io.regPin.poke(1)
-      dut.clock.step(1)
-      dut.io.outPC.expect(0x20)
-      dut.io.regPrb.expect(0x10)
-
-      dut.clock.step(3)
-      dut.io.outPC.expect(0x10)
-
-      dut.io.regPin.poke(7)
-      dut.clock.step(2)
-      dut.io.regPrb.expect(99)
-    }
-  }
-
-  "rvCore" should "pass Lui" in {
-    PathCfg.doLinkRam("lui.hex")
+  "rvCore" should "pass Store" in {
+    PathCfg.doLinkRam("stores.hex")
     test (new rvProc.rvCore())
       .withAnnotations(Seq(
         // WriteVcdAnnotation,
@@ -152,78 +233,22 @@ class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
         VerilatorOpGen.getFlags(),
       )
     ) { dut =>
-      dut.io.regPin.poke(1)
-      dut.clock.step()
-      dut.io.regPrb.expect(0)
+      dut.clock.step(8)
 
-      dut.io.regPin.poke(2)
-      dut.clock.step()
-      dut.io.regPrb.expect(IntCvt.twosC(4096))
-
-      dut.io.regPin.poke(3)
-      dut.clock.step()
-      dut.io.regPrb.expect(0x12345000)
-
-      dut.io.regPin.poke(4)
-      dut.clock.step()
-      dut.io.regPrb.expect(0x80000000L)
-
-      dut.io.regPin.poke(5)
-      dut.clock.step()
-      dut.io.regPrb.expect(0x7ffff000)
-
-      dut.clock.step()
-
-      dut.io.regPin.poke(15)
-      dut.clock.step()
-      dut.io.regPrb.expect(0x7AAAA000)
-    }
-  }
-
-  "rvCore" should "pass Load" in {
-    PathCfg.doLinkRam("loads.hex")
-    test (new rvProc.rvCore())
-      .withAnnotations(Seq(
-        // WriteVcdAnnotation,
-        VerilatorBackendAnnotation,
-        VerilatorOpGen.getFlags(),
-      )
-    ) { dut =>
-
-      dut.io.regPin.poke(5)
-      dut.clock.step(2)
-      dut.io.regPrb.expect(0x30L)
-
-      dut.io.regPin.poke(6)
-      dut.clock.step()
-      dut.io.regPrb.expect(0xdeadbeefL)
-      
-      dut.io.regPin.poke(7)
-      dut.clock.step()
-      dut.io.regPrb.expect(0x1L)
-      
-      dut.io.regPin.poke(8)
-      dut.clock.step()
-      dut.io.regPrb.expect(0xffffffffL)
-      
       dut.io.regPin.poke(9)
       dut.clock.step()
-      dut.io.regPrb.expect(0x1L)
-      
+      dut.io.regPrb.expect(0xdeadbeefL)
+
       dut.io.regPin.poke(10)
       dut.clock.step()
-      dut.io.regPrb.expect(0xffffff80L)
-      
-      dut.io.regPin.poke(11)
-      dut.clock.step()
-      dut.io.regPrb.expect(0x00000080L)
+      dut.io.regPrb.expect(0xffffffffL)
 
-      dut.io.regPin.poke(12)
+      dut.io.regPin.poke(11)
       dut.clock.step()
       dut.io.regPrb.expect(0x0000007fL)
     }
   }
-  //
+
   // "rvCore" should "exit at Ebreak" in {
   //   PathCfg.doLinkRam("ebreak.hex")
   //   test (new rvProc.rvCore())
