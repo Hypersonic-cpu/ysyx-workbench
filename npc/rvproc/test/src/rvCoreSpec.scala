@@ -274,7 +274,7 @@ class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
   }
 
   "rvCore" should "hit good trap sum.hex" in {
-    PathCfg.doLinkRam("ebreak.hex")
+    PathCfg.doLinkRam("sum_v3.hex")
     test (new rvProc.rvCore())
       .withAnnotations(Seq(
         // WriteVcdAnnotation,
