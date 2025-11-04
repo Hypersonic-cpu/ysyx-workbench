@@ -116,8 +116,8 @@ class RegFile extends Module {
   io.rs2V := Mux(io.rs2.orR, regs(io.rs2), 0.U)
   io.regPrb := Mux(io.rsPin.orR, regs(io.rsPin), 0.U)
 
-  printf(cf"<<REG>> R[${io.rs1}] = ${io.rs1V}%x\n")
-  printf(cf"<<REG>> R[${io.rs2}] = ${io.rs2V}%x\n")
+  // printf(cf"<<REG>> R[${io.rs1}] = ${io.rs1V}%x\n")
+  // printf(cf"<<REG>> R[${io.rs2}] = ${io.rs2V}%x\n")
   when (io.wrEn && io.rd.orR) {
     regs(io.rd) := io.data
   }
@@ -170,6 +170,7 @@ class IDU extends Module {
   val immIS  = io.inst(31, 20).asSInt.pad(32).asUInt
   val immIU  = io.inst(31, 20).pad(32)
   val immU   = io.inst(31, 12) << 12
+  val immS   = (io.inst(31, 25) ## io.inst(11, 7)).asSInt.pad(32).asUInt
 
   // TODO:
   val instTp  = MuxLookup(opName, ITYPE.tN) ( Seq(
@@ -182,18 +183,19 @@ class IDU extends Module {
     InstOp.Store  -> ITYPE.tS,
     InstOp.System -> ITYPE.tN
     ))
-  io.aluOp := Mux(
-    opName === InstOp.OpReg || opName === InstOp.OpImm,
-    IntAluOp(funct3), IntAluOp.Add
-  )
-  io.aluSel.rs2Invert := funct7(5).asBool
+  val instArith = 
+    opName === InstOp.OpReg || opName === InstOp.OpImm
+  io.aluOp := Mux(instArith, 
+    IntAluOp(funct3), IntAluOp.Add)
+  io.aluSel.rs2Invert := instArith && funct7(5).asBool
   io.aluSel.rs2SelImm := ~(instTp === ITYPE.tN || instTp === ITYPE.tR)
   io.aluSel.rs1SelPC  := false.B // TODO: JAL
 
   // TODO: SEXT
   io.imm    := MuxLookup(instTp, 0.U) (Seq(
     ITYPE.tI -> Mux(true.B, immIS, immIU), 
-    ITYPE.tU -> immU
+    ITYPE.tU -> immU,
+    ITYPE.tS -> immS
   ))
 
   io.memAcc.lenOp := MemLenOp(Mux(
@@ -220,9 +222,9 @@ class IDU extends Module {
     (opName === InstOp.Load) -> WbSrcOp.fromMem
   ))
 
-  printf(cf"Decode: inst ${io.inst}%x type${instTp} alu${io.aluOp} " + 
+  printf(cf"IDU ${io.inst}%x ${instTp} alu${io.aluOp} " + 
     cf"wr[M|R] = ${io.memAcc.lenOp}|${io.regWr} jmp ${io.pcJmp.jUncond}\n")
-  printf(cf"\trs1 ${io.rs1}%d, rs2 ${io.rs2}%d, imm ${io.imm}%x\n");
+  // printf(cf"\trs1 ${io.rs1}%d, rs2 ${io.rs2}%d, imm ${io.imm}%x\n");
 
 }
 
@@ -238,7 +240,7 @@ class EXU extends Module {
     val brCmp = Output(new BrCmpBundle())
   })
 
-  printf(cf"\trs1V ${io.rs1V}%x, rs2V ${io.rs2V}%x, imm ${io.imm}%x\n");
+  // printf(cf"\trs1V ${io.rs1V}%x, rs2V ${io.rs2V}%x, imm ${io.imm}%x\n");
   io.res := 0.U
   io.brCmp.beq := false.B
   io.brCmp.blt := false.B
@@ -271,11 +273,15 @@ class LSU extends Module {
   iMem.io.reset := reset
   iMem.io.pcin  := io.pcin
   iMem.io.addr  := io.addr
-  iMem.io.data  := io.data
+  iMem.io.data  := MuxLookup(lenOp, 0.U) (Seq(
+    MemLenOp.Byte -> (io.data(7, 0) << (io.addr(1,0) << 3.U)),
+    MemLenOp.Half -> (io.data(15,0) << (io.addr(1,1) << 4.U)),
+    MemLenOp.Word -> io.data
+  ))
   iMem.io.byteMask := MuxLookup(lenOp, 0.U) (
     Seq(
-      MemLenOp.Byte -> 0x1.U,
-      MemLenOp.Half -> 0x3.U,
+      MemLenOp.Byte -> (0x1.U << io.addr(1, 0)),
+      MemLenOp.Half -> (0x3.U << (io.addr(1, 1) << 1.U)),
       MemLenOp.Word -> 0xf.U
     )
   )
@@ -285,7 +291,7 @@ class LSU extends Module {
 
   val lraw = iMem.io.loadRaw >> (io.addr(1, 0) << 3)
   val sext = io.memAcc.sExt
-  printf(cf"DPI Chisel Raw ${lraw}%x SEXT ${sext}\n")
+  // printf(cf"DPI Chisel Raw ${lraw}%x SEXT ${sext}\n")
   io.inst := iMem.io.instRaw
   io.load := MuxLookup(lenOp, 0.U) (Seq(
     MemLenOp.Byte -> Mux(sext, lraw(7, 0).asSInt.pad(32).asUInt, lraw(7, 0)),
@@ -332,7 +338,6 @@ class rvCore() extends Module {
   val pc     = RegInit(0.U(ISA.PCBits.W))
   val iReg   = Module(new RegFile())
 
-  printf(cf"[ PC = ${pc}%x ]\n")
   // Func
   val iDec   = Module(new IDU())
   val iExe   = Module(new EXU()) 
@@ -349,6 +354,7 @@ class rvCore() extends Module {
   iLsu.io.pcin := pc
   // IFU out
   val inst = iLsu.io.inst
+  printf(cf"[ PC = ${pc}%x ] inst = ${inst}%x\n")
 
   // IDU in
   iDec.io.inst := inst
@@ -386,7 +392,7 @@ class rvCore() extends Module {
   iLsu.io.memAcc := iDec.io.memAcc
   // LSU out
   val loadV = iLsu.io.load
-  printf(cf"DPI Chisel loadval ${loadV}%x\n")
+  // printf(cf"DPI Chisel loadval ${loadV}%x\n")
 
   // WB in
   iWrite.io.brCmp := br
@@ -399,7 +405,7 @@ class rvCore() extends Module {
   pc           := iWrite.io.nxpc
   iReg.io.data := iWrite.io.data
 
-  printf(cf"<<<WB>>> rd ${iReg.io.rd} data ${iReg.io.data}%x\n")
+  // printf(cf"<<<WB>>> rd ${iReg.io.rd} data ${iReg.io.data}%x\n")
 
   // printf(cf"   R[${iDec.io.rs1}%d]=0x${rs1V}%x R[${iDec.io.rs2}%d]=0x${rs2V}%x "
   //     + cf"Alu=${sAlu.io.sum}%x Eq=${sAlu.io.isEq}\n")
