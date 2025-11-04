@@ -293,4 +293,25 @@ class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
       }
     }
   }
+
+  "rvCore" should "hit good trap mem.hex" in {
+    PathCfg.doLinkRam("mem_v3.hex")
+    test (new rvProc.rvCore())
+      .withAnnotations(Seq(
+        // WriteVcdAnnotation,
+        VerilatorBackendAnnotation,
+        VerilatorOpGen.getFlags(true),
+      )
+    ) { dut =>
+      dut.io.regPin.poke(10)
+      dut.clock.setTimeout(7000)
+      try {
+        dut.clock.step(6000)
+      } catch {
+        case e: StopException => {
+          println(s"Stop at cycle ${e.cycles}")
+        }
+      }
+    }
+  }
 }
