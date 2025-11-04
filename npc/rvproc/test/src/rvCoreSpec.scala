@@ -1,4 +1,4 @@
-package rvProc.Test
+package rvproc.test
 
 import scala.sys.process._
 
@@ -32,6 +32,12 @@ object PathCfg {
     val cmd_res = cmd_str.!! // Raise RuntimeException if failed
     ()
   }
+
+  def doLinkBin(abspath: String) = {
+    val cmd_str = s"ln -sfn ${abspath} ${hexFile("meminit.bin")}"
+    val cmd_res = cmd_str.!! // Raise RuntimeException if failed
+    ()
+  }
 }
 
 object VerilatorOpGen {
@@ -47,7 +53,7 @@ object VerilatorOpGen {
 class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
   "rvCore" should "pass Addi" in {
     PathCfg.doLinkRam("addi.hex")
-    test (new rvProc.rvCore())
+    test (new rvproc.rvCore())
       .withAnnotations(Seq(
       // WriteVcdAnnotation,
       VerilatorBackendAnnotation,
@@ -84,7 +90,7 @@ class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
 
   "rvCore" should "pass Add" in {
     PathCfg.doLinkRam("add.hex")
-    test (new rvProc.rvCore())
+    test (new rvproc.rvCore())
       .withAnnotations(Seq(
         // WriteVcdAnnotation,
         VerilatorBackendAnnotation,
@@ -121,7 +127,7 @@ class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
 
   "rvCore" should "pass Jalr" in {
     PathCfg.doLinkRam("jalr.hex")
-    test (new rvProc.rvCore())
+    test (new rvproc.rvCore())
       .withAnnotations(Seq(
         // WriteVcdAnnotation,
         VerilatorBackendAnnotation,
@@ -147,7 +153,7 @@ class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
 
   "rvCore" should "pass Lui" in {
     PathCfg.doLinkRam("lui.hex")
-    test (new rvProc.rvCore())
+    test (new rvproc.rvCore())
       .withAnnotations(Seq(
         // WriteVcdAnnotation,
         VerilatorBackendAnnotation,
@@ -184,7 +190,7 @@ class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
 
   "rvCore" should "pass Load" in {
     PathCfg.doLinkRam("loads.hex")
-    test (new rvProc.rvCore())
+    test (new rvproc.rvCore())
       .withAnnotations(Seq(
         // WriteVcdAnnotation,
         VerilatorBackendAnnotation,
@@ -228,7 +234,7 @@ class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
 
   "rvCore" should "pass Store" in {
     PathCfg.doLinkRam("stores.hex")
-    test (new rvProc.rvCore())
+    test (new rvproc.rvCore())
       .withAnnotations(Seq(
         // WriteVcdAnnotation,
         VerilatorBackendAnnotation,
@@ -253,7 +259,7 @@ class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
 
   "rvCore" should "exit at Ebreak" in {
     PathCfg.doLinkRam("ebreak.hex")
-    test (new rvProc.rvCore())
+    test (new rvproc.rvCore())
       .withAnnotations(Seq(
         // WriteVcdAnnotation,
         VerilatorBackendAnnotation,
@@ -275,7 +281,7 @@ class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
 
   "rvCore" should "hit good trap sum.hex" in {
     PathCfg.doLinkRam("sum_v3.hex")
-    test (new rvProc.rvCore())
+    test (new rvproc.rvCore())
       .withAnnotations(Seq(
         // WriteVcdAnnotation,
         VerilatorBackendAnnotation,
@@ -296,7 +302,7 @@ class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
 
   "rvCore" should "hit good trap mem.hex" in {
     PathCfg.doLinkRam("mem_v3.hex")
-    test (new rvProc.rvCore())
+    test (new rvproc.rvCore())
       .withAnnotations(Seq(
         // WriteVcdAnnotation,
         VerilatorBackendAnnotation,

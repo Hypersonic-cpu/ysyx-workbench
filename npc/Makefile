@@ -1,7 +1,7 @@
+include MakeAmRun.mk
+
 ## Directories
 # project name (also source dir)
-PRJ ?= rvproc
-TOPNAME ?= rvCore
 # dir for generated Verilog
 BUILD_SV_DIR = ./build-sv/$(PRJ)
 # dir for C++ compiled by Verilator
@@ -55,12 +55,14 @@ $(SIM_BIN): $(VSRCS) $(CSRCS) $(NVB_ARCHIVE)
 		$(addprefix -CFLAGS , $(CXXFLAGS)) $(addprefix -LDFLAGS , $(LDFLAGS)) \
 		--Mdir $(BUILD_OBJ_DIR) --exe -o $(abspath $(SIM_BIN))
 
-## constant end
-
-
 test:
 	$(call git_commit, "test RTL") # DO NOT REMOVE THIS LINE!!!
-	mill -i $(PRJ).test
+	mill -i $(PRJ).test.testOnly $(PRJ).test.$(TOPNAME)Spec
+
+runam:
+	$(call git_commit, "run with AM")
+	mill -i $(PRJ).test.testOnly $(PRJ).test.$(TOPNAME)Am 
+	# @echo $(CHISEL_DPIC_MEMPATH)
 
 verilog:
 	$(call git_commit, "generate verilog")
@@ -85,7 +87,7 @@ idea:
 clean:
 	-rm -rf $(BUILD_SV_DIR) $(BUILD_SIM_DIR)
 
-.PHONY: test verilog help reformat checkformat clean verilate sim
+.PHONY: test runam verilog help reformat checkformat clean verilate sim
 
 verilate:
 	@mkdir -p $(BUILD_OBJ_DIR)
