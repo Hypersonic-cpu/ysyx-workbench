@@ -279,7 +279,7 @@ class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
     PathCfg.doLinkRam("sum_v3.hex")
     test (new rvProc.rvCore())
       .withAnnotations(Seq(
-        // WriteVcdAnnotation,
+        WriteVcdAnnotation,
         VerilatorBackendAnnotation,
         VerilatorOpGen.getFlags(false),
       )
