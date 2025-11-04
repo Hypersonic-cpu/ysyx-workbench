@@ -47,7 +47,8 @@ pmem_write(uint32_t waddr, uint32_t wdata, uint8_t wmask) {
       m |= (0xff << (i * 8));
     }
   }
-  pmem_raw[aligned_index] = (m & wdata);
+  pmem_raw[aligned_index] = 
+    (pmem_raw[aligned_index] & ~m) | (wdata & m);
 
   std::cout << "DPI-C >> pmem_write addr" << std::hex << waddr << " : " << wdata << " mask = " << m << std::endl;
   for (size_t i = 0x100 >> 2; i < (0x100+20) >> 2; i++) {
