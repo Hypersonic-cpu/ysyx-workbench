@@ -283,6 +283,7 @@ class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
       )
     ) { dut =>
       dut.io.regPin.poke(10)
+      dut.clock.setTimeout(7000)
       try {
         dut.clock.step(6000)
       } catch {
