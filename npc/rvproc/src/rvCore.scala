@@ -222,8 +222,8 @@ class IDU extends Module {
     (opName === InstOp.Load) -> WbSrcOp.fromMem
   ))
 
-  // printf(cf"Decode: inst ${io.inst}%x type${instTp} alu${io.aluOp} " + 
-  //   cf"wr[M|R] = ${io.memAcc.lenOp}|${io.regWr} jmp ${io.pcJmp.jUncond}\n")
+  printf(cf"IDU ${io.inst}%x ${instTp} alu${io.aluOp} " + 
+    cf"wr[M|R] = ${io.memAcc.lenOp}|${io.regWr} jmp ${io.pcJmp.jUncond}\n")
   // printf(cf"\trs1 ${io.rs1}%d, rs2 ${io.rs2}%d, imm ${io.imm}%x\n");
 
 }
