@@ -26,9 +26,19 @@ pmem_init() {
 
   ifs.read((char *) pmem_raw, file_size);
   std::cout << "DPI-C >> fail " << ifs.fail() << " eof " << ifs.eof() << std::endl;
-  assert(!ifs.fail() && ifs.eof());
-  
+  assert(!ifs.fail());
+
+  for (size_t i = 0x0; i < 0x20; i++) {
+    if (i % 4 == 0) {
+      std::cout << std::hex << i << ":\t";
+    }
+    std::cout << std::hex << pmem_raw[i] << " ";
+    if (i % 4 == 3) {
+      std::cout << std::endl;
+    }
+  }
 }
+// TODO: 0x8000000
 
 // pmem_init() {
 // #if PRINTF_COND
