@@ -279,7 +279,7 @@ class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
       .withAnnotations(Seq(
         // WriteVcdAnnotation,
         VerilatorBackendAnnotation,
-        VerilatorOpGen.getFlags(false),
+        VerilatorOpGen.getFlags(true),
       )
     ) { dut =>
       dut.io.regPin.poke(10)
