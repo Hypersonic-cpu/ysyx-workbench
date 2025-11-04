@@ -49,7 +49,7 @@ pmem_write(uint32_t waddr, uint32_t wdata, uint8_t wmask) {
   }
   pmem_raw[aligned_index] = (m & wdata);
 
-  std::cout << "DPI-C >> pmem_write addr" << std::hex << waddr << " : " << wdata << " mask = " << (uint32_t) wmask << std::endl;
+  std::cout << "DPI-C >> pmem_write addr" << std::hex << waddr << " : " << wdata << " mask = " << m << std::endl;
   for (size_t i = 0x100; i < 0x100+20; i++) {
     if (i % 4 == 0) {
       std::cout << std::hex << i << ":\t";
