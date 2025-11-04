@@ -1,4 +1,4 @@
-package rvProc.Test
+package rvproc.test
 
 import scala.sys.process._
 
