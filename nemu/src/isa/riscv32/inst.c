@@ -48,11 +48,34 @@ enum {
   (BITS(i, 11,  8) <<  1) \
   ; } while (0)
 
-// static void ftrace(vaddr_t jtar, int rd) {
-//   if (rd == 0)
-//   unsigned pos = symbol_which(jtar);
-//
-// }
+static void ftrace(vaddr_t jtar, int rd, vaddr_t snpc) {
+  if (rd == 0) {
+    bool found = false;
+    for (unsigned i = frames.num-1U; i < frames.num; --i) {
+      rv32_frame frm = frames.stack[i];
+      // TODO: TCO Detection
+      // A funct call should recover sp and pc
+      if (R(2) == frm.sp && jtar == frm.ra) {
+        unsigned sp = --frames.num;
+        printf("-Fr[%3d] 0x%8x: %s\n", 
+               sp, frm.fn, symbols.table[frm.symt_idx].name);
+        found = true;
+        break;
+      }
+    }
+    Assert(found || frames.num == 0, "Cannot find frame-to-return");
+  } else {
+    unsigned idx = symbol_which(jtar);
+    // Cannot find in symbol table
+    if (idx >= symbols.sym_num) { return; }
+    unsigned sp = frames.num++;
+    frames.stack[sp].fn = jtar;
+    frames.stack[sp].ra = snpc;
+    frames.stack[sp].sp = R(2);
+    frames.stack[sp].symt_idx = R(2);
+    printf("+Fr[%3d] 0x%8x: %s\n", sp, jtar, symbols.table[idx].name);
+  }
+}
 
 static void decode_operand(Decode *s, int *rd, word_t *src1, word_t *src2, word_t *imm, int type) {
   uint32_t i = s->isa.inst;
@@ -90,11 +113,15 @@ static int decode_exec(Decode *s) {
   INSTPAT("??????? ????? ????? ??? ????? 11011 11", 
           jal    , J,
           R(rd) = s->snpc, 
-          s->dnpc = s->pc + imm
+          s->dnpc = s->pc + imm,
+          ftrace(s->dnpc, rd, s->snpc)
           );
   INSTPAT("??????? ????? ????? 000 ????? 11001 11", 
-          jalr   , I, R(rd) = s->snpc,
-          s->dnpc = (src1 + imm) & ((word_t)(-2)));
+          jalr   , I, 
+          R(rd) = s->snpc,
+          s->dnpc = (src1 + imm) & ((word_t)(-2)),
+          ftrace(s->dnpc, rd, s->snpc)
+          );
   INSTPAT("??????? ????? ????? 000 ????? 11000 11",
           beq    , B, if (src1 == src2) { s->dnpc = s->pc + imm; }  );
   INSTPAT("??????? ????? ????? 001 ????? 11000 11",
