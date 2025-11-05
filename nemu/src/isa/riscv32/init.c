@@ -67,10 +67,6 @@ void init_elf(const char* elf_file) {
   uint8_t* map = (uint8_t *) mmap(NULL, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
   Assert(map != MAP_FAILED, "Elf '%s' mmap failed", elf_file);
 
-  // TODO: 
-  // MUXDEF(CONFIG_ISA64, X, Y);
-
-  // NOTE: Only for RV32 now
   Elf32_Ehdr* ehdr = (Elf32_Ehdr*) map;
   Assert(memcmp(ehdr->e_ident, ELFMAG, SELFMAG) == 0,
          "Elf header mismatch");
@@ -103,7 +99,7 @@ void init_elf(const char* elf_file) {
     __attribute_maybe_unused__ int bind = ELF32_ST_BIND(sym_table[i].st_info);
     __attribute_maybe_unused__ int type = ELF32_ST_TYPE(sym_table[i].st_info);
 
-    printf("[%2u] 0x%8x: %s\n" , i, 
+    printf("[%3u] 0x%8x: %s\n" , i, 
            (vaddr_t) sym_table[i].st_value, 
            (const char*) (str_table + sym_table[i].st_name)
            );
