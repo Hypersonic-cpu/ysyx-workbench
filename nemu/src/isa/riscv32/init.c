@@ -14,6 +14,7 @@
 ***************************************************************************************/
 
 #include "common.h"
+#include "isa-def.h"
 #include <isa.h>
 #include <memory/paddr.h>
 
@@ -94,17 +95,27 @@ void init_elf(const char* elf_file) {
   Assert(sym_table, "Elf symbol table not found");
   Assert(str_table, "Elf string table not found");
 
-  printf(" === ELF Symbol Table (%u total) === \n", sym_count);
+  symbols.sym_num = 0;
   for (unsigned i = 0; i < sym_count; ++i) {
     __attribute_maybe_unused__ int bind = ELF32_ST_BIND(sym_table[i].st_info);
     __attribute_maybe_unused__ int type = ELF32_ST_TYPE(sym_table[i].st_info);
+    __attribute_maybe_unused__ const char*
+      sym_name = (const char*) (str_table + sym_table[i].st_name);
 
-    if (type == STT_FUNC)
-    printf("[%3u] 0x%8x: %s\n" , i, 
-           (vaddr_t) sym_table[i].st_value, 
-           (const char*) (str_table + sym_table[i].st_name)
-           );
-
+    if (type == STT_FUNC) {
+      unsigned cur = symbols.sym_num++;
+      symbols.table[cur].addr = sym_table[i].st_value;
+      strncpy(symbols.table[cur].name, sym_name, 127);
+    }
   }
+
+  printf(" === ELF Symbol Table (%u total) === \n", symbols.sym_num);
+  for (unsigned i = 0; i < symbols.sym_num; ++i) {
+      printf("[%3u] 0x%8x: %s\n" , i, 
+             symbols.table[i].addr, symbols.table[i].name);
+  }
+
+  munmap(map, st.st_size);
+  close(fd);
 }
 

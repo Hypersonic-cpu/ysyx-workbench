@@ -18,6 +18,18 @@
 
 #include <common.h>
 
+#define SYM_TABLE_ENT 240
+typedef struct {
+  vaddr_t addr;
+  char name[128];
+} rv32_symbol;
+
+__attribute_used__
+static struct {
+  unsigned sym_num;
+  rv32_symbol table[SYM_TABLE_ENT];
+} symbols;
+
 typedef struct {
   word_t gpr[MUXDEF(CONFIG_RVE, 16, 32)];
   vaddr_t pc;
