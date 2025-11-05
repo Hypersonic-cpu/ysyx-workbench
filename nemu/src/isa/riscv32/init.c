@@ -53,7 +53,9 @@ void init_isa() {
   restart();
 }
 
-// INIT_ELF
+rv32_FrStack frames;
+rv32_SymTable symbols;
+
 void init_elf(const char* elf_file) {
   if (elf_file == NULL) { return; }
 

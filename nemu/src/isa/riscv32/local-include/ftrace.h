@@ -12,10 +12,11 @@ typedef struct {
 } rv32_symbol;
 
 __attribute_used__
-static struct {
+typedef struct {
   unsigned sym_num;
   rv32_symbol table[SYM_TABLE_ENT];
-} symbols;
+} rv32_SymTable; 
+extern rv32_SymTable symbols;
 
 // Check if any symbol at addr. UINT_MAX if not.
 unsigned symbol_which(vaddr_t addr);
@@ -29,10 +30,11 @@ typedef struct {
 } rv32_frame;
 
 __attribute_used__
-static struct {
+typedef struct {
   size_t num;
   rv32_frame stack[FTRACE_STACK_SIZE];
-} frames;
+} rv32_FrStack;
+extern rv32_FrStack frames;
 
 #endif // !__RISCV_FTRACE_H__
 
