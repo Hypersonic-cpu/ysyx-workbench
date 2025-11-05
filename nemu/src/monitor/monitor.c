@@ -13,7 +13,6 @@
 * See the Mulan PSL v2 for more details.
 ***************************************************************************************/
 
-#include "macro.h"
 #include <isa.h>
 #include <memory/paddr.h>
 
@@ -120,6 +119,7 @@ void init_monitor(int argc, char *argv[]) {
   /* Open the log file. */
   init_log(log_file);
 
+  /* Parse symbols from ELF */
   init_elf(elf_file);
 
   /* Initialize memory. */

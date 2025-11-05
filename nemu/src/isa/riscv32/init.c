@@ -14,7 +14,7 @@
 ***************************************************************************************/
 
 #include "common.h"
-#include "isa-def.h"
+#include "local-include/ftrace.h"
 #include <isa.h>
 #include <memory/paddr.h>
 
@@ -99,7 +99,7 @@ void init_elf(const char* elf_file) {
   for (unsigned i = 0; i < sym_count; ++i) {
     __attribute_maybe_unused__ int bind = ELF32_ST_BIND(sym_table[i].st_info);
     __attribute_maybe_unused__ int type = ELF32_ST_TYPE(sym_table[i].st_info);
-    __attribute_maybe_unused__ const char*
+    const char*
       sym_name = (const char*) (str_table + sym_table[i].st_name);
 
     if (type == STT_FUNC) {
@@ -109,7 +109,7 @@ void init_elf(const char* elf_file) {
     }
   }
 
-  printf(" === ELF Symbol Table (%u total) === \n", symbols.sym_num);
+  printf(" === ELF Funct Symbols (%u total) === \n", symbols.sym_num);
   for (unsigned i = 0; i < symbols.sym_num; ++i) {
       printf("[%3u] 0x%8x: %s\n" , i, 
              symbols.table[i].addr, symbols.table[i].name);
@@ -119,3 +119,11 @@ void init_elf(const char* elf_file) {
   close(fd);
 }
 
+unsigned symbol_which(vaddr_t va) {
+  for (unsigned i = 0; i < symbols.sym_num; ++i) {
+    if (symbols.table[i].addr == va) {
+      return i;
+    }
+  }
+  return (unsigned) (-1);
+}
