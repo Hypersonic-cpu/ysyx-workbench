@@ -99,6 +99,7 @@ void init_elf(const char* elf_file) {
     __attribute_maybe_unused__ int bind = ELF32_ST_BIND(sym_table[i].st_info);
     __attribute_maybe_unused__ int type = ELF32_ST_TYPE(sym_table[i].st_info);
 
+    if (type == STT_FUNC)
     printf("[%3u] 0x%8x: %s\n" , i, 
            (vaddr_t) sym_table[i].st_value, 
            (const char*) (str_table + sym_table[i].st_name)
