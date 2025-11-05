@@ -65,6 +65,7 @@ static void ftrace(vaddr_t jtar, int rd, vaddr_t snpc) {
     }
     Assert(found || frames.num == 0, "Cannot find frame-to-return");
   } else {
+    printf("+Jump to addr 0x%8x\n", jtar);
     unsigned idx = symbol_which(jtar);
     // Cannot find in symbol table
     if (idx >= symbols.sym_num) { return; }
