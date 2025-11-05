@@ -21,10 +21,17 @@ static struct {
 unsigned symbol_which(vaddr_t addr);
 
 #define FTRACE_STACK_SIZE 240
+typedef struct {
+  vaddr_t ra; // PC after func finish
+  vaddr_t fn; // PC that matches the symbol table
+  vaddr_t sp; // Stack pointer
+  unsigned symt_idx; // sym table index
+} rv32_frame;
+
 __attribute_used__
 static struct {
   size_t num;
-  rv32_symbol stack[FTRACE_STACK_SIZE];
+  rv32_frame stack[FTRACE_STACK_SIZE];
 } frames;
 
 #endif // !__RISCV_FTRACE_H__

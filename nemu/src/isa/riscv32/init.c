@@ -117,6 +117,9 @@ void init_elf(const char* elf_file) {
 
   munmap(map, st.st_size);
   close(fd);
+
+  /* Also clear the func call stack */
+  frames.num = 0;
 }
 
 unsigned symbol_which(vaddr_t va) {
