@@ -69,6 +69,7 @@ static void ftrace(vaddr_t jtar, int rd, vaddr_t snpc) {
     printf("+Jump to addr 0x%8x, symidx %u\n", jtar, idx);
     // Cannot find in symbol table
     if (idx >= symbols.sym_num) { return; }
+    printf("+Jump\n");
     unsigned sp = frames.num++;
     frames.stack[sp].fn = jtar;
     frames.stack[sp].ra = snpc;
