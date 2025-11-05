@@ -1,0 +1,31 @@
+#ifndef __RISCV_FTRACE_H__
+#define __RISCV_FTRACE_H__
+
+#include "isa-def.h"
+#include "common.h"
+#include "debug.h"
+
+#define SYM_TABLE_ENT 240
+typedef struct {
+  vaddr_t addr;
+  char name[128];
+} rv32_symbol;
+
+__attribute_used__
+static struct {
+  unsigned sym_num;
+  rv32_symbol table[SYM_TABLE_ENT];
+} symbols;
+
+// Check if any symbol at addr. UINT_MAX if not.
+unsigned symbol_which(vaddr_t addr);
+
+#define FTRACE_STACK_SIZE 240
+__attribute_used__
+static struct {
+  size_t num;
+  rv32_symbol stack[FTRACE_STACK_SIZE];
+} frames;
+
+#endif // !__RISCV_FTRACE_H__
+

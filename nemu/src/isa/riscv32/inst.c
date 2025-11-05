@@ -15,6 +15,7 @@
 
 #include "common.h"
 #include "debug.h"
+#include "local-include/ftrace.h"
 #include "local-include/reg.h"
 #include <cpu/cpu.h>
 #include <cpu/ifetch.h>
@@ -46,6 +47,12 @@ enum {
   (BITS(i,  7,  7) << 11) | \
   (BITS(i, 11,  8) <<  1) \
   ; } while (0)
+
+// static void ftrace(vaddr_t jtar, int rd) {
+//   if (rd == 0)
+//   unsigned pos = symbol_which(jtar);
+//
+// }
 
 static void decode_operand(Decode *s, int *rd, word_t *src1, word_t *src2, word_t *imm, int type) {
   uint32_t i = s->isa.inst;
@@ -81,10 +88,13 @@ static int decode_exec(Decode *s) {
   INSTPAT("??????? ????? ????? ??? ????? 00101 11", 
           auipc  , U, R(rd) = s->pc + imm);
   INSTPAT("??????? ????? ????? ??? ????? 11011 11", 
-          jal    , J, R(rd) = s->snpc, s->dnpc = s->pc + imm);
+          jal    , J,
+          R(rd) = s->snpc, 
+          s->dnpc = s->pc + imm
+          );
   INSTPAT("??????? ????? ????? 000 ????? 11001 11", 
-          jalr   , I, R(rd) = s->snpc, 
-                      s->dnpc = (src1 + imm) & ((word_t)(-2)));
+          jalr   , I, R(rd) = s->snpc,
+          s->dnpc = (src1 + imm) & ((word_t)(-2)));
   INSTPAT("??????? ????? ????? 000 ????? 11000 11",
           beq    , B, if (src1 == src2) { s->dnpc = s->pc + imm; }  );
   INSTPAT("??????? ????? ????? 001 ????? 11000 11",
