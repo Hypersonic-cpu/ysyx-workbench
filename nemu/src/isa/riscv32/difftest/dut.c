@@ -19,15 +19,16 @@
 #include "utils.h"
 #include "common.h"
 
-bool isa_difftest_checkregs(CPU_state *ref_r, vaddr_t pc) {
+bool isa_difftest_checkregs(CPU_state *ref_r, vaddr_t pc, vaddr_t dnpc) {
   unsigned const regnum = MUXDEF(CONFIG_RVE, 16, 32);
   bool success = true;
-  if (ref_r->pc != pc) {
+  // set to -1 to skip check
+  if (dnpc != (vaddr_t) (-1) && ref_r->pc != dnpc) {
     fprintf(stderr, ANSI_FG_RED 
-            "DiffTest PC mismatch: " 
+            "DiffTest NextPC mismatch @ PC " FMT_PADDR ": " 
             "ref " FMT_PADDR " got " FMT_PADDR "\n" ANSI_NONE,
-            ref_r->pc, pc);
-    // success = false;
+            pc, ref_r->pc, dnpc);
+    success = false;
   }
   for (unsigned i = 0; i < regnum; ++i) {
     if (ref_r->gpr[i] == gpr(i)) { continue; }
