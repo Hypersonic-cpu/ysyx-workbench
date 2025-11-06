@@ -22,7 +22,7 @@
 bool isa_difftest_checkregs(CPU_state *ref_r, vaddr_t pc) {
   unsigned const regnum = MUXDEF(CONFIG_RVE, 16, 32);
   bool success = true;
-  if (ref_r->pc != pc) {
+  if (ref_r->pc + 4U != pc) {
     fprintf(stderr, ANSI_FG_RED 
             "DiffTest PC mismatch: " 
             "ref " FMT_PADDR " got " FMT_PADDR "\n" ANSI_NONE,
