@@ -15,6 +15,7 @@
 
 #include "common.h"
 #include "debug.h"
+#include "local-include/ftrace.h"
 #include "local-include/reg.h"
 #include <cpu/cpu.h>
 #include <cpu/ifetch.h>
@@ -46,6 +47,60 @@ enum {
   (BITS(i,  7,  7) << 11) | \
   (BITS(i, 11,  8) <<  1) \
   ; } while (0)
+
+static inline void spaces_fmt(unsigned i) {
+  while (i--) {
+    printf(" ");
+  }
+}
+
+static void ftrace(vaddr_t jtar, int rd, vaddr_t snpc) {
+  unsigned idx = symbol_which(jtar);
+  // printf("+Jump to addr 0x%8x, symidx %u/%u\n", jtar, idx, symbols.sym_num);
+
+  // If jumps to a symbol, must be a funct call.
+  // TCO can be detected.
+  if (idx < symbols.sym_num) {
+    unsigned sp = frames.num++;
+    frames.stack[sp].fn = jtar;
+    frames.stack[sp].ra = snpc;
+    frames.stack[sp].sp = R(2);
+    frames.stack[sp].symt_idx = idx;
+    spaces_fmt(sp);
+    printf("+Fr[%3d] 0x%8x: %s\n", sp, jtar, symbols.table[idx].name);
+  } else {
+    // Jump to non-symbol places
+    if (rd != 0) {
+      // Unknown function call 
+    } else {
+      // TCO of unknown function, 
+      // or a ret instruction.
+      unsigned retsrc = frames.num;
+      for (unsigned i = frames.num-1U; i < frames.num; --i) {
+        rv32_frame frm = frames.stack[i];
+        // TODO: TCO Detection
+        // A funct call should recover sp and pc
+        if (R(2) == frm.sp && jtar == frm.ra) {
+          retsrc = i;
+          // printf("-Ret[%3u]\n", i);
+          break;
+        }
+      }
+      if (retsrc < frames.num) {
+        for (unsigned i = frames.num-1U; i != retsrc-1U; --i) {
+          rv32_frame frm = frames.stack[i];
+          // printf("-Ret[%3u]\n", i); printf(" frm symt_idx %u\n", frm.symt_idx);
+          spaces_fmt(i);
+          printf("-Fr[%3d] 0x%8x: %s%s\n", 
+                 i, frm.fn, symbols.table[frm.symt_idx].name,
+                 (i == retsrc) ? "" : " (TCO skip)");
+        }
+        // New stack top index is retsrc-1
+        frames.num = retsrc;
+      }
+    }
+  }
+}
 
 static void decode_operand(Decode *s, int *rd, word_t *src1, word_t *src2, word_t *imm, int type) {
   uint32_t i = s->isa.inst;
@@ -81,10 +136,17 @@ static int decode_exec(Decode *s) {
   INSTPAT("??????? ????? ????? ??? ????? 00101 11", 
           auipc  , U, R(rd) = s->pc + imm);
   INSTPAT("??????? ????? ????? ??? ????? 11011 11", 
-          jal    , J, R(rd) = s->snpc, s->dnpc = s->pc + imm);
+          jal    , J,
+          R(rd) = s->snpc, 
+          s->dnpc = s->pc + imm,
+          ftrace(s->dnpc, rd, s->snpc)
+          );
   INSTPAT("??????? ????? ????? 000 ????? 11001 11", 
-          jalr   , I, R(rd) = s->snpc, 
-                      s->dnpc = (src1 + imm) & ((word_t)(-2)));
+          jalr   , I, 
+          R(rd) = s->snpc,
+          s->dnpc = (src1 + imm) & ((word_t)(-2)),
+          ftrace(s->dnpc, rd, s->snpc)
+          );
   INSTPAT("??????? ????? ????? 000 ????? 11000 11",
           beq    , B, if (src1 == src2) { s->dnpc = s->pc + imm; }  );
   INSTPAT("??????? ????? ????? 001 ????? 11000 11",
