@@ -12,6 +12,9 @@
 #define _CONCAT(x, y)       x ## y
 #define CONCAT(x, y)        _CONCAT(x, y)
 
+// NOTE: Used by printf buffer.
+#define PRINT_BUF_LEN 4096
+
 #define putstr(s) \
   ({ for (const char *p = s; *p; p++) putch(*p); })
 
