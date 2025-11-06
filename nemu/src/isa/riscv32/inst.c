@@ -59,7 +59,7 @@ static void ftrace(vaddr_t jtar, int rd, vaddr_t snpc) {
     frames.stack[sp].fn = jtar;
     frames.stack[sp].ra = snpc;
     frames.stack[sp].sp = R(2);
-    frames.stack[sp].symt_idx = R(2);
+    frames.stack[sp].symt_idx = idx;
     printf("+Fr[%3d] 0x%8x: %s\n", sp, jtar, symbols.table[idx].name);
   } else {
     // Jump to non-symbol places
