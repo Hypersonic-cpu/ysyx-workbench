@@ -59,14 +59,16 @@ static void exec_once(Decode *s, vaddr_t pc) {
   s->pc = pc;
   s->snpc = pc;
   isa_exec_once(s);
+  printf("ThisPC " FMT_PADDR " NextPC " FMT_WORD "\n", cpu.pc, s->dnpc);
   cpu.pc = s->dnpc;
 }
 
 /**
  * WARN: For Inst Ring Buffer. 
  * 这段代码本来处在 exec_once 以后, 
- * 因此无法记录下出错的指令本身. 因此现在改到 exec_once
- * 函数当中. 对后续的 difftest 不应产生影响.
+ * 因此无法记录下出错的指令本身. 因此现在改到 
+ * isa_exec_once 函数当中. 
+ * 对后续的 difftest 不应产生影响.
  */
 void itrace_logging(Decode *s) {
 #ifdef CONFIG_ITRACE
