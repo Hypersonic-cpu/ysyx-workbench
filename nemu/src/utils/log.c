@@ -13,6 +13,7 @@
 * See the Mulan PSL v2 for more details.
 ***************************************************************************************/
 
+#include <errno.h>
 #include <common.h>
 
 extern uint64_t g_nr_guest_inst;
@@ -27,7 +28,7 @@ void init_log(const char *log_file) {
   // log_fp = NULL;
   if (log_file != NULL) {
     FILE *fp = fopen(log_file, "w");
-    Assert(fp, "Can not open '%s'", log_file);
+    Assert(fp, "Can not open '%s', errno %d", log_file, errno);
     log_fp = fp;
   }
   // Log("Log is written to %s", log_file ? log_file : "stdout");
