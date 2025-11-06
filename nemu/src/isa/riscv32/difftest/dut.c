@@ -22,15 +22,22 @@
 bool isa_difftest_checkregs(CPU_state *ref_r, vaddr_t pc) {
   unsigned const regnum = MUXDEF(CONFIG_RVE, 16, 32);
   bool success = true;
+  if (ref_r->pc != pc) {
+    fprintf(stderr, ANSI_FG_RED 
+            "DiffTest PC mismatch: " 
+            "ref " FMT_PADDR " got " FMT_PADDR "\n" ANSI_NONE,
+            ref_r->pc, pc);
+    success = false;
+  }
   for (unsigned i = 0; i < regnum; ++i) {
     if (ref_r->gpr[i] == gpr(i)) { continue; }
     if (success) {
       fprintf(stderr, ANSI_FG_RED 
-              "At PC = " FMT_PADDR ": reg state mismatch\n" ANSI_NONE,
+              "DiffTest @ PC = " FMT_PADDR ": reg state mismatch\n" ANSI_NONE,
               pc);
     }
     fprintf(stderr, ANSI_FG_RED 
-            "GPR[%2u] ref 0x%8x got 0x%8x\n" ANSI_NONE, 
+            "GPR[%2u] ref " FMT_WORD " got " FMT_WORD "\n" ANSI_NONE, 
             i, ref_r->gpr[i], gpr(i)
             );
     success = false;
