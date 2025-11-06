@@ -75,26 +75,28 @@ static void ftrace(vaddr_t jtar, int rd, vaddr_t snpc) {
     } else {
       // TCO of unknown function, 
       // or a ret instruction.
-      unsigned newsp = frames.num;
+      unsigned retsrc = frames.num;
       for (unsigned i = frames.num-1U; i < frames.num; --i) {
         rv32_frame frm = frames.stack[i];
         // TODO: TCO Detection
         // A funct call should recover sp and pc
         if (R(2) == frm.sp && jtar == frm.ra) {
-          newsp = i;
+          retsrc = i;
           // printf("-Ret[%3u]\n", i);
           break;
         }
       }
-      if (newsp < frames.num) {
-        for (unsigned i = frames.num-1U; i != newsp-1U; --i) {
+      if (retsrc < frames.num) {
+        for (unsigned i = frames.num-1U; i != retsrc-1U; --i) {
           rv32_frame frm = frames.stack[i];
           // printf("-Ret[%3u]\n", i); printf(" frm symt_idx %u\n", frm.symt_idx);
           spaces_fmt(i);
-          printf("-Fr[%3d] 0x%8x: %s\n", 
-                 i, frm.fn, symbols.table[frm.symt_idx].name);
+          printf("-Fr[%3d] 0x%8x: %s%s\n", 
+                 i, frm.fn, symbols.table[frm.symt_idx].name,
+                 (i == retsrc) ? "" : " (TCO skip)");
         }
-        frames.num = newsp;
+        // New stack top index is retsrc-1
+        frames.num = retsrc;
       }
     }
   }
