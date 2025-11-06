@@ -59,8 +59,8 @@ static void exec_once(Decode *s, vaddr_t pc) {
   s->pc = pc;
   s->snpc = pc;
   isa_exec_once(s);
-  printf("ThisPC " FMT_PADDR " NextPC " FMT_WORD "\n", cpu.pc, s->dnpc);
   cpu.pc = s->dnpc;
+  printf("ThisPC " FMT_PADDR " NextPC " FMT_WORD "\n", cpu.pc, s->dnpc);
 }
 
 /**
