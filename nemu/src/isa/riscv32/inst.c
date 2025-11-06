@@ -48,9 +48,15 @@ enum {
   (BITS(i, 11,  8) <<  1) \
   ; } while (0)
 
+static inline void spaces_fmt(unsigned i) {
+  while (i--) {
+    printf(" ");
+  }
+}
+
 static void ftrace(vaddr_t jtar, int rd, vaddr_t snpc) {
   unsigned idx = symbol_which(jtar);
-  printf("+Jump to addr 0x%8x, symidx %u/%u\n", jtar, idx, symbols.sym_num);
+  // printf("+Jump to addr 0x%8x, symidx %u/%u\n", jtar, idx, symbols.sym_num);
 
   // If jumps to a symbol, must be a funct call.
   // TCO can be detected.
@@ -60,6 +66,7 @@ static void ftrace(vaddr_t jtar, int rd, vaddr_t snpc) {
     frames.stack[sp].ra = snpc;
     frames.stack[sp].sp = R(2);
     frames.stack[sp].symt_idx = idx;
+    spaces_fmt(sp);
     printf("+Fr[%3d] 0x%8x: %s\n", sp, jtar, symbols.table[idx].name);
   } else {
     // Jump to non-symbol places
@@ -83,6 +90,7 @@ static void ftrace(vaddr_t jtar, int rd, vaddr_t snpc) {
         for (unsigned i = frames.num-1U; i != newsp-1U; --i) {
           rv32_frame frm = frames.stack[i];
           // printf("-Ret[%3u]\n", i); printf(" frm symt_idx %u\n", frm.symt_idx);
+          spaces_fmt(i);
           printf("-Fr[%3d] 0x%8x: %s\n", 
                  i, frm.fn, symbols.table[frm.symt_idx].name);
         }
