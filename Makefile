@@ -42,3 +42,10 @@ _default:
 	@echo "Please run 'make' under subprojects."
 
 .PHONY: .git_commit .clean_index _default
+
+.PHONY: nemuconfig
+
+# This typo may cause series branch mis-commit by tracer
+nemuconfig:
+	@echo "WARN: USE menuconfig but not NEMUconfig"
+
