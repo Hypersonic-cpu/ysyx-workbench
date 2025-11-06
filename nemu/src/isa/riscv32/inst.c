@@ -49,32 +49,44 @@ enum {
   ; } while (0)
 
 static void ftrace(vaddr_t jtar, int rd, vaddr_t snpc) {
-  if (rd == 0) {
-    bool found = false;
-    for (unsigned i = frames.num-1U; i < frames.num; --i) {
-      rv32_frame frm = frames.stack[i];
-      // TODO: TCO Detection
-      // A funct call should recover sp and pc
-      if (R(2) == frm.sp && jtar == frm.ra) {
-        unsigned sp = --frames.num;
-        printf("-Fr[%3d] 0x%8x: %s\n", 
-               sp, frm.fn, symbols.table[frm.symt_idx].name);
-        found = true;
-        break;
-      }
-    }
-    Assert(found || frames.num == 0, "Cannot find frame-to-return");
-  } else {
-    unsigned idx = symbol_which(jtar);
-    printf("+Jump to addr 0x%8x, symidx %u/%u\n", jtar, idx, symbols.sym_num);
-    // Cannot find in symbol table
-    if (idx >= symbols.sym_num) { return; }
+  unsigned idx = symbol_which(jtar);
+  printf("+Jump to addr 0x%8x, symidx %u/%u\n", jtar, idx, symbols.sym_num);
+
+  // If jumps to a symbol, must be a funct call.
+  // TCO can be detected.
+  if (idx < symbols.sym_num) {
     unsigned sp = frames.num++;
     frames.stack[sp].fn = jtar;
     frames.stack[sp].ra = snpc;
     frames.stack[sp].sp = R(2);
     frames.stack[sp].symt_idx = R(2);
     printf("+Fr[%3d] 0x%8x: %s\n", sp, jtar, symbols.table[idx].name);
+  } else {
+    // Jump to non-symbol places
+    if (rd != 0) {
+      // Unknown function call 
+    } else {
+      // TCO of unknown function, 
+      // or a ret instruction.
+      unsigned newsp = frames.num;
+      for (unsigned i = frames.num-1U; i < frames.num; --i) {
+        rv32_frame frm = frames.stack[i];
+        // TODO: TCO Detection
+        // A funct call should recover sp and pc
+        if (R(2) == frm.sp && jtar == frm.ra) {
+          newsp = i;
+          break;
+        }
+      }
+      if (newsp < frames.num) {
+        for (unsigned i = frames.num-1U; i != newsp-1U; --i) {
+          rv32_frame frm = frames.stack[i];
+          printf("-Fr[%3d] 0x%8x: %s\n", 
+                 i, frm.fn, symbols.table[frm.symt_idx].name);
+        }
+        frames.num = newsp;
+      }
+    }
   }
 }
 
