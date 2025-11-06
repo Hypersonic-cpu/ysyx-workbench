@@ -69,3 +69,9 @@ line-count:
 
 line-nonempty:
 	@find . -name "*.c" -o -name "*.h" | xargs grep -E '\S' | wc -l
+
+.PHONY: nemuconfig
+
+nemuconfig:
+	@echo "WARN: USE menuconfig but not NEMUconfig"
+
