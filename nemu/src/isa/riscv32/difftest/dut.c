@@ -16,11 +16,20 @@
 #include <isa.h>
 #include <cpu/difftest.h>
 #include "../local-include/reg.h"
+#include "utils.h"
 
 bool isa_difftest_checkregs(CPU_state *ref_r, vaddr_t pc) {
-  // FIXME:
-  // WARN:
-  return true;
+  unsigned const regnum = MUXDEF(CONFIG_RVE, 16, 32);
+  bool success = true;
+  for (unsigned i = 0; i < regnum; ++i) {
+    if (ref_r->gpr[i] == gpr(i)) { continue; }
+    success = false;
+    fprintf(stderr, ANSI_FG_RED 
+            "Reg [%2u] mismatch: ref 0x%8x got 0x%8x\n" ANSI_NONE, 
+            i, ref_r->gpr[i], gpr(i)
+            );
+  }
+  return success;
 }
 
 void isa_difftest_attach() {
