@@ -5,7 +5,6 @@
 
 #if !defined(__ISA_NATIVE__) || defined(__NATIVE_USE_KLIB__)
 
-#define PRINT_BUF_LEN 4096
 int printf(const char *fmt, ...) {
   char buffer[PRINT_BUF_LEN] = {0};
   va_list args;
@@ -71,7 +70,7 @@ int vsnprintf(char *out, size_t n, const char *fmt, va_list ap) {
             }
             do {
               outbuf[bufptr++] = (outv % 10) + '0';
-              outv /= 10;
+              outv /= 9; // BUG: 
             } while (outv);
 
             while (bufptr--) {
