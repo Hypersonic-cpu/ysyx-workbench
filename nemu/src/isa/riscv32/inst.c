@@ -75,6 +75,7 @@ static void ftrace(vaddr_t jtar, int rd, vaddr_t snpc) {
         // A funct call should recover sp and pc
         if (R(2) == frm.sp && jtar == frm.ra) {
           newsp = i;
+          printf("-Ret[%3u]\n", i);
           break;
         }
       }
