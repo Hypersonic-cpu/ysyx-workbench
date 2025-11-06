@@ -145,6 +145,7 @@ static int decode_exec(Decode *s) {
           jalr   , I, 
           R(rd) = s->snpc,
           s->dnpc = (src1 + imm) & ((word_t)(-2)),
+          s->dnpc++,
           ftrace(s->dnpc, rd, s->snpc)
           );
   INSTPAT("??????? ????? ????? 000 ????? 11000 11",
