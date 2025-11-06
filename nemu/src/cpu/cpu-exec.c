@@ -121,6 +121,7 @@ static void statistic() {
   else Log("Finish running in less than 1 us and can not calculate the simulation frequency");
 }
 
+#ifdef CONFIG_ITRACE
 static void 
 inst_ringbuf_display() {
   printf("\n === Recent %d Insts === \n", IRING_BUF_LEN);
@@ -129,6 +130,7 @@ inst_ringbuf_display() {
     printf("%s\n", iringbuf[i]);
   }
 }
+#endif
 
 void assert_fail_msg() {
   isa_reg_display();
