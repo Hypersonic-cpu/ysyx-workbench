@@ -1,4 +1,5 @@
 #include <am.h>
+#include <limits.h>
 #include <klib.h>
 #include <klib-macros.h>
 #include <stdarg.h>
@@ -49,18 +50,30 @@ int vsnprintf(char *out, size_t n, const char *fmt, va_list ap) {
         if (cnt++ + 1 >= n) { goto vnfinish; }
         *out++ = *fmt;
       }
+      fmt++;
     } else {
       // '%' state 
       state = 0;
-      // FIXME: Currently assume only one char 
-      // after '%'
-      switch (*fmt) {
+      // bool dollar = false;
+      // TODO: Left align?
+      int width = 0;
+      // int precision = INT_MAX;
+      char padding = ' ';
+      // TODO: %[$][flags][width][.precision][length modifier]conversion
+      if (*fmt == '0') { padding = '0'; fmt++; }
+      while (*fmt >= '0' && *fmt < '9') {
+        width = width * 10 + *fmt - '0';
+        fmt++;
+      }
+
+      switch (*fmt++) {
         case 'd': 
           {
             int outv = va_arg(ap, int);
             // int64_t have 20 digits at most (including neg sign)
             // so 20 Byte buffer is enough
-            char outbuf[20] = {0};
+            char outbuf[32] = {0};
+            panic_on(width > 31, "integer width out-of-buffer");
             unsigned bufptr = 0;
             if (outv < 0) {
               if (cnt++ + 1 >= n) { goto vnfinish; }
@@ -71,6 +84,11 @@ int vsnprintf(char *out, size_t n, const char *fmt, va_list ap) {
               outbuf[bufptr++] = (outv % 10) + '0';
               outv /= 10;
             } while (outv);
+
+            // After this buffptr == width ([0] .. [width-1])
+            while (bufptr < width) {
+              outbuf[bufptr++] = padding;
+            }
 
             while (bufptr--) {
               if (cnt++ + 1 >= n) { goto vnfinish; }
@@ -99,7 +117,6 @@ int vsnprintf(char *out, size_t n, const char *fmt, va_list ap) {
           return -1;
       }
     }
-    fmt++;
   }
 
 vnfinish:
