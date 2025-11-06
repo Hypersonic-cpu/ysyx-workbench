@@ -75,15 +75,14 @@ static void ftrace(vaddr_t jtar, int rd, vaddr_t snpc) {
         // A funct call should recover sp and pc
         if (R(2) == frm.sp && jtar == frm.ra) {
           newsp = i;
-          printf("-Ret[%3u]\n", i);
+          // printf("-Ret[%3u]\n", i);
           break;
         }
       }
       if (newsp < frames.num) {
         for (unsigned i = frames.num-1U; i != newsp-1U; --i) {
           rv32_frame frm = frames.stack[i];
-          printf("-Ret[%3u]\n", i);
-          printf(" frm symt_idx %u\n", frm.symt_idx);
+          // printf("-Ret[%3u]\n", i); printf(" frm symt_idx %u\n", frm.symt_idx);
           printf("-Fr[%3d] 0x%8x: %s\n", 
                  i, frm.fn, symbols.table[frm.symt_idx].name);
         }
