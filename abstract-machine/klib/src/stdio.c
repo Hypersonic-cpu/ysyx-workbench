@@ -15,7 +15,6 @@ int printf(const char *fmt, ...) {
   return ret;
 }
 
-// TODO: Move all main logics into vnsprintf 
 int vsprintf(char *out, const char *fmt, va_list ap) {
   return vsnprintf(out, /* size_t */ -1, fmt, ap);
 }
