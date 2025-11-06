@@ -13,8 +13,19 @@
 * See the Mulan PSL v2 for more details.
 ***************************************************************************************/
 
+#include "common.h"
+#include "local-include/ftrace.h"
 #include <isa.h>
 #include <memory/paddr.h>
+
+#include <elf.h>
+#include <stdint.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/mman.h>
+#include <sys/cdefs.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 // this is not consistent with uint8_t
 // but it is ok since we do not access the array directly
@@ -40,4 +51,84 @@ void init_isa() {
 
   /* Initialize this virtual computer system. */
   restart();
+}
+
+rv32_FrStack frames;
+rv32_SymTable symbols;
+
+void init_elf(const char* elf_file) {
+  if (elf_file == NULL) { return; }
+
+  int fd = open(elf_file, O_RDONLY);
+  Assert(fd >= 0, "Can not open '%s'", elf_file);
+
+  struct stat st;
+  int fs_status = fstat(fd, &st);
+  Assert(fs_status == 0, "Cannot get size of elf '%s'", elf_file);
+  Log("The elf is %s, size = %ld", elf_file, st.st_size);
+
+  uint8_t* map = (uint8_t *) mmap(NULL, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+  Assert(map != MAP_FAILED, "Elf '%s' mmap failed", elf_file);
+
+  Elf32_Ehdr* ehdr = (Elf32_Ehdr*) map;
+  Assert(memcmp(ehdr->e_ident, ELFMAG, SELFMAG) == 0,
+         "Elf header mismatch");
+  Assert(ehdr->e_machine == EM_RISCV,
+         "Elf ISA mismatch, not RV32");
+  Assert(ehdr->e_ident[EI_DATA] == ELFDATA2LSB, 
+         "Elf endianess mismatch");
+
+  // Section header
+  Elf32_Shdr* shdr = (Elf32_Shdr*) (map + ehdr->e_shoff);
+  Elf32_Sym* sym_table = NULL;
+  uint8_t* str_table = NULL;
+  unsigned sym_count = 0;
+
+  for (unsigned i = 0; i < ehdr->e_shnum; ++i) {
+    if (shdr[i].sh_type != SHT_SYMTAB) { continue; }
+    sym_table = (Elf32_Sym *) (map + shdr[i].sh_offset);
+    sym_count = shdr[i].sh_size / sizeof(Elf32_Sym);
+    Assert(shdr[i].sh_link < ehdr->e_shnum, 
+           "String table out of bound");
+    str_table = map + shdr[shdr[i].sh_link].sh_offset;
+    break;
+  }
+
+  Assert(sym_table, "Elf symbol table not found");
+  Assert(str_table, "Elf string table not found");
+
+  symbols.sym_num = 0;
+  for (unsigned i = 0; i < sym_count; ++i) {
+    __attribute_maybe_unused__ int bind = ELF32_ST_BIND(sym_table[i].st_info);
+    __attribute_maybe_unused__ int type = ELF32_ST_TYPE(sym_table[i].st_info);
+    const char*
+      sym_name = (const char*) (str_table + sym_table[i].st_name);
+
+    if (type == STT_FUNC) {
+      unsigned cur = symbols.sym_num++;
+      symbols.table[cur].addr = sym_table[i].st_value;
+      strncpy(symbols.table[cur].name, sym_name, 127);
+    }
+  }
+
+  printf(" === ELF Funct Symbols (%u total) === \n", symbols.sym_num);
+  for (unsigned i = 0; i < symbols.sym_num; ++i) {
+      printf("[%3u] 0x%8x: %s\n" , i, 
+             symbols.table[i].addr, symbols.table[i].name);
+  }
+
+  munmap(map, st.st_size);
+  close(fd);
+
+  /* Also clear the func call stack */
+  frames.num = 0;
+}
+
+unsigned symbol_which(vaddr_t va) {
+  for (unsigned i = 0; i < symbols.sym_num; ++i) {
+    if (symbols.table[i].addr == va) {
+      return i;
+    }
+  }
+  return (unsigned) (-1);
 }
