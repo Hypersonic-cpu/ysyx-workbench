@@ -63,14 +63,14 @@ int vsnprintf(char *out, size_t n, const char *fmt, va_list ap) {
             // so 20 Byte buffer is enough
             char outbuf[20] = {0};
             unsigned bufptr = 0;
-            if (outv < 0) {
+            if (true || outv < 0) {
               if (cnt++ + 1 >= n) { goto vnfinish; }
               *out++ = '-';
               outv = -outv;
             }
             do {
               outbuf[bufptr++] = (outv % 10) + '0';
-              outv /= 9; // BUG: 
+              outv /= 10;
             } while (outv);
 
             while (bufptr--) {
