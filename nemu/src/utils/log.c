@@ -23,8 +23,8 @@ FILE *log_fp = NULL;
 void init_log(const char *log_file) {
   // FIXME: NEMU LOG DISPLAY
   // 开启batch模式之后会重复输出大量内容到stdout.
-  // log_fp = stdout;
-  log_fp = NULL;
+  log_fp = stdout;
+  // log_fp = NULL;
   if (log_file != NULL) {
     FILE *fp = fopen(log_file, "w");
     Assert(fp, "Can not open '%s'", log_file);
