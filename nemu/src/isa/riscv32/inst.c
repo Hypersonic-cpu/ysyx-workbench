@@ -244,11 +244,11 @@ static int decode_exec(Decode *s) {
   //         R(rd) = (word_t) (
   //             ((int64_t)((sword_t)src1) * (uint64_t)src2) >> 32
   //         ));
-  // INSTPAT("0000001 ????? ????? 011 ????? 01100 11", 
-  //         mulhu  , R,
-  //             R(rd) = (word_t) (
-  //             ((uint64_t)src1 * (uint64_t)src2) >> 32
-  //         ));
+  INSTPAT("0000001 ????? ????? 011 ????? 01100 11", 
+          mulhu  , R,
+              R(rd) = (word_t) (
+              ((uint64_t)src1 * (uint64_t)src2) >> 32
+          ));
   INSTPAT("0000001 ????? ????? 100 ????? 01100 11", 
           div    , R, 
           if ((sword_t)src2 == 0) { 
