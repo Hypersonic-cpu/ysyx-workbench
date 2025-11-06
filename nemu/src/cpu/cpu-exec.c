@@ -59,10 +59,17 @@ static void exec_once(Decode *s, vaddr_t pc) {
   s->pc = pc;
   s->snpc = pc;
   isa_exec_once(s);
+  // printf("ThisPC " FMT_PADDR " NextPC " FMT_WORD "\n", cpu.pc, s->dnpc);
   cpu.pc = s->dnpc;
-  // TODO: 这个 Ring trace 记录不到出错的命令本身...
 }
 
+/**
+ * WARN: For Inst Ring Buffer. 
+ * 这段代码本来处在 exec_once 以后, 
+ * 因此无法记录下出错的指令本身. 因此现在改到 
+ * isa_exec_once 函数当中. 
+ * 对后续的 difftest 不应产生影响.
+ */
 void itrace_logging(Decode *s) {
 #ifdef CONFIG_ITRACE
   char *p = s->logbuf;
@@ -98,6 +105,7 @@ static void execute(uint64_t n) {
   for (;n > 0; n --) {
     exec_once(&s, cpu.pc);
     g_nr_guest_inst ++;
+    // printf("Diff PC " FMT_PADDR  "\n", cpu.pc);
     trace_and_difftest(&s, cpu.pc);
     if (nemu_state.state != NEMU_RUNNING) break;
     IFDEF(CONFIG_DEVICE, device_update());
