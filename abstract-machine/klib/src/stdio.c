@@ -87,6 +87,13 @@ int vsnprintf(char *out, size_t n, const char *fmt, va_list ap) {
             }
           }
           break;
+        case 'c': 
+          {
+            const char outc = va_arg(ap, int);
+            if (cnt++ + 1 >= n) { goto vnfinish; }
+            *out++ = outc;
+          }
+          break;
         default:
           // Unknown format
           return -1;
