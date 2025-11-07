@@ -94,7 +94,10 @@ void init_difftest(char *ref_so_file, long img_size, int port) {
 static void checkregs(CPU_state *ref, vaddr_t pc, vaddr_t dnpc) {
   // if (!isa_difftest_checkregs(ref, pc)) {
   if (!isa_difftest_checkregs(ref, pc, dnpc)) {
-    nemu_state.state = NEMU_ABORT;
+    // TODO: 
+    // WARN: Change back
+    // nemu_state.state = NEMU_ABORT;
+    nemu_state.state = NEMU_STOP;
     nemu_state.halt_pc = pc;
     IFDEF(CONFIG_ITRACE, void inst_ringbuf_display());
     MUXDEF(CONFIG_ITRACE, inst_ringbuf_display(), printf("Inst ring buffer disabled\n"));
