@@ -120,7 +120,7 @@ static void statistic() {
 }
 
 #ifdef CONFIG_ITRACE
-static void 
+void 
 inst_ringbuf_display() {
   printf("\n === Recent %d Insts === \n", IRING_BUF_LEN);
   for (unsigned i = iringptr, n = IRING_BUF_LEN; n > 0;
