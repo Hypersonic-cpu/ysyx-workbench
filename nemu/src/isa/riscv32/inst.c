@@ -54,7 +54,8 @@ static inline void spaces_fmt(unsigned i) {
   }
 }
 
-static void ftrace(vaddr_t jtar, int rd, vaddr_t snpc) {
+#ifdef CONFIG_FTRACE_ENABLE
+static void frame_trace(vaddr_t jtar, int rd, vaddr_t snpc) {
   unsigned idx = symbol_which(jtar);
   // printf("+Jump to addr 0x%8x, symidx %u/%u\n", jtar, idx, symbols.sym_num);
 
@@ -101,6 +102,7 @@ static void ftrace(vaddr_t jtar, int rd, vaddr_t snpc) {
     }
   }
 }
+#endif
 
 static void decode_operand(Decode *s, int *rd, word_t *src1, word_t *src2, word_t *imm, int type) {
   uint32_t i = s->isa.inst;
@@ -138,14 +140,14 @@ static int decode_exec(Decode *s) {
   INSTPAT("??????? ????? ????? ??? ????? 11011 11", 
           jal    , J,
           R(rd) = s->snpc, 
-          s->dnpc = s->pc + imm,
-          ftrace(s->dnpc, rd, s->snpc)
+          s->dnpc = s->pc + imm;
+          IFDEF(CONFIG_FTRACE_ENABLE, frame_trace(s->dnpc, rd, s->snpc))
           );
   INSTPAT("??????? ????? ????? 000 ????? 11001 11", 
           jalr   , I, 
           R(rd) = s->snpc,
-          s->dnpc = (src1 + imm) & ((word_t)(-2)),
-          ftrace(s->dnpc, rd, s->snpc)
+          s->dnpc = (src1 + imm) & ((word_t)(-2));
+          IFDEF(CONFIG_FTRACE_ENABLE, frame_trace(s->dnpc, rd, s->snpc))
           );
   INSTPAT("??????? ????? ????? 000 ????? 11000 11",
           beq    , B, if (src1 == src2) { s->dnpc = s->pc + imm; }  );
@@ -288,6 +290,6 @@ static int decode_exec(Decode *s) {
 int isa_exec_once(Decode *s) {
   s->isa.inst = inst_fetch(&s->snpc, 4);
   void itrace_logging(Decode *s);
-  itrace_logging(s);
+  IFDEF(CONFIG_ITRACE, itrace_logging(s));
   return decode_exec(s);
 }
