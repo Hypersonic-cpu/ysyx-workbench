@@ -52,10 +52,10 @@ static void device_trace(paddr_t addr, int len, word_t value, const char* name) 
   unsigned ulen;
   if (len < 0) {
     fprintf(stderr, "> WRITE  to");
-    ulen = len;
+    ulen = -len;
   } else {
     fprintf(stderr, "< READ from");
-    ulen = -len;
+    ulen = len;
   }
   fprintf(stderr, " device %s @ " FMT_PADDR ":%1dB = " FMT_WORD "\n",
          name, addr, ulen, value);
