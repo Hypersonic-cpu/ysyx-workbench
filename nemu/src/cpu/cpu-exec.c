@@ -33,7 +33,7 @@ static uint64_t g_timer = 0; // unit: us
 static bool g_print_step = false;
 
 #ifdef CONFIG_ITRACE
-#define IRING_BUF_LEN 16
+#define IRING_BUF_LEN 64
 static char iringbuf[IRING_BUF_LEN][128];
 static unsigned iringptr;
 #endif
