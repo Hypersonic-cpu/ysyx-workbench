@@ -71,7 +71,6 @@ static void exec_once(Decode *s, vaddr_t pc) {
  * 对后续的 difftest 不应产生影响.
  */
 void itrace_logging(Decode *s) {
-#ifdef CONFIG_ITRACE
   char *p = s->logbuf;
   p += snprintf(p, sizeof(s->logbuf), FMT_WORD ":", s->pc);
   int ilen = s->snpc - s->pc;
@@ -97,7 +96,6 @@ void itrace_logging(Decode *s) {
 
   strncpy(iringbuf[iringptr], s->logbuf, 128);
   iringptr = (iringptr+1) % IRING_BUF_LEN;
-#endif
 }
 
 static void execute(uint64_t n) {
