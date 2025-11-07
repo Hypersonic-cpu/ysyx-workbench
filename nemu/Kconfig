@@ -151,6 +151,20 @@ config ITRACE_COND
   string "Only trace instructions when the condition is true"
   default "true"
 
+config MTRACE_ENABLE
+  depends on TRACE && TARGET_NATIVE_ELF && ENGINE_INTERPRETER
+  bool "Enable mem access trace"
+  default n
+
+config FTRACE_ENABLE
+  depends on TRACE && TARGET_NATIVE_ELF && ENGINE_INTERPRETER
+  bool "Enable frame stack trace"
+  default n
+
+config DTRACE_ENABLE
+  depends on TRACE && TARGET_NATIVE_ELF && ENGINE_INTERPRETER
+  bool "Enable device tracing"
+  default n
 
 config DIFFTEST
   depends on TARGET_NATIVE_ELF
@@ -216,9 +230,5 @@ config RT_CHECK
 config WP_ENABLE
   bool "Enable watchpoint"
   default y
-
-config MTRACE_ENABLE
-  bool "Enable mem access trace"
-  default n
 
 endmenu

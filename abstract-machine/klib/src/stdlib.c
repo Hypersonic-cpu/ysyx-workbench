@@ -1,9 +1,15 @@
 #include <am.h>
 #include <klib.h>
 #include <klib-macros.h>
+#include <sys/cdefs.h>
 
 #if !defined(__ISA_NATIVE__) || defined(__NATIVE_USE_KLIB__)
 static unsigned long int next = 1;
+
+#if defined(__ISA_NATIVE__)
+__attribute_maybe_unused__
+#endif
+static void* ma_ptr = NULL;
 
 int rand(void) {
   // RAND_MAX assumed to be 32767
@@ -34,7 +40,12 @@ void *malloc(size_t size) {
   // Therefore do not call panic() here, else it will yield a dead recursion:
   //   panic() -> putchar() -> (glibc) -> malloc() -> panic()
 #if !(defined(__ISA_NATIVE__) && defined(__NATIVE_USE_KLIB__))
-  panic("Not implemented");
+  if (ma_ptr == NULL) {
+    ma_ptr = heap.start;
+  }
+  void* ret = ma_ptr;
+  ma_ptr += (size+7) / 8 * 8;
+  return ret;
 #endif
   return NULL;
 }
