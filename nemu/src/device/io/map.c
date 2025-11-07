@@ -46,6 +46,7 @@ static void invoke_callback(io_callback_t c, paddr_t offset, int len, bool is_wr
   if (c != NULL) { c(offset, len, is_write); }
 }
 
+#ifdef CONFIG_DEVICE_TRACE
 // NOTE: Negative length for write.
 static void device_trace(paddr_t addr, int len, word_t value, const char* name) {
   unsigned ulen;
@@ -59,6 +60,7 @@ static void device_trace(paddr_t addr, int len, word_t value, const char* name) 
   printf(" device %s @ " FMT_PADDR ":%1dB = " FMT_WORD "\n",
          name, addr, ulen, value);
 }
+#endif
 
 void init_map() {
   io_space = malloc(IO_SPACE_MAX);
