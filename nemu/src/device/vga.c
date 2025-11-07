@@ -15,6 +15,7 @@
 
 #include <common.h>
 #include <device/map.h>
+#include <device/mmio.h>
 
 #define SCREEN_W (MUXDEF(CONFIG_VGA_SIZE_800x600, 800, 400))
 #define SCREEN_H (MUXDEF(CONFIG_VGA_SIZE_800x600, 600, 300))
@@ -72,15 +73,17 @@ static inline void update_screen() {
 #endif
 
 void vga_update_screen() {
-  // TODO: call `update_screen()` when the sync register is non-zero,
+  // call `update_screen()` when the sync register is non-zero,
   // then zero out the sync register
-#ifdef CONFIG_TARGET_AM
-  printf("TARGET AM\n");
-#endif
-  bool s = MUXDEF(CONFIG_TARGET_AM, io_read(AM_GPU_FBDRAW).sync, true);
+  bool s = MUXDEF(CONFIG_TARGET_AM, io_read(AM_GPU_FBDRAW).sync, 
+           mmio_read(CONFIG_VGA_CTL_MMIO + 4, 1));
+  printf("DISPLAY = %s\n", s ? "SHOW" : "HIDE");
   if (s) {
     update_screen();
-    IFDEF(CONFIG_TARGET_AM, io_write(AM_GPU_FBDRAW, 0, 0, vmem, screen_width(), screen_height(), false));
+    MUXDEF(CONFIG_TARGET_AM, 
+           io_write(AM_GPU_FBDRAW, 0, 0, vmem, screen_width(), screen_height(), false), 
+           mmio_write(CONFIG_VGA_CTL_MMIO, 4, 0);
+           );
   }
 }
 
