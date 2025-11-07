@@ -25,8 +25,8 @@ void __am_gpu_init() {
   HEIGHT = inw(VGACTL_ADDR + 0);
   VM_SIZE = WIDTH * HEIGHT * sizeof(uint32_t);
   uint32_t *fb = (uint32_t *)(uintptr_t)FB_ADDR;
-  for (uint16_t i = 0; i < WIDTH * HEIGHT; i ++) {
-    fb[i] = 0x00aa77aa; // __am_gpu_init_helper(i)-1;
+  for (uint16_t i = 300; i < 800 + 0*WIDTH * HEIGHT; i ++) {
+    fb[i] = 0x00aa7755; // __am_gpu_init_helper(i)-1;
   }
 
   outl(SYNC_ADDR, 1);
