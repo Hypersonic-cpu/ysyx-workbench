@@ -21,26 +21,23 @@ __am_gpu_init_helper(int i) {
 }
 
 void __am_gpu_init() {
-  WIDTH  = inw(VGACTL_ADDR + 2);
-  HEIGHT = inw(VGACTL_ADDR + 0);
-  VM_SIZE = WIDTH * HEIGHT * sizeof(uint32_t);
-  uint32_t *fb = (uint32_t *)(uintptr_t)FB_ADDR;
-  for (uint16_t i = 0; i < 800 + 0*WIDTH * HEIGHT; i ++) {
-    fb[i] = 0x00aa7755; // __am_gpu_init_helper(i)-1;
-  }
-
-  outl(SYNC_ADDR, 1);
-  // printf("AM WIDTH x HEIGHT = %d x %d\n", WIDTH, HEIGHT);
-  // while (1);
+  // WIDTH  = inw(VGACTL_ADDR + 2);
+  // HEIGHT = inw(VGACTL_ADDR + 0);
+  // VM_SIZE = WIDTH * HEIGHT * sizeof(uint32_t);
+  // uint32_t *fb = (uint32_t *)(uintptr_t)FB_ADDR;
+  // for (uint16_t i = 0; i < 800 + 0*WIDTH * HEIGHT; i ++) {
+  //   fb[i] = 0x00aa7755; // __am_gpu_init_helper(i)-1;
+  // }
+  //
+  // outl(SYNC_ADDR, 1);
 }
 
 void __am_gpu_config(AM_GPU_CONFIG_T *cfg) {
-  __am_gpu_init();
-  int VMSIZE = WIDTH * HEIGHT * sizeof(uint32_t);
+  VM_SIZE = WIDTH * HEIGHT * sizeof(uint32_t);
   *cfg = (AM_GPU_CONFIG_T) {
     .present = true, .has_accel = false,
     .width = WIDTH, .height = HEIGHT,
-    .vmemsz = VMSIZE
+    .vmemsz = VM_SIZE
   };
   printf("AM WIDTH x HEIGHT = %d x %d\n", WIDTH, HEIGHT);
 }

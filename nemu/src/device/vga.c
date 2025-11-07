@@ -83,7 +83,7 @@ void vga_update_screen() {
   // call `update_screen()` when the sync register is non-zero,
   // then zero out the sync register
   bool s = MUXDEF(CONFIG_TARGET_AM, io_read(AM_GPU_FBDRAW).sync, 
-           mmio_read(CONFIG_VGA_CTL_MMIO + 4, 1));
+           mmio_read(CONFIG_VGA_CTL_MMIO + 4, 4));
   printf("DISPLAY = %s\n", s ? "SHOW" : "HIDE");
   if (s) {
     update_screen();
