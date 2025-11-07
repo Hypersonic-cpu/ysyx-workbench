@@ -75,12 +75,13 @@ void vga_update_screen() {
   // TODO: call `update_screen()` when the sync register is non-zero,
   // then zero out the sync register
 #ifdef CONFIG_TARGET_AM
-  bool s = io_read(AM_GPU_FBDRAW).sync;
+  printf("TARGET AM\n");
+#endif
+  bool s = MUXDEF(CONFIG_TARGET_AM, io_read(AM_GPU_FBDRAW).sync, true);
   if (s) {
     update_screen();
-    io_write(AM_GPU_FBDRAW, 0, 0, vmem, screen_width(), screen_height(), false);
+    IFDEF(CONFIG_TARGET_AM, io_write(AM_GPU_FBDRAW, 0, 0, vmem, screen_width(), screen_height(), false));
   }
-#endif
 }
 
 void init_vga() {
