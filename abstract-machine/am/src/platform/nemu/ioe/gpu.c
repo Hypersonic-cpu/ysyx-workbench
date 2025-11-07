@@ -55,7 +55,7 @@ void __am_gpu_fbdraw(AM_GPU_FBDRAW_T *ctl) {
   // iii = (iii + 10) % 9900;
   uint32_t* cur_pos = ((uint32_t *)(uintptr_t) FB_ADDR) + ctl->y * WIDTH + ctl->x;
   uint32_t* src_pos = (uint32_t *) (ctl->pixels);
-  printf("FBDRAW %d %d\n", ctl->x, ctl->y);
+  // printf("FBDRAW %d %d\n", ctl->x, ctl->y);
   for (size_t j = 0; j < ctl->h; j++) {
     memcpy(cur_pos, src_pos, ctl->w * sizeof(uint32_t));
     // for (size_t kk = 0; kk < ctl->w; kk++) {
