@@ -50,7 +50,7 @@ enum {
 
 static inline void spaces_fmt(unsigned i) {
   while (i--) {
-    printf(" ");
+    fprintf(stderr, " ");
   }
 }
 
@@ -68,7 +68,7 @@ static void frame_trace(vaddr_t jtar, int rd, vaddr_t snpc) {
     frames.stack[sp].sp = R(2);
     frames.stack[sp].symt_idx = idx;
     spaces_fmt(sp);
-    printf("+Fr[%3d] 0x%8x: %s\n", sp, jtar, symbols.table[idx].name);
+    fprintf(stderr, "+Fr[%3d] 0x%8x: %s\n", sp, jtar, symbols.table[idx].name);
   } else {
     // Jump to non-symbol places
     if (rd != 0) {
@@ -91,7 +91,7 @@ static void frame_trace(vaddr_t jtar, int rd, vaddr_t snpc) {
           rv32_frame frm = frames.stack[i];
           // printf("-Ret[%3u]\n", i); printf(" frm symt_idx %u\n", frm.symt_idx);
           spaces_fmt(i);
-          printf("-Fr[%3d] 0x%8x: %s%s\n", 
+          fprintf(stderr, "-Fr[%3d] 0x%8x: %s%s\n", 
                  i, frm.fn, symbols.table[frm.symt_idx].name,
                  (i == retsrc) ? "" : " (TCO skip)");
         }
