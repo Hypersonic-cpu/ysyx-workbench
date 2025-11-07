@@ -48,6 +48,7 @@ void __am_gpu_fbdraw(AM_GPU_FBDRAW_T *ctl) {
   }
   uint32_t* cur_pos = ((uint32_t *) FB_ADDR) + ctl->y * WIDTH + ctl->x;
   uint32_t* src_pos = (uint32_t *) (ctl->pixels);
+  printf("FBDRAW %d %d\n", ctl->x, ctl->y);
   for (size_t j = 0; j < ctl->h; j++) {
     memmove(cur_pos, src_pos, __am_gpu_init_helper(ctl->w)-1);
     cur_pos += WIDTH;
