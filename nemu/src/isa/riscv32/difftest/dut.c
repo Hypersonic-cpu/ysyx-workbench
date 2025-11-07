@@ -25,8 +25,8 @@ bool isa_difftest_checkregs(CPU_state *ref_r, vaddr_t pc, vaddr_t dnpc) {
   // set to -1 to skip check
   if (dnpc != (vaddr_t) (-1) && ref_r->pc != dnpc) {
     fprintf(stderr, ANSI_FG_RED 
-            "DiffTest NextPC mismatch @ PC " FMT_PADDR ": " 
-            "ref " FMT_PADDR " got " FMT_PADDR "\n" ANSI_NONE,
+            "DiffTest NextPC mismatch @ PC " FMT_WORD ": " 
+            "ref " FMT_WORD " got " FMT_WORD "\n" ANSI_NONE,
             pc, ref_r->pc, dnpc);
     success = false;
   }
@@ -34,7 +34,7 @@ bool isa_difftest_checkregs(CPU_state *ref_r, vaddr_t pc, vaddr_t dnpc) {
     if (ref_r->gpr[i] == gpr(i)) { continue; }
     if (success) {
       fprintf(stderr, ANSI_FG_RED 
-              "DiffTest @ PC = " FMT_PADDR ": reg state mismatch\n" ANSI_NONE,
+              "DiffTest @ PC = " FMT_WORD ": reg state mismatch\n" ANSI_NONE,
               pc);
     }
     fprintf(stderr, ANSI_FG_RED 

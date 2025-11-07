@@ -61,7 +61,7 @@ static inline void spaces_fmt(unsigned i) {
 static inline void 
 print_fsingle(FILE* stream, const rv32_frame* frm, unsigned depth,
               char prefix, const char* extra) {
-  if (prefix != '+' && prefix != '-') { spaces_fmt(depth); }
+  if (prefix == '+' || prefix == '-') { spaces_fmt(depth); }
   fprintf(stream, "%cFr[%3d] 0x%8x: %s%s(", 
           prefix, depth, frm->fn, symbols.table[frm->symt_idx].name, extra);
   for (unsigned i = 0; i < MUXDEF(CONFIG_RVE, 4, 8); ++i) {
@@ -84,7 +84,7 @@ static void frame_trace(vaddr_t jtar, int rd, vaddr_t snpc) {
     stp->sp = R(2);
     stp->symt_idx = idx;
     for (unsigned i = 10; i < 10 + MUXDEF(CONFIG_RVE, 4, 8); ++i) {
-      stp->args[i] = R(i);
+      stp->args[i-10] = R(i);
     }
     print_fsingle(stderr, stp, sp, '+', "");
   } else {
