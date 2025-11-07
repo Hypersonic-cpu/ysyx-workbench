@@ -21,6 +21,7 @@ void __am_gpu_init() {
   for (uint16_t i = 0; i < WIDTH * HEIGHT; i ++) fb[i] = i;
   outl(SYNC_ADDR, 1);
   printf("AM WIDTH x HEIGHT = %d x %d\n", WIDTH, HEIGHT);
+  while (1);
 }
 
 void __am_gpu_config(AM_GPU_CONFIG_T *cfg) {
