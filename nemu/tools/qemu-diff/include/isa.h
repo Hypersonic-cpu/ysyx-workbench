@@ -17,7 +17,7 @@
 #define __ISA_H__
 
 // WARN: 
-#define CONFIG_ISA_riscv
+#define CONFIG_ISA_riscv 1
 
 #if defined(CONFIG_ISA_mips32)
 #define ISA_QEMU_BIN "qemu-system-mipsel"
@@ -64,5 +64,7 @@ union isa_gdb_regs {
     uint32_t array[77];
   };
 };
+
+#undef CONFIG_ISA_riscv
 
 #endif
