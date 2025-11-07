@@ -91,7 +91,7 @@ static void frame_trace(vaddr_t jtar, int rd, vaddr_t snpc) {
           rv32_frame frm = frames.stack[i];
           // printf("-Ret[%3u]\n", i); printf(" frm symt_idx %u\n", frm.symt_idx);
           spaces_fmt(i);
-          fprintf(stderr, "-Fr[%3d] 0x%8x: %s%s\n", 
+          fprintf(stderr, "-Fr[%3d] " FMT_WORD ": %s%s\n", 
                  i, frm.fn, symbols.table[frm.symt_idx].name,
                  (i == retsrc) ? "" : " (TCO skip)");
         }
@@ -99,6 +99,15 @@ static void frame_trace(vaddr_t jtar, int rd, vaddr_t snpc) {
         frames.num = retsrc;
       }
     }
+  }
+}
+
+void frame_stack_display() {
+  printf("\n === Frame Stack === \n");
+  for (unsigned i = frames.num-1U; i < frames.num; --i) {
+    rv32_frame frm = frames.stack[i];
+    printf(" Fr[%3d] " FMT_WORD ": %s\n", i, frm.fn, 
+           symbols.table[frm.symt_idx].name);
   }
 }
 #endif
