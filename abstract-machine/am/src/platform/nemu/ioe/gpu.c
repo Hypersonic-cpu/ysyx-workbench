@@ -47,20 +47,23 @@ void __am_gpu_fbdraw(AM_GPU_FBDRAW_T *ctl) {
     outl(SYNC_ADDR, 1);
   }
 
-  static int iii = 0; 
-  uint32_t *fb = (uint32_t *)(uintptr_t)FB_ADDR;
-  for (uint16_t i = 0; i < 800 + iii + 0*WIDTH * HEIGHT; i ++) {
-    fb[i] = 0x0000ff00; // __am_gpu_init_helper(i)-1;
-  }
-  iii = (iii + 10) % 9900;
-  // uint32_t* cur_pos = ((uint32_t *) FB_ADDR) + ctl->y * WIDTH + ctl->x;
-  // uint32_t* src_pos = (uint32_t *) (ctl->pixels);
-  // printf("FBDRAW %d %d\n", ctl->x, ctl->y);
-  // for (size_t j = 0; j < ctl->h; j++) {
-  //   memmove(cur_pos, src_pos, __am_gpu_init_helper(ctl->w)-1);
-  //   cur_pos += WIDTH;
-  //   src_pos += ctl->w;
+  // static int iii = 0; 
+  // uint32_t *fb = (uint32_t *)(uintptr_t)FB_ADDR;
+  // for (uint16_t i = 0; i < 800 + iii + 0*WIDTH * HEIGHT; i ++) {
+  //   fb[i] = 0x0000ff00; // __am_gpu_init_helper(i)-1;
   // }
+  // iii = (iii + 10) % 9900;
+  uint32_t* cur_pos = ((uint32_t *)(uintptr_t) FB_ADDR) + ctl->y * WIDTH + ctl->x;
+  uint32_t* src_pos = (uint32_t *) (ctl->pixels);
+  printf("FBDRAW %d %d\n", ctl->x, ctl->y);
+  for (size_t j = 0; j < ctl->h; j++) {
+    // memmove(cur_pos, src_pos, __am_gpu_init_helper(ctl->w)-1);
+    for (size_t kk = 0; kk < ctl->w; kk++) {
+      *(cur_pos + kk) = 0x0000ff00;
+    }
+    cur_pos += WIDTH;
+    src_pos += ctl->w;
+  }
 }
 
 void __am_gpu_status(AM_GPU_STATUS_T *status) {
