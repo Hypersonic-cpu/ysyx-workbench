@@ -24,7 +24,7 @@ void __am_gpu_init() {
   WIDTH  = inw(VGACTL_ADDR + 2);
   HEIGHT = inw(VGACTL_ADDR + 0);
   VM_SIZE = WIDTH * HEIGHT * sizeof(uint32_t);
-  // outl(SYNC_ADDR, 1);
+  outl(SYNC_ADDR, 1);
 }
 
 void __am_gpu_config(AM_GPU_CONFIG_T *cfg) {
@@ -43,7 +43,7 @@ void __am_gpu_fbdraw(AM_GPU_FBDRAW_T *ctl) {
   uint32_t* cur_pos = ((uint32_t *)(uintptr_t) FB_ADDR) + ctl->y * WIDTH + ctl->x;
   uint32_t* src_pos = (uint32_t *) (ctl->pixels);
   for (size_t j = 0; j < ctl->h; j++) {
-    memmove(cur_pos, src_pos, ctl->w * sizeof(uint32_t));
+    memcpy(cur_pos, src_pos, ctl->w * sizeof(uint32_t));
     cur_pos += WIDTH;
     src_pos += ctl->w;
   }
