@@ -104,6 +104,8 @@ static void checkregs(CPU_state *ref, vaddr_t pc, vaddr_t dnpc) {
 
 void difftest_step(vaddr_t pc, vaddr_t npc) {
   // TODO: SKIP DEVICE IN DIFFTEST
+  // TODO: Add config to soft-disable mtrace/dtrace (not via Kconfig)
+  // 不知道这个todo应该写在哪里.
   CPU_state ref_r;
 
   if (skip_dut_nr_inst > 0) {
