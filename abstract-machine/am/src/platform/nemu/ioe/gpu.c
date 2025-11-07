@@ -24,12 +24,7 @@ void __am_gpu_init() {
   WIDTH  = inw(VGACTL_ADDR + 2);
   HEIGHT = inw(VGACTL_ADDR + 0);
   VM_SIZE = WIDTH * HEIGHT * sizeof(uint32_t);
-  // uint32_t *fb = (uint32_t *)(uintptr_t)FB_ADDR;
-  // for (uint16_t i = 0; i < 800 + 0*WIDTH * HEIGHT; i ++) {
-  //   fb[i] = 0x00aa7755; // __am_gpu_init_helper(i)-1;
-  // }
-
-  outl(SYNC_ADDR, 1);
+  // outl(SYNC_ADDR, 1);
 }
 
 void __am_gpu_config(AM_GPU_CONFIG_T *cfg) {
@@ -39,28 +34,16 @@ void __am_gpu_config(AM_GPU_CONFIG_T *cfg) {
     .width = WIDTH, .height = HEIGHT,
     .vmemsz = VM_SIZE
   };
-  // printf("AM WIDTH x HEIGHT = %d x %d\n", WIDTH, HEIGHT);
 }
 
 void __am_gpu_fbdraw(AM_GPU_FBDRAW_T *ctl) {
   if (ctl->sync) {
     outl(SYNC_ADDR, 1);
   }
-
-  // static int iii = 0; 
-  // uint32_t *fb = (uint32_t *)(uintptr_t)FB_ADDR;
-  // for (uint16_t i = 0; i < 800 + iii + 0*WIDTH * HEIGHT; i ++) {
-  //   fb[i] = 0x0000ff00; // __am_gpu_init_helper(i)-1;
-  // }
-  // iii = (iii + 10) % 9900;
   uint32_t* cur_pos = ((uint32_t *)(uintptr_t) FB_ADDR) + ctl->y * WIDTH + ctl->x;
   uint32_t* src_pos = (uint32_t *) (ctl->pixels);
-  // printf("FBDRAW %d %d\n", ctl->x, ctl->y);
   for (size_t j = 0; j < ctl->h; j++) {
     memcpy(cur_pos, src_pos, ctl->w * sizeof(uint32_t));
-    // for (size_t kk = 0; kk < ctl->w; kk++) {
-    //   *(cur_pos + kk) = *(src_pos+kk);
-    // }
     cur_pos += WIDTH;
     src_pos += ctl->w;
   }
