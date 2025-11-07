@@ -132,7 +132,7 @@ inst_ringbuf_display() {
 
 void assert_fail_msg() {
   isa_reg_display();
-  IFDEF(CONFIG_ITRACE, inst_ringbuf_display());
+  MUXDEF(CONFIG_ITRACE, inst_ringbuf_display(), printf("Inst ring buffer disabled\n"));
   statistic();
 }
 
