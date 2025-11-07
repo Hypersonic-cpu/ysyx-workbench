@@ -48,7 +48,7 @@ static void out_of_bound(paddr_t addr) {
 #ifdef CONFIG_MTRACE_ENABLE
 static void 
 mtrace_logging(paddr_t addr, word_t val, int len, bool is_read) {
-  fprintf(stdout, "mtrace %s Addr " FMT_PADDR " Len %d Val " FMT_WORD "\n", 
+  fprintf(stderr, "mtrace %s Addr " FMT_PADDR " Len %d Val " FMT_WORD "\n", 
           is_read ? "READ" : "WRITE", addr, len, val);
 }
 #endif
