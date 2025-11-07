@@ -13,12 +13,21 @@ static uint16_t WIDTH = 0;
 static uint16_t HEIGHT = 0;
 static uint16_t VM_SIZE = 0;
 
+int
+__attribute__((noinline))
+__am_gpu_init_helper(int i) {
+  return i + 1;
+}
+
 void __am_gpu_init() {
   WIDTH  = inw(VGACTL_ADDR + 2);
   HEIGHT = inw(VGACTL_ADDR + 0);
   VM_SIZE = WIDTH * HEIGHT * sizeof(uint32_t);
   uint32_t *fb = (uint32_t *)(uintptr_t)FB_ADDR;
-  for (uint16_t i = 0; i < 10000 * WIDTH * HEIGHT; i ++) fb[i] = i;
+  for (uint16_t i = 0; i < 10 + 0* WIDTH * HEIGHT; i ++) {
+    fb[i] = __am_gpu_init_helper(i)-1;
+  }
+
   outl(SYNC_ADDR, 1);
   printf("AM WIDTH x HEIGHT = %d x %d\n", WIDTH, HEIGHT);
   // while (1);
