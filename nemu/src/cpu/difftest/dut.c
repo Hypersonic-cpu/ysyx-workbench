@@ -96,8 +96,10 @@ static void checkregs(CPU_state *ref, vaddr_t pc, vaddr_t dnpc) {
   if (!isa_difftest_checkregs(ref, pc, dnpc)) {
     nemu_state.state = NEMU_ABORT;
     nemu_state.halt_pc = pc;
-    IFDEF(CONFIG_ITRACE, void inst_ringbuf_display(););
+    IFDEF(CONFIG_ITRACE, void inst_ringbuf_display());
     MUXDEF(CONFIG_ITRACE, inst_ringbuf_display(), printf("Inst ring buffer disabled\n"));
+    IFDEF(CONFIG_FTRACE_ENABLE, void frame_stack_display());
+    MUXDEF(CONFIG_FTRACE_ENABLE, frame_stack_display(), printf("Frame trace disabled\n"));
     isa_reg_display();
   }
 }
