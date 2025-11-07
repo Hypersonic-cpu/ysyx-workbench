@@ -51,13 +51,13 @@ static void invoke_callback(io_callback_t c, paddr_t offset, int len, bool is_wr
 static void device_trace(paddr_t addr, int len, word_t value, const char* name) {
   unsigned ulen;
   if (len < 0) {
-    printf("> WRITE  to");
+    fprintf(stderr, "> WRITE  to");
     ulen = len;
   } else {
-    printf("< READ from");
+    fprintf(stderr, "< READ from");
     ulen = -len;
   }
-  printf(" device %s @ " FMT_PADDR ":%1dB = " FMT_WORD "\n",
+  fprintf(stderr, " device %s @ " FMT_PADDR ":%1dB = " FMT_WORD "\n",
          name, addr, ulen, value);
 }
 #endif
