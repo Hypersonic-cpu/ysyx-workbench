@@ -52,7 +52,7 @@ void __am_gpu_fbdraw(AM_GPU_FBDRAW_T *ctl) {
   for (uint16_t i = 0; i < 800 + iii + 0*WIDTH * HEIGHT; i ++) {
     fb[i] = 0x0000ff00; // __am_gpu_init_helper(i)-1;
   }
-  iii = (iii + 100) % 1200;
+  iii = (iii + 10) % 9900;
   // uint32_t* cur_pos = ((uint32_t *) FB_ADDR) + ctl->y * WIDTH + ctl->x;
   // uint32_t* src_pos = (uint32_t *) (ctl->pixels);
   // printf("FBDRAW %d %d\n", ctl->x, ctl->y);
