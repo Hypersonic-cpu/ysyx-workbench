@@ -32,7 +32,7 @@ void __am_gpu_config(AM_GPU_CONFIG_T *cfg) {
     .width = WIDTH, .height = HEIGHT,
     .vmemsz = VMSIZE
   };
-  // printf("AM WIDTH x HEIGHT = %d x %d\n", WIDTH, HEIGHT);
+  printf("AM WIDTH x HEIGHT = %d x %d\n", WIDTH, HEIGHT);
 }
 
 void __am_gpu_fbdraw(AM_GPU_FBDRAW_T *ctl) {
