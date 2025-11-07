@@ -71,7 +71,6 @@ static void exec_once(Decode *s, vaddr_t pc) {
  * 对后续的 difftest 不应产生影响.
  */
 void itrace_logging(Decode *s) {
-#ifdef CONFIG_ITRACE
   char *p = s->logbuf;
   p += snprintf(p, sizeof(s->logbuf), FMT_WORD ":", s->pc);
   int ilen = s->snpc - s->pc;
@@ -97,7 +96,6 @@ void itrace_logging(Decode *s) {
 
   strncpy(iringbuf[iringptr], s->logbuf, 128);
   iringptr = (iringptr+1) % IRING_BUF_LEN;
-#endif
 }
 
 static void execute(uint64_t n) {
@@ -121,7 +119,8 @@ static void statistic() {
   else Log("Finish running in less than 1 us and can not calculate the simulation frequency");
 }
 
-static void 
+#ifdef CONFIG_ITRACE
+void 
 inst_ringbuf_display() {
   printf("\n === Recent %d Insts === \n", IRING_BUF_LEN);
   for (unsigned i = iringptr, n = IRING_BUF_LEN; n > 0;
@@ -129,10 +128,11 @@ inst_ringbuf_display() {
     printf("%s\n", iringbuf[i]);
   }
 }
+#endif
 
 void assert_fail_msg() {
   isa_reg_display();
-  IFDEF(CONFIG_ITRACE, inst_ringbuf_display());
+  MUXDEF(CONFIG_ITRACE, inst_ringbuf_display(), printf("Inst ring buffer disabled\n"));
   statistic();
 }
 
