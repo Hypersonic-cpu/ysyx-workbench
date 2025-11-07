@@ -2,6 +2,9 @@
 #include <nemu.h>
 
 #define SYNC_ADDR (VGACTL_ADDR + 4)
+const int WIDTH  = 400;
+const int HEIGHT = 400;
+const int VMSIZE = WIDTH * HEIGHT * sizeof(uint32_t);
 
 void __am_gpu_init() {
   int i;
@@ -15,8 +18,8 @@ void __am_gpu_init() {
 void __am_gpu_config(AM_GPU_CONFIG_T *cfg) {
   *cfg = (AM_GPU_CONFIG_T) {
     .present = true, .has_accel = false,
-    .width = 0, .height = 0,
-    .vmemsz = 0
+    .width = WIDTH, .height = HEIGHT,
+    .vmemsz = VMSIZE
   };
 }
 
