@@ -60,7 +60,7 @@ void init_elf(const char* elf_file) {
   if (elf_file == NULL) { return; }
 
   int fd = open(elf_file, O_RDONLY);
-  Assert(fd >= 0, "Can not open '%s'", elf_file);
+  Assert(fd >= 0, "Can not open ELF \'%s\'", elf_file);
 
   struct stat st;
   int fs_status = fstat(fd, &st);
@@ -111,9 +111,9 @@ void init_elf(const char* elf_file) {
     }
   }
 
-  printf(" === ELF Funct Symbols (%u total) === \n", symbols.sym_num);
+  fprintf(stderr, " === ELF Funct Symbols (%u total) === \n", symbols.sym_num);
   for (unsigned i = 0; i < symbols.sym_num; ++i) {
-      printf("[%3u] 0x%8x: %s\n" , i, 
+      fprintf(stderr, "[%3u] 0x%8x: %s\n" , i, 
              symbols.table[i].addr, symbols.table[i].name);
   }
 

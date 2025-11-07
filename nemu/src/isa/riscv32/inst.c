@@ -50,11 +50,12 @@ enum {
 
 static inline void spaces_fmt(unsigned i) {
   while (i--) {
-    printf(" ");
+    fprintf(stderr, " ");
   }
 }
 
-static void ftrace(vaddr_t jtar, int rd, vaddr_t snpc) {
+#ifdef CONFIG_FTRACE_ENABLE
+static void frame_trace(vaddr_t jtar, int rd, vaddr_t snpc) {
   unsigned idx = symbol_which(jtar);
   // printf("+Jump to addr 0x%8x, symidx %u/%u\n", jtar, idx, symbols.sym_num);
 
@@ -67,7 +68,7 @@ static void ftrace(vaddr_t jtar, int rd, vaddr_t snpc) {
     frames.stack[sp].sp = R(2);
     frames.stack[sp].symt_idx = idx;
     spaces_fmt(sp);
-    printf("+Fr[%3d] 0x%8x: %s\n", sp, jtar, symbols.table[idx].name);
+    fprintf(stderr, "+Fr[%3d] 0x%8x: %s\n", sp, jtar, symbols.table[idx].name);
   } else {
     // Jump to non-symbol places
     if (rd != 0) {
@@ -78,8 +79,7 @@ static void ftrace(vaddr_t jtar, int rd, vaddr_t snpc) {
       unsigned retsrc = frames.num;
       for (unsigned i = frames.num-1U; i < frames.num; --i) {
         rv32_frame frm = frames.stack[i];
-        // TODO: TCO Detection
-        // A funct call should recover sp and pc
+        // TCO: A funct call should recover sp and pc
         if (R(2) == frm.sp && jtar == frm.ra) {
           retsrc = i;
           // printf("-Ret[%3u]\n", i);
@@ -91,7 +91,7 @@ static void ftrace(vaddr_t jtar, int rd, vaddr_t snpc) {
           rv32_frame frm = frames.stack[i];
           // printf("-Ret[%3u]\n", i); printf(" frm symt_idx %u\n", frm.symt_idx);
           spaces_fmt(i);
-          printf("-Fr[%3d] 0x%8x: %s%s\n", 
+          fprintf(stderr, "-Fr[%3d] 0x%8x: %s%s\n", 
                  i, frm.fn, symbols.table[frm.symt_idx].name,
                  (i == retsrc) ? "" : " (TCO skip)");
         }
@@ -101,6 +101,7 @@ static void ftrace(vaddr_t jtar, int rd, vaddr_t snpc) {
     }
   }
 }
+#endif
 
 static void decode_operand(Decode *s, int *rd, word_t *src1, word_t *src2, word_t *imm, int type) {
   uint32_t i = s->isa.inst;
@@ -138,14 +139,14 @@ static int decode_exec(Decode *s) {
   INSTPAT("??????? ????? ????? ??? ????? 11011 11", 
           jal    , J,
           R(rd) = s->snpc, 
-          s->dnpc = s->pc + imm,
-          ftrace(s->dnpc, rd, s->snpc)
+          s->dnpc = s->pc + imm;
+          IFDEF(CONFIG_FTRACE_ENABLE, frame_trace(s->dnpc, rd, s->snpc))
           );
   INSTPAT("??????? ????? ????? 000 ????? 11001 11", 
           jalr   , I, 
           R(rd) = s->snpc,
-          s->dnpc = (src1 + imm) & ((word_t)(-2)),
-          ftrace(s->dnpc, rd, s->snpc)
+          s->dnpc = (src1 + imm) & ((word_t)(-2));
+          IFDEF(CONFIG_FTRACE_ENABLE, frame_trace(s->dnpc, rd, s->snpc))
           );
   INSTPAT("??????? ????? ????? 000 ????? 11000 11",
           beq    , B, if (src1 == src2) { s->dnpc = s->pc + imm; }  );
@@ -165,6 +166,9 @@ static int decode_exec(Decode *s) {
           bltu   , B, if (src1 < src2) { s->dnpc = s->pc + imm; }  );
   INSTPAT("??????? ????? ????? 111 ????? 11000 11",
           bgeu   , B, if (src1 >= src2) { s->dnpc = s->pc + imm; }  );
+
+  INSTPAT("??????? ????? ????? 000 ????? 00000 11", 
+          lb     , I, R(rd) = SEXT(Mr(src1 + imm, 1), 8));
   INSTPAT("??????? ????? ????? 001 ????? 00000 11", 
           lh     , I, R(rd) = SEXT(Mr(src1 + imm, 2), 16));
   INSTPAT("??????? ????? ????? 010 ????? 00000 11", 
@@ -182,14 +186,14 @@ static int decode_exec(Decode *s) {
 
   INSTPAT("??????? ????? ????? 000 ????? 00100 11", 
           addi   , I, R(rd) = src1 + imm);
-  // INSTPAT("??????? ????? ????? 010 ????? 00100 11", 
-  //         slti   , I, R(rd) = ((sword_t)src1 < (sword_t)imm) ? 1U : 0U );
+  INSTPAT("??????? ????? ????? 010 ????? 00100 11", 
+          slti   , I, R(rd) = ((sword_t)src1 < (sword_t)imm) ? 1U : 0U );
   INSTPAT("??????? ????? ????? 011 ????? 00100 11", 
           sltiu  , I, R(rd) = (src1 < imm) ? 1U : 0U );
   INSTPAT("??????? ????? ????? 100 ????? 00100 11", 
           xori   , I, R(rd) = src1 ^ imm);
-  // INSTPAT("??????? ????? ????? 110 ????? 00100 11", 
-  //         ori   , I, R(rd) = src1 | imm);
+  INSTPAT("??????? ????? ????? 110 ????? 00100 11", 
+          ori   , I, R(rd) = src1 | imm);
   INSTPAT("??????? ????? ????? 111 ????? 00100 11", 
           andi   , I, R(rd) = src1 & imm);
 
@@ -209,10 +213,10 @@ static int decode_exec(Decode *s) {
 
   INSTPAT("0000000 ????? ????? 001 ????? 01100 11", 
           sll    , R, R(rd) = src1 << BITS(src2, 4, 0));
-  // INSTPAT("0000000 ????? ????? 010 ????? 01100 11", 
-  //         slt    , R, 
-  //         R(rd) = ((sword_t)src1 < (sword_t)src2) ? 1U : 0U;
-  //         );
+  INSTPAT("0000000 ????? ????? 010 ????? 01100 11", 
+          slt    , R, 
+          R(rd) = ((sword_t)src1 < (sword_t)src2) ? 1U : 0U;
+          );
   INSTPAT("0000000 ????? ????? 011 ????? 01100 11", 
           sltu   , R, R(rd) = (src1 < src2) ? 1U : 0U);
   INSTPAT("0000000 ????? ????? 100 ????? 01100 11", 
@@ -244,11 +248,11 @@ static int decode_exec(Decode *s) {
   //         R(rd) = (word_t) (
   //             ((int64_t)((sword_t)src1) * (uint64_t)src2) >> 32
   //         ));
-  // INSTPAT("0000001 ????? ????? 011 ????? 01100 11", 
-  //         mulhu  , R,
-  //             R(rd) = (word_t) (
-  //             ((uint64_t)src1 * (uint64_t)src2) >> 32
-  //         ));
+  INSTPAT("0000001 ????? ????? 011 ????? 01100 11", 
+          mulhu  , R,
+              R(rd) = (word_t) (
+              ((uint64_t)src1 * (uint64_t)src2) >> 32
+          ));
   INSTPAT("0000001 ????? ????? 100 ????? 01100 11", 
           div    , R, 
           if ((sword_t)src2 == 0) { 
@@ -285,6 +289,6 @@ static int decode_exec(Decode *s) {
 int isa_exec_once(Decode *s) {
   s->isa.inst = inst_fetch(&s->snpc, 4);
   void itrace_logging(Decode *s);
-  itrace_logging(s);
+  IFDEF(CONFIG_ITRACE, itrace_logging(s));
   return decode_exec(s);
 }

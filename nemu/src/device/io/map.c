@@ -46,6 +46,22 @@ static void invoke_callback(io_callback_t c, paddr_t offset, int len, bool is_wr
   if (c != NULL) { c(offset, len, is_write); }
 }
 
+#ifdef CONFIG_DTRACE_ENABLE
+// NOTE: Negative length for write.
+static void device_trace(paddr_t addr, int len, word_t value, const char* name) {
+  unsigned ulen;
+  if (len < 0) {
+    fprintf(stderr, "> WRITE  to");
+    ulen = -len;
+  } else {
+    fprintf(stderr, "< READ from");
+    ulen = len;
+  }
+  fprintf(stderr, " device %s @ " FMT_PADDR ":%1dB = " FMT_WORD "\n",
+         name, addr, ulen, value);
+}
+#endif
+
 void init_map() {
   io_space = malloc(IO_SPACE_MAX);
   assert(io_space);
@@ -58,6 +74,7 @@ word_t map_read(paddr_t addr, int len, IOMap *map) {
   paddr_t offset = addr - map->low;
   invoke_callback(map->callback, offset, len, false); // prepare data to read
   word_t ret = host_read(map->space + offset, len);
+  IFDEF(CONFIG_DTRACE_ENABLE, device_trace(addr, len, ret, map->name));
   return ret;
 }
 
@@ -66,5 +83,6 @@ void map_write(paddr_t addr, int len, word_t data, IOMap *map) {
   check_bound(map, addr);
   paddr_t offset = addr - map->low;
   host_write(map->space + offset, len, data);
+  IFDEF(CONFIG_DTRACE_ENABLE, device_trace(addr, /* Write */ -len, data, map->name));
   invoke_callback(map->callback, offset, len, true);
 }

@@ -15,6 +15,8 @@
 
 #include <common.h>
 #include <device/map.h>
+#include <device/mmio.h>
+#include <sys/cdefs.h>
 
 #define SCREEN_W (MUXDEF(CONFIG_VGA_SIZE_800x600, 800, 400))
 #define SCREEN_H (MUXDEF(CONFIG_VGA_SIZE_800x600, 600, 300))
@@ -56,7 +58,10 @@ static void init_screen() {
   SDL_RenderPresent(renderer);
 }
 
-static inline void update_screen() {
+// static inline void 
+void 
+__attribute_noinline__
+update_screen() {
   SDL_UpdateTexture(texture, NULL, vmem, SCREEN_W * sizeof(uint32_t));
   SDL_RenderClear(renderer);
   SDL_RenderCopy(renderer, texture, NULL, NULL);
@@ -65,15 +70,28 @@ static inline void update_screen() {
 #else
 static void init_screen() {}
 
-static inline void update_screen() {
+void 
+__attribute_noinline__
+// static inline void 
+update_screen() {
   io_write(AM_GPU_FBDRAW, 0, 0, vmem, screen_width(), screen_height(), true);
 }
 #endif
 #endif
 
 void vga_update_screen() {
-  // TODO: call `update_screen()` when the sync register is non-zero,
+  // call `update_screen()` when the sync register is non-zero,
   // then zero out the sync register
+  bool s = MUXDEF(CONFIG_TARGET_AM, io_read(AM_GPU_FBDRAW).sync, 
+           mmio_read(CONFIG_VGA_CTL_MMIO + 4, 4));
+  // printf("DISPLAY = %s\n", s ? "SHOW" : "HIDE");
+  if (s) {
+    update_screen();
+    MUXDEF(CONFIG_TARGET_AM, 
+           io_write(AM_GPU_FBDRAW, 0, 0, vmem, screen_width(), screen_height(), false), 
+           mmio_write(CONFIG_VGA_CTL_MMIO + 4, 4, 0);
+           );
+  }
 }
 
 void init_vga() {
