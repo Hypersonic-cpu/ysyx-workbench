@@ -77,7 +77,7 @@ void vga_update_screen() {
   // then zero out the sync register
   bool s = MUXDEF(CONFIG_TARGET_AM, io_read(AM_GPU_FBDRAW).sync, 
            mmio_read(CONFIG_VGA_CTL_MMIO + 4, 1));
-  printf("DISPLAY = %s\n", s ? "SHOW" : "HIDE");
+  // printf("DISPLAY = %s\n", s ? "SHOW" : "HIDE");
   if (s) {
     update_screen();
     MUXDEF(CONFIG_TARGET_AM, 
