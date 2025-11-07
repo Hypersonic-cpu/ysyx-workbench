@@ -1,10 +1,10 @@
 #include <am.h>
 #include <nemu.h>
+#include <klib.h>
 
 #define SYNC_ADDR (VGACTL_ADDR + 4)
-const int WIDTH  = 40;
-const int HEIGHT = 40;
-const int VMSIZE = WIDTH * HEIGHT * sizeof(uint32_t);
+static int WIDTH  = 40;
+static int HEIGHT = 40;
 
 void __am_gpu_init() {
   int i;
@@ -16,11 +16,13 @@ void __am_gpu_init() {
 }
 
 void __am_gpu_config(AM_GPU_CONFIG_T *cfg) {
+  int VMSIZE = WIDTH * HEIGHT * sizeof(uint32_t);
   *cfg = (AM_GPU_CONFIG_T) {
     .present = true, .has_accel = false,
     .width = WIDTH, .height = HEIGHT,
     .vmemsz = VMSIZE
   };
+  printf("WIDTH x HEIGHT = %d x %d\n", WIDTH, HEIGHT);
 }
 
 void __am_gpu_fbdraw(AM_GPU_FBDRAW_T *ctl) {
