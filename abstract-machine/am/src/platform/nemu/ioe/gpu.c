@@ -2,16 +2,23 @@
 #include <nemu.h>
 #include <klib.h>
 
+/**
+ * NOTE: VGACTL_ADDR [2B] [2B] [4B]
+ *               LSB  ^    ^   SYNC MSB
+ *             HEIGHT |    | WIDTH
+*/
 #define SYNC_ADDR (VGACTL_ADDR + 4)
-static int WIDTH  = 40;
-static int HEIGHT = 40;
+
+static uint16_t WIDTH = 0;
+static uint16_t HEIGHT = 0;
+static uint16_t VM_SIZE = 0;
 
 void __am_gpu_init() {
-  int i;
-  int w = io_read(AM_GPU_CONFIG).width ;
-  int h = io_read(AM_GPU_CONFIG).height;
+  WIDTH  = inw(VGACTL_ADDR + 2);
+  HEIGHT = inw(VGACTL_ADDR + 0);
+  VM_SIZE = WIDTH * HEIGHT * sizeof(uint32_t);
   uint32_t *fb = (uint32_t *)(uintptr_t)FB_ADDR;
-  for (i = 0; i < w * h; i ++) fb[i] = i;
+  for (uint16_t i = 0; i < WIDTH * HEIGHT; i ++) fb[i] = i;
   outl(SYNC_ADDR, 1);
 }
 
@@ -22,7 +29,7 @@ void __am_gpu_config(AM_GPU_CONFIG_T *cfg) {
     .width = WIDTH, .height = HEIGHT,
     .vmemsz = VMSIZE
   };
-  printf("WIDTH x HEIGHT = %d x %d\n", WIDTH, HEIGHT);
+  printf("AM WIDTH x HEIGHT = %d x %d\n", WIDTH, HEIGHT);
 }
 
 void __am_gpu_fbdraw(AM_GPU_FBDRAW_T *ctl) {
