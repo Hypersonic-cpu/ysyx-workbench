@@ -59,7 +59,7 @@ void __am_gpu_fbdraw(AM_GPU_FBDRAW_T *ctl) {
   for (size_t j = 0; j < ctl->h; j++) {
     // memmove(cur_pos, src_pos, __am_gpu_init_helper(ctl->w)-1);
     for (size_t kk = 0; kk < ctl->w; kk++) {
-      *(cur_pos + kk) = 0x0000ff00;
+      *(cur_pos + kk) = *(src_pos+kk);
     }
     cur_pos += WIDTH;
     src_pos += ctl->w;
