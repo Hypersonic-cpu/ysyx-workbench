@@ -78,6 +78,7 @@ static void frame_trace(vaddr_t jtar, int rd, vaddr_t snpc) {
   // TCO can be detected.
   if (idx < symbols.sym_num) {
     unsigned sp = frames.num++;
+    Assert(frames.num < FTRACE_STACK_SIZE, "ftrace stack overflow");
     rv32_frame* stp = &frames.stack[sp];
     stp->fn = jtar;
     stp->ra = snpc;
