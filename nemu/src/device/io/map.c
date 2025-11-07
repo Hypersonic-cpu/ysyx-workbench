@@ -46,7 +46,7 @@ static void invoke_callback(io_callback_t c, paddr_t offset, int len, bool is_wr
   if (c != NULL) { c(offset, len, is_write); }
 }
 
-#ifdef CONFIG_DEVICE_TRACE
+#ifdef CONFIG_DTRACE_ENABLE
 // NOTE: Negative length for write.
 static void device_trace(paddr_t addr, int len, word_t value, const char* name) {
   unsigned ulen;
