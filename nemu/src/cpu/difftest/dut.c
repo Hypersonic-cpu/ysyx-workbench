@@ -30,6 +30,7 @@ void (*ref_difftest_raise_intr)(uint64_t NO) = NULL;
 
 static bool is_skip_ref = false;
 static int skip_dut_nr_inst = 0;
+static long bin_size;
 
 // this is used to let ref skip instructions which
 // can not produce consistent behavior with NEMU
@@ -61,6 +62,7 @@ void difftest_skip_dut(int nr_ref, int nr_dut) {
 
 void init_difftest(char *ref_so_file, long img_size, int port) {
   assert(ref_so_file != NULL);
+  bin_size = img_size;
 
   void *handle;
   handle = dlopen(ref_so_file, RTLD_LAZY);
@@ -115,6 +117,7 @@ void difftest_step(vaddr_t pc, vaddr_t npc) {
 
   if (skip_dut_nr_inst > 0) {
     ref_difftest_regcpy(&ref_r, DIFFTEST_TO_DUT);
+    ref_difftest_memcpy(RESET_VECTOR, guest_to_host(RESET_VECTOR), bin_size, DIFFTEST_TO_REF);
     if (ref_r.pc == npc) {
       skip_dut_nr_inst = 0;
       checkregs(&ref_r, npc, -1);
