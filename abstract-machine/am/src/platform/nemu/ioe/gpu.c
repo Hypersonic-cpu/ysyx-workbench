@@ -18,7 +18,7 @@ void __am_gpu_init() {
   HEIGHT = inw(VGACTL_ADDR + 0);
   VM_SIZE = WIDTH * HEIGHT * sizeof(uint32_t);
   uint32_t *fb = (uint32_t *)(uintptr_t)FB_ADDR;
-  for (uint16_t i = 0; i < WIDTH * HEIGHT; i ++) fb[i] = i;
+  for (uint16_t i = 0; i < 10000 * WIDTH * HEIGHT; i ++) fb[i] = i;
   outl(SYNC_ADDR, 1);
   printf("AM WIDTH x HEIGHT = %d x %d\n", WIDTH, HEIGHT);
   while (1);
