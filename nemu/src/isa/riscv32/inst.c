@@ -86,7 +86,7 @@ static void frame_trace(vaddr_t jtar, int rd, vaddr_t snpc) {
     for (unsigned i = 10; i < 10 + MUXDEF(CONFIG_RVE, 4, 8); ++i) {
       stp->args[i-10] = R(i);
     }
-    // print_fsingle(stderr, stp, sp, '+', "");
+    print_fsingle(stderr, stp, sp, '+', "");
   } else {
     // Jump to non-symbol places
     if (rd != 0) {
@@ -108,8 +108,8 @@ static void frame_trace(vaddr_t jtar, int rd, vaddr_t snpc) {
         for (unsigned i = frames.num-1U; i != retsrc-1U; --i) {
           // __attribute_maybe_unused__
           // rv32_frame frm = frames.stack[i];
-          // print_fsingle(stderr, &frames.stack[i], i, '-', 
-          //               (i == retsrc ? "" : "[TCO]"));
+          print_fsingle(stderr, &frames.stack[i], i, '-', 
+                        (i == retsrc ? "" : "[TCO]"));
           // printf("-Ret[%3u]\n", i); printf(" frm symt_idx %u\n", frm.symt_idx);
           // spaces_fmt(i);
           // fprintf(stderr, "-Fr[%3d] " FMT_WORD ": %s%s\n", 
