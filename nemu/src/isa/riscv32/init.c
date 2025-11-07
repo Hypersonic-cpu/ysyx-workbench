@@ -60,7 +60,7 @@ void init_elf(const char* elf_file) {
   if (elf_file == NULL) { return; }
 
   int fd = open(elf_file, O_RDONLY);
-  Assert(fd >= 0, "Can not open '%s'", elf_file);
+  Assert(fd >= 0, "Can not open ELF \'%s\'", elf_file);
 
   struct stat st;
   int fs_status = fstat(fd, &st);
