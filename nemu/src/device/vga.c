@@ -16,6 +16,7 @@
 #include <common.h>
 #include <device/map.h>
 #include <device/mmio.h>
+#include <sys/cdefs.h>
 
 #define SCREEN_W (MUXDEF(CONFIG_VGA_SIZE_800x600, 800, 400))
 #define SCREEN_H (MUXDEF(CONFIG_VGA_SIZE_800x600, 600, 300))
@@ -57,7 +58,10 @@ static void init_screen() {
   SDL_RenderPresent(renderer);
 }
 
-static inline void update_screen() {
+// static inline void 
+void 
+__attribute_noinline__
+update_screen() {
   SDL_UpdateTexture(texture, NULL, vmem, SCREEN_W * sizeof(uint32_t));
   SDL_RenderClear(renderer);
   SDL_RenderCopy(renderer, texture, NULL, NULL);
@@ -66,7 +70,10 @@ static inline void update_screen() {
 #else
 static void init_screen() {}
 
-static inline void update_screen() {
+void 
+__attribute_noinline__
+// static inline void 
+update_screen() {
   io_write(AM_GPU_FBDRAW, 0, 0, vmem, screen_width(), screen_height(), true);
 }
 #endif
