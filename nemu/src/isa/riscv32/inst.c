@@ -79,8 +79,7 @@ static void frame_trace(vaddr_t jtar, int rd, vaddr_t snpc) {
       unsigned retsrc = frames.num;
       for (unsigned i = frames.num-1U; i < frames.num; --i) {
         rv32_frame frm = frames.stack[i];
-        // TODO: TCO Detection
-        // A funct call should recover sp and pc
+        // TCO: A funct call should recover sp and pc
         if (R(2) == frm.sp && jtar == frm.ra) {
           retsrc = i;
           // printf("-Ret[%3u]\n", i);
