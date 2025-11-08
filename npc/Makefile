@@ -62,7 +62,6 @@ test:
 runam:
 	$(call git_commit, "run with AM")
 	mill -i $(PRJ).test.testOnly $(PRJ).test.$(TOPNAME)Am 
-	# @echo $(CHISEL_DPIC_MEMPATH)
 
 verilog:
 	$(call git_commit, "generate verilog")
