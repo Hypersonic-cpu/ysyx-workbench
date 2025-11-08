@@ -7,7 +7,7 @@
 #include <verilated.h>
 // #define PRINTF_COND 1
 
-const char PMemFile[] = "/mnt/hgfs/Arch-PA/ysyx-workbench/npc/rvproc/prog-rom/meminit.bin";
+const char PMemFile[] = "/home/kong/ysyx-workbench/npc/rvproc/prog-rom/meminit.bin";
 constexpr size_t PMemSize{ 0x1000'0000U }; // 32 MiB
 static uint32_t pmem_raw[PMemSize >> 2];
 
