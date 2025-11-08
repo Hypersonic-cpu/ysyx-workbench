@@ -25,27 +25,29 @@ void __am_gpu_init() {
 }
 
 void __am_gpu_config(AM_GPU_CONFIG_T *cfg) {
-  // WIDTH  = inw(VGACTL_ADDR + 2);
-  // HEIGHT = inw(VGACTL_ADDR + 0);
-  // VM_SIZE = WIDTH * HEIGHT * sizeof(uint32_t);
+  return; 
+  WIDTH  = inw(VGACTL_ADDR + 2);
+  HEIGHT = inw(VGACTL_ADDR + 0);
+  VM_SIZE = WIDTH * HEIGHT * sizeof(uint32_t);
   *cfg = (AM_GPU_CONFIG_T) {
     .present = true, .has_accel = false,
     .width = WIDTH, .height = HEIGHT,
-    .vmemsz = 0 * VM_SIZE
+    .vmemsz = VM_SIZE
   };
 }
 
 void __am_gpu_fbdraw(AM_GPU_FBDRAW_T *ctl) {
+  return ;
   if (ctl->sync) {
     outl(SYNC_ADDR, 1);
   }
-  // uint32_t* cur_pos = ((uint32_t *)(uintptr_t) FB_ADDR) + ctl->y * WIDTH + ctl->x;
-  // uint32_t* src_pos = (uint32_t *) (ctl->pixels);
-  // for (size_t j = 0; j < ctl->h; j++) {
-  //   memcpy(cur_pos, src_pos, ctl->w * sizeof(uint32_t));
-  //   cur_pos += WIDTH;
-  //   src_pos += ctl->w;
-  // }
+  uint32_t* cur_pos = ((uint32_t *)(uintptr_t) FB_ADDR) + ctl->y * WIDTH + ctl->x;
+  uint32_t* src_pos = (uint32_t *) (ctl->pixels);
+  for (size_t j = 0; j < ctl->h; j++) {
+    memcpy(cur_pos, src_pos, ctl->w * sizeof(uint32_t));
+    cur_pos += WIDTH;
+    src_pos += ctl->w;
+  }
 }
 
 void __am_gpu_status(AM_GPU_STATUS_T *status) {
