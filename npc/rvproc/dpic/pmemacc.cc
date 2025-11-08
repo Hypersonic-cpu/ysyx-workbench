@@ -18,6 +18,17 @@ constexpr auto ValidAccess = [](size_t idx) -> bool {
   return idx < (PMemSize >> 2);
 };
 
+template<typename... Args>
+inline void v_assert(bool cond, const Args&... args) {
+  if (!cond) {
+    std::cerr << "[ASSERT FAILED] " << __FILE__ << ":" << __LINE__ << std::hex;
+    ((std::cerr << args << " "), ...);
+    std::cerr << std::endl;
+    // std::abort();
+    vl_fatal(__FILE__, __LINE__, "BlackBox", "assertion failed");
+  }
+}
+
 namespace rv_device {
   constexpr addr_t SerialAddr{ 0x1000'0000U };
   constexpr addr_t ClockAddr{ 0x1000'0020U };
@@ -111,7 +122,7 @@ pmem_read(uint32_t raddr) {
   } else {
     // Memory
     uint32_t aln_idx = (raddr - BaseAddr) >> 2;
-    assert(ValidAccess(aln_idx) && "PMem out of bound");
+    v_assert(ValidAccess(aln_idx), std::string("Read addr = "), raddr);
     ret = pmem_raw[aln_idx];
   }
 #if PRINTF_COND
@@ -127,7 +138,7 @@ pmem_write(uint32_t waddr, uint32_t wdata, uint8_t wmask) {
     rv_device::write_serial(wdata & 0x3);
   } else {
     uint32_t aln_idx = (waddr - BaseAddr) >> 2;
-    assert(ValidAccess(aln_idx) && "PMem out of bound");
+    v_assert(ValidAccess(aln_idx), std::string("Read addr = "), waddr);
     uint32_t m = 0U;
     for (int i = 0; i < 4; i++) {
       if (wmask & (1 << i)) {
