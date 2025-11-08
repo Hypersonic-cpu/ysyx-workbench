@@ -134,7 +134,7 @@ pmem_read(uint32_t raddr) {
 extern "C" void
 pmem_write(uint32_t waddr, uint32_t wdata, uint8_t wmask) {
   if (rv_device::is_serial_range(waddr)) {
-    assert((wmask & 0x3) == 0x3);
+    v_assert((wmask & 0x1), "Serial write masked out, wmask = ", wmask);
     rv_device::write_serial(wdata & 0x3);
   } else {
     uint32_t aln_idx = (waddr - BaseAddr) >> 2;
