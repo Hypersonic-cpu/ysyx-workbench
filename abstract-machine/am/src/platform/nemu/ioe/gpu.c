@@ -25,7 +25,6 @@ void __am_gpu_init() {
 }
 
 void __am_gpu_config(AM_GPU_CONFIG_T *cfg) {
-  return; 
   WIDTH  = inw(VGACTL_ADDR + 2);
   HEIGHT = inw(VGACTL_ADDR + 0);
   VM_SIZE = WIDTH * HEIGHT * sizeof(uint32_t);
@@ -37,7 +36,6 @@ void __am_gpu_config(AM_GPU_CONFIG_T *cfg) {
 }
 
 void __am_gpu_fbdraw(AM_GPU_FBDRAW_T *ctl) {
-  return ;
   if (ctl->sync) {
     outl(SYNC_ADDR, 1);
   }
