@@ -89,7 +89,7 @@ class MemAccBundle extends Bundle {
   // lenOp =?= None
   val lenOp = MemLenOp()
   val sExt  = Bool()
-  val isLd  = Bool()
+  val isSt  = Bool()
 }
 
 object WbSrcOp extends ChiselEnum {
@@ -202,7 +202,7 @@ class IDU extends Module {
     opName === InstOp.Load || opName === InstOp.Store,
     funct3(1, 0), 0b11.U
   ))
-  io.memAcc.isLd := opName === InstOp.Load 
+  io.memAcc.isSt := instTp === ITYPE.tS
   io.memAcc.sExt := ~funct3(2)
 
   io.regWr  := ~(
@@ -287,7 +287,7 @@ class LSU extends Module {
   )
   iMem.io.memEn := lenOp =/= MemLenOp.None
   // Load and store should not happen together
-  iMem.io.wrEn  := ~io.memAcc.isLd
+  iMem.io.wrEn  := io.memAcc.isSt
 
   val lraw = iMem.io.loadRaw >> (io.addr(1, 0) << 3)
   val sext = io.memAcc.sExt
