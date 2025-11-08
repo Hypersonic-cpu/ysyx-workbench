@@ -18,17 +18,24 @@ class rvCoreAm extends AnyFlatSpec with ChiselScalatestTester {
   "rvCore" should "pass am-kernel" in {
     test (new rvproc.rvCore())
       .withAnnotations(Seq(
-      WriteVcdAnnotation,
+      // WriteVcdAnnotation,
       VerilatorBackendAnnotation,
       VerilatorOpGen.getFlags(true)
     )) { dut =>
-      // dut.io.regPin.poke(10)
-      dut.clock.setTimeout(7000)
+      val timeOut = 0;
+      dut.io.regPin.poke(10)
+      dut.clock.setTimeout(timeOut)
       try {
-        dut.clock.step(6000)
+        // dut.clock.step(timeOut+2)
+        while (true) {
+          dut.clock.step()
+        }
       } catch {
         case e: StopException => {
           println(s"Stop at cycle ${e.cycles}")
+        }
+        case e: TimeoutException => {
+          fail("Time out (dead loop)\n")
         }
       }
     }

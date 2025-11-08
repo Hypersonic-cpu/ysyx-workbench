@@ -1,0 +1,7 @@
+#ifndef __RISCV_NPC_ADDRMAP_H__
+#define __RISCV_NPC_ADDRMAP_H__
+
+#define RV32_NPC_SERIAL  0x10000000
+#define RV32_NPC_CLOCK   0x10000020
+
+#endif // !__RISCV_NPC_ADDRMAP_H__
