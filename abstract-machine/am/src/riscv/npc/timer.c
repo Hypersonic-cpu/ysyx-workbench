@@ -8,7 +8,7 @@ void __am_timer_init() {
 
 void __am_timer_uptime(AM_TIMER_UPTIME_T *uptime) {
   // FIXME: 高低位置不在同一时间读取
-  uptime->us = inl(RV32_NPC_CLOCK+4); // Higher bits
+  uptime->us = 0 & inl(RV32_NPC_CLOCK+4); // Higher bits
   uptime->us <<= 32;
   uptime->us |= inl(RV32_NPC_CLOCK);  // Lower bits
 }
