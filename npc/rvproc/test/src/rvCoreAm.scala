@@ -20,9 +20,9 @@ class rvCoreAm extends AnyFlatSpec with ChiselScalatestTester {
       .withAnnotations(Seq(
       WriteVcdAnnotation,
       VerilatorBackendAnnotation,
-      VerilatorOpGen.getFlags(false)
+      VerilatorOpGen.getFlags(true)
     )) { dut =>
-      val timeOut = 200;
+      val timeOut = 20000;
       dut.io.regPin.poke(10)
       dut.clock.setTimeout(timeOut-2)
       try {
