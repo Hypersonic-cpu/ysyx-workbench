@@ -72,8 +72,9 @@ print_fsingle(FILE* stream, const rv32_frame* frm, unsigned depth,
 
 static void frame_trace(vaddr_t jtar, int rd, vaddr_t snpc) {
   unsigned idx = symbol_which(jtar);
-  // printf("+Jump to addr 0x%8x, symidx %u/%u\n", jtar, idx, symbols.sym_num);
-
+  // TODO: 目前尾递归会导致stack一直增加, 事实上如果有 TCO
+  // 并不会. 可以考虑不增加缩进, 而是直接同depth覆盖, 并输出.
+  //
   // If jumps to a symbol, must be a funct call.
   // TCO can be detected.
   if (idx < symbols.sym_num) {
@@ -87,7 +88,7 @@ static void frame_trace(vaddr_t jtar, int rd, vaddr_t snpc) {
     for (unsigned i = 10; i < 10 + MUXDEF(CONFIG_RVE, 4, 8); ++i) {
       stp->args[i-10] = R(i);
     }
-    print_fsingle(stderr, stp, sp, '+', "");
+    IFNDEF(CONFIG_FTRACE_SILENT, print_fsingle(stderr, stp, sp, '+', ""));
   } else {
     // Jump to non-symbol places
     if (rd != 0) {
@@ -107,15 +108,10 @@ static void frame_trace(vaddr_t jtar, int rd, vaddr_t snpc) {
       }
       if (retsrc < frames.num) {
         for (unsigned i = frames.num-1U; i != retsrc-1U; --i) {
-          // __attribute_maybe_unused__
-          // rv32_frame frm = frames.stack[i];
-          print_fsingle(stderr, &frames.stack[i], i, '-', 
-                        (i == retsrc ? "" : "[TCO]"));
-          // printf("-Ret[%3u]\n", i); printf(" frm symt_idx %u\n", frm.symt_idx);
-          // spaces_fmt(i);
-          // fprintf(stderr, "-Fr[%3d] " FMT_WORD ": %s%s\n", 
-          //        i, frm.fn, symbols.table[frm.symt_idx].name,
-          //        (i == retsrc) ? "" : " (TCO skip)");
+          IFNDEF(CONFIG_FTRACE_SILENT, \
+                 print_fsingle(stderr, &frames.stack[i], i, '-', \
+                                   (i == retsrc ? "" : "[TCO]")) \
+                 );
         }
         // New stack top index is retsrc-1
         frames.num = retsrc;
