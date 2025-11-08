@@ -1,20 +1,54 @@
 #include <cassert>
 #include <cstdint>
 
+#include <cstdio>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <verilated.h>
 // #define PRINTF_COND 1
 
+using addr_t = uint32_t;
 const char PMemFile[] = "/home/kong/ysyx-workbench/npc/rvproc/prog-rom/meminit.bin";
 constexpr size_t PMemSize{ 0x1000'0000U }; // 32 MiB
 static uint32_t pmem_raw[PMemSize >> 2];
 
-constexpr uint32_t BaseAddr{ 0x8000'0000U };
+constexpr addr_t BaseAddr{ 0x8000'0000U };
 constexpr auto ValidAccess = [](size_t idx) -> bool {
   return idx < (PMemSize >> 2);
 };
+
+namespace rv_device {
+  constexpr addr_t SerialAddr{ 0x1000'0000U };
+  constexpr addr_t ClockAddr{ 0x1000'0020U };
+
+  bool is_mem_range(addr_t a) {
+    return a >= BaseAddr;
+  }
+  bool is_clock_range(addr_t a) {
+    return a >= ClockAddr && a < ClockAddr + 8U;
+  }
+  bool is_serial_range(addr_t a) {
+    assert((a & 0x3) == 0);
+    return a == SerialAddr;
+  }
+
+  void write_serial(unsigned char ch) {
+    putchar(ch);
+  }
+
+  uint32_t read_clock(bool hi) {
+    std::ifstream file("/proc/uptime");
+    assert(file.is_open());
+    double uptime_seconds = 0.0;
+    assert(file >> uptime_seconds && "Read uptime failed");
+
+    auto seconds_duration = std::chrono::duration<double>(uptime_seconds);
+    auto micro_duration = std::chrono::duration_cast<std::chrono::microseconds>(seconds_duration);
+    auto micro_i64 = static_cast<uint64_t>(micro_duration.count());
+    return static_cast<uint32_t>(micro_i64 >> (hi ? 32 : 0));
+  }
+}
 
 extern "C" void 
 pmem_init() {
@@ -71,38 +105,49 @@ pmem_read(uint32_t raddr) {
 #if PRINTF_COND
   std::cout << "DPI-C >> pmem_read addr " << std::hex << raddr << std::endl;
 #endif
-  if (raddr == 0) { return 0; }
-  uint32_t aln_idx = (raddr - BaseAddr) >> 2;
-  assert(ValidAccess(aln_idx) && "PMem out of bound");
+  uint32_t ret = 0;
+  if (raddr == 0) { ret = 0; }
+  else if (rv_device::is_clock_range(raddr)) {
+    ret = rv_device::read_clock(raddr & 0x3);
+  } else {
+    // Memory
+    uint32_t aln_idx = (raddr - BaseAddr) >> 2;
+    assert(ValidAccess(aln_idx) && "PMem out of bound");
+    ret = pmem_raw[aln_idx];
+  }
 #if PRINTF_COND
-  std::cout << " ret = " << std::hex << pmem_raw[aln_idx] << std::endl;
+  std::cout << " ret = " << std::hex << ret << std::endl;
 #endif
-  return pmem_raw[aln_idx];
+  return ret;
 }
 
 extern "C" void
 pmem_write(uint32_t waddr, uint32_t wdata, uint8_t wmask) {
-  uint32_t aln_idx = (waddr - BaseAddr) >> 2;
-  assert(ValidAccess(aln_idx) && "PMem out of bound");
-  uint32_t m = 0U;
-  for (int i = 0; i < 4; i++) {
-    if (wmask & (1 << i)) {
-      m |= (0xff << (i * 8));
+  if (rv_device::is_serial_range(waddr)) {
+    assert((wmask & 0x3) == 0x3);
+    rv_device::write_serial(wdata & 0x3);
+  } else {
+    uint32_t aln_idx = (waddr - BaseAddr) >> 2;
+    assert(ValidAccess(aln_idx) && "PMem out of bound");
+    uint32_t m = 0U;
+    for (int i = 0; i < 4; i++) {
+      if (wmask & (1 << i)) {
+        m |= (0xff << (i * 8));
+      }
     }
-  }
-  pmem_raw[aln_idx] = 
-    (pmem_raw[aln_idx] & ~m) | (wdata & m);
-
+    pmem_raw[aln_idx] = 
+      (pmem_raw[aln_idx] & ~m) | (wdata & m);
 #if PRINTF_COND
-  std::cout << "DPI-C >> pmem_write addr" << std::hex << waddr << " : " << wdata << " mask = " << m << std::endl;
-  for (size_t i = 0x100 >> 2; i < (0x100+20) >> 2; i++) {
-    if (i % 4 == 0) {
-      std::cout << std::hex << i << ":\t";
+    std::cout << "DPI-C >> pmem_write addr" << std::hex << waddr << " : " << wdata << " mask = " << m << std::endl;
+    for (size_t i = 0x100 >> 2; i < (0x100+20) >> 2; i++) {
+      if (i % 4 == 0) {
+        std::cout << std::hex << i << ":\t";
+      }
+      std::cout << std::hex << pmem_raw[i] << " ";
+      if (i % 4 == 3) {
+        std::cout << std::endl;
+      }
     }
-    std::cout << std::hex << pmem_raw[i] << " ";
-    if (i % 4 == 3) {
-      std::cout << std::endl;
-    }
-  }
 #endif
+  }
 }
