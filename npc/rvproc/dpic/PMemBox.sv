@@ -28,6 +28,9 @@ module PMemBox(
   reg [31:0] rdata;
 
   always_comb begin
+    $display(memEn);
+    $display(wrEn);
+    $display(addr);
     if (memEn) begin
       rdata = pmem_read(addr);
       if (wrEn) begin
