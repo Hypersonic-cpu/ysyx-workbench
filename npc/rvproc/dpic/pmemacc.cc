@@ -138,7 +138,7 @@ pmem_write(uint32_t waddr, uint32_t wdata, uint8_t wmask) {
     rv_device::write_serial(wdata & 0x3);
   } else {
     uint32_t aln_idx = (waddr - BaseAddr) >> 2;
-    v_assert(ValidAccess(aln_idx), std::string("Read addr = "), waddr);
+    v_assert(ValidAccess(aln_idx), std::string("Write addr = "), waddr);
     uint32_t m = 0U;
     for (int i = 0; i < 4; i++) {
       if (wmask & (1 << i)) {
