@@ -45,7 +45,7 @@ namespace rv_device {
   }
 
   void write_serial(unsigned char ch) {
-    std::cout << "WRITE SERIAL !! \'" << ch << "\'" << std::endl; 
+    // std::cout << "WRITE SERIAL !! \'" << ch << "\'" << std::endl; 
     putchar(ch);
   }
 
