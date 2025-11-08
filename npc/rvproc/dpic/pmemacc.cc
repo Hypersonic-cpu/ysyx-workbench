@@ -21,7 +21,7 @@ constexpr auto ValidAccess = [](size_t idx) -> bool {
 template<typename... Args>
 inline void v_assert(bool cond, const Args&... args) {
   if (!cond) {
-    std::cerr << "[ASSERT FAILED] " << __FILE__ << ":" << __LINE__ << std::hex;
+    std::cerr << "[ASSERT FAILED] " << __FILE__ << ":" << __LINE__ << " " << std::hex;
     ((std::cerr << args << " "), ...);
     std::cerr << std::endl;
     // std::abort();
