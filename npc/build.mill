@@ -37,7 +37,7 @@ object rvproc extends RV32CoreSettings { m =>
   object test extends ScalaTests with TestModule.ScalaTest with ScalafmtModule {
     override def ivyDeps = m.ivyDeps() ++ Agg(
       ivy"org.scalatest::scalatest::3.2.19",
-      ivy"edu.berkeley.cs::chiseltest:6.0.0"
+      ivy"edu.berkeley.cs::chiseltest:6.6.0"
     )
   }
 }
