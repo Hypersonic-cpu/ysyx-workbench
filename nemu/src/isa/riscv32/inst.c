@@ -20,6 +20,7 @@
 #include <cpu/cpu.h>
 #include <cpu/ifetch.h>
 #include <cpu/decode.h>
+#include <sys/cdefs.h>
 
 #define R(i) gpr(i)
 #define Mr vaddr_read
@@ -48,6 +49,7 @@ enum {
   (BITS(i, 11,  8) <<  1) \
   ; } while (0)
 
+__attribute_maybe_unused__
 static inline void spaces_fmt(unsigned i) {
   while (i--) {
     fprintf(stderr, " ");
@@ -55,20 +57,38 @@ static inline void spaces_fmt(unsigned i) {
 }
 
 #ifdef CONFIG_FTRACE_ENABLE
+// prefix = '+' '-' (with indent) or ' ' (without indent)
+static inline void 
+print_fsingle(FILE* stream, const rv32_frame* frm, unsigned depth,
+              char prefix, const char* extra) {
+  if (prefix == '+' || prefix == '-') { spaces_fmt(depth); }
+  fprintf(stream, "%cFr[%3d] 0x%8x: %s%s(", 
+          prefix, depth, frm->fn, symbols.table[frm->symt_idx].name, extra);
+  for (unsigned i = 0; i < MUXDEF(CONFIG_RVE, 4, 8); ++i) {
+    fprintf(stream, MUXDEF(CONFIG_ISA64, "0x%lx, ", "0x%x, "), frm->args[i]);
+  }
+  fprintf(stream, ")\n");
+}
+
 static void frame_trace(vaddr_t jtar, int rd, vaddr_t snpc) {
   unsigned idx = symbol_which(jtar);
-  // printf("+Jump to addr 0x%8x, symidx %u/%u\n", jtar, idx, symbols.sym_num);
-
+  // TODO: 目前尾递归会导致stack一直增加, 事实上如果有 TCO
+  // 并不会. 可以考虑不增加缩进, 而是直接同depth覆盖, 并输出.
+  //
   // If jumps to a symbol, must be a funct call.
   // TCO can be detected.
   if (idx < symbols.sym_num) {
     unsigned sp = frames.num++;
-    frames.stack[sp].fn = jtar;
-    frames.stack[sp].ra = snpc;
-    frames.stack[sp].sp = R(2);
-    frames.stack[sp].symt_idx = idx;
-    spaces_fmt(sp);
-    fprintf(stderr, "+Fr[%3d] 0x%8x: %s\n", sp, jtar, symbols.table[idx].name);
+    Assert(frames.num < FTRACE_STACK_SIZE, "ftrace stack overflow");
+    rv32_frame* stp = &frames.stack[sp];
+    stp->fn = jtar;
+    stp->ra = snpc;
+    stp->sp = R(2);
+    stp->symt_idx = idx;
+    for (unsigned i = 10; i < 10 + MUXDEF(CONFIG_RVE, 4, 8); ++i) {
+      stp->args[i-10] = R(i);
+    }
+    IFNDEF(CONFIG_FTRACE_SILENT, print_fsingle(stderr, stp, sp, '+', ""));
   } else {
     // Jump to non-symbol places
     if (rd != 0) {
@@ -88,17 +108,25 @@ static void frame_trace(vaddr_t jtar, int rd, vaddr_t snpc) {
       }
       if (retsrc < frames.num) {
         for (unsigned i = frames.num-1U; i != retsrc-1U; --i) {
-          rv32_frame frm = frames.stack[i];
-          // printf("-Ret[%3u]\n", i); printf(" frm symt_idx %u\n", frm.symt_idx);
-          spaces_fmt(i);
-          fprintf(stderr, "-Fr[%3d] 0x%8x: %s%s\n", 
-                 i, frm.fn, symbols.table[frm.symt_idx].name,
-                 (i == retsrc) ? "" : " (TCO skip)");
+          IFNDEF(CONFIG_FTRACE_SILENT, \
+                 print_fsingle(stderr, &frames.stack[i], i, '-', \
+                                   (i == retsrc ? "" : "[TCO]")) \
+                 );
         }
         // New stack top index is retsrc-1
         frames.num = retsrc;
       }
     }
+  }
+}
+
+void frame_stack_display() {
+  printf("\n === Frame Stack === \n");
+  for (unsigned i = frames.num-1U; i < frames.num; --i) {
+    const rv32_frame* frm = &frames.stack[i];
+    print_fsingle(stdout, frm, i, ' ', "");
+    // printf(" Fr[%3d] " FMT_WORD ": %s\n", i, frm.fn, 
+    //        symbols.table[frm.symt_idx].name);
   }
 }
 #endif
