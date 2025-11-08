@@ -7,9 +7,11 @@ BUILD_SV_DIR = ./build-sv/$(PRJ)
 # dir for C++ compiled by Verilator
 BUILD_SIM_DIR = ./build-sim/$(PRJ)
 BUILD_OBJ_DIR = $(BUILD_SIM_DIR)/obj_dir
+SRC_DPIC_DIR = $(PRJ)/dpic
 # simulation elf or nvboard elf
 SIM_BIN = $(BUILD_SIM_DIR)/$(PRJ).elf
 
+# if this build involve NV Board 
 WITH_NVBOARD ?= 0
 
 ifeq ($(WITH_NVBOARD),0)
@@ -17,20 +19,20 @@ SIM_CXX_DIR = $(PRJ)/sim-cxx
 else
 SIM_CXX_DIR = $(PRJ)/sim-nvboard
 endif
-# will this build involve NV Board 
-
-## Verilator related
-VERILATOR = verilator
-VERILATOR_COVERAGE = verilator_coverage
-VERILATOR_CFLAGS ?= --trace --trace-fst
-VERILATOR_CFLAGS += -MMD --build -cc  \
-										-O3 --x-assign fast --x-initial fast --noassert
-INCFLAGS = $(addprefix -I, $(INC_PATH))
-CXXFLAGS += $(INCFLAGS) -DTOP_NAME="\"V$(TOPNAME)\""
 
 ## NV Board related 
 NXDC_FILES = $(PRJ)/constr/$(TOPNAME).nxdc
 INC_PATH ?=
+
+## Verilator related
+VERILATOR = verilator
+VERILATOR_COVERAGE = verilator_coverage
+VERILATOR_TRACE ?= --trace --trace-fst --trace-depth 99
+VERILATOR_CFLAGS += $(VERILATOR_TRACE)
+VERILATOR_CFLAGS += -MMD --build -cc  \
+										-O3 --x-assign fast --x-initial fast --noassert
+INCFLAGS = $(addprefix -I, $(INC_PATH))
+CXXFLAGS += $(INCFLAGS) -DTOP_NAME="\"V$(TOPNAME)\""
 
 SRC_AUTO_BIND = $(abspath $(BUILD_SIM_DIR)/auto_bind.cpp)
 $(SRC_AUTO_BIND): $(NXDC_FILES)
@@ -38,6 +40,7 @@ $(SRC_AUTO_BIND): $(NXDC_FILES)
 
 VSRCS = $(shell find $(abspath $(BUILD_SV_DIR)) -name "*.sv" -or -name "*.v")
 CSRCS = $(shell find $(abspath $(SIM_CXX_DIR)) -name "*.cc" -or -name "*.cpp")
+DPISRCS = $(shell find $(abspath $(SRC_DPIC_DIR)) -name "*.cc" -or -name "*.cpp")
 
 ifeq ($(WITH_NVBOARD),0)
 NVB_ARCHIVE=
@@ -62,6 +65,10 @@ test:
 runam:
 	$(call git_commit, "run with AM")
 	mill -i $(PRJ).test.testOnly $(PRJ).test.$(TOPNAME)Am 
+
+runcc: $(SIM_BIN)
+	$(call git_commit, "run with AM via verilator cc")
+	$(SIM_BIN)
 
 verilog:
 	$(call git_commit, "generate verilog")
