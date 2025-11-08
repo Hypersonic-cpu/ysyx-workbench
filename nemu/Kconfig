@@ -161,6 +161,11 @@ config FTRACE_ENABLE
   bool "Enable frame stack trace"
   default n
 
+config FTRACE_SILENT
+  depends on FTRACE_ENABLE
+  bool "Silent ftrace unless fault encountered"
+  default n
+
 config DTRACE_ENABLE
   depends on TRACE && TARGET_NATIVE_ELF && ENGINE_INTERPRETER
   bool "Enable device tracing"
