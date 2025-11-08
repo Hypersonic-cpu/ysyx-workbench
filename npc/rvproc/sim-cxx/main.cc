@@ -33,7 +33,7 @@ main() {
   top->trace(tfp, 99);
   // tfp->dumpvars(1, "t"); // trace 1 level under "t"
   //
-  tfp->open("/mnt/hgfs/Arch-PA/ysyx-workbench/npc/build-sim/rvproc/logs/jalr.log");
+  tfp->open("/home/kong/ysyx-workbench/npc/build-sim/rvproc/logs/jalr.log");
   
   // int passed = 0;
   // int failed = 0;

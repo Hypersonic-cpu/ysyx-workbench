@@ -6,7 +6,7 @@ import chisel3.util._
 // import firrtl.annotations.MemoryLoadFileType
 
 object PATH {
-  val dpicPath = "/mnt/hgfs/Arch-PA/ysyx-workbench/npc/rvproc/dpic/"
+  val dpicPath = "/home/kong/ysyx-workbench/npc/rvproc/dpic/"
   def dpic(s: String) = java.nio.file.Paths.get(dpicPath, s).toString()
 }
 

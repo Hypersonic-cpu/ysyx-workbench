@@ -18,8 +18,8 @@ object IntCvt {
 }
 
 object PathCfg {
-  def workDir() = "/mnt/hgfs/Arch-PA/ysyx-workbench/npc/rvproc"
-  def vltDir() =  "/mnt/hgfs/Arch-PA/ysyx-workbench/build-sim/rvproc/obj_dir"
+  def workDir() = "/home/kong/ysyx-workbench/npc/rvproc"
+  def vltDir() =  "/home/kong/ysyx-workbench/build-sim/rvproc/obj_dir"
   def hexDir() = workDir() + "/prog-rom"
   def dpiDir() = workDir() + "/dpic"
   def hexFile(s: String) = file.Paths.get(hexDir(), s).toString()
