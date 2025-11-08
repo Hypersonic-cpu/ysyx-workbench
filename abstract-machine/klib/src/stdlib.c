@@ -44,8 +44,8 @@ void *malloc(size_t size) {
     ma_ptr = heap.start;
   }
   void* ret = ma_ptr;
-  ma_ptr += (size+7) / 8 * 8;
-  return ret;
+  ma_ptr += (size/8+1) * 8;
+  return ret >= heap.end ? NULL: ret;
 #endif
   return NULL;
 }
