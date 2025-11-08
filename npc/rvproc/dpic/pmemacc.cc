@@ -137,7 +137,7 @@ extern "C" void
 pmem_write(uint32_t waddr, uint32_t wdata, uint8_t wmask) {
   if (rv_device::is_serial_range(waddr)) {
     v_assert((wmask & 0x1), "Serial write masked out, wmask = ", wmask);
-    rv_device::write_serial(wdata & 0x3);
+    rv_device::write_serial(wdata & 0xff);
   } else {
     uint32_t aln_idx = (waddr - BaseAddr) >> 2;
     v_assert(ValidAccess(aln_idx), std::string("Write addr = "), waddr);
