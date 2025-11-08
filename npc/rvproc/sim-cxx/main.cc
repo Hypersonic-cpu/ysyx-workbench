@@ -52,9 +52,8 @@ main(int argc, char* argv[]) {
 
   constexpr size_t MaxCyc{ 30U };
   size_t currCyc{ 1U };
-  while (currCyc < MaxCyc) {
+  while (true || currCyc < MaxCyc) {
     single_cycle(top, contextp);
-
     currCyc++;
   }
   top->final();
