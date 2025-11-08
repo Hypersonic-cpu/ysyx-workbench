@@ -306,10 +306,10 @@ class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
       .withAnnotations(Seq(
         // WriteVcdAnnotation,
         VerilatorBackendAnnotation,
-        VerilatorOpGen.getFlags(true),
+        VerilatorOpGen.getFlags(false),
       )
     ) { dut =>
-      val timeOut = 20000;
+      val timeOut = 200;
       dut.io.regPin.poke(10)
       dut.clock.setTimeout(timeOut-2)
       try {
@@ -317,6 +317,9 @@ class rvCoreSpec extends AnyFlatSpec with ChiselScalatestTester {
       } catch {
         case e: StopException => {
           println(s"Stop at cycle ${e.cycles}")
+        }
+        case e: TimeoutException => {
+          fail("Time out (dead loop)\n")
         }
       }
     }
