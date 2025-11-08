@@ -2,11 +2,12 @@ package rvproc
 
 import chisel3._
 import chisel3.util._
+import chisel3.assert.Assert
 // import chisel3.util.experimental.loadMemoryFromFileInline
 // import firrtl.annotations.MemoryLoadFileType
 
 object PATH {
-  val dpicPath = "/mnt/hgfs/Arch-PA/ysyx-workbench/npc/rvproc/dpic/"
+  val dpicPath = "/home/kong/ysyx-workbench/npc/rvproc/dpic/"
   def dpic(s: String) = java.nio.file.Paths.get(dpicPath, s).toString()
 }
 
@@ -89,7 +90,7 @@ class MemAccBundle extends Bundle {
   // lenOp =?= None
   val lenOp = MemLenOp()
   val sExt  = Bool()
-  val isLd  = Bool()
+  val isSt  = Bool()
 }
 
 object WbSrcOp extends ChiselEnum {
@@ -123,13 +124,6 @@ class RegFile extends Module {
   }
 }
 
-/** NOTE: 3 Nov 2025
-  *  放弃把 Control 单独放在一个 unit 的想法. 因为
-  *  Ctrl 仍然需要输入 inst, 不能直接获得 IDU 的输出.
-  *  所以把 Ctrl 集成进入 IDU 更加合适. pcSel 由 WBU
-  *  根据 pcJmp 和 branch result 生成.
-  */
-
 class IDU extends Module {
   val io = IO(new Bundle {
     val inst   = Input(Tp.InstType())
@@ -150,10 +144,10 @@ class IDU extends Module {
   val funct3 = io.inst(14, 12)
   val funct7 = io.inst(31, 25)
   val rvBase  = opcode(1, 0) === 0b11.U(2.W)
-  assert(rvBase, cf"Inst[1:0] is not 0b11: opcode=${opcode}%x")
+  // assert(rvBase, cf"Inst[1:0] is not 0b11: opcode=${opcode}%x")
 
   val (opName, opValid) = InstOp.safe(opcode(6, 2))
-  assert(opValid, cf"Invalid opcode encountered: opcode=${opcode}%x")
+  // assert(clock, opValid, reset, None, Some(cf"Invalid opcode encountered: opcode=${opcode}%x"))
   // val isEbreak = sysOp && io.inst(20)
   // val isEcall  = sysOp && (~io.inst(20))
   val isEbreak = opName === InstOp.System && io.inst(20)
@@ -202,7 +196,7 @@ class IDU extends Module {
     opName === InstOp.Load || opName === InstOp.Store,
     funct3(1, 0), 0b11.U
   ))
-  io.memAcc.isLd := opName === InstOp.Load 
+  io.memAcc.isSt := instTp === ITYPE.tS
   io.memAcc.sExt := ~funct3(2)
 
   io.regWr  := ~(
@@ -287,7 +281,7 @@ class LSU extends Module {
   )
   iMem.io.memEn := lenOp =/= MemLenOp.None
   // Load and store should not happen together
-  iMem.io.wrEn  := ~io.memAcc.isLd
+  iMem.io.wrEn  := io.memAcc.isSt
 
   val lraw = iMem.io.loadRaw >> (io.addr(1, 0) << 3)
   val sext = io.memAcc.sExt

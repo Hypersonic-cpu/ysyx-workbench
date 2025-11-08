@@ -30,4 +30,8 @@ run: insert-arg
 	@ln -sfn $(IMAGE).bin $(CHISEL_DPIC_MEMPATH)
 	@$(MAKE) -C $(NPC_HOME) runam
 
+runcc: insert-arg
+	@ln -sfn $(IMAGE).bin $(CHISEL_DPIC_MEMPATH)
+	@$(MAKE) -C $(NPC_HOME) runcc
+
 .PHONY: insert-arg
