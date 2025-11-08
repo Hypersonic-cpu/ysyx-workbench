@@ -1,11 +1,14 @@
 #include <cassert>
+#include <chrono>
 #include <cstdint>
 
 #include <cstdio>
+#include <ctime>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <ostream>
+#include <ratio>
 #include <verilated.h>
 // #define PRINTF_COND 1
 
@@ -51,19 +54,34 @@ namespace rv_device {
     putchar(ch);
   }
 
-  uint32_t read_clock(bool hi) {
-    std::ifstream file("/proc/uptime");
-    assert(file.is_open());
-    double uptime_seconds = 0.0;
-    assert(file >> uptime_seconds && "Read uptime failed");
+  inline std::chrono::microseconds 
+  get_uptime() {
+    using std::chrono::duration_cast;
+    using std::chrono::seconds;
+    using std::chrono::milliseconds;
+    using std::chrono::nanoseconds;
+    std::timespec ts;
+    clock_gettime(CLOCK_BOOTTIME, &ts);
+    
+    return duration_cast<milliseconds>(
+      seconds(ts.tv_sec) + nanoseconds(ts.tv_nsec));
+  }
 
-    auto seconds_duration = std::chrono::duration<double>(uptime_seconds);
-    auto micro_duration = std::chrono::duration_cast<std::chrono::microseconds>(seconds_duration);
-    auto micro_i64 = static_cast<uint64_t>(micro_duration.count());
-#ifdef PRINTF_COND
-    std::cout << std::endl << "READ CLOCK !! \'" << micro_i64 << "\'" << std::endl; 
-#endif // PRINTF_COND
-    return static_cast<uint32_t>(micro_i64 >> (hi ? 32 : 0));
+  uint32_t read_clock(bool hi) {
+    return static_cast<uint64_t>(get_uptime().count()) >> 
+      (hi ? 32ULL : 0ULL);
+//     std::ifstream file("/proc/uptime");
+//     assert(file.is_open());
+//     double uptime_seconds = 0.0;
+//     assert(file >> uptime_seconds && "Read uptime failed");
+//
+//     auto seconds_duration = std::chrono::duration<double>(uptime_seconds);
+//     auto micro_duration = std::chrono::duration_cast<std::chrono::microseconds>(seconds_duration);
+//     auto micro_i64 = static_cast<uint64_t>(micro_duration.count());
+// #ifdef PRINTF_COND
+//     std::cout << std::endl << "READ CLOCK !! \'" << micro_i64 << "\'" << std::endl; 
+// #endif // PRINTF_COND
+//     return static_cast<uint32_t>(micro_i64 >> (hi ? 32 : 0));
   }
 }
 
