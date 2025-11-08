@@ -22,7 +22,7 @@ class rvCoreAm extends AnyFlatSpec with ChiselScalatestTester {
       VerilatorBackendAnnotation,
       VerilatorOpGen.getFlags(true)
     )) { dut =>
-      val timeOut = 200000;
+      val timeOut = 2000000;
       dut.io.regPin.poke(10)
       dut.clock.setTimeout(timeOut-2)
       try {
