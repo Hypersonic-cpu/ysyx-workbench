@@ -22,11 +22,11 @@ class rvCoreAm extends AnyFlatSpec with ChiselScalatestTester {
       VerilatorBackendAnnotation,
       VerilatorOpGen.getFlags(false)
     )) { dut =>
-      val timeOut = 500000;
+      val timeOut = 0;
       dut.io.regPin.poke(10)
-      dut.clock.setTimeout(timeOut-2)
+      dut.clock.setTimeout(timeOut)
       try {
-        dut.clock.step(timeOut)
+        dut.clock.step(timeOut+2)
       } catch {
         case e: StopException => {
           println(s"Stop at cycle ${e.cycles}")
