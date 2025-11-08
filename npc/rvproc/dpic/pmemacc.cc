@@ -58,6 +58,7 @@ namespace rv_device {
     auto seconds_duration = std::chrono::duration<double>(uptime_seconds);
     auto micro_duration = std::chrono::duration_cast<std::chrono::microseconds>(seconds_duration);
     auto micro_i64 = static_cast<uint64_t>(micro_duration.count());
+    std::cout << std::endl << "READ CLOCK !! \'" << micro_i64 << "\'" << std::endl; 
     return static_cast<uint32_t>(micro_i64 >> (hi ? 32 : 0));
   }
 }
