@@ -40,7 +40,7 @@ $(SRC_AUTO_BIND): $(NXDC_FILES)
 
 VSRCS = $(shell find $(abspath $(BUILD_SV_DIR)) -name "*.sv" -or -name "*.v")
 CSRCS = $(shell find $(abspath $(SIM_CXX_DIR)) -name "*.cc" -or -name "*.cpp")
-DPISRCS = $(shell find $(abspath $(SRC_DPIC_DIR)) -name "*.cc" -or -name "*.cpp")
+DPIC_SRCS = $(shell find $(abspath $(SRC_DPIC_DIR)) -name "*.cc" -or -name "*.cpp")
 
 ifeq ($(WITH_NVBOARD),0)
 NVB_ARCHIVE=
@@ -54,7 +54,7 @@ endif
 $(SIM_BIN): $(VSRCS) $(CSRCS) $(NVB_ARCHIVE)
 	@rm -rf $(BUILD_OBJ_DIR)
 	$(VERILATOR) $(VERILATOR_CFLAGS) \
-		--top-module $(TOPNAME) $^ \
+		--top-module $(TOPNAME) $^ $(DPIC_SRCS) \
 		$(addprefix -CFLAGS , $(CXXFLAGS)) $(addprefix -LDFLAGS , $(LDFLAGS)) \
 		--Mdir $(BUILD_OBJ_DIR) --exe -o $(abspath $(SIM_BIN))
 
@@ -66,7 +66,7 @@ runam:
 	$(call git_commit, "run with AM")
 	mill -i $(PRJ).test.testOnly $(PRJ).test.$(TOPNAME)Am 
 
-runcc: $(SIM_BIN)
+runcc: verilate verilog $(SIM_BIN)
 	$(call git_commit, "run with AM via verilator cc")
 	$(SIM_BIN)
 
@@ -99,9 +99,9 @@ verilate:
 	@mkdir -p $(BUILD_OBJ_DIR)
 	@mkdir -p $(BUILD_SIM_DIR)
 
-sim: verilate verilog $(SIM_BIN)
-	$(call git_commit, "sim RTL") # DO NOT REMOVE THIS LINE!!!
-	$(SIM_BIN)
+# sim: verilate verilog $(SIM_BIN)
+# 	$(call git_commit, "sim RTL") # DO NOT REMOVE THIS LINE!!!
+# 	$(SIM_BIN)
 
 -include ../Makefile
 
