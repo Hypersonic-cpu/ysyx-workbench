@@ -150,10 +150,10 @@ class IDU extends Module {
   val funct3 = io.inst(14, 12)
   val funct7 = io.inst(31, 25)
   val rvBase  = opcode(1, 0) === 0b11.U(2.W)
-  chisel3.assert(rvBase, cf"Inst[1:0] is not 0b11: opcode=${opcode}%x")
+  chisel3.assert(rvBase, "Inst[1:0] is not 0b11")
 
   val (opName, opValid) = InstOp.safe(opcode(6, 2))
-  chisel3.assert(opValid, cf"Invalid opcode encountered: opcode=${opcode}%x")
+  chisel3.assert(opValid, "Invalid opcode encountered")
   // val isEbreak = sysOp && io.inst(20)
   // val isEcall  = sysOp && (~io.inst(20))
   val isEbreak = opName === InstOp.System && io.inst(20)
