@@ -1,5 +1,4 @@
 #include <am.h>
-#include <cstdint>
 #include <klib-macros.h>
 
 #include "addrmap.h"
