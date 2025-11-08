@@ -5,6 +5,7 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <ostream>
 #include <verilated.h>
 // #define PRINTF_COND 1
 
@@ -44,6 +45,7 @@ namespace rv_device {
   }
 
   void write_serial(unsigned char ch) {
+    std::cout << "WRITE SERIAL !! \'" << ch << "\'" << std::endl; 
     putchar(ch);
   }
 
