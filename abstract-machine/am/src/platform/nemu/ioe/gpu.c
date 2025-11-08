@@ -13,21 +13,20 @@ static uint16_t WIDTH = 0;
 static uint16_t HEIGHT = 0;
 static uint16_t VM_SIZE = 0;
 
-int
-__attribute_maybe_unused__
-__attribute__((noinline))
-__am_gpu_init_helper(int i) {
-  return i + 1;
-}
+// int
+// __attribute_maybe_unused__
+// __attribute__((noinline))
+// __am_gpu_init_helper(int i) {
+//   return i + 1;
+// }
 
 void __am_gpu_init() {
-  WIDTH  = inw(VGACTL_ADDR + 2);
-  HEIGHT = inw(VGACTL_ADDR + 0);
-  VM_SIZE = WIDTH * HEIGHT * sizeof(uint32_t);
   // outl(SYNC_ADDR, 1);
 }
 
 void __am_gpu_config(AM_GPU_CONFIG_T *cfg) {
+  WIDTH  = inw(VGACTL_ADDR + 2);
+  HEIGHT = inw(VGACTL_ADDR + 0);
   VM_SIZE = WIDTH * HEIGHT * sizeof(uint32_t);
   *cfg = (AM_GPU_CONFIG_T) {
     .present = true, .has_accel = false,

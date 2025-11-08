@@ -66,8 +66,12 @@ int vsnprintf(char *out, size_t n, const char *fmt, va_list ap) {
         fmt++;
       }
 
+      unsigned intbase = 10;
       switch (*fmt++) {
-        case 'd': 
+        case 'x':
+          intbase = 16;
+          // Fall through
+        case 'd':
           {
             int outv = va_arg(ap, int);
             // int64_t have 20 digits at most (including neg sign)
@@ -81,8 +85,12 @@ int vsnprintf(char *out, size_t n, const char *fmt, va_list ap) {
               outv = -outv;
             }
             do {
-              outbuf[bufptr++] = (outv % 10) + '0';
-              outv /= 10;
+              if (outv % intbase < 10) {
+                outbuf[bufptr++] = (outv % intbase) + '0';
+              } else {
+                outbuf[bufptr++] = (outv % intbase) - 10 + 'a';
+              }
+              outv /= intbase;
             } while (outv);
 
             // After this buffptr == width ([0] .. [width-1])

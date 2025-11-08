@@ -3,6 +3,7 @@
 
 #include "isa-def.h"
 #include "common.h"
+#include "macro.h"
 #include "debug.h"
 
 #define SYM_TABLE_ENT 240
@@ -27,6 +28,7 @@ typedef struct {
   vaddr_t fn; // PC that matches the symbol table
   vaddr_t sp; // Stack pointer
   unsigned symt_idx; // sym table index
+  word_t args[MUXDEF(CONFIG_RVE, 4, 8)];
 } rv32_frame;
 
 __attribute_used__

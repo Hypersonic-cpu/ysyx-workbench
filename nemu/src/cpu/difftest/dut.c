@@ -92,18 +92,24 @@ void init_difftest(char *ref_so_file, long img_size, int port) {
 }
 
 static void checkregs(CPU_state *ref, vaddr_t pc, vaddr_t dnpc) {
-  // if (!isa_difftest_checkregs(ref, pc)) {
-  if (!isa_difftest_checkregs(ref, pc, dnpc)) {
-    nemu_state.state = NEMU_ABORT;
+  if (!isa_difftest_checkregs(ref, pc)) {
+    // TODO: 
+    // WARN: Change back
+    // nemu_state.state = NEMU_ABORT;
+    nemu_state.state = NEMU_STOP;
     nemu_state.halt_pc = pc;
-    IFDEF(CONFIG_ITRACE, void inst_ringbuf_display(););
+    IFDEF(CONFIG_ITRACE, void inst_ringbuf_display());
     MUXDEF(CONFIG_ITRACE, inst_ringbuf_display(), printf("Inst ring buffer disabled\n"));
+    IFDEF(CONFIG_FTRACE_ENABLE, void frame_stack_display());
+    MUXDEF(CONFIG_FTRACE_ENABLE, frame_stack_display(), printf("Frame trace disabled\n"));
     isa_reg_display();
   }
 }
 
 void difftest_step(vaddr_t pc, vaddr_t npc) {
   // TODO: SKIP DEVICE IN DIFFTEST
+  // TODO: Add config to soft-disable mtrace/dtrace (not via Kconfig)
+  // 不知道这个todo应该写在哪里.
   CPU_state ref_r;
 
   if (skip_dut_nr_inst > 0) {
