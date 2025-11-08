@@ -143,7 +143,7 @@ pmem_read(uint32_t raddr) {
   uint32_t ret = 0;
   if (raddr == 0) { ret = 0; }
   else if (rv_device::is_clock_range(raddr)) {
-    ret = rv_device::read_clock(raddr & 0x3);
+    ret = rv_device::read_clock(raddr != rv_device::ClockAddr);
   } else {
     // Memory
     uint32_t aln_idx = (raddr - BaseAddr) >> 2;
