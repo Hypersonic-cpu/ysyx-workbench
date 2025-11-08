@@ -52,7 +52,7 @@ main(int argc, char* argv[]) {
 
   constexpr size_t MaxCyc{ 30U };
   size_t currCyc{ 1U };
-  while (true || currCyc < MaxCyc) {
+  while (!contextp->gotFinish()) {
     single_cycle(top, contextp);
     currCyc++;
   }
