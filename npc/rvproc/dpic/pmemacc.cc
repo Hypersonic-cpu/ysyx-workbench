@@ -29,7 +29,6 @@ namespace rv_device {
     return a >= ClockAddr && a < ClockAddr + 8U;
   }
   bool is_serial_range(addr_t a) {
-    assert((a & 0x3) == 0);
     return a == SerialAddr;
   }
 
