@@ -28,13 +28,15 @@ module PMemBox(
   reg [31:0] rdata;
 
   always_comb begin
-    $display(memEn);
-    $display(wrEn);
-    $display(addr);
+    // $display(memEn);
+    // $display(wrEn);
+    // $display(addr);
     if (memEn) begin
-      rdata = pmem_read(addr);
+      rdata = 0;
       if (wrEn) begin
         pmem_write(addr, data, byteMask);
+      end else begin
+        rdata = pmem_read(addr);
       end
     end
     else begin
