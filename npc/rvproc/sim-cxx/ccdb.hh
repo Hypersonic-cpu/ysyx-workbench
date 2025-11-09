@@ -9,7 +9,16 @@
 #include <utility>
 #include "VrvCore.h"
 #include "VrvCore___024root.h"
+
 #include "pmemacc.hh"
+#include "disasm.hh"
+
+namespace cfmt {
+  std::ostream& sout32(std::ostream& os) {
+    os << "0x" << std::setfill('0') << std::setw(8) << std::hex;
+    return os;
+  }
+}
 
 namespace ccdb {
   // enum class RegIdx : uint8_t {
@@ -52,9 +61,9 @@ namespace ccdb {
     return dpic::pmem_probe(addr);
   }
 
-  std::ostream& sout32(std::ostream& os) {
-    os << "0x" << std::setfill('0') << std::setw(8) << std::hex;
-    return os;
+  void 
+  trace_init() {
+    init_disasm();
   }
 
   void 
@@ -62,7 +71,7 @@ namespace ccdb {
     auto [v, inst] = read_mem(pc);
     assert(v && "ccdb inst read fail");
 
-    sout32(std::cerr) << pc << " : ";
-    sout32(std::cerr) << inst << std::endl;
+    cfmt::sout32(std::cerr) << pc << " : ";
+    cfmt::sout32(std::cerr) << inst << std::endl;
   }
 }
