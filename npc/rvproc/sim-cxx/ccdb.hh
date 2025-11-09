@@ -44,7 +44,9 @@ namespace ccdb {
   }
 
   std::pair<bool, uint32_t>
-  read_mem(ptop_t top, uint32_t addr) {
+  read_mem(uint32_t addr) {
     return dpic::pmem_probe(addr);
   }
+
+  void inst_trace(uint32_t);
 }
