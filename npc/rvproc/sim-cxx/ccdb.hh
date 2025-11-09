@@ -50,7 +50,7 @@ namespace ccdb {
     return dpic::pmem_probe(addr);
   }
 
-  void inst_trace(uint32_t) {
+  void inst_trace(uint32_t pc) {
     auto [v, inst] = read_mem(pc);
     assert(v && "ccdb inst read fail");
 
