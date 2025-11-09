@@ -68,12 +68,12 @@ main(int argc, char* argv[]) {
     currCyc++;
   }
   for (uint8_t i = 0; i < 16; ++i) {
-    auto res = ccdb::read_reg(top, i);
+    auto [v, res] = ccdb::read_reg(top, i);
     std::cerr << "Reg [" << std::setw(2) << std::dec << i <<
       "] : 0x" << std::hex << std::setw(8) << res << std::endl;
   }
   {
-    auto res = ccdb::read_reg(top, 0xff);
+    auto [v, res] = ccdb::read_reg(top, 0xff);
     std::cerr << "Reg [PC] : 0x" << std::hex << std::setw(8) << res << std::endl;
   }
   top->final();
