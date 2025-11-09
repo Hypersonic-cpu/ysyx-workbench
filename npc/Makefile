@@ -22,7 +22,7 @@ endif
 
 ## NV Board related 
 NXDC_FILES = $(PRJ)/constr/$(TOPNAME).nxdc
-INC_PATH ?= $(PRJ)/dpic
+INC_PATH ?= ./$(PRJ)/dpic
 
 ## Verilator related
 VERILATOR = verilator
