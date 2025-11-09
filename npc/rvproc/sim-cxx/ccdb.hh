@@ -72,6 +72,14 @@ namespace ccdb {
     assert(v && "ccdb inst read fail");
 
     cfmt::sout32(std::cerr) << pc << " : ";
-    cfmt::sout32(std::cerr) << inst << std::endl;
+    cfmt::sout32(std::cerr) << inst << " ";
+
+    constexpr size_t BufferLen{ 256U };
+    char buf[BufferLen] = {0};
+    void disassemble(char *str, int size, uint64_t pc, uint8_t *code, int nbyte);
+    disassemble(buf, BufferLen-1, pc, (uint8_t*) (&inst), 4);
+
+    std::cerr << std::string(buf);
+    std::cerr << std::endl;
   }
 }
