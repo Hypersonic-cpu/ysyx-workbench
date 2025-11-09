@@ -10,6 +10,8 @@
 !*.sv
 !*.cpp
 !*.cc
+!*.hh
+!*.hpp
 !.gitignore
 !.scalafmt.conf
 !README.md

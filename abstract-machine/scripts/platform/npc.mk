@@ -34,4 +34,7 @@ runcc: insert-arg
 	@ln -sfn $(IMAGE).bin $(CHISEL_DPIC_MEMPATH)
 	@$(MAKE) -C $(NPC_HOME) runcc
 
+cleancc: 
+	@$(MAKE) -C $(NPC_HOME) clean
+
 .PHONY: insert-arg

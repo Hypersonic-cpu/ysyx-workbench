@@ -22,7 +22,7 @@ endif
 
 ## NV Board related 
 NXDC_FILES = $(PRJ)/constr/$(TOPNAME).nxdc
-INC_PATH ?=
+INC_PATH ?= $(abspath $(PRJ))/dpic
 
 ## Verilator related
 VERILATOR = verilator
@@ -32,7 +32,13 @@ VERILATOR_CFLAGS += $(VERILATOR_TRACE) -DPRINTF_COND=0
 VERILATOR_CFLAGS += -MMD --build -cc  \
 										-O3 --x-assign fast --x-initial fast --noassert
 INCFLAGS = $(addprefix -I, $(INC_PATH))
-CXXFLAGS += $(INCFLAGS) -DTOP_NAME="\"V$(TOPNAME)\"" -std=c++20
+CXXFLAGS += $(INCFLAGS) -DTOP_NAME="\"V$(TOPNAME)\"" -std=c++20 
+
+# capstone
+LIBCAPSTONE = $(NEMU_HOME)/tools/capstone/repo/libcapstone.so.5
+CXXFLAGS += -I$(NEMU_HOME)/tools/capstone/repo/include
+$(LIBCAPSTONE):
+	$(MAKE) -C tools/capstone
 
 SRC_AUTO_BIND = $(abspath $(BUILD_SIM_DIR)/auto_bind.cpp)
 $(SRC_AUTO_BIND): $(NXDC_FILES)
@@ -66,7 +72,7 @@ runam:
 	$(call git_commit, "run with AM")
 	mill -i $(PRJ).test.testOnly $(PRJ).test.$(TOPNAME)Am 
 
-runcc: verilate verilog $(SIM_BIN)
+runcc: verilate verilog $(LIBCAPSTONE) $(SIM_BIN)
 	$(call git_commit, "run with AM via verilator cc")
 	$(SIM_BIN)
 

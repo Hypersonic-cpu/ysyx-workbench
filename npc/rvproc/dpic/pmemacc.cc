@@ -1,3 +1,5 @@
+#include "pmemacc.hh"
+
 #include <cassert>
 #include <chrono>
 #include <cstdint>
@@ -9,6 +11,8 @@
 #include <iostream>
 #include <ostream>
 #include <ratio>
+#include <sys/types.h>
+#include <utility>
 #include <verilated.h>
 // #define PRINTF_COND 1
 
@@ -185,4 +189,15 @@ pmem_write(uint32_t waddr, uint32_t wdata, uint8_t wmask) {
     }
 #endif
   }
+}
+
+std::pair<bool, uint32_t>
+dpic::pmem_probe(uint32_t addr) {
+  uint32_t aln_idx = (addr - BaseAddr) >> 2;
+  bool valid = ValidAccess(aln_idx);
+  uint32_t ret = 0;
+  if (valid) {
+    ret = pmem_raw[aln_idx];
+  }
+  return std::make_pair(valid, ret);
 }
