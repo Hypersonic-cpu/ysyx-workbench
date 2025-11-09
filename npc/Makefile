@@ -30,7 +30,7 @@ VERILATOR_COVERAGE = verilator_coverage
 VERILATOR_TRACE ?= --trace --trace-fst --trace-depth 99
 VERILATOR_CFLAGS += $(VERILATOR_TRACE) -DPRINTF_COND=0
 VERILATOR_CFLAGS += -MMD --build -cc  \
-										-O3 --x-assign fast --x-initial fast --noassert \
+										-O3 --x-assign fast --x-initial fast --noassert
 INCFLAGS = $(addprefix -I, $(INC_PATH))
 CXXFLAGS += $(INCFLAGS) -DTOP_NAME="\"V$(TOPNAME)\"" -std=c++20 -Wall -Werror
 
