@@ -4,6 +4,8 @@
 #include <algorithm>
 #include <iomanip>
 #include <iostream>
+#include <iterator>
+#include <ostream>
 #include <utility>
 #include "VrvCore.h"
 #include "VrvCore___024root.h"
@@ -50,11 +52,17 @@ namespace ccdb {
     return dpic::pmem_probe(addr);
   }
 
-  void inst_trace(uint32_t pc) {
+  std::ostream& sout32(std::ostream& os) {
+    os << "0x" << std::setfill('0') << std::setw(8) << std::hex;
+    return os;
+  }
+
+  void 
+  inst_trace(uint32_t pc) {
     auto [v, inst] = read_mem(pc);
     assert(v && "ccdb inst read fail");
 
-    std::cerr << "0x" << std::setw(8) << std::hex << pc << " : ";
-    std::cerr << "0x" << std::setw(8) << std::hex << inst << std::endl;
+    sout32(std::cerr) << pc << " : ";
+    sout32(std::cerr) << inst << std::endl;
   }
 }
