@@ -79,7 +79,7 @@ main(int argc, char* argv[]) {
   {
     for (uint32_t i = 0; i < 16; i += 4) {
       auto [v, res] = ccdb::read_mem(top, 0x8000'0000U + i);
-      std::cerr << std::hex << res << " ";
+      std::cerr << std::hex << std::setfill('0') << std::setw(8) << res << " ";
     }
     std::cerr << std::endl;
   }
