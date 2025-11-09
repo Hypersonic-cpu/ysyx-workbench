@@ -7,7 +7,6 @@
 #include <verilated_fst_c.h>
 
 #include "VrvCore.h"
-#include "ccdb.hh"
 
 inline void 
 single_cycle(
