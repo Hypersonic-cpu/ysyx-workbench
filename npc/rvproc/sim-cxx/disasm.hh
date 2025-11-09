@@ -22,7 +22,7 @@ void init_disasm() {
   auto nemu_path = std::string(std::getenv("NEMU_HOME"));
 
   void *dl_handle;
-  dl_handle = dlopen("tools/capstone/repo/libcapstone.so.5", RTLD_LAZY);
+  dl_handle = dlopen((nemu_path + std::string("/tools/capstone/repo/libcapstone.so.5")).c_str(), RTLD_LAZY);
   assert(dl_handle);
 
   cs_open_dl = (cs_open_dl_t) dlsym(dl_handle, "cs_open");
