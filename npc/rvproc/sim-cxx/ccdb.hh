@@ -2,6 +2,8 @@
 
 #include <cstdint>
 #include <algorithm>
+#include <iomanip>
+#include <iostream>
 #include <utility>
 #include "VrvCore.h"
 #include "VrvCore___024root.h"
@@ -48,5 +50,11 @@ namespace ccdb {
     return dpic::pmem_probe(addr);
   }
 
-  void inst_trace(uint32_t);
+  void inst_trace(uint32_t) {
+    auto [v, inst] = read_mem(pc);
+    assert(v && "ccdb inst read fail");
+
+    std::cerr << "0x" << std::setw(8) << std::hex << pc << " : ";
+    std::cerr << "0x" << std::setw(8) << std::hex << inst << std::endl;
+  }
 }
