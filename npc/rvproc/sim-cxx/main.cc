@@ -67,7 +67,7 @@ main(int argc, char* argv[]) {
     single_cycle(top, contextp);
     currCyc++;
   }
-  for (uint8_t i = 0; i < 16; ++i) {
+  for (uint16_t i = 0; i < 16; ++i) {
     auto [v, res] = ccdb::read_reg(top, i);
     std::cerr << "Reg [" << std::dec << std::setw(2)<< i <<
       "] : 0x" << std::hex << std::setw(8) << res << std::endl;
