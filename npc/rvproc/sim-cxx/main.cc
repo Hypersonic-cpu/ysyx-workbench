@@ -76,6 +76,13 @@ main(int argc, char* argv[]) {
     auto [v, res] = ccdb::read_reg(top, 0xff);
     std::cerr << "Reg [PC] : 0x" << std::hex << std::setw(8) << res << std::endl;
   }
+  {
+    for (uint32_t i = 0; i < 16; i += 4) {
+      auto [v, res] = ccdb::read_mem(top, 0x8000'0000U + i);
+      std::cerr << std::hex << res << " ";
+    }
+    std::cerr << std::endl;
+  }
   top->final();
   tfp->close();
   return 0;
