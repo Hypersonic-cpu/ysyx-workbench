@@ -107,15 +107,15 @@ class RegFile extends Module {
     val rs1V = Output(Tp.RegType())
     val rs2V = Output(Tp.RegType())
 
-    val rsPin   = Input(Tp.RegIdxType())
-    val regPrb  = Output(Tp.RegType())
+    val probePin  = Input(Tp.RegIdxType())
+    val probeOut  = Output(Tp.RegType())
   })
 
   val regs = Reg(Vec(ISA.RegNum, Tp.RegType()))
 
   io.rs1V := Mux(io.rs1.orR, regs(io.rs1), 0.U)
   io.rs2V := Mux(io.rs2.orR, regs(io.rs2), 0.U)
-  io.regPrb := Mux(io.rsPin.orR, regs(io.rsPin), 0.U)
+  io.probeOut := Mux(io.probePin.orR, regs(io.probePin), 0.U)
 
   // printf(cf"<<REG>> R[${io.rs1}] = ${io.rs1V}%x\n")
   // printf(cf"<<REG>> R[${io.rs2}] = ${io.rs2V}%x\n")
@@ -323,9 +323,9 @@ class WBU extends Module {
 
 class rvCore() extends Module {
   val io = IO(new Bundle{
-    val regPin  = Input(Tp.RegIdxType())
-    val regPrb  = Output(Tp.RegType())
-    val outPC   = Output(Tp.PCType())
+    // val regPin  = Input(Tp.RegIdxType())
+    // val regPrb  = Output(Tp.RegType())
+    // val outPC   = Output(Tp.PCType())
   })
 
   // State
@@ -338,11 +338,12 @@ class rvCore() extends Module {
   val iLsu   = Module(new LSU())
   val iWrite = Module(new WBU())
   val iEcall = Module(new EcallBox())
+  // val iDebug = Module(new DebugBox())
 
   // Probing 
-  io.outPC := pc 
-  iReg.io.rsPin := io.regPin 
-  io.regPrb := iReg.io.regPrb
+  // io.outPC := pc 
+  // iReg.io.rsPin := io.regPin 
+  // io.regPrb := iReg.io.regPrb
 
   // IFU in
   iLsu.io.pcin := pc
@@ -410,6 +411,12 @@ class rvCore() extends Module {
   iEcall.io.a0in  := rs1V
   iEcall.io.isEbreak := iDec.io.ebreak
   iEcall.io.isEcall  := false.B
+
+  // iDebug.io.clock := this.clock
+  // iDebug.io.reset := this.reset
+  iReg.io.probePin   := 0.U // iDebug.io.probePin
+  // iDebug.io.probeOut := iReg.io.probeOut
+  // iDebug.io.probePC  := this.pc
 
   // dontTouch(iWrite.io)
   // dontTouch(iDec.io)
