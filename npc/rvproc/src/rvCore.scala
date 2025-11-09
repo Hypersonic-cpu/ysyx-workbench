@@ -115,7 +115,7 @@ class RegFile extends Module {
 
   io.rs1V := Mux(io.rs1.orR, regs(io.rs1), 0.U)
   io.rs2V := Mux(io.rs2.orR, regs(io.rs2), 0.U)
-  io.probeOut := Mux(io.rsPin.orR, regs(io.probePin), 0.U)
+  io.probeOut := Mux(io.probePin.orR, regs(io.probePin), 0.U)
 
   // printf(cf"<<REG>> R[${io.rs1}] = ${io.rs1V}%x\n")
   // printf(cf"<<REG>> R[${io.rs2}] = ${io.rs2V}%x\n")
