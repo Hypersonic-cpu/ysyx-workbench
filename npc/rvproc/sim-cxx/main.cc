@@ -7,6 +7,7 @@
 #include <verilated_fst_c.h>
 
 #include "VrvCore.h"
+#include "ccdb.hh"
 
 inline void 
 single_cycle(
@@ -33,6 +34,14 @@ single_reset(
   top->reset = 0;
   single_cycle(top, context);
 }
+
+// uint32_t 
+// probe_reg(
+//     const std::unique_ptr<TOP_NAME>& top, 
+//     uint8_t regid) {
+//   ccdb::set_reg_probe_idx(regid);
+//
+// }
 
 int 
 main(int argc, char* argv[]) {
