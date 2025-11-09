@@ -10,6 +10,7 @@
 
 #include "VrvCore.h"
 #include "ccdb.hh"
+#include "disasm.hh"
 
 inline void 
 single_cycle(
@@ -59,6 +60,7 @@ main(int argc, char* argv[]) {
   // tfp->dumpvars(1, "t"); // trace 1 level under "t"
   tfp->open("/home/kong/ysyx-workbench/npc/build-sim/rvproc/logs/simcc.log");
 
+  ccdb::trace_init();
   single_reset(top, contextp);
 
   constexpr size_t MaxCyc{ 30U };
