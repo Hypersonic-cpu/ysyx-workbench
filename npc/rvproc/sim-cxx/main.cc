@@ -1,12 +1,15 @@
 #include <ctime>
+#include <iomanip>
 #include <memory>
 #include <cstdlib>
+#include <iostream>
 
 #include <numeric>
 #include <verilated.h>
 #include <verilated_fst_c.h>
 
 #include "VrvCore.h"
+#include "ccdb.hh"
 
 inline void 
 single_cycle(
@@ -63,6 +66,15 @@ main(int argc, char* argv[]) {
   while (!contextp->gotFinish()) {
     single_cycle(top, contextp);
     currCyc++;
+  }
+  for (uint8_t i = 0; i < 16; ++i) {
+    auto res = ccdb::read_reg(top, i);
+    std::cerr << "Reg [" << std::setw(2) << std::dec << i <<
+      "] : 0x" << std::hex << std::setw(8) << res << std::endl;
+  }
+  {
+    auto res = ccdb::read_reg(top, 0xff);
+    std::cerr << "Reg [PC] : 0x" << std::hex << std::setw(8) << res << std::endl;
   }
   top->final();
   tfp->close();
