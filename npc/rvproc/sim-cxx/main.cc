@@ -10,6 +10,7 @@
 #include <verilated_fst_c.h>
 
 #include "VrvCore.h"
+#include "probe.hh"
 #include "ccdb.hh"
 #include "disasm.hh"
 
