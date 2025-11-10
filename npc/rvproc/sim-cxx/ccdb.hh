@@ -74,13 +74,4 @@ namespace ccdb {
     comm::instBuf.append(ent);
     ent.printent(std::cerr);
   }
-
-  class ElfSymEnt {
-    public:
-      const std::string name;
-      const uint32_t addr;
-      const uint32_t size;
-  };
-
-  extern std::vector<ElfSymEnt> elf_syms;
 }
