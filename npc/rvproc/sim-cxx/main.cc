@@ -97,6 +97,12 @@ main(int argc, char* argv[]) {
       comm::instBuf.atmod(i).printent(std::cerr);
     }
   }
+  {
+    std::cerr << "\n=== Mem Ring Buffer === " << std::endl;
+    for (size_t i = 0; i < comm::memBuf.size(); i++) {
+      comm::memBuf.atmod(i).printent(std::cerr);
+    }
+  }
   top->final();
   tfp->close();
   return 0;
