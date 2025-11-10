@@ -1,4 +1,5 @@
 #include "ccdb.hh"
+#include "probe.hh"
 
 #include <cstdint>
 #include <utility>

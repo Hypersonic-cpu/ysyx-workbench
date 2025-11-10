@@ -1,3 +1,4 @@
+#include <cassert>
 #include <ctime>
 #include <iomanip>
 #include <memory>
@@ -48,6 +49,8 @@ single_reset(
 
 int 
 main(int argc, char* argv[]) {
+  assert(argc > 1);
+
   const std::unique_ptr<VerilatedContext> contextp { new VerilatedContext };
 
   Verilated::traceEverOn(true);
@@ -60,7 +63,7 @@ main(int argc, char* argv[]) {
   // tfp->dumpvars(1, "t"); // trace 1 level under "t"
   tfp->open("/home/kong/ysyx-workbench/npc/build-sim/rvproc/logs/simcc.log");
 
-  ccdb::trace_init();
+  ccdb::trace_init(argv[1]);
   single_reset(top, contextp);
 
   constexpr size_t MaxCyc{ 30U };

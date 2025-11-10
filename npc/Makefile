@@ -33,6 +33,7 @@ VERILATOR_CFLAGS += -MMD --build -cc  \
 										-O3 --x-assign fast --x-initial fast --noassert
 INCFLAGS = $(addprefix -I, $(INC_PATH))
 CXXFLAGS += $(INCFLAGS) -DTOP_NAME="\"V$(TOPNAME)\"" -std=c++20 
+simccargs ?= 
 
 # capstone
 LIBCAPSTONE = $(NEMU_HOME)/tools/capstone/repo/libcapstone.so.5
@@ -74,7 +75,7 @@ runam:
 
 runcc: verilate verilog $(LIBCAPSTONE) $(SIM_BIN)
 	$(call git_commit, "run with AM via verilator cc")
-	$(SIM_BIN)
+	$(SIM_BIN) $(simccargs)
 
 verilog:
 	$(call git_commit, "generate verilog")
