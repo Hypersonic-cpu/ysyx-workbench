@@ -63,8 +63,8 @@ object InstOp extends ChiselEnum {
   val Lui    = Value(0b01101.U)
   // val Branch = Value(0b11000.U)
   val Jalr   = Value(0b11001.U)
-  val System = Value(0b11100.U)
   // val Jal    = Value(0b11011.U)
+  val System = Value(0b11100.U)
 }
 
 object IntAluOp extends ChiselEnum {
@@ -209,6 +209,7 @@ class IDU extends Module {
   io.pcJmp.jIflt   := false.B
   io.pcJmp.jIfge   := false.B
   // TODO: JAL
+  // BUG:  JALR ALU结果的LSB需要在加法以后清零!
   io.pcJmp.jUncond := opName === InstOp.Jalr
 
   io.wbSel := MuxCase(WbSrcOp.fromAlu, Seq(

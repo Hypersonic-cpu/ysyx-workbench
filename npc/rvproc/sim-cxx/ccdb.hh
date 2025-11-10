@@ -6,6 +6,7 @@
 #include <iomanip>
 #include <iostream>
 #include <iterator>
+#include <list>
 #include <ostream>
 #include <stack>
 #include <string>
@@ -59,11 +60,11 @@ namespace ccdb {
   }
 
   // void inst_trace(uint32_t pc);
-  void inst_trace(uint32_t pc);
+  void inst_trace(ptop_t top);
 
   class FrameEnt {
     // 
   };
-  extern std::stack<FrameEnt> frameStk;
-  void frame_trace();
+  extern std::list<FrameEnt> frameStk;
+  void frame_trace(uint32_t snpc, uint32_t dst, bool is_ret);
 }
