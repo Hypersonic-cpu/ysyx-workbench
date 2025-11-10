@@ -12,80 +12,10 @@
 #include "VrvCore.h"
 #include "VrvCore___024root.h"
 
-#include "pmemacc.hh"
 #include "disasm.hh"
-
-namespace cfmt {
-  std::ostream& sout32(std::ostream& os, std::string prefix="0x") {
-    os << prefix << std::setfill('0') << std::setw(8) << std::hex;
-    return os;
-  }
-}
+#include "probe.hh"
 
 namespace ccdb {
-  template<class T, std::size_t N>
-  class RingBuffer {
-    public:
-      RingBuffer() : ptr{ 0U }, buf{} {}
-      const T& append(const T& t) {
-        buf.at(ptr).~T();
-        new (&buf.at(ptr)) T(t);
-        auto const& ret = buf.at(ptr);
-        ptr = (ptr + 1) % N;
-        return ret;
-      }
-
-      T const atmod(size_t idx) const {
-        return buf.at(idx % N);
-      }
-
-      T& atmod(size_t idx) {
-        return buf.at(idx % N);
-      }
-
-      void printbuf(std::ostream& os, const std::string& title) const {
-        os << "\n === " << title << " === " << std::endl;
-        for (size_t i = 0; i < N; i++) {
-          atmod(i).printent(os);
-        }
-      }
-
-    protected:
-      size_t ptr;
-      std::array<T, N> buf;
-  };
-  
-  class InstEnt {
-    public:
-      uint32_t const pc;
-      uint32_t const inst;
-      std::string const disasm;
-      void printent(std::ostream& os) const {
-        cfmt::sout32(os) << pc << " : ";
-        cfmt::sout32(os, "") << inst << " \t" << disasm;
-        os << std::endl;
-      }
-  };
-
-  class MemEnt {
-    public:
-      uint32_t const addr;
-      bool const is_write;
-      uint32_t const value;
-      // Otherwise ostream<< will treat it as char.
-      uint16_t addr_mask;
-      void printent(std::ostream& os) const {
-        os << (is_write ? "Write" : "Read ");
-        cfmt::sout32(os, " @ 0x") << addr << " : ";
-        cfmt::sout32(os, "") << value;
-        if (is_write) { os << " mask " << std::hex << std::setw(1) << addr_mask; }
-        os << std::endl;
-      }
-  };
-
-  /** Global var */
-  RingBuffer<InstEnt, 16> instBuf {};
-  RingBuffer<MemEnt, 16> memBuf {};
 
   typedef const std::unique_ptr<TOP_NAME>& ptop_t;
   // 0xff for PC
@@ -125,7 +55,6 @@ namespace ccdb {
   void inline trace_init() { init_disasm(); }
 
   // void inst_trace(uint32_t pc);
-  
   void 
   inst_trace(uint32_t pc) {
     auto [v, inst] = ccdb::read_mem(pc);
@@ -136,8 +65,8 @@ namespace ccdb {
     void disassemble(char *str, int size, uint64_t pc, uint8_t *code, int nbyte);
     disassemble(buf, BufferLen, pc, (uint8_t*) (&inst), 4);
 
-    auto ent = InstEnt{ pc, inst, buf };
-    instBuf.append(ent);
+    auto ent = comm::InstEnt{ pc, inst, buf };
+    comm::instBuf.append(ent);
     ent.printent(std::cerr);
   }
 }

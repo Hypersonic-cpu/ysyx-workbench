@@ -1,5 +1,4 @@
-#include "pmemacc.hh"
-// #include "dpic.hh"
+#include "probe.hh"
 
 #include <cassert>
 #include <chrono>
@@ -90,11 +89,6 @@ namespace rv_device {
   }
 }
 
-namespace ccdb {
-  extern void 
-    pmem_access(uint32_t addr, bool is_write, uint32_t data, uint8_t byte_mask);
-}
-
 extern "C" void 
 pmem_init() {
   // ccdb::pmem_init_hello();
@@ -164,7 +158,7 @@ pmem_read(uint32_t raddr) {
 #if PRINTF_COND
   std::cout << " ret = " << std::hex << ret << std::endl;
 #endif
-  ccdb::pmem_access(raddr, false, ret, 0xf);
+  comm::mem_acc_log(raddr, false, ret, 0xf);
   return ret;
 }
 
@@ -197,7 +191,7 @@ pmem_write(uint32_t waddr, uint32_t wdata, uint8_t wmask) {
       }
     }
 #endif
-    ccdb::pmem_access(waddr, false, wdata, wmask);
+    comm::mem_acc_log(waddr, false, wdata, wmask);
   }
 }
 
