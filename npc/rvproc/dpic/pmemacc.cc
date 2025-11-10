@@ -1,7 +1,5 @@
 #include "pmemacc.hh"
 
-#include "dpic.hh"
-
 #include <cassert>
 #include <chrono>
 #include <cstdint>
@@ -89,6 +87,10 @@ namespace rv_device {
 // #endif // PRINTF_COND
 //     return static_cast<uint32_t>(micro_i64 >> (hi ? 32 : 0));
   }
+}
+
+namespace ccdb {
+  extern void pmem_init_hello();
 }
 
 extern "C" void 
