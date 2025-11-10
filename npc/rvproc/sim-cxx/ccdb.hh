@@ -116,7 +116,6 @@ namespace ccdb {
     return dpic::pmem_probe(addr);
   }
 
-  void pmem_init_hello() { std::cerr << "HELLO" << std::endl; exit(0); }
   void 
   trace_init() {
     init_disasm();
