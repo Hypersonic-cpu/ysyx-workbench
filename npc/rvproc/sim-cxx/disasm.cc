@@ -100,7 +100,7 @@ ccdb::init_elfsym(const char *elf_file) {
     const char*
       sym_name = (const char*) (str_table + sym_table[i].st_name);
     
-    uint32_t const addr = sym_table[i].st_value;
+    uint32_t addr = sym_table[i].st_value;
 
     if (type == STT_FUNC) {
       assert(comm::elf_syms.find(addr) == comm::elf_syms.end() && 
