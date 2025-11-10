@@ -114,5 +114,6 @@ ccdb::init_elfsym(const char *elf_file) {
 
   munmap(map, st.st_size);
   close(fd);
+  exit(0);
   // TODO: Clear frame stack
 }
