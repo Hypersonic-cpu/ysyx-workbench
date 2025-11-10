@@ -105,7 +105,8 @@ ccdb::init_elfsym(const char *elf_file) {
     if (type == STT_FUNC) {
       comm::v_assert(
           comm::elf_syms.find(addr) == comm::elf_syms.end(),
-          "Multiple symbols at the same addr ", addr, " name ", sym_name);
+          "Multiple symbols at the same addr ", addr, " name ", 
+          sym_name, " and ", comm::elf_syms.find(addr)->second.name);
       comm::elf_syms.emplace(addr, 
           comm::ElfSymEnt {
           /* Name */  sym_name, 
