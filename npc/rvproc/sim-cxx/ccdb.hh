@@ -8,6 +8,7 @@
 #include <iterator>
 #include <ostream>
 #include <utility>
+
 #include "VrvCore.h"
 #include "VrvCore___024root.h"
 
@@ -26,10 +27,12 @@ namespace ccdb {
   class RingBuffer {
     public:
       RingBuffer() : ptr{ 0U }, buf{} {}
-      void append(const T& t) {
+      const T& append(const T& t) {
         buf.at(ptr).~T();
         new (&buf.at(ptr)) T(t);
+        auto const& ret = buf.at(ptr);
         ptr = (ptr + 1) % N;
+        return ret;
       }
 
       T const atmod(size_t idx) const {
@@ -40,7 +43,7 @@ namespace ccdb {
         return buf.at(idx % N);
       }
 
-      void printbuf(std::ostream& os, const std::string& title) {
+      void printbuf(std::ostream& os, const std::string& title) const {
         os << "\n === " << title << " === " << std::endl;
         for (size_t i = 0; i < N; i++) {
           atmod(i).printent(os);
@@ -57,7 +60,7 @@ namespace ccdb {
       uint32_t const pc;
       uint32_t const inst;
       std::string const disasm;
-      void printent(std::ostream& os) {
+      void printent(std::ostream& os) const {
         cfmt::sout32(os) << pc << " : ";
         cfmt::sout32(os, "") << inst << " \t" << disasm;
         os << std::endl;
@@ -67,12 +70,15 @@ namespace ccdb {
   class MemEnt {
     public:
       uint32_t const addr;
-      uint32_t const value;
       bool const is_write;
-      void printent(std::ostream& os) {
+      uint32_t const value;
+      // Otherwise ostream<< will treat it as char.
+      uint16_t addr_mask;
+      void printent(std::ostream& os) const {
         os << (is_write ? "Write" : "Read ");
         cfmt::sout32(os, " @ 0x") << addr << " : ";
         cfmt::sout32(os, "") << value;
+        if (is_write) { os << " mask " << std::hex << std::setw(1) << addr_mask; }
         os << std::endl;
       }
   };
@@ -106,7 +112,7 @@ namespace ccdb {
       case 0xe: ret = r->rvCore__DOT__iReg__DOT__regs_14; break;
       case 0xf: ret = r->rvCore__DOT__iReg__DOT__regs_15; break;
       case 0xff: ret = r->rvCore__DOT__pc; break;
-      default: valid = false;
+      default: valid = false; break;
     }
     return std::make_pair(valid, ret);
   }
@@ -116,23 +122,7 @@ namespace ccdb {
     return dpic::pmem_probe(addr);
   }
 
-  void 
-  trace_init() {
-    init_disasm();
-  }
+  void inline trace_init() { init_disasm(); }
 
-  void 
-  inst_trace(uint32_t pc) {
-    auto [v, inst] = read_mem(pc);
-    assert(v && "ccdb inst read fail");
-
-    constexpr size_t BufferLen{ 256U };
-    char buf[BufferLen] = {0};
-    void disassemble(char *str, int size, uint64_t pc, uint8_t *code, int nbyte);
-    disassemble(buf, BufferLen, pc, (uint8_t*) (&inst), 4);
-
-    auto ent = InstEnt{ pc, inst, buf };
-    instBuf.append(ent);
-    ent.printent(std::cerr);
-  }
+  void inst_trace(uint32_t pc);
 }
