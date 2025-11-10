@@ -27,7 +27,8 @@ namespace ccdb {
     public:
       RingBuffer() : ptr{ 0U }, buf{} {}
       void append(const T& t) {
-        buf.at(ptr) = t;
+        buf.at(ptr).~T();
+        new (&buf.at(ptr)) T(t);
         ptr = (ptr + 1) % N;
       }
 
@@ -131,7 +132,7 @@ namespace ccdb {
     disassemble(buf, BufferLen-1, pc, (uint8_t*) (&inst), 4);
 
     auto ent = InstEnt{ pc, inst, buf };
-    instBuf.append(ent);
+    instBuf.append(ent)
     ent.printent(std::cerr);
   }
 }
