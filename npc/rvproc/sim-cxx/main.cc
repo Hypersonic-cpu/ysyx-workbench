@@ -70,7 +70,7 @@ main(int argc, char* argv[]) {
   constexpr size_t MaxCyc{ 30U };
   size_t currCyc{ 1U };
   while (!contextp->gotFinish()) {
-    ccdb::inst_trace(top->rootp->rvCore__DOT__pc);
+    ccdb::inst_trace(top);
     single_cycle(top, contextp);
     currCyc++;
   }
@@ -107,3 +107,4 @@ main(int argc, char* argv[]) {
   tfp->close();
   return 0;
 }
+

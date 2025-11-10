@@ -13,6 +13,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/mman.h>
+#include <tuple>
 #include <unistd.h>
 
 void 
@@ -98,18 +99,24 @@ ccdb::init_elfsym(const char *elf_file) {
     [[maybe_unused]] int type = ELF32_ST_TYPE(sym_table[i].st_info);
     const char*
       sym_name = (const char*) (str_table + sym_table[i].st_name);
+    
+    uint32_t const addr = sym_table[i].st_value;
 
     if (type == STT_FUNC) {
-      comm::elf_syms.emplace_back(sym_name, 
+      assert(comm::elf_syms.find(addr) == comm::elf_syms.end() && 
+          "Multiple symbols at the same addr");
+      comm::elf_syms.insert_or_assign(addr, 
+          std::forward_as_tuple(sym_name, 
           /* Address */ sym_table[i].st_value, 
-          /* Size */ sym_table[i].st_size);
+          /* Size */ sym_table[i].st_size)
+          );
     }
   }
 
   std::cerr <<  "\n === ELF Funct Symbols (" << comm::elf_syms.size() << " total) === ";
   std::cerr << std::endl;
-  for (auto const& ent : comm::elf_syms) {
-    comm::sout32(std::cerr) << ent.addr;
+  for (auto const& [addr, ent] : comm::elf_syms) {
+    comm::sout32(std::cerr) << addr;
     std::cerr << " size " << std::dec << std::setfill(' ') << std::setw(6) << ent.size;
     std::cerr << " : " << ent.name << std::endl;
   }
