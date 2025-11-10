@@ -103,16 +103,17 @@ ccdb::init_elfsym(const char *elf_file) {
     uint32_t addr = sym_table[i].st_value;
 
     if (type == STT_FUNC) {
+      // WARN: Skip
       comm::v_warn(
           comm::elf_syms.find(addr) == comm::elf_syms.end(),
           "Multiple symbols at the same addr ", addr, " name ", 
           sym_name, " and ", comm::elf_syms.find(addr)->second.name);
-      comm::elf_syms.emplace(addr, 
-          comm::ElfSymEnt {
+      comm::elf_syms.try_emplace(addr, 
+          // comm::ElfSymEnt {
           /* Name */  sym_name, 
           /* Address */ sym_table[i].st_value, 
           /* Size */ sym_table[i].st_size
-          }
+          // }
           );
     }
   }
