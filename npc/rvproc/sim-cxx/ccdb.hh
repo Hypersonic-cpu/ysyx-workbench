@@ -7,7 +7,9 @@
 #include <iostream>
 #include <iterator>
 #include <ostream>
+#include <string>
 #include <utility>
+#include <vector>
 
 #include "VrvCore.h"
 #include "VrvCore___024root.h"
@@ -52,7 +54,10 @@ namespace ccdb {
     return dpic::pmem_probe(addr);
   }
 
-  void inline trace_init() { init_disasm(); }
+  void inline trace_init() { 
+    init_disasm(); 
+    init_elfsym(NULL);
+  }
 
   // void inst_trace(uint32_t pc);
   void 
@@ -69,4 +74,13 @@ namespace ccdb {
     comm::instBuf.append(ent);
     ent.printent(std::cerr);
   }
+
+  class ElfSymEnt {
+    public:
+      const std::string name;
+      const uint32_t addr;
+      const uint32_t size;
+  };
+
+  extern std::vector<ElfSymEnt> elf_syms;
 }
