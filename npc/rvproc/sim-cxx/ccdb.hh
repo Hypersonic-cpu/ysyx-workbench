@@ -116,6 +116,7 @@ namespace ccdb {
     return dpic::pmem_probe(addr);
   }
 
+  void pmem_init_hello() { std::cerr << "HELLO" << std::endl; exit(0); }
   void 
   trace_init() {
     init_disasm();
@@ -129,7 +130,7 @@ namespace ccdb {
     constexpr size_t BufferLen{ 256U };
     char buf[BufferLen] = {0};
     void disassemble(char *str, int size, uint64_t pc, uint8_t *code, int nbyte);
-    disassemble(buf, BufferLen-1, pc, (uint8_t*) (&inst), 4);
+    disassemble(buf, BufferLen, pc, (uint8_t*) (&inst), 4);
 
     auto ent = InstEnt{ pc, inst, buf };
     instBuf.append(ent);

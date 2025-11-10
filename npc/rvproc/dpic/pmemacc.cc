@@ -1,5 +1,7 @@
 #include "pmemacc.hh"
 
+#include "ccdb.hh"
+
 #include <cassert>
 #include <chrono>
 #include <cstdint>
@@ -91,6 +93,7 @@ namespace rv_device {
 
 extern "C" void 
 pmem_init() {
+  ccdb::pmem_init_hello();
 #if PRINTF_COND
   std::cout << "DPI-C >> pmem_init called" << std::endl;
 #endif
