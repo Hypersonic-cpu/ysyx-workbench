@@ -7,20 +7,24 @@
 #include <iostream>
 #include <iterator>
 #include <ostream>
+#include <stack>
+#include <string>
 #include <utility>
+#include <vector>
 
 #include "VrvCore.h"
 #include "VrvCore___024root.h"
 
 #include "disasm.hh"
-#include "probe.hh"
 
 namespace ccdb {
 
   typedef const std::unique_ptr<TOP_NAME>& ptop_t;
+  std::pair<bool, uint32_t> read_reg(ptop_t top, uint8_t regid);
+
   // 0xff for PC
-  std::pair<bool, uint32_t> 
-  read_reg(ptop_t top, uint8_t regid) {
+  inline std::pair<bool, uint32_t> 
+  _read_verilator_reg(ptop_t top, uint8_t regid) {
     auto r = top->rootp;
     uint32_t ret = 0;
     bool valid = true;
@@ -47,26 +51,19 @@ namespace ccdb {
     return std::make_pair(valid, ret);
   }
 
-  std::pair<bool, uint32_t>
-  read_mem(uint32_t addr) {
-    return dpic::pmem_probe(addr);
-  }
+  std::pair<bool, uint32_t> read_mem(uint32_t addr);
 
-  void inline trace_init() { init_disasm(); }
+  void inline trace_init(const char* elf_file) { 
+    init_disasm(); 
+    init_elfsym(elf_file);
+  }
 
   // void inst_trace(uint32_t pc);
-  void 
-  inst_trace(uint32_t pc) {
-    auto [v, inst] = ccdb::read_mem(pc);
-    assert(v && "ccdb inst read fail");
+  void inst_trace(uint32_t pc);
 
-    constexpr size_t BufferLen{ 256U };
-    char buf[BufferLen] = {0};
-    void disassemble(char *str, int size, uint64_t pc, uint8_t *code, int nbyte);
-    disassemble(buf, BufferLen, pc, (uint8_t*) (&inst), 4);
-
-    auto ent = comm::InstEnt{ pc, inst, buf };
-    comm::instBuf.append(ent);
-    ent.printent(std::cerr);
-  }
+  class FrameEnt {
+    // 
+  };
+  extern std::stack<FrameEnt> frameStk;
+  void frame_trace();
 }
