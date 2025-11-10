@@ -130,7 +130,7 @@ namespace comm {
   void mem_acc_log(
       uint32_t addr, bool is_write, uint32_t data, uint8_t byte_mask);
 
-  class ElfSymEnt {
+  struct ElfSymEnt {
       std::string name;
       uint32_t addr;
       uint32_t size;
