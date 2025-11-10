@@ -51,7 +51,7 @@ ccdb::disassemble(char *str, int size, uint64_t pc, uint8_t *code, int nbyte) {
 
 void
 ccdb::init_elfsym(const char *elf_file) {
-  if (elf_file == NULL) { return; }
+  // if (elf_file == NULL) { return; }
 
   int fd = open(elf_file, O_RDONLY);
   assert(fd >= 0 && "Elf file open failed");
