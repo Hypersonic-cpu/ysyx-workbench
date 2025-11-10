@@ -13,8 +13,18 @@
  *  而只能被他们引用. 
  */
 namespace comm {
+  template<typename... Args>
+  inline void v_assert(bool cond, const Args&... args) {
+    if (!cond) {
+      std::cerr << "[ASSERT FAILED] " << __FILE__ << ":" << __LINE__ << " " << std::hex;
+      ((std::cerr << args << " "), ...);
+      std::cerr << std::endl;
+      std::abort();
+    }
+  }
+
   inline uint32_t 
-  bmask(unsigned hi, unsigned lo) {
+    bmask(unsigned hi, unsigned lo) {
     return (~0U >> (31-hi)) << lo;
   }
 
@@ -120,7 +130,7 @@ namespace comm {
   void mem_acc_log(
       uint32_t addr, bool is_write, uint32_t data, uint8_t byte_mask);
 
-  struct ElfSymEnt {
+  class ElfSymEnt {
       std::string name;
       uint32_t addr;
       uint32_t size;
