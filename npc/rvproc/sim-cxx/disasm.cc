@@ -106,9 +106,10 @@ ccdb::init_elfsym(const char *elf_file) {
       assert(comm::elf_syms.find(addr) == comm::elf_syms.end() && 
           "Multiple symbols at the same addr");
       comm::elf_syms.insert_or_assign(addr, 
-          /* Name */ std::string(sym_name), 
+          comm::ElfSymEnt {
+          /* Name */  sym_name, 
           /* Address */ sym_table[i].st_value, 
-          /* Size */ sym_table[i].st_size
+          /* Size */ sym_table[i].st_size }
           );
     }
   }
