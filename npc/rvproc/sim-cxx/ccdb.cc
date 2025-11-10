@@ -4,6 +4,7 @@
 #include "VrvCore___024root.h"
 
 #include <cstdint>
+#include <list>
 #include <stack>
 #include <utility>
 
@@ -53,10 +54,14 @@ ccdb::inst_trace(ccdb::ptop_t top) {
   }
 }
 
-std::stack<ccdb::FrameEnt> ccdb::frameStk {};
+std::list<ccdb::FrameEnt> ccdb::frameStk {};
 
 void 
-ccdb::frame_trace(uint32_t snpc, uint32_t dst, bool is_ret) {
-
+ccdb::frame_trace(/* ptop_t top, */ uint32_t snpc, uint32_t dst, bool is_ret) {
+  // NOTE: rd == 0 并不一定是 ret, 也有可能是 TCO.
+  // 另外, void funct() { while (1) { ... } } 也会造成类似的情况. 
+  // 需要根据stack操作辨别. 也可以直接无视, 因为无穷尾递归和 while (1) 
+  // 没什么区别. (但不应压栈)
+  //
 }
 
