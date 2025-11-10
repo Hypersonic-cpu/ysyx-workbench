@@ -90,13 +90,9 @@ namespace rv_device {
   }
 }
 
-// namespace ccdb {
-//   extern void pmem_init_hello();
-// }
-//
 extern "C" void 
 pmem_init() {
-  ccdb::pmem_init_hello();
+  // ccdb::pmem_init_hello();
 #if PRINTF_COND
   std::cout << "DPI-C >> pmem_init called" << std::endl;
 #endif
@@ -163,6 +159,7 @@ pmem_read(uint32_t raddr) {
 #if PRINTF_COND
   std::cout << " ret = " << std::hex << ret << std::endl;
 #endif
+  ccdb::pmem_access(raddr, false, ret, 0xf);
   return ret;
 }
 
@@ -171,6 +168,7 @@ pmem_write(uint32_t waddr, uint32_t wdata, uint8_t wmask) {
   if (rv_device::is_serial_range(waddr)) {
     v_assert((wmask & 0x1), "Serial write masked out, wmask = ", wmask);
     rv_device::write_serial(wdata & 0xff);
+    // TODO: Device trace here
   } else {
     uint32_t aln_idx = (waddr - BaseAddr) >> 2;
     v_assert(ValidAccess(aln_idx), std::string("Write addr = "), waddr);
@@ -194,6 +192,7 @@ pmem_write(uint32_t waddr, uint32_t wdata, uint8_t wmask) {
       }
     }
 #endif
+    ccdb::pmem_access(waddr, false, wdata, wmask);
   }
 }
 
