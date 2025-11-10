@@ -105,12 +105,12 @@ ccdb::init_elfsym(const char *elf_file) {
     if (type == STT_FUNC) {
       assert(comm::elf_syms.find(addr) == comm::elf_syms.end() && 
           "Multiple symbols at the same addr");
-      comm::elf_syms.insert_or_assign(addr, 
-          comm::ElfSymEnt {
+      auto [it, succ] = comm::elf_syms.emplace(addr, 
           /* Name */  sym_name, 
           /* Address */ sym_table[i].st_value, 
-          /* Size */ sym_table[i].st_size }
+          /* Size */ sym_table[i].st_size
           );
+      assert(succ && "Unordered map insert failed");
     }
   }
 
