@@ -1,9 +1,10 @@
 #include "probe.hh"
+#include <unordered_map>
 
 namespace comm {
   RingBuffer<InstEnt, 16> instBuf {}; 
   RingBuffer<MemEnt, 16> memBuf {};
-  std::vector<ElfSymEnt> elf_syms {};
+  std::unordered_map<uint32_t, ElfSymEnt> elf_syms {};
 }
 
 void 

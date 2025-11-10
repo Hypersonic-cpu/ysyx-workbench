@@ -5,6 +5,7 @@
 #include <iostream>
 #include <array>
 #include <stack>
+#include <unordered_map>
 #include <vector>
 
 /** WARN:
@@ -12,6 +13,56 @@
  *  而只能被他们引用. 
  */
 namespace comm {
+  template<typename... Args>
+  inline void v_warn(bool cond, const Args&... args) {
+    if (!cond) {
+      std::cerr << "[ASSERT FAILED] " << __FILE__ << ":" << __LINE__ << " " << std::hex;
+      ((std::cerr << args << " "), ...);
+      std::cerr << std::endl;
+    }
+  }
+
+  template<typename... Args>
+  inline void v_assert(bool cond, const Args&... args) {
+    if (!cond) {
+      std::cerr << "[WARN COND] " << __FILE__ << ":" << __LINE__ << " " << std::hex;
+      ((std::cerr << args << " "), ...);
+      std::cerr << std::endl;
+      std::abort();
+    }
+  }
+
+  inline uint32_t 
+    bmask(unsigned hi, unsigned lo) {
+    return (~0U >> (31-hi)) << lo;
+  }
+
+  inline uint32_t 
+  bits(uint32_t num, unsigned hi, unsigned lo) {
+    return (num >> lo) & bmask(hi-lo, 0);
+  }
+
+  inline uint32_t 
+  sext(uint32_t num, unsigned bitnum) {
+    const unsigned shift = 32 - bitnum;
+    return static_cast<uint32_t>(
+        static_cast<int32_t>(num << shift) >> shift
+        );
+  }
+
+  // template<unsigned N> 
+  // class SgnExtHelper {
+  //   signed int val : N;
+  // };
+  //
+  // template<unsigned N>
+  // inline uint32_t 
+  // sext(uint32_t num) {
+  //   SgnExtHelper<N> tmp;
+  //   tmp.val = num;
+  //   return static_cast<uint32_t> (tmp.val);
+  // }
+
   inline std::ostream& 
   sout32(std::ostream& os, std::string prefix="0x") {
     os << prefix << std::setfill('0') << std::setw(8) << std::hex;
@@ -25,8 +76,8 @@ namespace comm {
       uint32_t const inst;
       std::string const disasm;
       void printent(std::ostream& os) const {
-        comm::sout32(os) << pc << " : ";
-        comm::sout32(os, "") << inst << " \t" << disasm;
+        sout32(os) << pc << " : ";
+        sout32(os, "") << inst << " \t" << disasm;
         os << std::endl;
       }
   };
@@ -88,14 +139,13 @@ namespace comm {
   void mem_acc_log(
       uint32_t addr, bool is_write, uint32_t data, uint8_t byte_mask);
 
-  class ElfSymEnt {
-    public:
-      const std::string name;
-      const uint32_t addr;
-      const uint32_t size;
+  struct ElfSymEnt {
+      std::string name;
+      uint32_t addr;
+      uint32_t size;
   };
 
-  extern std::vector<ElfSymEnt> elf_syms;
+  extern std::unordered_map<uint32_t, ElfSymEnt> elf_syms;
 }
 
 // NOTE: 这是main用于窥探dpic SV 的namespace.
