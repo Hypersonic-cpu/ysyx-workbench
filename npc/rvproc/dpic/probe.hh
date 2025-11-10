@@ -4,6 +4,8 @@
 #include <iomanip>
 #include <iostream>
 #include <array>
+#include <stack>
+#include <vector>
 
 /** WARN:
  *  该文件禁止引用 ccdb.{cc,hh} 和 pmemacc.{cc,hh}, 
@@ -13,6 +15,7 @@ namespace comm {
   inline std::ostream& 
   sout32(std::ostream& os, std::string prefix="0x") {
     os << prefix << std::setfill('0') << std::setw(8) << std::hex;
+    os << std::setfill(' ');
     return os;
   }
 
@@ -71,6 +74,8 @@ namespace comm {
         }
       }
 
+      size_t size() const { return N; }
+
     protected:
       size_t ptr;
       std::array<T, N> buf;
@@ -82,6 +87,15 @@ namespace comm {
 
   void mem_acc_log(
       uint32_t addr, bool is_write, uint32_t data, uint8_t byte_mask);
+
+  class ElfSymEnt {
+    public:
+      const std::string name;
+      const uint32_t addr;
+      const uint32_t size;
+  };
+
+  extern std::vector<ElfSymEnt> elf_syms;
 }
 
 // NOTE: 这是main用于窥探dpic SV 的namespace.
