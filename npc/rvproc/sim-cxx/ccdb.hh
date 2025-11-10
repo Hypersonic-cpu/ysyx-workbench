@@ -7,6 +7,7 @@
 #include <iostream>
 #include <iterator>
 #include <ostream>
+#include <stack>
 #include <string>
 #include <utility>
 #include <vector>
@@ -58,5 +59,11 @@ namespace ccdb {
   }
 
   // void inst_trace(uint32_t pc);
-  void inst_trace(uint32_t pc);
+  void inst_trace(ptop_t top);
+
+  class FrameEnt {
+    // 
+  };
+  extern std::stack<FrameEnt> frameStk;
+  void frame_trace(uint32_t snpc, uint32_t dst, bool is_ret);
 }
