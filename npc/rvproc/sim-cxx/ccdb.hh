@@ -14,8 +14,8 @@
 #include "disasm.hh"
 
 namespace cfmt {
-  std::ostream& sout32(std::ostream& os) {
-    os << "0x" << std::setfill('0') << std::setw(8) << std::hex;
+  std::ostream& sout32(std::ostream& os, std::string prefix="0x") {
+    os << prefix << std::setfill('0') << std::setw(8) << std::hex;
     return os;
   }
 }
