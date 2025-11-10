@@ -1,3 +1,4 @@
+#include <cassert>
 #include <ctime>
 #include <iomanip>
 #include <memory>
@@ -9,6 +10,7 @@
 #include <verilated_fst_c.h>
 
 #include "VrvCore.h"
+#include "probe.hh"
 #include "ccdb.hh"
 #include "disasm.hh"
 
@@ -48,6 +50,8 @@ single_reset(
 
 int 
 main(int argc, char* argv[]) {
+  assert(argc > 1);
+
   const std::unique_ptr<VerilatedContext> contextp { new VerilatedContext };
 
   Verilated::traceEverOn(true);
@@ -60,7 +64,7 @@ main(int argc, char* argv[]) {
   // tfp->dumpvars(1, "t"); // trace 1 level under "t"
   tfp->open("/home/kong/ysyx-workbench/npc/build-sim/rvproc/logs/simcc.log");
 
-  ccdb::trace_init();
+  ccdb::trace_init(argv[1]);
   single_reset(top, contextp);
 
   constexpr size_t MaxCyc{ 30U };
@@ -87,7 +91,20 @@ main(int argc, char* argv[]) {
     }
     std::cerr << std::endl;
   }
+  {
+    std::cerr << "\n=== Inst Ring Buffer === " << std::endl;
+    for (size_t i = 0; i < comm::instBuf.size(); i++) {
+      comm::instBuf.atmod(i).printent(std::cerr);
+    }
+  }
+  {
+    std::cerr << "\n=== Mem Ring Buffer === " << std::endl;
+    for (size_t i = 0; i < comm::memBuf.size(); i++) {
+      comm::memBuf.atmod(i).printent(std::cerr);
+    }
+  }
   top->final();
   tfp->close();
   return 0;
 }
+

@@ -1,4 +1,19 @@
 #include "disasm.hh"
+#include "probe.hh"
+
+#include <cassert>
+#include <cstring>
+#include <fcntl.h>
+#include <cstdlib>
+#include <elf.h>
+#include <iomanip>
+#include <iostream>
+#include <iterator>
+#include <ostream>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/mman.h>
+#include <unistd.h>
 
 void 
 ccdb::init_disasm() {
@@ -35,3 +50,71 @@ ccdb::disassemble(char *str, int size, uint64_t pc, uint8_t *code, int nbyte) {
   cs_free_dl(insn, count);
 }
 
+void
+ccdb::init_elfsym(const char *elf_file) {
+  if (elf_file == NULL) { return; }
+
+  std::cerr << "Elf file " << elf_file; 
+  int fd = open(elf_file, O_RDONLY);
+  assert(fd >= 0 && "Elf file open failed");
+
+  struct stat st;
+  int fs_status = fstat(fd, &st);
+  std::cerr << ", size = " <<  st.st_size << std::endl;
+
+  uint8_t* map = (uint8_t *) mmap(NULL, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+  assert(map != MAP_FAILED && "Elf mmap failed");
+
+  Elf32_Ehdr* ehdr = (Elf32_Ehdr*) map;
+  assert(memcmp(ehdr->e_ident, ELFMAG, SELFMAG) == 0 && 
+      "Elf header mismatch");
+  assert(ehdr->e_machine == EM_RISCV &&
+         "Elf ISA mismatch, not RV32");
+  assert(ehdr->e_ident[EI_DATA] == ELFDATA2LSB && 
+         "Elf endianess mismatch");
+
+  // Section header
+  Elf32_Shdr* shdr = (Elf32_Shdr*) (map + ehdr->e_shoff);
+  Elf32_Sym* sym_table = NULL;
+  uint8_t* str_table = NULL;
+  unsigned sym_count = 0;
+
+  for (unsigned i = 0; i < ehdr->e_shnum; ++i) {
+    if (shdr[i].sh_type != SHT_SYMTAB) { continue; }
+    sym_table = (Elf32_Sym *) (map + shdr[i].sh_offset);
+    sym_count = shdr[i].sh_size / sizeof(Elf32_Sym);
+    assert(shdr[i].sh_link < ehdr->e_shnum && 
+           "String table out of bound");
+    str_table = map + shdr[shdr[i].sh_link].sh_offset;
+    break;
+  }
+
+  assert(sym_table && "Elf symbol table not found");
+  assert(str_table && "Elf string table not found");
+
+  comm::elf_syms.reserve(sym_count);
+  for (unsigned i = 0; i < sym_count; ++i) {
+    [[maybe_unused]] int bind = ELF32_ST_BIND(sym_table[i].st_info);
+    [[maybe_unused]] int type = ELF32_ST_TYPE(sym_table[i].st_info);
+    const char*
+      sym_name = (const char*) (str_table + sym_table[i].st_name);
+
+    if (type == STT_FUNC) {
+      comm::elf_syms.emplace_back(sym_name, 
+          /* Address */ sym_table[i].st_value, 
+          /* Size */ sym_table[i].st_size);
+    }
+  }
+
+  std::cerr <<  "\n === ELF Funct Symbols (" << comm::elf_syms.size() << " total) === ";
+  std::cerr << std::endl;
+  for (auto const& ent : comm::elf_syms) {
+    comm::sout32(std::cerr) << ent.addr;
+    std::cerr << " size " << std::dec << std::setfill(' ') << std::setw(6) << ent.size;
+    std::cerr << " : " << ent.name << std::endl;
+  }
+
+  munmap(map, st.st_size);
+  close(fd);
+  // TODO: Clear frame stack
+}
