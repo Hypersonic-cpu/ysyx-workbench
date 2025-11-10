@@ -1,4 +1,4 @@
-#include "pmemacc.hh"
+#include "probe.hh"
 
 #include <cassert>
 #include <chrono>
@@ -91,6 +91,7 @@ namespace rv_device {
 
 extern "C" void 
 pmem_init() {
+  // ccdb::pmem_init_hello();
 #if PRINTF_COND
   std::cout << "DPI-C >> pmem_init called" << std::endl;
 #endif
@@ -157,6 +158,7 @@ pmem_read(uint32_t raddr) {
 #if PRINTF_COND
   std::cout << " ret = " << std::hex << ret << std::endl;
 #endif
+  comm::mem_acc_log(raddr, false, ret, 0xf);
   return ret;
 }
 
@@ -165,6 +167,7 @@ pmem_write(uint32_t waddr, uint32_t wdata, uint8_t wmask) {
   if (rv_device::is_serial_range(waddr)) {
     v_assert((wmask & 0x1), "Serial write masked out, wmask = ", wmask);
     rv_device::write_serial(wdata & 0xff);
+    // TODO: Device trace here
   } else {
     uint32_t aln_idx = (waddr - BaseAddr) >> 2;
     v_assert(ValidAccess(aln_idx), std::string("Write addr = "), waddr);
@@ -188,6 +191,7 @@ pmem_write(uint32_t waddr, uint32_t wdata, uint8_t wmask) {
       }
     }
 #endif
+    comm::mem_acc_log(waddr, false, wdata, wmask);
   }
 }
 

@@ -72,17 +72,18 @@ main(int argc, char* argv[]) {
   }
   for (uint16_t i = 0; i < 16; ++i) {
     auto [v, res] = ccdb::read_reg(top, i);
-    std::cerr << "Reg [" << std::dec << std::setw(2)<< i <<
-      "] : 0x" << std::hex << std::setw(8) << res << std::endl;
+    std::cerr << "Reg [" << std::dec << std::setw(2)<< i << "] : ";
+    comm::sout32(std::cerr) << res << std::endl;
   }
   {
     auto [v, res] = ccdb::read_reg(top, 0xff);
-    std::cerr << "Reg [PC] : 0x" << std::hex << std::setw(8) << res << std::endl;
+    std::cerr << "Reg [PC] : ";
+    comm::sout32(std::cerr) << res << std::endl;
   }
   {
     for (uint32_t i = 0; i < 16; i += 4) {
       auto [v, res] = ccdb::read_mem(0x8000'0000U + i);
-      std::cerr << std::hex << std::setfill('0') << std::setw(8) << res << " ";
+    comm::sout32(std::cerr, "") << res << " ";
     }
     std::cerr << std::endl;
   }
