@@ -1,6 +1,6 @@
 #include "pmemacc.hh"
 
-#include "ccdb.hh"
+#include "dpic.hh"
 
 #include <cassert>
 #include <chrono>
