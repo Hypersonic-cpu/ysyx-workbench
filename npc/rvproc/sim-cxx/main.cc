@@ -91,6 +91,12 @@ main(int argc, char* argv[]) {
     }
     std::cerr << std::endl;
   }
+  {
+    std::cerr << "\n=== Inst Ring Buffer === " << std::endl;
+    for (size_t i = 0; i < comm::instBuf.size(); i++) {
+      comm::instBuf.atmod(i).printent(std::cerr);
+    }
+  }
   top->final();
   tfp->close();
   return 0;
