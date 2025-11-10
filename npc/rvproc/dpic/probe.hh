@@ -19,7 +19,6 @@ namespace comm {
       std::cerr << "[ASSERT FAILED] " << __FILE__ << ":" << __LINE__ << " " << std::hex;
       ((std::cerr << args << " "), ...);
       std::cerr << std::endl;
-      std::abort();
     }
   }
 
@@ -29,6 +28,7 @@ namespace comm {
       std::cerr << "[WARN COND] " << __FILE__ << ":" << __LINE__ << " " << std::hex;
       ((std::cerr << args << " "), ...);
       std::cerr << std::endl;
+      std::abort();
     }
   }
 
