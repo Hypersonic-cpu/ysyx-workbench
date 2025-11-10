@@ -20,9 +20,11 @@
 namespace ccdb {
 
   typedef const std::unique_ptr<TOP_NAME>& ptop_t;
+  std::pair<bool, uint32_t> read_reg(ptop_t top, uint8_t regid);
+
   // 0xff for PC
-  std::pair<bool, uint32_t> 
-  read_reg(ptop_t top, uint8_t regid) {
+  inline std::pair<bool, uint32_t> 
+  _read_verilator_reg(ptop_t top, uint8_t regid) {
     auto r = top->rootp;
     uint32_t ret = 0;
     bool valid = true;
