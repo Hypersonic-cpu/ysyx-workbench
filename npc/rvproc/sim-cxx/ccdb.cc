@@ -26,6 +26,6 @@ ccdb::inst_trace(uint32_t pc) {
 
   auto ent = comm::InstEnt{ pc, inst, buf };
   comm::instBuf.append(ent);
-  ent.printent(std::cerr);
+  // ent.printent(std::cerr);
 }
 
