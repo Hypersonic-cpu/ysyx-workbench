@@ -1,4 +1,5 @@
 #include "pmemacc.hh"
+#include "dpic.hh"
 
 #include <cassert>
 #include <chrono>
@@ -89,10 +90,10 @@ namespace rv_device {
   }
 }
 
-namespace ccdb {
-  extern void pmem_init_hello();
-}
-
+// namespace ccdb {
+//   extern void pmem_init_hello();
+// }
+//
 extern "C" void 
 pmem_init() {
   ccdb::pmem_init_hello();
