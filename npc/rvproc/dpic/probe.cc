@@ -3,6 +3,7 @@
 namespace comm {
   RingBuffer<InstEnt, 16> instBuf {}; 
   RingBuffer<MemEnt, 16> memBuf {};
+  std::vector<ElfSymEnt> elf_syms {};
 }
 
 void 

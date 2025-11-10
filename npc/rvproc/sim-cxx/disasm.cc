@@ -1,5 +1,4 @@
 #include "disasm.hh"
-#include "ccdb.hh"
 #include "probe.hh"
 
 #include <cassert>
@@ -13,6 +12,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/mman.h>
+#include <unistd.h>
 
 void 
 ccdb::init_disasm() {
@@ -90,7 +90,7 @@ ccdb::init_elfsym(const char *elf_file) {
   assert(sym_table && "Elf symbol table not found");
   assert(str_table && "Elf string table not found");
 
-  elf_syms.reserve(sym_count);
+  comm::elf_syms.reserve(sym_count);
   for (unsigned i = 0; i < sym_count; ++i) {
     [[maybe_unused]] int bind = ELF32_ST_BIND(sym_table[i].st_info);
     [[maybe_unused]] int type = ELF32_ST_TYPE(sym_table[i].st_info);
@@ -98,15 +98,15 @@ ccdb::init_elfsym(const char *elf_file) {
       sym_name = (const char*) (str_table + sym_table[i].st_name);
 
     if (type == STT_FUNC) {
-      elf_syms.emplace_back(sym_name, 
+      comm::elf_syms.emplace_back(sym_name, 
           /* Address */ sym_table[i].st_value, 
           /* Size */ sym_table[i].st_size);
     }
   }
 
-  std::cerr <<  "\n === ELF Funct Symbols (" << elf_syms.size() << " total) === ";
+  std::cerr <<  "\n === ELF Funct Symbols (" << comm::elf_syms.size() << " total) === ";
   std::cerr << std::endl;
-  for (auto const& ent : elf_syms) {
+  for (auto const& ent : comm::elf_syms) {
     comm::sout32(std::cerr) << ent.addr << " size " << std::dec << ent.size;
     std::cerr << " : " << ent.name << std::endl;
   }
