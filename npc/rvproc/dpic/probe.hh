@@ -120,11 +120,10 @@ namespace comm {
   void mem_acc_log(
       uint32_t addr, bool is_write, uint32_t data, uint8_t byte_mask);
 
-  class ElfSymEnt {
-    public:
-      const std::string name;
-      const uint32_t addr;
-      const uint32_t size;
+  struct ElfSymEnt {
+      std::string name;
+      uint32_t addr;
+      uint32_t size;
   };
 
   extern std::unordered_map<uint32_t, ElfSymEnt> elf_syms;
