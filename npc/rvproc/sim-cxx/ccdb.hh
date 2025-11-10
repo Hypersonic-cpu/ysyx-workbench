@@ -15,7 +15,6 @@
 #include "VrvCore___024root.h"
 
 #include "disasm.hh"
-#include "probe.hh"
 
 namespace ccdb {
 
@@ -53,9 +52,9 @@ namespace ccdb {
 
   std::pair<bool, uint32_t> read_mem(uint32_t addr);
 
-  void inline trace_init() { 
+  void inline trace_init(const char* elf_file) { 
     init_disasm(); 
-    init_elfsym(NULL);
+    init_elfsym(elf_file);
   }
 
   // void inst_trace(uint32_t pc);
