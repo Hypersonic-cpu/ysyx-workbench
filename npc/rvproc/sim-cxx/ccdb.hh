@@ -1,5 +1,6 @@
 #pragma once 
 
+#include <array>
 #include <cstdint>
 #include <algorithm>
 #include <iomanip>
@@ -21,10 +22,63 @@ namespace cfmt {
 }
 
 namespace ccdb {
-  // enum class RegIdx : uint8_t {
-  //   zero = 0,
-  //
-  // }
+  template<class T, std::size_t N>
+  class RingBuffer {
+    public:
+      RingBuffer() : ptr{ 0U }, buf{} {}
+      void append(const T& t) {
+        buf.at(ptr) = t;
+        ptr = (ptr + 1) % N;
+      }
+
+      T const atmod(size_t idx) const {
+        return buf.at(idx % N);
+      }
+
+      T& atmod(size_t idx) {
+        return buf.at(idx % N);
+      }
+
+      void printbuf(std::ostream& os, const std::string& title) {
+        os << "\n === " << title << " === " << std::endl;
+        for (size_t i = 0; i < N; i++) {
+          atmod(i).printent(os);
+        }
+      }
+
+    protected:
+      size_t ptr;
+      std::array<T, N> buf;
+  };
+  
+  class InstEnt {
+    public:
+      uint32_t const pc;
+      uint32_t const inst;
+      std::string const disasm;
+      void printent(std::ostream& os) {
+        cfmt::sout32(os) << pc << " : ";
+        cfmt::sout32(os, "") << inst << " \t" << disasm;
+        os << std::endl;
+      }
+  };
+
+  class MemEnt {
+    public:
+      uint32_t const addr;
+      uint32_t const value;
+      bool const is_write;
+      void printent(std::ostream& os) {
+        os << (is_write ? "Write" : "Read ");
+        cfmt::sout32(os, " @ 0x") << addr << " : ";
+        cfmt::sout32(os, "") << value;
+        os << std::endl;
+      }
+  };
+
+  /** Global var */
+  RingBuffer<InstEnt, 16> instBuf {};
+  RingBuffer<MemEnt, 16> memBuf {};
 
   typedef const std::unique_ptr<TOP_NAME>& ptop_t;
   // 0xff for PC
@@ -71,15 +125,13 @@ namespace ccdb {
     auto [v, inst] = read_mem(pc);
     assert(v && "ccdb inst read fail");
 
-    cfmt::sout32(std::cerr) << pc << " : ";
-    cfmt::sout32(std::cerr) << inst << " \t";
-
     constexpr size_t BufferLen{ 256U };
     char buf[BufferLen] = {0};
     void disassemble(char *str, int size, uint64_t pc, uint8_t *code, int nbyte);
     disassemble(buf, BufferLen-1, pc, (uint8_t*) (&inst), 4);
 
-    std::cerr << std::string(buf);
-    std::cerr << std::endl;
+    auto ent = InstEnt{ pc, inst, buf };
+    instBuf.append(ent);
+    ent.printent(std::cerr);
   }
 }

@@ -83,7 +83,7 @@ main(int argc, char* argv[]) {
   {
     for (uint32_t i = 0; i < 16; i += 4) {
       auto [v, res] = ccdb::read_mem(0x8000'0000U + i);
-    cfmt::sout32(std::cerr, "\t") << res << " ";
+    cfmt::sout32(std::cerr, "") << res << " ";
     }
     std::cerr << std::endl;
   }
