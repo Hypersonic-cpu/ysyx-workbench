@@ -53,12 +53,13 @@ void
 ccdb::init_elfsym(const char *elf_file) {
   if (elf_file == NULL) { return; }
 
+  std::cerr << "Elf file " << elf_file; 
   int fd = open(elf_file, O_RDONLY);
   assert(fd >= 0 && "Elf file open failed");
 
   struct stat st;
   int fs_status = fstat(fd, &st);
-  std::cerr << "Elf file " << elf_file << ", size = " <<  st.st_size << std::endl;
+  std::cerr << ", size = " <<  st.st_size << std::endl;
 
   uint8_t* map = (uint8_t *) mmap(NULL, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
   assert(map != MAP_FAILED && "Elf mmap failed");
