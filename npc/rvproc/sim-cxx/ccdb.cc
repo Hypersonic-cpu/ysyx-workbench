@@ -14,7 +14,7 @@ using ccdb::top;
 
 std::pair<bool, uint32_t>
 ccdb::read_reg(uint8_t regid) {
-  return ccdb::_read_verilator_reg(top, regid);
+  return ccdb::_read_verilator_reg(regid);
 }
 
 std::pair<bool, uint32_t>
