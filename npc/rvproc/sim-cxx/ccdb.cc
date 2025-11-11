@@ -68,43 +68,47 @@ ccdb::frame_trace(uint32_t snpc, uint32_t dst, bool is_ret) {
   using comm::elf_syms;
   using ccdb::frame_stk;
   auto it = elf_syms.find(dst);
-  auto [_, sp] = read_reg(2);
-  if (is_ret && it != elf_syms.end()) {
-    // NOTE: Jump to a symbol, with rd == 0, 
-    // should be a TCO function call.
-
+  auto [_v2, sp] = read_reg(2);
+  if (is_ret && it != elf_syms.end()) { // NOTE: TCO
+    // Jump to a symbol, with rd == 0, 
     // TCO psuedo ret of current frame. 
     unsigned depth = 0;
+    unsigned ra = 0;
     if (frame_stk.empty()) {
       std::cerr << "TCO on empty frame stack, change to simply alloc" << std::endl;
     } else {
       auto temp = frame_stk.back();
       depth = temp.depth;
+      ra = temp.ra;
       frame_stk.back().printent(std::cerr, "- [TCO]", true);
       frame_stk.pop_back();
     }
-    // Alloc new frame 
+    // Alloc new frame, but ra remains.
     frame_stk.emplace_back(
-        depth, it->second.name, it->second.addr, sp);
+        depth, it->second.name, it->second.addr, sp, ra);
     frame_stk.back().printent(std::cerr, "+", true);
-  } else if (it != elf_syms.end()) {
-    // Normal function call.
+  } else if (it != elf_syms.end()) { // NOTE: Normal function call.
     auto depth = frame_stk.empty() ? 0U : (frame_stk.back().depth+1);
+    // The static NPC (PC of jal +4) is ra
     frame_stk.emplace_back(
-        depth, it->second.name, it->second.addr, sp);
+        depth, it->second.name, it->second.addr, sp, snpc);
     frame_stk.back().printent(std::cerr, "+", true);
-  } else if (is_ret) {
-    // function return
+  } else if (is_ret) { // NOTE: function return
     auto ir = frame_stk.rbegin();
     for (; ir != frame_stk.rend(); ir++) {
-      // The sp equals the sp at function call (before frame alloc).
-      // => Matches!
-      if (ir->sp == sp) { 
-        std::cerr << ir->depth << " ir->sp ";
-        comm::sout32(std::cerr) << ir->sp << " curr sp";
-        comm::sout32(std::cerr) << sp << std::endl;
-        break; 
+      if (ir->ra == dst && ir->sp == sp) {
+        // Jump back => true ret.
+        break;
       }
+      // The sp equals the sp at function call (before frame alloc).
+      // => Matches ? 
+      // WARN:使用 sp 是不准确的. 可能用 ra 会更好.
+      // if (ir->sp == sp) { 
+      //   std::cerr << ir->depth << " ir->sp ";
+      //   comm::sout32(std::cerr) << ir->sp << " curr sp";
+      //   comm::sout32(std::cerr) << sp << std::endl;
+      //   break; 
+      // }
     }
     if (ir == frame_stk.rend()) { return; }
     else {
