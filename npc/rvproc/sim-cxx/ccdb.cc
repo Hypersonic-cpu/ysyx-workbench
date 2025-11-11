@@ -96,7 +96,7 @@ ccdb::frame_trace(uint32_t snpc, uint32_t dst, bool is_ret) {
   } else if (is_ret) { // NOTE: function return
     auto ir = frame_stk.rbegin();
     for (; ir != frame_stk.rend(); ir++) {
-      if (ir->ra == dst && ir->sp == sp) {
+      if (ir->ra == dst) {
         // Jump back => true ret.
         break;
       }
