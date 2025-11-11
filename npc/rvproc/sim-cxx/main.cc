@@ -4,8 +4,9 @@
 #include <memory>
 #include <cstdlib>
 #include <iostream>
-
 #include <numeric>
+#include <getopt.h>
+
 #include <verilated.h>
 #include <verilated_fst_c.h>
 
@@ -13,6 +14,32 @@
 #include "probe.hh"
 #include "ccdb.hh"
 #include "disasm.hh"
+
+void parse_args(int argc, char* argv[]) {
+  constexpr struct option table[] = {
+    {"print-mem"  , no_argument      , NULL, 'm'},
+    {"print-dev"  , no_argument      , NULL, 'd'},
+    {"print-frame", no_argument      , NULL, 'f'},
+    {"log"        , required_argument, NULL, 'l'},
+    {"elf"        , required_argument, NULL, 'e'},
+    {"help"       , no_argument      , NULL, 'h'},
+    {0            , 0                , NULL,  0 },
+  };
+  int o;
+  while ( (o = getopt_long(argc, argv, "-hmdfl:e:", table, NULL)) != -1) {
+    switch (o) {
+      case 'm': comm::mtrace_print = true; break;
+      case 'd': comm::dtrace_print = true; break;
+      case 'f': comm::ftrace_print = true; break;
+      case 'l': comm::log_wavefile = std::string(optarg); break;
+      case 'e': comm::elf_file = optarg; break;
+      default:
+        // printf("Usage: %s [OPTION...] IMAGE [args]\n\n", argv[0]);
+        printf("Invalid Arguments.\n\n");
+        exit(1);
+    }
+  }
+}
 
 inline void 
 single_cycle(
@@ -40,17 +67,9 @@ single_reset(
   single_cycle(top, context);
 }
 
-// uint32_t 
-// probe_reg(
-//     const std::unique_ptr<TOP_NAME>& top, 
-//     uint8_t regid) {
-//   ccdb::set_reg_probe_idx(regid);
-//
-// }
-
 int 
 main(int argc, char* argv[]) {
-  assert(argc > 1);
+  parse_args(argc, argv);
 
   const std::unique_ptr<VerilatedContext> contextp { new VerilatedContext };
 
@@ -59,12 +78,14 @@ main(int argc, char* argv[]) {
   VerilatedFstC* tfp = new VerilatedFstC;
 
   const std::unique_ptr<TOP_NAME> top{new TOP_NAME{contextp.get(), "TOP"}};
-  // Trace 99 levels of hierarchy (or see below)
-  top->trace(tfp, 99);
-  // tfp->dumpvars(1, "t"); // trace 1 level under "t"
-  tfp->open("/home/kong/ysyx-workbench/npc/build-sim/rvproc/logs/simcc.log");
+  if (!comm::log_wavefile.empty()) {
+    // Trace 99 levels of hierarchy (or see below)
+    top->trace(tfp, 99);
+    // tfp->dumpvars(1, "t"); // trace 1 level under "t"
+    tfp->open(comm::log_wavefile.c_str());
+  }
 
-  ccdb::trace_init(argv[1]);
+  ccdb::trace_init();
   single_reset(top, contextp);
 
   constexpr size_t MaxCyc{ 30U };
@@ -104,7 +125,10 @@ main(int argc, char* argv[]) {
     }
   }
   top->final();
-  tfp->close();
+
+  if (!comm::log_wavefile.empty()) {
+    tfp->close();
+  }
   return 0;
 }
 

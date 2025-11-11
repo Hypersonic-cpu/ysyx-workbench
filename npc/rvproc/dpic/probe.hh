@@ -5,6 +5,7 @@
 #include <iostream>
 #include <array>
 #include <stack>
+#include <string>
 #include <unordered_map>
 #include <vector>
 
@@ -146,6 +147,13 @@ namespace comm {
   };
 
   extern std::unordered_map<uint32_t, ElfSymEnt> elf_syms;
+
+  extern bool mtrace_print;
+  extern bool dtrace_print;
+  extern bool ftrace_print;
+
+  extern std::string log_wavefile;
+  extern std::string elf_file;
 }
 
 // NOTE: 这是main用于窥探dpic SV 的namespace.
