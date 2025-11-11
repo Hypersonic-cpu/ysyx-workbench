@@ -26,11 +26,11 @@ image: image-dep
 	@$(OBJCOPY) -S --set-section-flags .bss=alloc,contents -O binary $(IMAGE).elf $(IMAGE).bin
 
 -include $(NPC_HOME)/MakeAmRun.mk
-run: insert-arg
+runam: insert-arg
 	@ln -sfn $(IMAGE).bin $(CHISEL_DPIC_MEMPATH)
 	@$(MAKE) -C $(NPC_HOME) runam
 
-runcc: insert-arg
+run: insert-arg
 	@ln -sfn $(IMAGE).bin $(CHISEL_DPIC_MEMPATH)
 	@$(MAKE) -C $(NPC_HOME) run
 
