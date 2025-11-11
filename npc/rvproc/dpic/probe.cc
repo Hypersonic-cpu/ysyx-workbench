@@ -9,6 +9,7 @@ namespace comm {
   bool mtrace_print{ false };
   bool ftrace_print{ false };
   bool dtrace_print{ false };
+  bool itrace_print{ false };
   std::string log_wavefile{ };
   std::string elf_file{ };
 }
