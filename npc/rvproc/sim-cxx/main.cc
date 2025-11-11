@@ -1,6 +1,7 @@
 #include <cassert>
 #include <ctime>
 #include <iomanip>
+#include <iterator>
 #include <memory>
 #include <cstdlib>
 #include <iostream>
@@ -16,6 +17,11 @@
 #include "disasm.hh"
 
 void parse_args(int argc, char* argv[]) {
+  constexpr auto ANSI_Red    = "\033[31m";
+  constexpr auto ANSI_Yellow = "\033[32m";
+  constexpr auto ANSI_Green  = "\033[33m";
+  constexpr auto ANSI_Blue   = "\033[34m";
+  constexpr auto ANSI_None   = "\033[0m";
   constexpr struct option table[] = {
     {"print-mem"  , no_argument      , NULL, 'm'},
     {"print-inst" , no_argument      , NULL, 'i'},
@@ -36,8 +42,7 @@ void parse_args(int argc, char* argv[]) {
       case 'l': comm::log_wavefile = std::string(optarg); break;
       case 'e': comm::elf_file = optarg; break;
       default:
-        // printf("Usage: %s [OPTION...] IMAGE [args]\n\n", argv[0]);
-        printf("Invalid Arguments.\n\n");
+        std::cerr << ANSI_Red << "Invalid Arguments.\n" << ANSI_None << std::endl;
         exit(1);
     }
   }
