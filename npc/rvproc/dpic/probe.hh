@@ -67,7 +67,6 @@ namespace comm {
   inline std::ostream& 
   sout32(std::ostream& os, std::string prefix="0x") {
     os << prefix << std::setfill('0') << std::setw(8) << std::hex;
-    os << std::setfill(' ') << std::dec;
     return os;
   }
 
