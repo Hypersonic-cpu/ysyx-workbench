@@ -70,7 +70,7 @@ namespace ccdb {
     unsigned depth;
     std::string name;
     uint32_t addr;
-    uint32_t sp;
+    // uint32_t sp;
     uint32_t ra;
     std::array<uint32_t, comm::FuctArgs> args {};
     void printent(std::ostream& os, const std::string& prefix, bool indent=false) {

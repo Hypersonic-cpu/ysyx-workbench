@@ -68,7 +68,15 @@ ccdb::frame_trace(uint32_t snpc, uint32_t dst, bool is_ret) {
   using comm::elf_syms;
   using ccdb::frame_stk;
   auto it = elf_syms.find(dst);
-  auto [_v2, sp] = read_reg(2);
+  auto const read_args = [](){
+    std::array<uint32_t, comm::FuctArgs> aret {};
+    for (size_t i = 0; i < comm::FuctArgs; i++) {
+      aret.at(i) = read_reg(10U+i).second;
+    }
+    return aret;
+  };
+
+  // auto [_v2, sp] = read_reg(2);
   if (is_ret && it != elf_syms.end()) { // NOTE: TCO
     // Jump to a symbol, with rd == 0, 
     // TCO psuedo ret of current frame. 
@@ -85,13 +93,15 @@ ccdb::frame_trace(uint32_t snpc, uint32_t dst, bool is_ret) {
     }
     // Alloc new frame, but ra remains.
     frame_stk.emplace_back(
-        depth, it->second.name, it->second.addr, sp, ra);
+        depth, it->second.name, it->second.addr, ra, 
+        read_args());
     frame_stk.back().printent(std::cerr, "+", true);
   } else if (it != elf_syms.end()) { // NOTE: Normal function call.
     auto depth = frame_stk.empty() ? 0U : (frame_stk.back().depth+1);
     // The static NPC (PC of jal +4) is ra
     frame_stk.emplace_back(
-        depth, it->second.name, it->second.addr, sp, snpc);
+        depth, it->second.name, it->second.addr, snpc,
+        read_args());
     frame_stk.back().printent(std::cerr, "+", true);
   } else if (is_ret) { // NOTE: function return
     auto ir = frame_stk.rbegin();
@@ -102,13 +112,7 @@ ccdb::frame_trace(uint32_t snpc, uint32_t dst, bool is_ret) {
       }
       // The sp equals the sp at function call (before frame alloc).
       // => Matches ? 
-      // WARN:使用 sp 是不准确的. 可能用 ra 会更好.
-      // if (ir->sp == sp) { 
-      //   std::cerr << ir->depth << " ir->sp ";
-      //   comm::sout32(std::cerr) << ir->sp << " curr sp";
-      //   comm::sout32(std::cerr) << sp << std::endl;
-      //   break; 
-      // }
+      // WARN:使用 sp 是不准确的. 用 ra 会更好.
     }
     if (ir == frame_stk.rend()) { return; }
     else {
