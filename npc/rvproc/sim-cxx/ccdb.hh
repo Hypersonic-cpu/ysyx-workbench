@@ -71,7 +71,8 @@ namespace ccdb {
     std::string name;
     uint32_t addr;
     uint32_t sp;
-    std::array<uint32_t, comm::FuctArgs> args;
+    uint32_t ra;
+    std::array<uint32_t, comm::FuctArgs> args {};
     void printent(std::ostream& os, const std::string& prefix, bool indent=false) {
       if (indent) { std::string space(depth, ' '); os << space; }
       os << prefix << " ";

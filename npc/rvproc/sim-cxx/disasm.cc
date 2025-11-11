@@ -7,6 +7,7 @@
 #include <cstdlib>
 #include <elf.h>
 #include <iomanip>
+#include <ios>
 #include <iostream>
 #include <iterator>
 #include <ostream>
@@ -119,6 +120,7 @@ ccdb::init_elfsym() {
     }
   }
 
+  std::cerr << std::dec;
   std::cerr <<  "\n === ELF Funct Symbols (" << comm::elf_syms.size() << " total) === ";
   std::cerr << std::endl;
   for (auto const& [addr, ent] : comm::elf_syms) {
