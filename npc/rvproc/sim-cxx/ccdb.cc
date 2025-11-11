@@ -5,7 +5,8 @@
 
 #include <cstdint>
 #include <list>
-#include <stack>
+// #include <stack>
+#include <unordered_map>
 #include <utility>
 
 std::pair<bool, uint32_t>
@@ -54,10 +55,19 @@ ccdb::inst_trace(ccdb::ptop_t top) {
   }
 }
 
-std::list<ccdb::FrameEnt> ccdb::frameStk {};
+std::list<ccdb::FrameEnt> ccdb::frame_stk {};
 
 void 
-ccdb::frame_trace(/* ptop_t top, */ uint32_t snpc, uint32_t dst, bool is_ret) {
+ccdb::frame_trace(uint32_t snpc, uint32_t dst, bool is_ret) {
+  using comm::elf_syms;
+  using ccdb::frame_stk;
+  auto it = elf_syms.find(dst);
+  if (it != elf_syms.end()) {
+    // Jump to a symbol. Could be TCO or funct call
+    // depends on stack pointer.
+    
+  }
+
   // NOTE: rd == 0 并不一定是 ret, 也有可能是 TCO.
   // 另外, void funct() { while (1) { ... } } 也会造成类似的情况. 
   // 需要根据stack操作辨别. 也可以直接无视, 因为无穷尾递归和 while (1) 
