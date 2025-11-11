@@ -5,6 +5,7 @@
 
 #include <cassert>
 #include <cstdint>
+#include <iterator>
 #include <list>
 #include <unordered_map>
 #include <utility>
@@ -98,7 +99,12 @@ ccdb::frame_trace(uint32_t snpc, uint32_t dst, bool is_ret) {
     for (; ir != frame_stk.rend(); ir++) {
       // The sp equals the sp at function call (before frame alloc).
       // => Matches!
-      if (ir->sp == sp) { break; }
+      if (ir->sp == sp) { 
+        std::cerr << ir->depth << " ir->sp ";
+        comm::sout32(std::cerr) << ir->sp << " curr sp";
+        comm::sout32(std::cerr) << sp << std::endl;
+        break; 
+      }
     }
     if (ir == frame_stk.rend()) { return; }
     else {
