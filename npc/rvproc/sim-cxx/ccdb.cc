@@ -57,7 +57,7 @@ ccdb::inst_trace() {
     auto dst = is_jalr ? 
       ((immI + src1) & (~1U)) : (immJ + pc);
     // Check ELF symbol for pc / dst
-    ccdb::frame_trace(pc, dst, rd == 0);
+    ccdb::frame_trace(pc+4, dst, rd == 0);
   }
 }
 
