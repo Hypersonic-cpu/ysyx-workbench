@@ -18,6 +18,7 @@
 void parse_args(int argc, char* argv[]) {
   constexpr struct option table[] = {
     {"print-mem"  , no_argument      , NULL, 'm'},
+    {"print-inst" , no_argument      , NULL, 'i'},
     {"print-dev"  , no_argument      , NULL, 'd'},
     {"print-frame", no_argument      , NULL, 'f'},
     {"log"        , required_argument, NULL, 'l'},
@@ -26,11 +27,12 @@ void parse_args(int argc, char* argv[]) {
     {0            , 0                , NULL,  0 },
   };
   int o;
-  while ( (o = getopt_long(argc, argv, "-hmdfl:e:", table, NULL)) != -1) {
+  while ( (o = getopt_long(argc, argv, "-hmidfl:e:", table, NULL)) != -1) {
     switch (o) {
       case 'm': comm::mtrace_print = true; break;
       case 'd': comm::dtrace_print = true; break;
       case 'f': comm::ftrace_print = true; break;
+      case 'i': comm::itrace_print = true; break;
       case 'l': comm::log_wavefile = std::string(optarg); break;
       case 'e': comm::elf_file = optarg; break;
       default:

@@ -35,7 +35,9 @@ ccdb::inst_trace() {
 
   auto ent = comm::InstEnt{ pc, inst, buf };
   comm::instBuf.append(ent);
-  // ent.printent(std::cerr);
+  if (comm::itrace_print) {
+    ent.printent(std::cerr);
+  }
 
   bool is_jalr = comm::bits(inst, 6, 2) == 0b11001;
   bool is_jal  = comm::bits(inst, 6, 2) == 0b11011;
