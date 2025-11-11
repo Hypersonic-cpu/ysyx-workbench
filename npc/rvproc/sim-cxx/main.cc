@@ -121,13 +121,13 @@ main(int argc, char* argv[]) {
   {
     std::cerr << "\n=== Inst Ring Buffer === " << std::endl;
     for (size_t i = 0; i < comm::instBuf.size(); i++) {
-      comm::instBuf.atmod(i).printent(std::cerr);
+      comm::instBuf.atidx(i).printent(std::cerr);
     }
   }
   {
     std::cerr << "\n=== Mem Ring Buffer === " << std::endl;
     for (size_t i = 0; i < comm::memBuf.size(); i++) {
-      comm::memBuf.atmod(i).printent(std::cerr);
+      comm::memBuf.atidx(i).printent(std::cerr);
     }
   }
   top->final();
