@@ -77,19 +77,19 @@ ccdb::frame_trace(uint32_t snpc, uint32_t dst, bool is_ret) {
     } else {
       auto temp = frame_stk.back();
       depth = temp.depth;
-      frame_stk.back().printent(std::cerr, "- [TCO]");
+      frame_stk.back().printent(std::cerr, "- [TCO]", true);
       frame_stk.pop_back();
     }
     // Alloc new frame 
     frame_stk.emplace_back(
         depth, it->second.name, it->second.addr, sp);
-    frame_stk.back().printent(std::cerr, "+");
+    frame_stk.back().printent(std::cerr, "+", true);
   } else if (it != elf_syms.end()) {
     // Normal function call.
     auto depth = frame_stk.empty() ? 0U : (frame_stk.back().depth+1);
     frame_stk.emplace_back(
         depth, it->second.name, it->second.addr, sp);
-    frame_stk.back().printent(std::cerr, "+");
+    frame_stk.back().printent(std::cerr, "+", true);
   } else if (is_ret) {
     // function return
     auto ir = frame_stk.rbegin();
@@ -100,17 +100,11 @@ ccdb::frame_trace(uint32_t snpc, uint32_t dst, bool is_ret) {
     }
     if (ir == frame_stk.rend()) { return; }
     else {
-      frame_stk.back().printent(std::cerr, "-");
+      frame_stk.back().printent(std::cerr, "-", true);
       // Should not skip !
       assert(&(*ir) == &frame_stk.back());
       frame_stk.pop_back();
     }
   }
-
-  // NOTE: rd == 0 并不一定是 ret, 也有可能是 TCO.
-  // 另外, void funct() { while (1) { ... } } 也会造成类似的情况. 
-  // 需要根据stack操作辨别. 也可以直接无视, 因为无穷尾递归和 while (1) 
-  // 没什么区别. (但不应压栈)
-  //
 }
 
