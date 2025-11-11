@@ -54,9 +54,9 @@ namespace ccdb {
 
   std::pair<bool, uint32_t> read_mem(uint32_t addr);
 
-  void inline trace_init(const char* elf_file) { 
+  void inline trace_init() { 
     init_disasm(); 
-    init_elfsym(elf_file);
+    init_elfsym();
   }
 
   // void inst_trace(uint32_t pc);

@@ -52,11 +52,12 @@ ccdb::disassemble(char *str, int size, uint64_t pc, uint8_t *code, int nbyte) {
 }
 
 void
-ccdb::init_elfsym(const char *elf_file) {
-  if (elf_file == NULL) { return; }
+ccdb::init_elfsym() {
+  using comm::elf_file;
+  if (elf_file.empty()) { return; }
 
   std::cerr << "Elf file " << elf_file; 
-  int fd = open(elf_file, O_RDONLY);
+  int fd = open(elf_file.c_str(), O_RDONLY);
   assert(fd >= 0 && "Elf file open failed");
 
   struct stat st;
