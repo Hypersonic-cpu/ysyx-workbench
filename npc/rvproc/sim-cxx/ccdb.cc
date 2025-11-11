@@ -3,14 +3,19 @@
 #include "VrvCore.h"
 #include "VrvCore___024root.h"
 
+#include <cassert>
 #include <cstdint>
+#include <iterator>
 #include <list>
-#include <stack>
+#include <unordered_map>
 #include <utility>
+#include <ranges>
+
+using ccdb::top;
 
 std::pair<bool, uint32_t>
-ccdb::read_reg(ptop_t top, uint8_t regid) {
-  return ccdb::_read_verilator_reg(top, regid);
+ccdb::read_reg(uint8_t regid) {
+  return ccdb::_read_verilator_reg(regid);
 }
 
 std::pair<bool, uint32_t>
@@ -19,7 +24,7 @@ ccdb::read_mem(uint32_t addr) {
 }
 
 void 
-ccdb::inst_trace(ccdb::ptop_t top) {
+ccdb::inst_trace() {
   auto pc = top->rootp->rvCore__DOT__pc;
   auto [v, inst] = ccdb::read_mem(pc);
   assert(v && "ccdb inst read fail");
@@ -31,7 +36,9 @@ ccdb::inst_trace(ccdb::ptop_t top) {
 
   auto ent = comm::InstEnt{ pc, inst, buf };
   comm::instBuf.append(ent);
-  // ent.printent(std::cerr);
+  if (comm::itrace_print) {
+    ent.printent(std::cerr);
+  }
 
   bool is_jalr = comm::bits(inst, 6, 2) == 0b11001;
   bool is_jal  = comm::bits(inst, 6, 2) == 0b11011;
@@ -46,22 +53,74 @@ ccdb::inst_trace(ccdb::ptop_t top) {
       (comm::bits(inst, 20, 20) << 11) |
       (comm::bits(inst, 30, 21) <<  1), 21);
 
-    auto [v, src1] = read_reg(top, rs1);
+    auto [v, src1] = read_reg(rs1);
     auto dst = is_jalr ? 
       ((immI + src1) & (~1U)) : (immJ + pc);
     // Check ELF symbol for pc / dst
-    ccdb::frame_trace(pc, dst, rd == 0);
+    ccdb::frame_trace(pc+4, dst, rd == 0);
   }
 }
 
-std::list<ccdb::FrameEnt> ccdb::frameStk {};
+std::list<ccdb::FrameEnt> ccdb::frame_stk {};
 
 void 
-ccdb::frame_trace(/* ptop_t top, */ uint32_t snpc, uint32_t dst, bool is_ret) {
-  // NOTE: rd == 0 并不一定是 ret, 也有可能是 TCO.
-  // 另外, void funct() { while (1) { ... } } 也会造成类似的情况. 
-  // 需要根据stack操作辨别. 也可以直接无视, 因为无穷尾递归和 while (1) 
-  // 没什么区别. (但不应压栈)
-  //
+ccdb::frame_trace(uint32_t snpc, uint32_t dst, bool is_ret) {
+  using comm::elf_syms;
+  using ccdb::frame_stk;
+  auto it = elf_syms.find(dst);
+  auto const read_args = [](){
+    std::array<uint32_t, comm::FuctArgs> aret {};
+    for (size_t i = 0; i < comm::FuctArgs; i++) {
+      aret.at(i) = read_reg(10U+i).second;
+    }
+    return aret;
+  };
+
+  // auto [_v2, sp] = read_reg(2);
+  if (is_ret && it != elf_syms.end()) { // NOTE: TCO
+    // Jump to a symbol, with rd == 0, 
+    // TCO psuedo ret of current frame. 
+    unsigned depth = 0;
+    unsigned ra = 0;
+    if (frame_stk.empty()) {
+      std::cerr << "TCO on empty frame stack, change to simply alloc" << std::endl;
+    } else {
+      auto temp = frame_stk.back();
+      depth = temp.depth;
+      ra = temp.ra;
+      frame_stk.back().printent(std::cerr, "- [TCO]", true);
+      frame_stk.pop_back();
+    }
+    // Alloc new frame, but ra remains.
+    frame_stk.emplace_back(
+        depth, it->second.name, it->second.addr, ra, 
+        read_args());
+    frame_stk.back().printent(std::cerr, "+", true);
+  } else if (it != elf_syms.end()) { // NOTE: Normal function call.
+    auto depth = frame_stk.empty() ? 0U : (frame_stk.back().depth+1);
+    // The static NPC (PC of jal +4) is ra
+    frame_stk.emplace_back(
+        depth, it->second.name, it->second.addr, snpc,
+        read_args());
+    frame_stk.back().printent(std::cerr, "+", true);
+  } else if (is_ret) { // NOTE: function return
+    auto ir = frame_stk.rbegin();
+    for (; ir != frame_stk.rend(); ir++) {
+      if (ir->ra == dst) {
+        // Jump back => true ret.
+        break;
+      }
+      // The sp equals the sp at function call (before frame alloc).
+      // => Matches ? 
+      // WARN:使用 sp 是不准确的. 用 ra 会更好.
+    }
+    if (ir == frame_stk.rend()) { return; }
+    else {
+      frame_stk.back().printent(std::cerr, "-", true);
+      // Should not skip !
+      assert(&(*ir) == &frame_stk.back());
+      frame_stk.pop_back();
+    }
+  }
 }
 
