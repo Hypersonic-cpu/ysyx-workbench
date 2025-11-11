@@ -22,5 +22,5 @@ namespace ccdb {
 
   void disassemble(char *str, int size, uint64_t pc, uint8_t *code, int nbyte);
 
-  void init_elfsym(const char* path);
+  void init_elfsym();
 } // namespace ccdb 

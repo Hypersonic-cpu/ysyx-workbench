@@ -63,6 +63,7 @@ static void exec_once(Decode *s, vaddr_t pc) {
   cpu.pc = s->dnpc;
 }
 
+#ifdef CONFIG_ITRACE
 /**
  * WARN: For Inst Ring Buffer. 
  * 这段代码本来处在 exec_once 以后, 
@@ -97,6 +98,7 @@ void itrace_logging(Decode *s) {
   strncpy(iringbuf[iringptr], s->logbuf, 128);
   iringptr = (iringptr+1) % IRING_BUF_LEN;
 }
+#endif
 
 static void execute(uint64_t n) {
   Decode s;
