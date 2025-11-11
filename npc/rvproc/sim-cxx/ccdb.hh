@@ -76,7 +76,7 @@ namespace ccdb {
     void printent(std::ostream& os, const std::string& prefix, bool indent=false) {
       if (indent) { std::string space(depth, ' '); os << space; }
       os << prefix << " ";
-      os << "[" << std::setfill(' ') << std::setw(3) << depth << "] "; 
+      os << "[" << std::setfill(' ') << std::setw(3) << std::dec << depth << "] "; 
       comm::sout32(os) << addr << " : " << name << "(";
       for (auto arg: args) {
         comm::sout32(os) << ", ";
