@@ -67,6 +67,8 @@ single_reset(
   single_cycle(top, context);
 }
 
+ccdb::ptop_t ccdb::top = nullptr;
+
 int 
 main(int argc, char* argv[]) {
   parse_args(argc, argv);
