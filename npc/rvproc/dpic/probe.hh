@@ -5,6 +5,7 @@
 #include <iostream>
 #include <array>
 #include <stack>
+#include <string>
 #include <unordered_map>
 #include <vector>
 
@@ -64,9 +65,8 @@ namespace comm {
   // }
 
   inline std::ostream& 
-  sout32(std::ostream& os, std::string prefix="0x") {
-    os << prefix << std::setfill('0') << std::setw(8) << std::hex;
-    os << std::setfill(' ');
+  sout32(std::ostream& os, char fill='0', std::string prefix="0x") {
+    os << prefix << std::setfill(fill) << std::setw(8) << std::hex;
     return os;
   }
 
@@ -77,7 +77,7 @@ namespace comm {
       std::string const disasm;
       void printent(std::ostream& os) const {
         sout32(os) << pc << " : ";
-        sout32(os, "") << inst << " \t" << disasm;
+        sout32(os, '0', "") << inst << " \t" << disasm;
         os << std::endl;
       }
   };
@@ -91,8 +91,8 @@ namespace comm {
       uint16_t addr_mask;
       void printent(std::ostream& os) const {
         os << (is_write ? "Write" : "Read ");
-        comm::sout32(os, " @ 0x") << addr << " : ";
-        comm::sout32(os, "") << value;
+        comm::sout32(os, '0', " @ 0x") << addr << " : ";
+        comm::sout32(os, ' ', "") << value;
         if (is_write) { os << " mask " << std::hex << std::setw(1) << addr_mask; }
         os << std::endl;
       }
@@ -118,6 +118,14 @@ namespace comm {
         return buf.at(idx % N);
       }
 
+      const T atidx(size_t idx) const {
+        return buf.at((idx + ptr) % N);
+      }
+
+      T& atidx(size_t idx) {
+        return buf.at((idx + ptr) % N);
+      }
+
       void printbuf(std::ostream& os, const std::string& title) const {
         os << "\n === " << title << " === " << std::endl;
         for (size_t i = 0; i < N; i++) {
@@ -126,6 +134,8 @@ namespace comm {
       }
 
       size_t size() const { return N; }
+
+      size_t head() const { return ptr; }
 
     protected:
       size_t ptr;
@@ -146,6 +156,17 @@ namespace comm {
   };
 
   extern std::unordered_map<uint32_t, ElfSymEnt> elf_syms;
+
+  extern bool itrace_print;
+  extern bool mtrace_print;
+  extern bool dtrace_print;
+  extern bool ftrace_print;
+
+  extern std::string log_wavefile;
+  extern std::string elf_file;
+
+  constexpr unsigned RegNum { 16U };
+  constexpr unsigned FuctArgs { 4U };
 }
 
 // NOTE: 这是main用于窥探dpic SV 的namespace.

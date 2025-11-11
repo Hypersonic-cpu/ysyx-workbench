@@ -73,7 +73,7 @@ runam:
 	$(call git_commit, "run with AM")
 	mill -i $(PRJ).test.testOnly $(PRJ).test.$(TOPNAME)Am 
 
-runcc: verilate verilog $(LIBCAPSTONE) $(SIM_BIN)
+run: verilate verilog $(LIBCAPSTONE) $(SIM_BIN)
 	$(call git_commit, "run with AM via verilator cc")
 	$(SIM_BIN) $(simccargs)
 
