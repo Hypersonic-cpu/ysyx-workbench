@@ -17,15 +17,17 @@
 #include "VrvCore___024root.h"
 
 #include "disasm.hh"
+#include "probe.hh"
 
 namespace ccdb {
+  using ptop_t = const TOP_NAME*;
+  extern ptop_t top;
 
-  typedef const std::unique_ptr<TOP_NAME>& ptop_t;
-  std::pair<bool, uint32_t> read_reg(ptop_t top, uint8_t regid);
+  std::pair<bool, uint32_t> read_reg(uint8_t regid);
 
   // 0xff for PC
   inline std::pair<bool, uint32_t> 
-  _read_verilator_reg(ptop_t top, uint8_t regid) {
+  _read_verilator_reg(uint8_t regid) {
     auto r = top->rootp;
     uint32_t ret = 0;
     bool valid = true;
@@ -60,12 +62,26 @@ namespace ccdb {
   }
 
   // void inst_trace(uint32_t pc);
-  void inst_trace(ptop_t top);
+  void inst_trace();
 
-  struct FrameEnt {
+  class FrameEnt {
+    public:
     // Stack pointer before callee modify it.
+    unsigned depth;
+    std::string name;
+    uint32_t addr;
     uint32_t sp;
-    std::list<FrameEnt>::iterator it;
+    std::array<uint32_t, comm::FuctArgs> args;
+    void printent(std::ostream& os, const std::string& prefix, bool indent=false) {
+      if (indent) { std::string space(depth, ' '); os << space; }
+      os << prefix << " ";
+      os << "[" << std::setfill(' ') << std::setw(3) << depth << "] "; 
+      comm::sout32(os) << addr << " : " << name << "(";
+      for (auto arg: args) {
+        comm::sout32(os) << ", ";
+      }
+      os << ")" << std::endl;
+    }
   };
   extern std::list<FrameEnt> frame_stk;
 

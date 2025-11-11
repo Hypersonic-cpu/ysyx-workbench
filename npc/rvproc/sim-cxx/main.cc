@@ -78,6 +78,8 @@ main(int argc, char* argv[]) {
   VerilatedFstC* tfp = new VerilatedFstC;
 
   const std::unique_ptr<TOP_NAME> top{new TOP_NAME{contextp.get(), "TOP"}};
+  ccdb::top = top.get();
+
   if (!comm::log_wavefile.empty()) {
     // Trace 99 levels of hierarchy (or see below)
     top->trace(tfp, 99);
@@ -91,17 +93,17 @@ main(int argc, char* argv[]) {
   constexpr size_t MaxCyc{ 30U };
   size_t currCyc{ 1U };
   while (!contextp->gotFinish()) {
-    ccdb::inst_trace(top);
+    ccdb::inst_trace();
     single_cycle(top, contextp);
     currCyc++;
   }
   for (uint16_t i = 0; i < 16; ++i) {
-    auto [v, res] = ccdb::read_reg(top, i);
+    auto [v, res] = ccdb::read_reg(i);
     std::cerr << "Reg [" << std::dec << std::setw(2)<< i << "] : ";
     comm::sout32(std::cerr) << res << std::endl;
   }
   {
-    auto [v, res] = ccdb::read_reg(top, 0xff);
+    auto [v, res] = ccdb::read_reg(0xff);
     std::cerr << "Reg [PC] : ";
     comm::sout32(std::cerr) << res << std::endl;
   }
