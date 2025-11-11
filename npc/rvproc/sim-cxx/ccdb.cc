@@ -95,6 +95,7 @@ ccdb::frame_trace(uint32_t snpc, uint32_t dst, bool is_ret) {
     frame_stk.emplace_back(
         depth, it->second.name, it->second.addr, ra, 
         read_args());
+    frame_stk.back().args.at(0) = 1;
     frame_stk.back().printent(std::cerr, "+", true);
   } else if (it != elf_syms.end()) { // NOTE: Normal function call.
     auto depth = frame_stk.empty() ? 0U : (frame_stk.back().depth+1);
