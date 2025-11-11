@@ -79,7 +79,7 @@ namespace ccdb {
       os << "[" << std::setfill(' ') << std::setw(3) << std::dec << depth << "] "; 
       comm::sout32(os) << addr << " : " << name << "(";
       for (auto arg: args) {
-        comm::sout32(os) << arg << ", ";
+        comm::sout32(os, ' ') << arg << ", ";
       }
       os << ")" << std::endl;
     }

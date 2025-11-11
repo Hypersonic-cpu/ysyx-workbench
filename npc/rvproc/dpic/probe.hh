@@ -65,7 +65,7 @@ namespace comm {
   // }
 
   inline std::ostream& 
-  sout32(std::ostream& os, std::string prefix="0x", char fill='0') {
+  sout32(std::ostream& os, char fill='0', std::string prefix="0x") {
     os << prefix << std::setfill(fill) << std::setw(8) << std::hex;
     return os;
   }
@@ -77,7 +77,7 @@ namespace comm {
       std::string const disasm;
       void printent(std::ostream& os) const {
         sout32(os) << pc << " : ";
-        sout32(os, "") << inst << " \t" << disasm;
+        sout32(os, '0', "") << inst << " \t" << disasm;
         os << std::endl;
       }
   };
@@ -91,8 +91,8 @@ namespace comm {
       uint16_t addr_mask;
       void printent(std::ostream& os) const {
         os << (is_write ? "Write" : "Read ");
-        comm::sout32(os, " @ 0x") << addr << " : ";
-        comm::sout32(os, "") << value;
+        comm::sout32(os, '0', " @ 0x") << addr << " : ";
+        comm::sout32(os, ' ', "") << value;
         if (is_write) { os << " mask " << std::hex << std::setw(1) << addr_mask; }
         os << std::endl;
       }
