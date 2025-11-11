@@ -82,13 +82,13 @@ ccdb::frame_trace(uint32_t snpc, uint32_t dst, bool is_ret) {
     }
     // Alloc new frame 
     frame_stk.emplace_back(
-        depth, it->second->name, it->second->addr, sp);
+        depth, it->second.name, it->second.addr, sp);
     frame_stk.back().printent(std::cerr, "+");
   } else if (it != elf_syms.end()) {
     // Normal function call.
     auto depth = frame_stk.empty() ? 0U : (frame_stk.back().depth+1);
     frame_stk.emplace_back(
-        depth, it->second->name, it->second->addr, sp);
+        depth, it->second.name, it->second.addr, sp);
     frame_stk.back().printent(std::cerr, "+");
   } else if (is_ret) {
     // function return
