@@ -62,9 +62,12 @@ namespace ccdb {
   // void inst_trace(uint32_t pc);
   void inst_trace(ptop_t top);
 
-  class FrameEnt {
-    // 
+  struct FrameEnt {
+    // Stack pointer before callee modify it.
+    uint32_t sp;
+    std::list<FrameEnt>::iterator it;
   };
-  extern std::list<FrameEnt> frameStk;
+  extern std::list<FrameEnt> frame_stk;
+
   void frame_trace(uint32_t snpc, uint32_t dst, bool is_ret);
 }

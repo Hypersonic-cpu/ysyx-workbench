@@ -105,13 +105,13 @@ main(int argc, char* argv[]) {
     std::cerr << "Reg [PC] : ";
     comm::sout32(std::cerr) << res << std::endl;
   }
-  {
-    for (uint32_t i = 0; i < 16; i += 4) {
-      auto [v, res] = ccdb::read_mem(0x8000'0000U + i);
-    comm::sout32(std::cerr, "") << res << " ";
-    }
-    std::cerr << std::endl;
-  }
+  // {
+  //   for (uint32_t i = 0; i < 16; i += 4) {
+  //     auto [v, res] = ccdb::read_mem(0x8000'0000U + i);
+  //   comm::sout32(std::cerr, "") << res << " ";
+  //   }
+  //   std::cerr << std::endl;
+  // }
   {
     std::cerr << "\n=== Inst Ring Buffer === " << std::endl;
     for (size_t i = 0; i < comm::instBuf.size(); i++) {
