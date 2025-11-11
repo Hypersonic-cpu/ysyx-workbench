@@ -118,6 +118,14 @@ namespace comm {
         return buf.at(idx % N);
       }
 
+      const T atidx(size_t idx) const {
+        return buf.at((idx + ptr) % N);
+      }
+
+      T& atidx(size_t idx) {
+        return buf.at((idx + ptr) % N);
+      }
+
       void printbuf(std::ostream& os, const std::string& title) const {
         os << "\n === " << title << " === " << std::endl;
         for (size_t i = 0; i < N; i++) {
@@ -126,6 +134,8 @@ namespace comm {
       }
 
       size_t size() const { return N; }
+
+      size_t head() const { return ptr; }
 
     protected:
       size_t ptr;
