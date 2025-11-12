@@ -243,7 +243,7 @@ class EXU extends Module {
   val src2 = Mux(io.sel.rs2SelImm, io.imm, io.rs2V)
   switch (io.op) {
     is (IntAluOp.Add) {
-      io.res := src1 + src2
+      io.res := src1 + src2 + 1.U
     }
   }
   printf(cf"\t${src1}%x op ${src2}%x = ${io.res}%x\n")
