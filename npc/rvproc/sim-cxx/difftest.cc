@@ -64,27 +64,20 @@ diff::iota(uint64_t n) {
   ref_exec(n);
 }
 
-namespace diff {
-  uint32_t delayed_ref_pc = -1;
-}
-
 std::pair<bool, uint8_t>
 diff::match() {
   uint32_t regbuf[comm::RegNum+1];
   ref_regcpy(regbuf, CpyDir::ToDut);
 
-  auto ref_pc = delayed_ref_pc;
-  delayed_ref_pc = regbuf[comm::RegNum];
-
   size_t i = 0;
-  for (i = 0; i < comm::RegNum; ++i) {
+  for (i = 0; i < comm::RegNum + 1; ++i) {
     // if (regbuf[i] != ccdb::read_reg(i).second) {
       comm::sout32(std::cerr) << regbuf[i] << "<- Ref"<< std::endl;
       // return std::make_pair(false, i);
     // }
   }
   // if (ref_pc != -1 && ref_pc != ccdb::read_reg(i).second) {
-    comm::sout32(std::cerr) << regbuf[i] << "<- Ref"<< std::endl;
+    // comm::sout32(std::cerr) << regbuf[i] << "<- Ref"<< std::endl;
     // return std::make_pair(false, i);
   // }
   return std::make_pair(true, 0xff);

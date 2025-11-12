@@ -105,9 +105,10 @@ main(int argc, char* argv[]) {
   size_t currCyc{ 1U };
   while (!contextp->gotFinish()) {
     ccdb::inst_trace();
+    // WARN: Must come first (before DUT has changed)
+    diff::iota(1);
     single_cycle(top, contextp);
     std::cerr << "Cycle #" << currCyc << std::endl;
-    diff::iota(1);
     auto [good, id] = diff::match();
     if (true || !good) {
       // std::cerr << "Mismatch " << std::dec << (int) id << std::endl;
