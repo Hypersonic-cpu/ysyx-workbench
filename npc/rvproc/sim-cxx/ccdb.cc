@@ -69,8 +69,8 @@ ccdb::frame_trace(uint32_t snpc, uint32_t dst, bool is_ret) {
   using ccdb::frame_stk;
   auto it = elf_syms.find(dst);
   auto const read_args = [](){
-    std::array<uint32_t, comm::FuctArgs> aret {};
-    for (size_t i = 0; i < comm::FuctArgs; i++) {
+    std::array<uint32_t, comm::FunctArgs> aret {};
+    for (size_t i = 0; i < comm::FunctArgs; i++) {
       aret.at(i) = read_reg(10U+i).second;
     }
     return aret;
