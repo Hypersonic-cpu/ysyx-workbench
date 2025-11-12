@@ -88,7 +88,7 @@ ccdb::frame_trace(uint32_t snpc, uint32_t dst, bool is_ret) {
       auto temp = frame_stk.front();
       depth = temp.depth;
       ra = temp.ra;
-      frame_stk.front().printent(std::cerr, "- [TCO]", true);
+      // frame_stk.front().printent(std::cerr, "- [TCO]", true);
       frame_stk.pop_front();
     }
     // Alloc new frame, but ra remains.
@@ -116,7 +116,7 @@ ccdb::frame_trace(uint32_t snpc, uint32_t dst, bool is_ret) {
     }
     if (ir == frame_stk.end()) { return; }
     else {
-      frame_stk.front().printent(std::cerr, "-", true);
+      // frame_stk.front().printent(std::cerr, "-", true);
       // Should not skip !
       assert(&(*ir) == &frame_stk.front());
       frame_stk.pop_front();
