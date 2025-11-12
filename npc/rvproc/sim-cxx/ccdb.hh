@@ -95,6 +95,7 @@ namespace ccdb {
     bool frame_stk = true;
     bool inst_buf = true;
     bool reg_file = true;
+    bool elf_symbol = true;
   };
   extern DumpPrint runtime_dump_opt;
 
@@ -134,6 +135,17 @@ namespace ccdb {
     os << "\n=== Mem Ring Buffer === " << std::endl;
     for (size_t i = 0; i < comm::memBuf.size(); i++) {
       comm::memBuf.atidx(i).printent(os);
+    }
+  }
+
+  inline void 
+  elftable_dump(std::ostream& os=std::cerr) {
+    os <<  "\n === ELF Funct Symbols (" << comm::elf_syms.size() << " total) === ";
+    os << std::endl;
+    for (auto const& [addr, ent] : comm::elf_syms) {
+      comm::sout32(os) << addr;
+      os << " size " << std::dec << std::setfill(' ') << std::setw(6) << ent.size;
+      os << " : " << ent.name << std::endl;
     }
   }
 
