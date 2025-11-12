@@ -17,12 +17,12 @@
 #include "ccdb.hh"
 #include "disasm.hh"
 
+constexpr auto ANSI_Red    = "\033[31m";
+constexpr auto ANSI_Yellow = "\033[32m";
+constexpr auto ANSI_Green  = "\033[33m";
+constexpr auto ANSI_Blue   = "\033[34m";
+constexpr auto ANSI_None   = "\033[0m";
 void parse_args(int argc, char* argv[]) {
-  constexpr auto ANSI_Red    = "\033[31m";
-  constexpr auto ANSI_Yellow = "\033[32m";
-  constexpr auto ANSI_Green  = "\033[33m";
-  constexpr auto ANSI_Blue   = "\033[34m";
-  constexpr auto ANSI_None   = "\033[0m";
   constexpr struct option table[] = {
     {"print-mem"  , no_argument      , NULL, 'm'},
     {"print-inst" , no_argument      , NULL, 'i'},
@@ -105,27 +105,18 @@ main(int argc, char* argv[]) {
   size_t currCyc{ 1U };
   while (!contextp->gotFinish()) {
     ccdb::inst_trace();
-    // WARN: Must come first (before DUT has changed)
+    // Ref iota must come first (before DUT has changed)
     diff::iota(1);
     single_cycle(top, contextp);
-    // std::cerr << "Cycle #" << currCyc << std::endl;
-    // if (currCyc == 88) {
-    //   ccdb::dump_print(ccdb::DumpPrint{});
-    //   exit(0);
-    // }
-    auto [good, id] = diff::match();
-    if (!good) {
-      // std::cerr << "Mismatch " << std::dec << (int) id << std::endl;
-      // for (uint16_t i = 0; i < comm::RegNum; ++i) {
-      //   auto [v, res] = ccdb::read_reg(i);
-      //   std::cerr << "Reg [" << std::dec << std::setw(2)<< i << "] : ";
-      //   comm::sout32(std::cerr) << res << std::endl;
-      // }
-      // {
-      //   auto [v, res] = ccdb::read_reg(comm::RegNum);
-      //   std::cerr << "Reg [PC] : ";
-      //   comm::sout32(std::cerr) << res << std::endl;
-      // }
+    auto diffvec = diff::match();
+    if (!diffvec.empty()) {
+      for (const auto& [id, ref, dut] : diffvec) {
+        std::cerr << ANSI_Red << "Mismatch reg " << (int) id
+          << " (" << comm::RegName.at(id) << ") : " << "expected "; 
+        comm::sout32(std::cerr) << ref << " got ";
+        comm::sout32(std::cerr) << dut << std::endl;
+      }
+      // ccdb::dump_print(ccdb::DumpPrint{});
       exit(1);
     }
     currCyc++;
