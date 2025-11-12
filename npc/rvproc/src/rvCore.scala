@@ -156,7 +156,8 @@ class IDU extends Module {
   // On ECALL we prepare reg a0 (x10)
   io.rs1    := MuxCase(io.inst(19, 15), Seq(
     isEbreak                -> 10.U,
-    (opName === InstOp.Lui) -> 0.U
+    (opName === InstOp.Lui) -> 0.U,
+    (opName === InstOp.OpImm) -> 2.U
   ))
   // (isEbreak, 10.U, io.inst(19, 15))
   io.rs2    := io.inst(24, 20)
@@ -243,7 +244,7 @@ class EXU extends Module {
   val src2 = Mux(io.sel.rs2SelImm, io.imm, io.rs2V)
   switch (io.op) {
     is (IntAluOp.Add) {
-      io.res := src1 + src2 + 1.U
+      io.res := src1 + src2
     }
   }
   printf(cf"\t${src1}%x op ${src2}%x = ${io.res}%x\n")
