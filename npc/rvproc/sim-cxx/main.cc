@@ -109,7 +109,7 @@ main(int argc, char* argv[]) {
     diff::iota(1);
     single_cycle(top, contextp);
     std::cerr << "Cycle #" << currCyc << std::endl;
-    if (currCyc == 18) {
+    if (currCyc == 88) {
       ccdb::dump_print(ccdb::DumpPrint{});
       exit(0);
     }
