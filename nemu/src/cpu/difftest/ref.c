@@ -13,6 +13,7 @@
 * See the Mulan PSL v2 for more details.
 ***************************************************************************************/
 
+#include "utils.h"
 #include <isa.h>
 #include <cpu/cpu.h>
 #include <difftest-def.h>
@@ -20,15 +21,49 @@
 
 __EXPORT void difftest_memcpy(paddr_t addr, void *buf, size_t n, bool direction) {
   // TODO: DiffTest
-  assert(0);
+  if (direction == DIFFTEST_TO_REF) { // =1
+    for (size_t i = 0; i < n/4; i++) {
+      size_t off = (i << 2);
+      paddr_write(addr+off, 4, *(uint32_t *)(buf+off));
+    }
+    for (size_t i = 0; i < n%4; i++) {
+      size_t off = (n & ~0b11) | i;
+      paddr_write(addr+off, 1, *(uint8_t *)(buf+off));
+    }
+  } else {
+    for (size_t i = 0; i < n/4; i++) {
+      size_t off = (i << 2);
+      uint32_t val = paddr_read(addr+off, 4);
+      *(uint32_t *) (buf+off) = val;
+    }
+    for (size_t i = 0; i < n%4; i++) {
+      size_t off = (n & ~0b11) | i;
+      uint8_t val = paddr_read(addr+off, 1);
+      *(uint8_t *) (buf+off) = val;
+    }
+  }
 }
 
 __EXPORT void difftest_regcpy(void *dut, bool direction) {
-  assert(0);
+  if (direction == DIFFTEST_TO_REF) { // 1 
+    size_t i = 0;
+    for (i = 0; i < MUXDEF(CONFIG_RVE, 16, 32); i++) {
+      cpu.gpr[i] = *((word_t *)dut + i);
+    }
+    cpu.pc = *((word_t *)dut + i);
+  } else {
+    size_t i = 0;
+    for (i = 0; i < MUXDEF(CONFIG_RVE, 16, 32); i++) {
+      *((word_t *)dut + i) = cpu.gpr[i] ;
+    }
+    *((word_t *)dut + i) = cpu.pc;
+  }
 }
 
 __EXPORT void difftest_exec(uint64_t n) {
-  assert(0);
+  nemu_state.state = NEMU_RUNNING;
+  cpu_exec(n);
+  nemu_state.state = NEMU_STOP;
 }
 
 __EXPORT void difftest_raise_intr(word_t NO) {
