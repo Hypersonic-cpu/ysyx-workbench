@@ -8,6 +8,13 @@
 #include <string>
 #include <dlfcn.h>
 
+namespace diff {
+  init_t ref_init = nullptr;
+  exec_t ref_exec = nullptr;
+  mcpy_t ref_memcpy = nullptr;
+  rcpy_t ref_regcpy = nullptr;
+  intr_t ref_raise_intr = nullptr;
+}
 
 // NOTE: Must after the NPC memory is initialized.
 void 
