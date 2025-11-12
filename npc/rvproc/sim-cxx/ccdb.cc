@@ -13,6 +13,8 @@
 
 using ccdb::top;
 
+ccdb::DumpPrint ccdb::runtime_dump_opt{ 0, 1, 0, 0 };
+
 std::pair<bool, uint32_t>
 ccdb::read_reg(uint8_t regid) {
   return ccdb::_read_verilator_reg(regid);
@@ -76,6 +78,7 @@ ccdb::frame_trace(uint32_t snpc, uint32_t dst, bool is_ret) {
     return aret;
   };
 
+  using ccdb::runtime_dump_opt;
   // auto [_v2, sp] = read_reg(2);
   if (is_ret && it != elf_syms.end()) { // NOTE: TCO
     // Jump to a symbol, with rd == 0, 
@@ -88,21 +91,24 @@ ccdb::frame_trace(uint32_t snpc, uint32_t dst, bool is_ret) {
       auto temp = frame_stk.front();
       depth = temp.depth;
       ra = temp.ra;
-      // frame_stk.front().printent(std::cerr, "- [TCO]", true);
+      if (runtime_dump_opt.frame_stk)
+        frame_stk.front().printent(std::cerr, "- [TCO]", true);
       frame_stk.pop_front();
     }
     // Alloc new frame, but ra remains.
     frame_stk.emplace_front(
         depth, it->second.name, it->second.addr, ra, 
         read_args());
-    frame_stk.front().printent(std::cerr, "+", true);
+    if (runtime_dump_opt.frame_stk)
+      frame_stk.front().printent(std::cerr, "+", true);
   } else if (it != elf_syms.end()) { // NOTE: Normal function call.
     auto depth = frame_stk.empty() ? 0U : (frame_stk.front().depth+1);
     // The static NPC (PC of jal +4) is ra
     frame_stk.emplace_front(
         depth, it->second.name, it->second.addr, snpc,
         read_args());
-    frame_stk.front().printent(std::cerr, "+", true);
+    if (runtime_dump_opt.frame_stk)
+      frame_stk.front().printent(std::cerr, "+", true);
   } else if (is_ret) { // NOTE: function return
     auto ir = frame_stk.begin();
     for (; ir != frame_stk.end(); ir++) {
@@ -116,7 +122,8 @@ ccdb::frame_trace(uint32_t snpc, uint32_t dst, bool is_ret) {
     }
     if (ir == frame_stk.end()) { return; }
     else {
-      // frame_stk.front().printent(std::cerr, "-", true);
+      if (runtime_dump_opt.frame_stk)
+        frame_stk.front().printent(std::cerr, "-", true);
       // Should not skip !
       assert(&(*ir) == &frame_stk.front());
       frame_stk.pop_front();
