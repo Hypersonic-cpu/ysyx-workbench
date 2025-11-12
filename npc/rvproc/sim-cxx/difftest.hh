@@ -10,5 +10,5 @@ namespace diff {
 
   bool match();
   void iota();
-
+  void init();
 }
