@@ -66,7 +66,9 @@ namespace comm {
 
   inline std::ostream& 
   sout32(std::ostream& os, char fill='0', std::string prefix="0x") {
+    std::ios::fmtflags original_flags = os.flags();
     os << prefix << std::setfill(fill) << std::setw(8) << std::hex;
+    os.flags(original_flags);
     return os;
   }
 
