@@ -8,6 +8,7 @@
 #include <iterator>
 #include <list>
 #include <ostream>
+#include <regex>
 #include <stack>
 #include <string>
 #include <utility>
@@ -121,8 +122,8 @@ namespace ccdb {
       } else {
         os << std::dec << std::setw(2) << i;
       }
-      os << "] " << comm::RegName.at(i);
-      comm::sout32(os) << std::endl;
+      os << "] " << comm::RegName.at(i) << " : ";
+      comm::sout32(os) << read_reg(i).second << std::endl;
     }
   }
 
