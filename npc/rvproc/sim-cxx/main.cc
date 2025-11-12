@@ -110,6 +110,7 @@ main(int argc, char* argv[]) {
     diff::iota(1);
     auto [good, id] = diff::match();
     if (!good) {
+      std::cerr << "Mismatch " << (int) id << std::endl;
       for (uint16_t i = 0; i < comm::RegNum; ++i) {
         auto [v, res] = ccdb::read_reg(i);
         std::cerr << "Reg [" << std::dec << std::setw(2)<< i << "] : ";
@@ -120,6 +121,7 @@ main(int argc, char* argv[]) {
         std::cerr << "Reg [PC] : ";
         comm::sout32(std::cerr) << res << std::endl;
       }
+      exit(1);
     }
     currCyc++;
   }
