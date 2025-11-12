@@ -109,6 +109,10 @@ main(int argc, char* argv[]) {
     diff::iota(1);
     single_cycle(top, contextp);
     std::cerr << "Cycle #" << currCyc << std::endl;
+    if (currCyc == 18) {
+      ccdb::dump_print(ccdb::DumpPrint{});
+      exit(0);
+    }
     auto [good, id] = diff::match();
     if (!good) {
       // std::cerr << "Mismatch " << std::dec << (int) id << std::endl;
