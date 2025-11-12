@@ -86,7 +86,7 @@ void vga_update_screen() {
            mmio_read(CONFIG_VGA_CTL_MMIO + 4, 4));
   // printf("DISPLAY = %s\n", s ? "SHOW" : "HIDE");
   if (s) {
-    update_screen();
+    IFDEF(CONFIG_VGA_SHOW_SCREEN, update_screen());
     MUXDEF(CONFIG_TARGET_AM, 
            io_write(AM_GPU_FBDRAW, 0, 0, vmem, screen_width(), screen_height(), false), 
            mmio_write(CONFIG_VGA_CTL_MMIO + 4, 4, 0);

@@ -1,4 +1,5 @@
 #include "disasm.hh"
+#include "ccdb.hh"
 #include "probe.hh"
 
 #include <cassert>
@@ -57,13 +58,15 @@ ccdb::init_elfsym() {
   using comm::elf_file;
   if (elf_file.empty()) { return; }
 
-  std::cerr << "Elf file " << elf_file; 
+  if (ccdb::runtime_dump_opt.elf_symbol)
+    std::cerr << "Elf file " << elf_file; 
   int fd = open(elf_file.c_str(), O_RDONLY);
   assert(fd >= 0 && "Elf file open failed");
 
   struct stat st;
   int fs_status = fstat(fd, &st);
-  std::cerr << ", size = " <<  st.st_size << std::endl;
+  if (ccdb::runtime_dump_opt.elf_symbol)
+    std::cerr << ", size = " <<  st.st_size << std::endl;
 
   uint8_t* map = (uint8_t *) mmap(NULL, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
   assert(map != MAP_FAILED && "Elf mmap failed");
@@ -120,14 +123,8 @@ ccdb::init_elfsym() {
     }
   }
 
-  std::cerr << std::dec;
-  std::cerr <<  "\n === ELF Funct Symbols (" << comm::elf_syms.size() << " total) === ";
-  std::cerr << std::endl;
-  for (auto const& [addr, ent] : comm::elf_syms) {
-    comm::sout32(std::cerr) << addr;
-    std::cerr << " size " << std::dec << std::setfill(' ') << std::setw(6) << ent.size;
-    std::cerr << " : " << ent.name << std::endl;
-  }
+  if (ccdb::runtime_dump_opt.elf_symbol)
+    ccdb::elftable_dump();
 
   munmap(map, st.st_size);
   close(fd);
