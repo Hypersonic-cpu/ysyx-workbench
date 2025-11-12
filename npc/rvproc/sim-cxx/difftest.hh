@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <utility>
 
 namespace diff {
   using mcpy_t = void (*)(uint32_t addr, void *buf, size_t n, bool direction);
@@ -27,7 +28,7 @@ namespace diff {
 
   constexpr uint32_t ResetVector{ 0x8000'0000 };
 
-  bool match();
-  void iota();
+  std::pair<bool, uint8_t> match();
+  void iota(uint64_t n=1);
   void init(const char* so=NEMU_SO, int port=NEMUPort);
 }
