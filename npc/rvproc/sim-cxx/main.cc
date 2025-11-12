@@ -111,41 +111,24 @@ main(int argc, char* argv[]) {
     std::cerr << "Cycle #" << currCyc << std::endl;
     auto [good, id] = diff::match();
     if (!good) {
-      std::cerr << "Mismatch " << std::dec << (int) id << std::endl;
-      for (uint16_t i = 0; i < comm::RegNum; ++i) {
-        auto [v, res] = ccdb::read_reg(i);
-        std::cerr << "Reg [" << std::dec << std::setw(2)<< i << "] : ";
-        comm::sout32(std::cerr) << res << std::endl;
-      }
-      {
-        auto [v, res] = ccdb::read_reg(comm::RegNum);
-        std::cerr << "Reg [PC] : ";
-        comm::sout32(std::cerr) << res << std::endl;
-      }
+      // std::cerr << "Mismatch " << std::dec << (int) id << std::endl;
+      // for (uint16_t i = 0; i < comm::RegNum; ++i) {
+      //   auto [v, res] = ccdb::read_reg(i);
+      //   std::cerr << "Reg [" << std::dec << std::setw(2)<< i << "] : ";
+      //   comm::sout32(std::cerr) << res << std::endl;
+      // }
+      // {
+      //   auto [v, res] = ccdb::read_reg(comm::RegNum);
+      //   std::cerr << "Reg [PC] : ";
+      //   comm::sout32(std::cerr) << res << std::endl;
+      // }
       exit(1);
     }
     currCyc++;
   }
-  // {
-  //   for (uint32_t i = 0; i < 16; i += 4) {
-  //     auto [v, res] = ccdb::read_mem(0x8000'0000U + i);
-  //   comm::sout32(std::cerr, "") << res << " ";
-  //   }
-  //   std::cerr << std::endl;
-  // }
-  {
-    std::cerr << "\n=== Inst Ring Buffer === " << std::endl;
-    for (size_t i = 0; i < comm::instBuf.size(); i++) {
-      comm::instBuf.atidx(i).printent(std::cerr);
-    }
-  }
-  {
-    std::cerr << "\n=== Mem Ring Buffer === " << std::endl;
-    for (size_t i = 0; i < comm::memBuf.size(); i++) {
-      comm::memBuf.atidx(i).printent(std::cerr);
-    }
-  }
   top->final();
+
+  ccdb::dump_print(ccdb::DumpPrint{});
 
   if (!comm::log_wavefile.empty()) {
     tfp->close();

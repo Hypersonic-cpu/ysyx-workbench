@@ -73,7 +73,7 @@ namespace ccdb {
     // uint32_t sp;
     uint32_t ra;
     std::array<uint32_t, comm::FunctArgs> args;
-    void printent(std::ostream& os, const std::string& prefix, bool indent=false) {
+    void printent(std::ostream& os, const std::string& prefix="", bool indent=false) const {
       if (indent) { std::string space(depth, ' '); os << space; }
       os << prefix << " ";
       os << "[" << std::setfill(' ') << std::setw(3) << std::dec << depth << "] "; 
@@ -87,4 +87,52 @@ namespace ccdb {
   extern std::list<FrameEnt> frame_stk;
 
   void frame_trace(uint32_t snpc, uint32_t dst, bool is_ret);
+
+  struct DumpPrint {
+    bool mem_buf = true;
+    bool frame_stk = true;
+    bool inst_buf = true;
+    bool reg_file = true;
+  };
+
+  inline void 
+  inst_dump(std::ostream& os=std::cerr) {
+    os << "\n=== Inst Ring Buffer === " << std::endl;
+    for (size_t i = 0; i < comm::instBuf.size(); i++) {
+      comm::instBuf.atidx(i).printent(os);
+    }
+  }
+
+  inline void 
+  frame_dump(std::ostream& os=std::cerr) {
+    os << "\n=== Frame Stack === " << std::endl;
+    for (const auto& ent : ccdb::frame_stk) {
+      ent.printent(os);
+    }
+  }
+
+  inline void 
+  regfile_dump(std::ostream& os=std::cerr) {
+    os << "\n=== Register File === " << std::endl;
+    for (size_t i = 0; i < comm::RegNum+1; ++i) {
+      os << std::setfill(' ') << "[";
+      if (i == comm::RegNum) {
+        os << "  ";
+      } else {
+        os << std::dec << std::setw(2) << i;
+      }
+      os << "] " << comm::RegName.at(i);
+      comm::sout32(os) << std::endl;
+    }
+  }
+
+  inline void 
+  memacc_dump(std::ostream& os=std::cerr) {
+    os << "\n=== Mem Ring Buffer === " << std::endl;
+    for (size_t i = 0; i < comm::memBuf.size(); i++) {
+      comm::memBuf.atidx(i).printent(os);
+    }
+  }
+
+  void dump_print(const DumpPrint& opt);
 }
