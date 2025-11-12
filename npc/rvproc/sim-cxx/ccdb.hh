@@ -96,6 +96,7 @@ namespace ccdb {
     bool inst_buf = true;
     bool reg_file = true;
   };
+  extern DumpPrint runtime_dump_opt;
 
   inline void 
   inst_dump(std::ostream& os=std::cerr) {
