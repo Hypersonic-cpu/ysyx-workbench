@@ -102,7 +102,7 @@ ccdb::frame_trace(uint32_t snpc, uint32_t dst, bool is_ret) {
     frame_stk.emplace_front(
         depth, it->second.name, it->second.addr, snpc,
         read_args());
-    frame_stk.back().printent(std::cerr, "+", true);
+    frame_stk.front().printent(std::cerr, "+", true);
   } else if (is_ret) { // NOTE: function return
     auto ir = frame_stk.begin();
     for (; ir != frame_stk.end(); ir++) {
