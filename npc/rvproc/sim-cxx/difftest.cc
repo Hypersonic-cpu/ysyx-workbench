@@ -8,6 +8,7 @@
 #include <cstdlib>
 #include <string>
 #include <dlfcn.h>
+#include <tuple>
 #include <utility>
 
 namespace diff {
@@ -64,21 +65,24 @@ diff::iota(uint64_t n) {
   ref_exec(n);
 }
 
-std::pair<bool, uint8_t>
+std::vector<std::tuple<uint8_t, uint32_t, uint32_t> >
 diff::match() {
+  std::vector<std::tuple<uint8_t, uint32_t, uint32_t> > ret {};
   uint32_t regbuf[comm::RegNum+1];
   ref_regcpy(regbuf, CpyDir::ToDut);
 
   size_t i = 0;
   for (i = 0; i < comm::RegNum + 1; ++i) {
-    if (regbuf[i] != ccdb::read_reg(i).second) {
-      comm::sout32(std::cerr) << regbuf[i] << "<- Ref"<< std::endl;
-      return std::make_pair(false, i);
+    auto dut = ccdb::read_reg(i).second;
+    if (regbuf[i] != dut) {
+      // comm::sout32(std::cerr) << regbuf[i] << "<- Ref"<< std::endl;
+      // return std::make_pair(false, i);
+      ret.emplace_back(i, regbuf[i], dut);
     }
   }
   // if (ref_pc != -1 && ref_pc != ccdb::read_reg(i).second) {
     // comm::sout32(std::cerr) << regbuf[i] << "<- Ref"<< std::endl;
     // return std::make_pair(false, i);
   // }
-  return std::make_pair(true, 0xff);
+  return ret;
 }
