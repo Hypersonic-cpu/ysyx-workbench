@@ -12,6 +12,7 @@
 #include <verilated_fst_c.h>
 
 #include "VrvCore.h"
+#include "difftest.hh"
 #include "probe.hh"
 #include "ccdb.hh"
 #include "disasm.hh"
@@ -98,6 +99,7 @@ main(int argc, char* argv[]) {
 
   ccdb::trace_init();
   single_reset(top, contextp);
+  diff::init();
 
   constexpr size_t MaxCyc{ 30U };
   size_t currCyc{ 1U };
@@ -108,13 +110,13 @@ main(int argc, char* argv[]) {
 
     currCyc++;
   }
-  for (uint16_t i = 0; i < 16; ++i) {
+  for (uint16_t i = 0; i < comm::RegNum; ++i) {
     auto [v, res] = ccdb::read_reg(i);
     std::cerr << "Reg [" << std::dec << std::setw(2)<< i << "] : ";
     comm::sout32(std::cerr) << res << std::endl;
   }
   {
-    auto [v, res] = ccdb::read_reg(0xff);
+    auto [v, res] = ccdb::read_reg(comm::RegNum);
     std::cerr << "Reg [PC] : ";
     comm::sout32(std::cerr) << res << std::endl;
   }

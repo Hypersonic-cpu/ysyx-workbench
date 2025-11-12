@@ -25,7 +25,7 @@ namespace ccdb {
 
   std::pair<bool, uint32_t> read_reg(uint8_t regid);
 
-  // 0xff for PC
+  // 0x10 for PC
   inline std::pair<bool, uint32_t> 
   _read_verilator_reg(uint8_t regid) {
     auto r = top->rootp;
@@ -48,7 +48,7 @@ namespace ccdb {
       case 0xd: ret = r->rvCore__DOT__iReg__DOT__regs_13; break;
       case 0xe: ret = r->rvCore__DOT__iReg__DOT__regs_14; break;
       case 0xf: ret = r->rvCore__DOT__iReg__DOT__regs_15; break;
-      case 0xff: ret = r->rvCore__DOT__pc; break;
+      case 0x10: ret = r->rvCore__DOT__pc; break;
       default: valid = false; break;
     }
     return std::make_pair(valid, ret);

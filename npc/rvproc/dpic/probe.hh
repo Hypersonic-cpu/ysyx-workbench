@@ -173,4 +173,7 @@ namespace comm {
 // DPI-C 选择暴露这些接口. 定义应该在 pememacc.cc.
 namespace dpic {
   std::pair<bool, uint32_t> pmem_probe(uint32_t addr);
+
+  uint8_t* pmem_pointer_raw();
+  size_t pmem_bytes_raw();
 }
