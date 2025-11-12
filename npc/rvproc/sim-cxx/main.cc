@@ -123,7 +123,7 @@ main(int argc, char* argv[]) {
   }
   top->final();
 
-  ccdb::dump_print(ccdb::DumpPrint{});
+  // ccdb::dump_print(ccdb::DumpPrint{});
 
   if (!comm::log_wavefile.empty()) {
     tfp->close();
