@@ -13,7 +13,7 @@
 
 using ccdb::top;
 
-ccdb::DumpPrint ccdb::runtime_dump_opt{ 0, 1, 0, 0 };
+ccdb::DumpPrint ccdb::runtime_dump_opt{ 0, 0, 0, 0 };
 
 std::pair<bool, uint32_t>
 ccdb::read_reg(uint8_t regid) {
