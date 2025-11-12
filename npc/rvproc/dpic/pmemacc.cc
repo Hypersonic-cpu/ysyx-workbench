@@ -1,3 +1,4 @@
+#include "ccdb.hh"
 #include "probe.hh"
 
 #include <cassert>
@@ -17,9 +18,20 @@
 // #define PRINTF_COND 1
 
 using addr_t = uint32_t;
-const char PMemFile[] = "/home/kong/ysyx-workbench/npc/rvproc/prog-rom/meminit.bin";
+constexpr char PMemFile[] = "/home/kong/ysyx-workbench/npc/rvproc/prog-rom/meminit.bin";
 constexpr size_t PMemSize{ 0x1000'0000U }; // 32 MiB
 static uint32_t pmem_raw[PMemSize >> 2];
+static size_t image_size = 0;
+
+uint8_t *
+dpic::pmem_pointer_raw() {
+  return (uint8_t *)pmem_raw;
+}
+
+size_t 
+dpic::pmem_bytes_raw() {
+  return image_size;
+}
 
 constexpr addr_t BaseAddr{ 0x8000'0000U };
 constexpr auto ValidAccess = [](size_t idx) -> bool {
@@ -104,6 +116,7 @@ pmem_init() {
   std::cout << "DPI-C >> file size " << std::dec << file_size << std::endl;
 #endif
   assert(file_size != std::ifstream::pos_type(-1));
+  image_size = file_size;
   ifs.seekg(0, std::ios::beg);
 
   ifs.read((char *) pmem_raw, file_size);
@@ -158,7 +171,8 @@ pmem_read(uint32_t raddr) {
 #if PRINTF_COND
   std::cout << " ret = " << std::hex << ret << std::endl;
 #endif
-  comm::mem_acc_log(raddr, false, ret, 0xf);
+  if (ccdb::runtime_dump_opt.mem_buf)
+    comm::mem_acc_log(raddr, false, ret, 0xf);
   return ret;
 }
 
@@ -191,7 +205,8 @@ pmem_write(uint32_t waddr, uint32_t wdata, uint8_t wmask) {
       }
     }
 #endif
-    comm::mem_acc_log(waddr, false, wdata, wmask);
+    if (ccdb::runtime_dump_opt.mem_buf)
+      comm::mem_acc_log(waddr, false, wdata, wmask);
   }
 }
 

@@ -157,6 +157,7 @@ class IDU extends Module {
   io.rs1    := MuxCase(io.inst(19, 15), Seq(
     isEbreak                -> 10.U,
     (opName === InstOp.Lui) -> 0.U
+    // ,(opName === InstOp.OpImm) -> 2.U // bug, triggering DiffTest
   ))
   // (isEbreak, 10.U, io.inst(19, 15))
   io.rs2    := io.inst(24, 20)

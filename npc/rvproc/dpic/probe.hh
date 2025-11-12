@@ -66,6 +66,7 @@ namespace comm {
 
   inline std::ostream& 
   sout32(std::ostream& os, char fill='0', std::string prefix="0x") {
+    std::ios::fmtflags original_flags = os.flags();
     os << prefix << std::setfill(fill) << std::setw(8) << std::hex;
     return os;
   }
@@ -166,11 +167,19 @@ namespace comm {
   extern std::string elf_file;
 
   constexpr unsigned RegNum { 16U };
-  constexpr unsigned FuctArgs { 4U };
+  constexpr unsigned FunctArgs { 6U };
+  constexpr std::array<std::string, RegNum+1> RegName {
+    "$0", "ra", "sp", "gp", "tp", "t0", "t1", "t2",
+    "s0", "s1", "a0", "a1", "a2", "a3", "a4", "a5",
+    "pc" 
+  };
 }
 
 // NOTE: 这是main用于窥探dpic SV 的namespace.
 // DPI-C 选择暴露这些接口. 定义应该在 pememacc.cc.
 namespace dpic {
   std::pair<bool, uint32_t> pmem_probe(uint32_t addr);
+
+  uint8_t* pmem_pointer_raw();
+  size_t pmem_bytes_raw();
 }

@@ -12,16 +12,17 @@
 #include <verilated_fst_c.h>
 
 #include "VrvCore.h"
+#include "difftest.hh"
 #include "probe.hh"
 #include "ccdb.hh"
 #include "disasm.hh"
 
+constexpr auto ANSI_Red    = "\033[31m";
+constexpr auto ANSI_Yellow = "\033[32m";
+constexpr auto ANSI_Green  = "\033[33m";
+constexpr auto ANSI_Blue   = "\033[34m";
+constexpr auto ANSI_None   = "\033[0m";
 void parse_args(int argc, char* argv[]) {
-  constexpr auto ANSI_Red    = "\033[31m";
-  constexpr auto ANSI_Yellow = "\033[32m";
-  constexpr auto ANSI_Green  = "\033[33m";
-  constexpr auto ANSI_Blue   = "\033[34m";
-  constexpr auto ANSI_None   = "\033[0m";
   constexpr struct option table[] = {
     {"print-mem"  , no_argument      , NULL, 'm'},
     {"print-inst" , no_argument      , NULL, 'i'},
@@ -98,46 +99,31 @@ main(int argc, char* argv[]) {
 
   ccdb::trace_init();
   single_reset(top, contextp);
+  diff::init();
 
   constexpr size_t MaxCyc{ 30U };
   size_t currCyc{ 1U };
   while (!contextp->gotFinish()) {
     ccdb::inst_trace();
+    // Ref iota must come first (before DUT has changed)
+    diff::iota(1);
     single_cycle(top, contextp);
-    // TODO: Diff test here
-
+    auto diffvec = diff::match();
+    if (!diffvec.empty()) {
+      for (const auto& [id, ref, dut] : diffvec) {
+        std::cerr << ANSI_Red << "Mismatch reg " << (int) id
+          << " (" << comm::RegName.at(id) << ") : " << "expected "; 
+        comm::sout32(std::cerr) << ref << " got ";
+        comm::sout32(std::cerr) << dut << std::endl;
+      }
+      // ccdb::dump_print(ccdb::DumpPrint{});
+      exit(1);
+    }
     currCyc++;
   }
-  for (uint16_t i = 0; i < 16; ++i) {
-    auto [v, res] = ccdb::read_reg(i);
-    std::cerr << "Reg [" << std::dec << std::setw(2)<< i << "] : ";
-    comm::sout32(std::cerr) << res << std::endl;
-  }
-  {
-    auto [v, res] = ccdb::read_reg(0xff);
-    std::cerr << "Reg [PC] : ";
-    comm::sout32(std::cerr) << res << std::endl;
-  }
-  // {
-  //   for (uint32_t i = 0; i < 16; i += 4) {
-  //     auto [v, res] = ccdb::read_mem(0x8000'0000U + i);
-  //   comm::sout32(std::cerr, "") << res << " ";
-  //   }
-  //   std::cerr << std::endl;
-  // }
-  {
-    std::cerr << "\n=== Inst Ring Buffer === " << std::endl;
-    for (size_t i = 0; i < comm::instBuf.size(); i++) {
-      comm::instBuf.atidx(i).printent(std::cerr);
-    }
-  }
-  {
-    std::cerr << "\n=== Mem Ring Buffer === " << std::endl;
-    for (size_t i = 0; i < comm::memBuf.size(); i++) {
-      comm::memBuf.atidx(i).printent(std::cerr);
-    }
-  }
   top->final();
+
+  // ccdb::dump_print(ccdb::DumpPrint{});
 
   if (!comm::log_wavefile.empty()) {
     tfp->close();
