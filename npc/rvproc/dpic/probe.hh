@@ -166,7 +166,7 @@ namespace comm {
   extern std::string elf_file;
 
   constexpr unsigned RegNum { 16U };
-  constexpr unsigned FuctArgs { 4U };
+  constexpr unsigned FunctArgs { 6U };
 }
 
 // NOTE: 这是main用于窥探dpic SV 的namespace.
