@@ -13,6 +13,8 @@
 
 using ccdb::top;
 
+ccdb::DumpPrint ccdb::runtime_dump_opt{ 0, 0, 0, 0, 0 };
+
 std::pair<bool, uint32_t>
 ccdb::read_reg(uint8_t regid) {
   return ccdb::_read_verilator_reg(regid);
@@ -69,13 +71,14 @@ ccdb::frame_trace(uint32_t snpc, uint32_t dst, bool is_ret) {
   using ccdb::frame_stk;
   auto it = elf_syms.find(dst);
   auto const read_args = [](){
-    std::array<uint32_t, comm::FuctArgs> aret {};
-    for (size_t i = 0; i < comm::FuctArgs; i++) {
+    std::array<uint32_t, comm::FunctArgs> aret {};
+    for (size_t i = 0; i < comm::FunctArgs; i++) {
       aret.at(i) = read_reg(10U+i).second;
     }
     return aret;
   };
 
+  using ccdb::runtime_dump_opt;
   // auto [_v2, sp] = read_reg(2);
   if (is_ret && it != elf_syms.end()) { // NOTE: TCO
     // Jump to a symbol, with rd == 0, 
@@ -85,27 +88,30 @@ ccdb::frame_trace(uint32_t snpc, uint32_t dst, bool is_ret) {
     if (frame_stk.empty()) {
       std::cerr << "TCO on empty frame stack, change to simply alloc" << std::endl;
     } else {
-      auto temp = frame_stk.back();
+      auto temp = frame_stk.front();
       depth = temp.depth;
       ra = temp.ra;
-      frame_stk.back().printent(std::cerr, "- [TCO]", true);
-      frame_stk.pop_back();
+      if (runtime_dump_opt.frame_stk)
+        frame_stk.front().printent(std::cerr, "- [TCO]", true);
+      frame_stk.pop_front();
     }
     // Alloc new frame, but ra remains.
-    frame_stk.emplace_back(
+    frame_stk.emplace_front(
         depth, it->second.name, it->second.addr, ra, 
         read_args());
-    frame_stk.back().printent(std::cerr, "+", true);
+    if (runtime_dump_opt.frame_stk)
+      frame_stk.front().printent(std::cerr, "+", true);
   } else if (it != elf_syms.end()) { // NOTE: Normal function call.
-    auto depth = frame_stk.empty() ? 0U : (frame_stk.back().depth+1);
+    auto depth = frame_stk.empty() ? 0U : (frame_stk.front().depth+1);
     // The static NPC (PC of jal +4) is ra
-    frame_stk.emplace_back(
+    frame_stk.emplace_front(
         depth, it->second.name, it->second.addr, snpc,
         read_args());
-    frame_stk.back().printent(std::cerr, "+", true);
+    if (runtime_dump_opt.frame_stk)
+      frame_stk.front().printent(std::cerr, "+", true);
   } else if (is_ret) { // NOTE: function return
-    auto ir = frame_stk.rbegin();
-    for (; ir != frame_stk.rend(); ir++) {
+    auto ir = frame_stk.begin();
+    for (; ir != frame_stk.end(); ir++) {
       if (ir->ra == dst) {
         // Jump back => true ret.
         break;
@@ -114,13 +120,22 @@ ccdb::frame_trace(uint32_t snpc, uint32_t dst, bool is_ret) {
       // => Matches ? 
       // WARN:使用 sp 是不准确的. 用 ra 会更好.
     }
-    if (ir == frame_stk.rend()) { return; }
+    if (ir == frame_stk.end()) { return; }
     else {
-      frame_stk.back().printent(std::cerr, "-", true);
+      if (runtime_dump_opt.frame_stk)
+        frame_stk.front().printent(std::cerr, "-", true);
       // Should not skip !
-      assert(&(*ir) == &frame_stk.back());
-      frame_stk.pop_back();
+      assert(&(*ir) == &frame_stk.front());
+      frame_stk.pop_front();
     }
   }
 }
 
+
+void 
+ccdb::dump_print(const ccdb::DumpPrint& opt) {
+  if (opt.reg_file) { regfile_dump(); }
+  if (opt.inst_buf) { inst_dump(); }
+  if (opt.mem_buf) { memacc_dump(); }
+  if (opt.frame_stk) { frame_dump(); }
+}
