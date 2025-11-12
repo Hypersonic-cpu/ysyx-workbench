@@ -205,7 +205,8 @@ pmem_write(uint32_t waddr, uint32_t wdata, uint8_t wmask) {
       }
     }
 #endif
-    comm::mem_acc_log(waddr, false, wdata, wmask);
+    if (ccdb::runtime_dump_opt.mem_buf)
+      comm::mem_acc_log(waddr, false, wdata, wmask);
   }
 }
 
