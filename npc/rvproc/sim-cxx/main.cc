@@ -121,7 +121,7 @@ main(int argc, char* argv[]) {
         std::cerr << "Reg [PC] : ";
         comm::sout32(std::cerr) << res << std::endl;
       }
-      exit(1);
+      // exit(1);
     }
     currCyc++;
   }

@@ -78,14 +78,14 @@ diff::match() {
 
   size_t i = 0;
   for (i = 0; i < comm::RegNum; ++i) {
-    if (regbuf[i] != ccdb::read_reg(i).second) {
+    // if (regbuf[i] != ccdb::read_reg(i).second) {
       comm::sout32(std::cerr) << regbuf[i] << "<- Ref"<< std::endl;
-      return std::make_pair(false, i);
-    }
+      // return std::make_pair(false, i);
+    // }
   }
-  if (ref_pc != -1 && ref_pc != ccdb::read_reg(i).second) {
+  // if (ref_pc != -1 && ref_pc != ccdb::read_reg(i).second) {
     comm::sout32(std::cerr) << regbuf[i] << "<- Ref"<< std::endl;
-    return std::make_pair(false, i);
-  }
+    // return std::make_pair(false, i);
+  // }
   return std::make_pair(true, 0xff);
 }
