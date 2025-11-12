@@ -69,6 +69,7 @@ diff::match() {
   ref_regcpy(regbuf, CpyDir::ToDut);
   for (size_t i = 0; i < comm::RegNum+1; ++i) {
     if (regbuf[i] != ccdb::read_reg(i).second) {
+      comm::sout32(std::cerr) << regbuf[i] << "<- Ref"<< std::endl;
       return std::make_pair(false, i);
     }
   }
