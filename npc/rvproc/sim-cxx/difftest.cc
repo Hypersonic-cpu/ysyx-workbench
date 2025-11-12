@@ -83,7 +83,7 @@ diff::match() {
       return std::make_pair(false, i);
     }
   }
-  if (regbuf[i] != ccdb::read_reg(i).second) {
+  if (ref_pc != -1 && ref_pc != ccdb::read_reg(i).second) {
     comm::sout32(std::cerr) << regbuf[i] << "<- Ref"<< std::endl;
     return std::make_pair(false, i);
   }
