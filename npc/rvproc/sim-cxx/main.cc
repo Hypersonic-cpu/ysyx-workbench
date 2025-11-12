@@ -100,6 +100,7 @@ main(int argc, char* argv[]) {
   ccdb::trace_init();
   single_reset(top, contextp);
   diff::init();
+  single_cycle(top, contextp);
 
   constexpr size_t MaxCyc{ 30U };
   size_t currCyc{ 1U };
@@ -110,7 +111,7 @@ main(int argc, char* argv[]) {
     diff::iota(1);
     auto [good, id] = diff::match();
     if (!good) {
-      std::cerr << "Mismatch " << (int) id << std::endl;
+      std::cerr << "Mismatch " << std::dec << (int) id << std::endl;
       for (uint16_t i = 0; i < comm::RegNum; ++i) {
         auto [v, res] = ccdb::read_reg(i);
         std::cerr << "Reg [" << std::dec << std::setw(2)<< i << "] : ";
