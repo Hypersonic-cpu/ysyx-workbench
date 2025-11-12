@@ -100,7 +100,6 @@ main(int argc, char* argv[]) {
   ccdb::trace_init();
   single_reset(top, contextp);
   diff::init();
-  single_cycle(top, contextp);
 
   constexpr size_t MaxCyc{ 30U };
   size_t currCyc{ 1U };
