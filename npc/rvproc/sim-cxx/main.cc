@@ -104,6 +104,8 @@ main(int argc, char* argv[]) {
   while (!contextp->gotFinish()) {
     ccdb::inst_trace();
     single_cycle(top, contextp);
+    // TODO: Diff test here
+
     currCyc++;
   }
   for (uint16_t i = 0; i < 16; ++i) {
