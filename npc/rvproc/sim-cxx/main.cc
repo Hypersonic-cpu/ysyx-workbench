@@ -106,19 +106,22 @@ main(int argc, char* argv[]) {
   while (!contextp->gotFinish()) {
     ccdb::inst_trace();
     single_cycle(top, contextp);
-    // TODO: Diff test here
-
+    std::cerr << "Cycle #" << currCyc << std::endl;
+    diff::iota(1);
+    auto [good, id] = diff::match();
+    if (!good) {
+      for (uint16_t i = 0; i < comm::RegNum; ++i) {
+        auto [v, res] = ccdb::read_reg(i);
+        std::cerr << "Reg [" << std::dec << std::setw(2)<< i << "] : ";
+        comm::sout32(std::cerr) << res << std::endl;
+      }
+      {
+        auto [v, res] = ccdb::read_reg(comm::RegNum);
+        std::cerr << "Reg [PC] : ";
+        comm::sout32(std::cerr) << res << std::endl;
+      }
+    }
     currCyc++;
-  }
-  for (uint16_t i = 0; i < comm::RegNum; ++i) {
-    auto [v, res] = ccdb::read_reg(i);
-    std::cerr << "Reg [" << std::dec << std::setw(2)<< i << "] : ";
-    comm::sout32(std::cerr) << res << std::endl;
-  }
-  {
-    auto [v, res] = ccdb::read_reg(comm::RegNum);
-    std::cerr << "Reg [PC] : ";
-    comm::sout32(std::cerr) << res << std::endl;
   }
   // {
   //   for (uint32_t i = 0; i < 16; i += 4) {

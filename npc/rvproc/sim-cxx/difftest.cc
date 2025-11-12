@@ -7,6 +7,7 @@
 #include <cstdlib>
 #include <string>
 #include <dlfcn.h>
+#include <utility>
 
 namespace diff {
   init_t ref_init = nullptr;
@@ -50,4 +51,26 @@ diff::init(const char* so, int port) {
     regbuf[i] = ccdb::read_reg(i).second;
   }
   ref_regcpy(regbuf, CpyDir::ToRef);
+}
+
+void 
+diff::iota(uint64_t n) {
+  uint32_t regbuf[comm::RegNum+1];
+  for (size_t i = 0; i < comm::RegNum+1; ++i) {
+    regbuf[i] = ccdb::read_reg(i).second;
+  }
+  ref_regcpy(regbuf, CpyDir::ToRef);
+  ref_exec(n);
+}
+
+std::pair<bool, uint8_t>
+diff::match() {
+  uint32_t regbuf[comm::RegNum+1];
+  ref_regcpy(regbuf, CpyDir::ToDut);
+  for (size_t i = 0; i < comm::RegNum+1; ++i) {
+    if (regbuf[i] != ccdb::read_reg(i).second) {
+      return std::make_pair(false, i);
+    }
+  }
+  return std::make_pair(true, 0xff);
 }
