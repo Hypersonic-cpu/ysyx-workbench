@@ -1,3 +1,4 @@
+#include "ccdb.hh"
 #include "probe.hh"
 
 #include <cassert>
@@ -170,7 +171,8 @@ pmem_read(uint32_t raddr) {
 #if PRINTF_COND
   std::cout << " ret = " << std::hex << ret << std::endl;
 #endif
-  comm::mem_acc_log(raddr, false, ret, 0xf);
+  if (ccdb::runtime_dump_opt.mem_buf)
+    comm::mem_acc_log(raddr, false, ret, 0xf);
   return ret;
 }
 
