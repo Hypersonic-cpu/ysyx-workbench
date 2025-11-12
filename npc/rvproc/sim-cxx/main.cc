@@ -108,11 +108,11 @@ main(int argc, char* argv[]) {
     // WARN: Must come first (before DUT has changed)
     diff::iota(1);
     single_cycle(top, contextp);
-    std::cerr << "Cycle #" << currCyc << std::endl;
-    if (currCyc == 88) {
-      ccdb::dump_print(ccdb::DumpPrint{});
-      exit(0);
-    }
+    // std::cerr << "Cycle #" << currCyc << std::endl;
+    // if (currCyc == 88) {
+    //   ccdb::dump_print(ccdb::DumpPrint{});
+    //   exit(0);
+    // }
     auto [good, id] = diff::match();
     if (!good) {
       // std::cerr << "Mismatch " << std::dec << (int) id << std::endl;
