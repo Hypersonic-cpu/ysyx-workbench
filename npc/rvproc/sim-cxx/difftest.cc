@@ -57,7 +57,8 @@ diff::init(const char* so, int port) {
 
 void 
 diff::copy() {
-  comm::device_access = false;
+  comm::device_access[comm::PrevCyc] = comm::device_access[comm::CurrCyc];
+  comm::device_access[comm::CurrCyc] = false;
   uint32_t regbuf[comm::RegNum+1];
   for (size_t i = 0; i < comm::RegNum+1; ++i) {
     regbuf[i] = ccdb::read_reg(i).second;
@@ -68,13 +69,13 @@ diff::copy() {
 void 
 diff::iota(uint64_t n) {
   std::cerr << "==> Id1     " << comm::device_access << std::endl;
-  if (comm::device_access) return;
+  if (comm::device_access[comm::PrevCyc]) return;
   ref_exec(n);
 }
 
 std::vector<std::tuple<uint8_t, uint32_t, uint32_t> >
 diff::match() {
-  if (comm::device_access) return {};
+  if (comm::device_access[comm::PrevCyc]) return {};
   std::vector<std::tuple<uint8_t, uint32_t, uint32_t> > ret {};
   uint32_t regbuf[comm::RegNum+1];
   ref_regcpy(regbuf, CpyDir::ToDut);
