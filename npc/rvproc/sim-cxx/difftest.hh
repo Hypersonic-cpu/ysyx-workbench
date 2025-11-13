@@ -31,6 +31,7 @@ namespace diff {
 
   std::vector<std::tuple<uint8_t, uint32_t, uint32_t> >
     match();
+  void copy();
   void iota(uint64_t n=1);
   void init(const char* so=NEMU_SO, int port=NEMUPort);
 }
