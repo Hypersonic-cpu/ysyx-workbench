@@ -67,7 +67,7 @@ diff::copy() {
 
 void 
 diff::iota(uint64_t n) {
-  std::cerr << "==> Id      " << comm::device_access << std::endl;
+  std::cerr << "==> Id1     " << comm::device_access << std::endl;
   if (comm::device_access) return;
   ref_exec(n);
 }
