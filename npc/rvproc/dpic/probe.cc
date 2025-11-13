@@ -6,11 +6,6 @@ namespace comm {
   RingBuffer<MemEnt, 16> memBuf {};
   std::unordered_map<uint32_t, ElfSymEnt> elf_syms {};
 
-  bool mtrace_print{ false };
-  bool ftrace_print{ false };
-  bool dtrace_print{ false };
-  bool itrace_print{ false };
-
   bool device_access{ false };
 
   std::string log_wavefile{ };
