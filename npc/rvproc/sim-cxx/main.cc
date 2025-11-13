@@ -36,10 +36,10 @@ void parse_args(int argc, char* argv[]) {
   int o;
   while ( (o = getopt_long(argc, argv, "-hmidfl:e:", table, NULL)) != -1) {
     switch (o) {
-      case 'm': comm::mtrace_print = true; break;
-      case 'd': comm::dtrace_print = true; break;
-      case 'f': comm::ftrace_print = true; break;
-      case 'i': comm::itrace_print = true; break;
+      case 'm': ccdb::runtime_dump_opt.mem_buf   = true; break;
+      // case 'd': ccdb::runtime_dump_opt. = true; break;
+      case 'f': ccdb::runtime_dump_opt.frame_stk = true; break;
+      case 'i': ccdb::runtime_dump_opt.inst_buf  = true; break;
       case 'l': comm::log_wavefile = std::string(optarg); break;
       case 'e': comm::elf_file = optarg; break;
       default:
@@ -104,10 +104,10 @@ main(int argc, char* argv[]) {
   constexpr size_t MaxCyc{ 30U };
   size_t currCyc{ 1U };
   while (!contextp->gotFinish()) {
+    diff::copy();       // Comes before exec
     ccdb::inst_trace();
-    // Ref iota must come first (before DUT has changed)
-    diff::iota(1);
     single_cycle(top, contextp);
+    diff::iota();       // Comes after exec
     auto diffvec = diff::match();
     if (!diffvec.empty()) {
       for (const auto& [id, ref, dut] : diffvec) {

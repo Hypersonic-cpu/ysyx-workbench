@@ -4,6 +4,7 @@
 #include <iomanip>
 #include <iostream>
 #include <array>
+#include <list>
 #include <stack>
 #include <string>
 #include <unordered_map>
@@ -158,13 +159,15 @@ namespace comm {
 
   extern std::unordered_map<uint32_t, ElfSymEnt> elf_syms;
 
-  extern bool itrace_print;
-  extern bool mtrace_print;
-  extern bool dtrace_print;
-  extern bool ftrace_print;
-
   extern std::string log_wavefile;
   extern std::string elf_file;
+
+  enum DelayTime{
+    CurrCyc = 0,
+    PrevCyc = 1,
+    Num_DelayTime
+  };
+  extern std::array<bool, Num_DelayTime> device_access;
 
   constexpr unsigned RegNum { 16U };
   constexpr unsigned FunctArgs { 6U };
