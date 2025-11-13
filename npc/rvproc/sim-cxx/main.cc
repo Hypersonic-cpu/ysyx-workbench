@@ -36,10 +36,10 @@ void parse_args(int argc, char* argv[]) {
   int o;
   while ( (o = getopt_long(argc, argv, "-hmidfl:e:", table, NULL)) != -1) {
     switch (o) {
-      case 'm': comm::mtrace_print = true; break;
-      case 'd': comm::dtrace_print = true; break;
-      case 'f': comm::ftrace_print = true; break;
-      case 'i': comm::itrace_print = true; break;
+      case 'm': ccdb::runtime_dump_opt.mem_buf   = true; break;
+      // case 'd': ccdb::runtime_dump_opt. = true; break;
+      case 'f': ccdb::runtime_dump_opt.frame_stk = true; break;
+      case 'i': ccdb::runtime_dump_opt.inst_buf  = true; break;
       case 'l': comm::log_wavefile = std::string(optarg); break;
       case 'e': comm::elf_file = optarg; break;
       default:
@@ -107,7 +107,7 @@ main(int argc, char* argv[]) {
     diff::copy();       // Comes before exec
     ccdb::inst_trace();
     single_cycle(top, contextp);
-    std::cerr << "==> Id      " << comm::device_access << std::endl;
+    // std::cerr << "==> Id      " << comm::device_access << std::endl;
     diff::iota();       // Comes after exec
     auto diffvec = diff::match();
     if (!diffvec.empty()) {
