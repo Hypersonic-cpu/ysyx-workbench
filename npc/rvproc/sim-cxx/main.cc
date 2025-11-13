@@ -106,12 +106,8 @@ main(int argc, char* argv[]) {
   while (!contextp->gotFinish()) {
     diff::copy();       // Comes before exec
     ccdb::inst_trace();
-    std::cerr << "be4" << std::endl;
     single_cycle(top, contextp);
-    std::cerr << "aft" << std::endl;
-    // std::cerr << "==> Id      " << comm::device_access << std::endl;
     diff::iota();       // Comes after exec
-    std::cerr << "000" << std::endl;
     auto diffvec = diff::match();
     if (!diffvec.empty()) {
       for (const auto& [id, ref, dut] : diffvec) {
