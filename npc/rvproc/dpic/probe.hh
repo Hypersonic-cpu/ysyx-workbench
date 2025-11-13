@@ -158,11 +158,6 @@ namespace comm {
 
   extern std::unordered_map<uint32_t, ElfSymEnt> elf_syms;
 
-  extern bool itrace_print;
-  extern bool mtrace_print;
-  extern bool dtrace_print;
-  extern bool ftrace_print;
-
   extern std::string log_wavefile;
   extern std::string elf_file;
 
