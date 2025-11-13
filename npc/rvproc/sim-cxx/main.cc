@@ -105,9 +105,9 @@ main(int argc, char* argv[]) {
   size_t currCyc{ 1U };
   while (!contextp->gotFinish()) {
     diff::copy();       // Comes before exec
-    ccdb::inst_trace();
     std::cerr << "be4" << std::endl;
     single_cycle(top, contextp);
+    ccdb::inst_trace();
     std::cerr << "aft" << std::endl;
     // std::cerr << "==> Id      " << comm::device_access << std::endl;
     diff::iota();       // Comes after exec
