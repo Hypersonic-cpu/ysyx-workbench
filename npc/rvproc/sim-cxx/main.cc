@@ -104,8 +104,8 @@ main(int argc, char* argv[]) {
   constexpr size_t MaxCyc{ 30U };
   size_t currCyc{ 1U };
   while (!contextp->gotFinish()) {
+    diff::copy();
     ccdb::inst_trace();
-    // Ref iota must come first (before DUT has changed)
     diff::iota(1);
     single_cycle(top, contextp);
     auto diffvec = diff::match();

@@ -166,6 +166,8 @@ namespace comm {
   extern std::string log_wavefile;
   extern std::string elf_file;
 
+  extern bool device_access;
+
   constexpr unsigned RegNum { 16U };
   constexpr unsigned FunctArgs { 6U };
   constexpr std::array<std::string, RegNum+1> RegName {
