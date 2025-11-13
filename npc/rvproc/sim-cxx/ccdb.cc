@@ -27,7 +27,7 @@ ccdb::read_mem(uint32_t addr) {
 
 void 
 ccdb::inst_trace() {
-  auto pc = top->rootp->rvCore__DOT__pc;
+  auto pc = read_reg(comm::RegNum).second;
   auto [v, inst] = ccdb::read_mem(pc);
   assert(v && "ccdb inst read fail");
 
@@ -38,7 +38,7 @@ ccdb::inst_trace() {
 
   auto ent = comm::InstEnt{ pc, inst, buf };
   comm::instBuf.append(ent);
-  if (comm::itrace_print) {
+  if (ccdb::runtime_dump_opt.inst_buf) {
     ent.printent(std::cerr);
   }
 
