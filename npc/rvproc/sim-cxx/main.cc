@@ -116,7 +116,7 @@ main(int argc, char* argv[]) {
         comm::sout32(std::cerr) << ref << " got ";
         comm::sout32(std::cerr) << dut << std::endl;
       }
-      // ccdb::dump_print(ccdb::DumpPrint{});
+      ccdb::dump_print(ccdb::DumpPrint{ .inst_buf=true });
       exit(1);
     }
     currCyc++;
