@@ -104,10 +104,11 @@ main(int argc, char* argv[]) {
   constexpr size_t MaxCyc{ 30U };
   size_t currCyc{ 1U };
   while (!contextp->gotFinish()) {
-    diff::copy();
+    diff::copy();       // Comes before exec
     ccdb::inst_trace();
-    diff::iota(1);
     single_cycle(top, contextp);
+    std::cerr << "==> Identifier " << comm::device_access << std::endl;
+    diff::iota();       // Comes after exec
     auto diffvec = diff::match();
     if (!diffvec.empty()) {
       for (const auto& [id, ref, dut] : diffvec) {
