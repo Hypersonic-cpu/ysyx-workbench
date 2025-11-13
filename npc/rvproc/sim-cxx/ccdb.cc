@@ -38,7 +38,7 @@ ccdb::inst_trace() {
 
   auto ent = comm::InstEnt{ pc, inst, buf };
   comm::instBuf.append(ent);
-  if (comm::itrace_print) {
+  if (ccdb::runtime_dump_opt.inst_buf) {
     ent.printent(std::cerr);
   }
 
