@@ -86,18 +86,6 @@ namespace rv_device {
   uint32_t read_clock(bool hi) {
     return static_cast<uint64_t>(get_uptime().count()) >> 
       (hi ? 32ULL : 0ULL);
-//     std::ifstream file("/proc/uptime");
-//     assert(file.is_open());
-//     double uptime_seconds = 0.0;
-//     assert(file >> uptime_seconds && "Read uptime failed");
-//
-//     auto seconds_duration = std::chrono::duration<double>(uptime_seconds);
-//     auto micro_duration = std::chrono::duration_cast<std::chrono::microseconds>(seconds_duration);
-//     auto micro_i64 = static_cast<uint64_t>(micro_duration.count());
-// #ifdef PRINTF_COND
-//     std::cout << std::endl << "READ CLOCK !! \'" << micro_i64 << "\'" << std::endl; 
-// #endif // PRINTF_COND
-//     return static_cast<uint32_t>(micro_i64 >> (hi ? 32 : 0));
   }
 }
 
@@ -124,46 +112,22 @@ pmem_init() {
   std::cout << "DPI-C >> fail " << ifs.fail() << " eof " << ifs.eof() << std::endl;
 #endif
   assert(!ifs.fail());
-
-  // for (size_t i = 0x0; i < 0x20; i++) {
-  //   if (i % 4 == 0) {
-  //     std::cout << std::hex << i << ":\t";
-  //   }
-  //   std::cout << std::hex << std::setfill('0') << std::setw(8) << pmem_raw[i] << " ";
-  //   if (i % 4 == 3) {
-  //     std::cout << std::endl;
-  //   }
-  // }
 }
 
-// pmem_init() {
-// #if PRINTF_COND
-//   std::cout << "DPI-C >> pmem_init called" << std::endl;
-// #endif
-//   std::ifstream ifs (PMemFile);
-//   assert(ifs.is_open());
-//
-//   std::string rline{};
-//   size_t pos{ 0U };
-//   while (std::getline(ifs, rline)) {
-//     assert (pos < (PMemSize >> 2) && "Mem init out of bound");
-//     std::stringstream ss {rline};
-//     ss >> std::hex >> pmem_raw[pos++];
-//   }
-//   ifs.close();
-// }
 
 extern "C" uint32_t 
 pmem_read(uint32_t raddr) {
 #if PRINTF_COND
   std::cout << "DPI-C >> pmem_read addr " << std::hex << raddr << std::endl;
 #endif
+  comm::device_access = true;
   uint32_t ret = 0;
   if (raddr == 0) { ret = 0; }
   else if (rv_device::is_clock_range(raddr)) {
     ret = rv_device::read_clock(raddr != rv_device::ClockAddr);
   } else {
     // Memory
+    comm::device_access = false;
     uint32_t aln_idx = (raddr - BaseAddr) >> 2;
     v_assert(ValidAccess(aln_idx), std::string("Read addr = "), raddr);
     ret = pmem_raw[aln_idx];
@@ -178,11 +142,12 @@ pmem_read(uint32_t raddr) {
 
 extern "C" void
 pmem_write(uint32_t waddr, uint32_t wdata, uint8_t wmask) {
+  comm::device_access = true;
   if (rv_device::is_serial_range(waddr)) {
     v_assert((wmask & 0x1), "Serial write masked out, wmask = ", wmask);
     rv_device::write_serial(wdata & 0xff);
-    // TODO: Device trace here
   } else {
+    comm::device_access = false;
     uint32_t aln_idx = (waddr - BaseAddr) >> 2;
     v_assert(ValidAccess(aln_idx), std::string("Write addr = "), waddr);
     uint32_t m = 0U;
