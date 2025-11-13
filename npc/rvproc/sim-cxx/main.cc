@@ -107,7 +107,7 @@ main(int argc, char* argv[]) {
     diff::copy();       // Comes before exec
     ccdb::inst_trace();
     single_cycle(top, contextp);
-    std::cerr << "==> Identifier " << comm::device_access << std::endl;
+    std::cerr << "==> Id      " << comm::device_access << std::endl;
     diff::iota();       // Comes after exec
     auto diffvec = diff::match();
     if (!diffvec.empty()) {
