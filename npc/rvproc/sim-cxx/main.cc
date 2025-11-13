@@ -112,7 +112,7 @@ main(int argc, char* argv[]) {
     if (!diffvec.empty()) {
       for (const auto& [id, ref, dut] : diffvec) {
         std::cerr << ANSI_Red << "Mismatch reg " << (int) id
-          << " (" << comm::RegName.at(id) << ") : " << "expected "; 
+          << " (" << comm::RegName.at(id) << ") : " << ANSI_None << "expected "; 
         comm::sout32(std::cerr) << ref << " got ";
         comm::sout32(std::cerr) << dut << std::endl;
       }
