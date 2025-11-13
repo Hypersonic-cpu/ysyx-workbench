@@ -180,7 +180,7 @@ class IDU extends Module {
     ))
   val instArith = 
     opName === InstOp.OpReg || opName === InstOp.OpImm
-  assert(instArith)
+  // assert(instArith)
   io.aluOp := Mux(instArith, 
     IntAluOp(funct3), IntAluOp.Add)
   io.aluSel.rs2Invert := instArith && funct7(5).asBool
