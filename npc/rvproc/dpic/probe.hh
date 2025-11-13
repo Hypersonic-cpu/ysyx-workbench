@@ -4,6 +4,7 @@
 #include <iomanip>
 #include <iostream>
 #include <array>
+#include <list>
 #include <stack>
 #include <string>
 #include <unordered_map>
@@ -161,7 +162,12 @@ namespace comm {
   extern std::string log_wavefile;
   extern std::string elf_file;
 
-  extern bool device_access;
+  enum DelayTime{
+    CurrCyc = 0,
+    PrevCyc = 1,
+    Num_DelayTime
+  };
+  extern std::array<bool, Num_DelayTime> device_access;
 
   constexpr unsigned RegNum { 16U };
   constexpr unsigned FunctArgs { 6U };

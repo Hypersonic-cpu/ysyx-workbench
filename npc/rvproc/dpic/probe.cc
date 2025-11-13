@@ -1,4 +1,5 @@
 #include "probe.hh"
+#include <array>
 #include <unordered_map>
 
 namespace comm {
@@ -6,7 +7,7 @@ namespace comm {
   RingBuffer<MemEnt, 16> memBuf {};
   std::unordered_map<uint32_t, ElfSymEnt> elf_syms {};
 
-  bool device_access{ false };
+  std::array<bool, Num_DelayTime> device_access{ false, false };
 
   std::string log_wavefile{ };
   std::string elf_file{ };
