@@ -16,10 +16,10 @@ object Elaborate extends App {
     ).reduce(_ + "," + _)
   )
 
-  val print = {
-    printf(s"write to ${Paths.get(npcHome, "build-sv/rvproc/").toString()}\n")
-    1
-  }
+  // val print = {
+  //   printf(s"write to ${Paths.get(npcHome, "build-sv/rvproc/").toString()}\n")
+  //   1
+  // }
 
   circt.stage.ChiselStage.emitSystemVerilogFile(new rvproc.rvCore(), args, firtoolOptions)
 }
