@@ -6,7 +6,7 @@ object Elaborate extends App {
   val firtoolOptions = Array(
     "--split-verilog",
     "-o", "/home/kong/ysyx-workbench/npc/build-sv/rvproc/",
-    "--disable-aggresive-merge-connections",
+    "--disable-aggressive-merge-connections",
     "--disable-opt",
     "--lowering-options=" + List(
       // make yosys happy
