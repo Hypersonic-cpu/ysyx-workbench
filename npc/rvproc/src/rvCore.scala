@@ -217,7 +217,11 @@ class IDU extends Module {
     io.aluOp === IntAluOp.Sltu ||
     instBr
   io.aluSel.isBranch := instBr
-  io.aluSel.rs2SelImm := ~(instTp === ITYPE.tN || instTp === ITYPE.tR)
+  io.aluSel.rs2SelImm := ~(
+    instTp === ITYPE.tN || 
+    instTp === ITYPE.tR ||
+    instTp === ITYPE.tB
+  )
 
   // NOTE: imm is always sign-extended
   io.imm    := MuxLookup(instTp, 0.U) (Seq(
