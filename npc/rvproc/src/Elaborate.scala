@@ -14,7 +14,7 @@ object Elaborate extends App {
       "disallowLocalVariables",
       "disallowPackedArrays",
       "locationInfoStyle=wrapInAtSquareBracket",
-      "emmitedLineLength=76",
+      "emittedLineLength=76",
     ).reduce(_ + "," + _)
   )
 
