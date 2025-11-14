@@ -45,7 +45,8 @@ SRC_AUTO_BIND = $(abspath $(BUILD_SIM_DIR)/auto_bind.cpp)
 $(SRC_AUTO_BIND): $(NXDC_FILES)
 	python3 $(NVBOARD_HOME)/scripts/auto_pin_bind.py $^ $@
 
-VSRCS = $(shell find $(abspath $(BUILD_SV_DIR)) -name "*.sv" -or -name "*.v")
+# VSRCS = $(shell find $(abspath $(BUILD_SV_DIR)) -name "*.sv" -or -name "*.v")
+FILELIST := $(shell find $(abspath $(BUILD_SV_DIR)/filelist.f))
 CSRCS = $(shell find $(abspath $(SIM_CXX_DIR)) -name "*.cc" -or -name "*.cpp")
 DPIC_SRCS = $(shell find $(abspath $(SRC_DPIC_DIR)) -name "*.cc" -or -name "*.cpp")
 
@@ -58,10 +59,12 @@ NVB_ARCHIVE=$(NVBOARD_ARCHIVE)
 CSRCS += $(SRC_AUTO_BIND)
 endif
 
-$(SIM_BIN): $(VSRCS) $(CSRCS) $(NVB_ARCHIVE)
+$(SIM_BIN): $(CSRCS) $(NVB_ARCHIVE)
 	@rm -rf $(BUILD_OBJ_DIR)
 	$(VERILATOR) $(VERILATOR_CFLAGS) \
-		--top-module $(TOPNAME) $^ $(DPIC_SRCS) \
+		-f $(FILELIST) \
+		--top-module $(TOPNAME) \
+		$^ \
 		$(addprefix -CFLAGS , $(CXXFLAGS)) $(addprefix -LDFLAGS , $(LDFLAGS)) \
 		--Mdir $(BUILD_OBJ_DIR) --exe -o $(abspath $(SIM_BIN))
 
