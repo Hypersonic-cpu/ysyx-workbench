@@ -8,6 +8,7 @@ object Elaborate extends App {
     "-o", "/home/kong/ysyx-workbench/npc/build-sv/rvproc/",
     "--disable-aggressive-merge-connections",
     "--disable-opt",
+    "--preserve-values=all",
     "--lowering-options=" + List(
       // make yosys happy
       // see https://github.com/llvm/circt/blob/main/docs/VerilogGeneration.md
