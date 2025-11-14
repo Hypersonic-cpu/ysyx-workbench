@@ -229,6 +229,8 @@ class IDU extends Module {
 
   io.wbSel := MuxCase(WbSrcOp.fromAlu, Seq(
     (opName === InstOp.Jalr) -> WbSrcOp.fromPC,
+    (opName === InstOp.Jal ) -> WbSrcOp.fromPC,
+    // TODO: Branch
     (opName === InstOp.Load) -> WbSrcOp.fromMem
   ))
 
