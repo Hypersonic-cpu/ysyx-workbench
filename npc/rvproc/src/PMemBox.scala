@@ -8,7 +8,7 @@ class PMemBox extends BlackBox with HasBlackBoxPath {
   val io = IO(new Bundle {
     val clock    = Input(Clock())
     val reset    = Input(Reset())
-    val pcin     = Input(Tp.PCType())
+    val pcin     = Input(Tp.RegType())
     val addr     = Input(Tp.AddrType())
     val data     = Input(Tp.RegType())
     val memEn    = Input(Bool())

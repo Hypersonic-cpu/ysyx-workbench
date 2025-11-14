@@ -10,7 +10,7 @@ class EcallBox extends BlackBox with HasBlackBoxPath {
     val reset = Input(Reset())
     val isEcall  = Input(Bool())
     val isEbreak = Input(Bool())
-    val pcin  = Input(Tp.PCType())
+    val pcin  = Input(Tp.RegType())
     val a0in = Input(Tp.RegType())
   })
   
