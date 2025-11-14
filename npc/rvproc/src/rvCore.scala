@@ -282,7 +282,7 @@ class EXU extends Module {
   // printf(cf"\trs1V ${io.rs1V}%x, rs2V ${io.rs2V}%x, imm ${io.imm}%x\n");
   io.brCmp.beq := false.B
   io.brCmp.blt := false.B
-  val flip = io.sel.rs2Invert
+  val flip = io.sel.rs2Invert && (io.op =/= IntAluOp.Srr)
   val skip = io.sel.isBranch
   val src1 = Mux(io.sel.rs1SelPC, io.pc, io.rs1V)
   val srcc = Mux(io.sel.rs2SelImm, io.imm, io.rs2V)
@@ -294,8 +294,9 @@ class EXU extends Module {
     )
   // Add, Sltu, Slt
   val anst = MuxCase(ansc(ISA.RegBits-1, 0), Seq(
-    (io.op === IntAluOp.Sll) -> 0.U,
-    (io.op === IntAluOp.Srr) -> 0.U,
+    (io.op === IntAluOp.Sll) -> (src1 << src2),
+    (io.op === IntAluOp.Srr) -> Mux(io.sel.rs2Invert,
+      (src1.asSInt >> src2).asUInt , src1 >> src2),
     (io.op === IntAluOp.And) -> (src1 & src2),
     (io.op === IntAluOp.Or ) -> (src1 | src2),
     (io.op === IntAluOp.Xor) -> (src1 ^ src2),
