@@ -62,7 +62,7 @@ endif
 $(SIM_BIN): $(CSRCS) $(NVB_ARCHIVE)
 	@rm -rf $(BUILD_OBJ_DIR)
 	$(VERILATOR) $(VERILATOR_CFLAGS) \
-		-y $(BUILD_SV_DIR) -f $(FILELIST) \
+		-y $(abspath $(BUILD_SV_DIR)) -f $(FILELIST) \
 		--top-module $(TOPNAME) \
 		$^ \
 		$(addprefix -CFLAGS , $(CXXFLAGS)) $(addprefix -LDFLAGS , $(LDFLAGS)) \
