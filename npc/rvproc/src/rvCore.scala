@@ -326,6 +326,7 @@ class WBU extends Module {
   })
   val jmp = io.pcJmp.jUncond
   val snpc = io.pc + 4.U
+  printf(cf"\twbsel ${io.wbSel} alu ${io.aluV}%x snpc ${snpc}\n")
   // TODO: Is truncation right on branch ? 
   val dnpc = io.aluV(31, 1) ## 0.U(1.W) 
   io.nxpc := Mux(jmp, io.aluV, snpc)
