@@ -12,7 +12,7 @@ object Elaborate extends App {
   val firtoolOptionsString = Array(
     // s"-o=$outputDir", // 指定输出目录
     "--split-verilog", // 启用分文件输出
-    "--top=rvCore", // 保持 Top 模块名称
+    // "--top=rvCore", // 保持 Top 模块名称
     "--lowering-options=" + List(
       "disallowLocalVariables",
       "disallowPackedArrays",
