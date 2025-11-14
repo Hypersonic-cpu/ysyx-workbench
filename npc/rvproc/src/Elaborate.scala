@@ -3,11 +3,13 @@ import java.nio.file.Paths
 
 object Elaborate extends App {
 
+  val outputPath = "/home/kong/ysyx-workbench/npc/build-sv/rvproc/"
+
   val firtoolOptions = Array(
     "--split-verilog",
-    "-o", "/home/kong/ysyx-workbench/npc/build-sv/rvproc/",
-    "--disable-aggressive-merge-connections",
-    "--disable-opt",
+    "-o", outputPath,
+    // "--disable-aggressive-merge-connections",
+    // "--disable-opt",
     // "--preserve-values=all",
     "--lowering-options=" + List(
       // make yosys happy
