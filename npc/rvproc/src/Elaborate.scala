@@ -7,7 +7,7 @@ object Elaborate extends App {
   val firtoolOptions = Array(
     "-o", Paths.get(npcHome, "build-sv/rvproc/").toString(),
     "--split-verilog",
-    "--main-module=rvCore",
+    "--top=rvCore",
     "--lowering-options=" + List(
       // make yosys happy
       // see https://github.com/llvm/circt/blob/main/docs/VerilogGeneration.md
