@@ -5,7 +5,7 @@ object Elaborate extends App {
   val npcHome = sys.env.get("NPC_HOME").get
 
   val firtoolOptions = Array(
-    "-o", Paths.get(npcHome, "npc/build-sv/rvproc/").toString(),
+    "-o", Paths.get(npcHome, "build-sv/rvproc/").toString(),
     "--split-verilog",
     "--lowering-options=" + List(
       // make yosys happy
@@ -15,5 +15,11 @@ object Elaborate extends App {
       "locationInfoStyle=wrapInAtSquareBracket"
     ).reduce(_ + "," + _)
   )
+
+  val print = {
+    printf(s"write to ${Paths.get(npcHome, "build-sv/rvproc/").toString()}\n")
+    1
+  }
+
   circt.stage.ChiselStage.emitSystemVerilogFile(new rvproc.rvCore(), args, firtoolOptions)
 }
