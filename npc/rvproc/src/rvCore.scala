@@ -302,7 +302,7 @@ class EXU extends Module {
   io.res := MuxCase(anst, Seq(
     skip -> (io.pc + io.imm),
     (io.op === IntAluOp.Sltu || io.op === IntAluOp.Slt) ->
-      io.brCmp.blt.pad(ISA.RegBits)
+      io.brCmp.blt.asUInt.pad(ISA.RegBits)
   ))
   // printf(cf"\t${src1}%x op ${src2}%x = ${io.res}%x\n")
 }
