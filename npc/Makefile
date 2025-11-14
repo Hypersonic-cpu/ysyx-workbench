@@ -81,6 +81,7 @@ verilog:
 	$(call git_commit, "generate verilog")
 	mkdir -p $(BUILD_SV_DIR)
 	mill -i $(PRJ).runMain Elaborate --target-dir $(BUILD_SV_DIR)
+	@echo "Verilog written to " $(BUILD_SV_DIR)
 
 help:
 	mill -i $(PRJ).runMain Elaborate --help
