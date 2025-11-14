@@ -198,13 +198,14 @@ class IDU extends Module {
     IntAluOp(funct3), IntAluOp.Add)
   io.aluSel.rs2Invert := instArith && funct7(5).asBool
   io.aluSel.rs2SelImm := ~(instTp === ITYPE.tN || instTp === ITYPE.tR)
-  io.aluSel.rs1SelPC  := (opName === InstOp.Auipc) // TODO: JAL
+  io.aluSel.rs1SelPC  := (opName === InstOp.Auipc) || (opName === InstOp.Jal)
 
   // TODO: SEXT
   io.imm    := MuxLookup(instTp, 0.U) (Seq(
     ITYPE.tI -> Mux(true.B, immIS, immIU), 
     ITYPE.tU -> immU,
-    ITYPE.tS -> immS
+    ITYPE.tS -> immS,
+    ITYPE.tJ -> immJ,
   ))
 
   io.memAcc.lenOp := MemLenOp(Mux(
@@ -223,9 +224,8 @@ class IDU extends Module {
   io.pcJmp.jIfne   := false.B
   io.pcJmp.jIflt   := false.B
   io.pcJmp.jIfge   := false.B
-  // TODO: JAL
-  // BUG:  JALR ALU结果的LSB需要在加法以后清零!
-  io.pcJmp.jUncond := opName === InstOp.Jalr
+  io.pcJmp.jUncond := 
+    (opName === InstOp.Jalr) || (opName === InstOp.Jal)
 
   io.wbSel := MuxCase(WbSrcOp.fromAlu, Seq(
     (opName === InstOp.Jalr) -> WbSrcOp.fromPC,
@@ -305,8 +305,8 @@ class LSU extends Module {
   // printf(cf"DPI Chisel Raw ${lraw}%x SEXT ${sext}\n")
   io.inst := iMem.io.instRaw
   io.load := MuxLookup(lenOp, 0.U) (Seq(
-    MemLenOp.Byte -> Mux(sext, lraw(7, 0).asSInt.pad(32).asUInt, lraw(7, 0)),
-    MemLenOp.Half -> Mux(sext, lraw(15, 0).asSInt.pad(32).asUInt, lraw(15, 0)),
+    MemLenOp.Byte -> Mux(sext, lraw(7, 0).SExt(), lraw(7, 0)),
+    MemLenOp.Half -> Mux(sext, lraw(15, 0).SExt(), lraw(15, 0)),
     MemLenOp.Word -> lraw
     )
   )
@@ -331,11 +331,14 @@ class WBU extends Module {
   // For B-type insts, wrEn had been set to false.
   // FIXME: 目前的思路: 需要存储PC的Jmp(Link)不可能
   // 是有条件的, 所以RegWB不需要考虑branch.
-  io.data := MuxLookup(io.wbSel, 0.U) (Seq(
+  val dstsel = MuxLookup(io.wbSel, 0.U) (Seq(
     WbSrcOp.fromAlu -> io.aluV, 
     WbSrcOp.fromMem -> io.memV,
     WbSrcOp.fromPC  -> snpc
   ))
+
+  io.data := 
+    dstsel(31, 1) ## Mux(io.pcJmp.jUncond, 0.U(1.W), dstsel(0, 0))
 }
 
 class rvCore() extends Module {
