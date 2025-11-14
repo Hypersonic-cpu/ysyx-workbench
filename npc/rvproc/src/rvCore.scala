@@ -176,7 +176,7 @@ class IDU extends Module {
     (io.inst(31, 25) ## io.inst(11, 7)).SExt()
   val immJ   = 
     (io.inst(31, 31) ## io.inst(19, 12) ## 
-      io.inst(20, 20) ## io.inst(30, 21)).SExt()
+      io.inst(20, 20) ## io.inst(30, 21) ## 0.U(1.W)).SExt()
 
 
   // TODO:
