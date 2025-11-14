@@ -298,7 +298,7 @@ class EXU extends Module {
   ))
 
   val over = (~(src1.MSB() ^ src2.MSB())) & (src1.MSB() ^ anst.MSB())
-  val less = Mux(cmpu, ~ansc.MSB(), anst.MSB() ^ over)
+  val less = Mux(cmpu, ~ansc.MSB(-1), anst.MSB() ^ over)
   io.brCmp.blt := less
   io.brCmp.beq := ~anst.orR
   io.res := MuxCase(anst, Seq(
