@@ -326,19 +326,18 @@ class WBU extends Module {
   })
   val jmp = io.pcJmp.jUncond
   val snpc = io.pc + 4.U
+  // TODO: Is truncation right on branch ? 
+  val dnpc = io.aluV(31, 1) ## 0.U(1.W) 
   io.nxpc := Mux(jmp, io.aluV, snpc)
   // NOTE: Once PC jumps, try store its next pc
   // For B-type insts, wrEn had been set to false.
   // FIXME: 目前的思路: 需要存储PC的Jmp(Link)不可能
   // 是有条件的, 所以RegWB不需要考虑branch.
-  val dstsel = MuxLookup(io.wbSel, 0.U) (Seq(
+  io.data := MuxLookup(io.wbSel, 0.U) (Seq(
     WbSrcOp.fromAlu -> io.aluV, 
     WbSrcOp.fromMem -> io.memV,
     WbSrcOp.fromPC  -> snpc
   ))
-
-  io.data := 
-    dstsel(31, 1) ## Mux(io.pcJmp.jUncond, 0.U(1.W), dstsel(0, 0))
 }
 
 class rvCore() extends Module {
