@@ -77,6 +77,7 @@ object InstOp extends ChiselEnum {
   val OpReg  = Value(0b01100.U)
   // val OpFP   = Value(0b10100.U)
   val Lui    = Value(0b01101.U)
+  // TODO: 
   // val Branch = Value(0b11000.U)
   val Jalr   = Value(0b11001.U)
   val Jal    = Value(0b11011.U)
@@ -205,7 +206,9 @@ class IDU extends Module {
     IntAluOp(funct3), IntAluOp.Add)
   io.aluSel.rs1SelPC  := (opName === InstOp.Auipc) || (opName === InstOp.Jal)
   // TODO: SLT
-  io.aluSel.rs2Invert := (opName === InstOp.OpReg) && funct7(5).asBool
+  io.aluSel.rs2Invert := 
+    ((opName === InstOp.OpReg) && funct7(5).asBool) ||
+    io.aluOp === IntAluOp.Slt
   io.aluSel.rs2SelImm := ~(instTp === ITYPE.tN || instTp === ITYPE.tR)
 
   // NOTE: imm is always sign-extended
@@ -280,10 +283,11 @@ class EXU extends Module {
     (io.op === IntAluOp.And) -> (src1 & src2),
     (io.op === IntAluOp.Or ) -> (src1 | src2),
     (io.op === IntAluOp.Xor) -> (src1 ^ src2),
-
   ))
+
   val over = (~(src1.MSB() ^ src2.MSB())) & (src1.MSB() ^ anst.MSB())
-  io.brCmp.blt := anst.MSB() ^ over
+  io.brCmp.blt := 
+    Mux(io.op === IntAluOp.Sltu, ~ansc.MSB(), anst.MSB() ^ over)
   io.brCmp.beq := ~anst.orR
   io.res := anst
   // printf(cf"\t${src1}%x op ${src2}%x = ${io.res}%x\n")
