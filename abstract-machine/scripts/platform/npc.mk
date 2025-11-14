@@ -34,7 +34,14 @@ run: insert-arg cleancc
 	@ln -sfn $(IMAGE).bin $(CHISEL_DPIC_MEMPATH)
 	@$(MAKE) -C $(NPC_HOME) run
 
+buildsv: 
+	@$(MAKE) -C $(NPC_HOME) verilog
+
+runonly: insert-arg
+	@ln -sfn $(IMAGE).bin $(CHISEL_DPIC_MEMPATH)
+	@$(MAKE) -C $(NPC_HOME) runonly
+
 cleancc: 
 	@$(MAKE) -C $(NPC_HOME) clean
 
-.PHONY: insert-arg
+.PHONY: insert-arg cleancc buildsv runonly
