@@ -421,6 +421,7 @@ class rvCore() extends Module {
   // iDebug.io.probeOut := iReg.io.probeOut
   // iDebug.io.probePC  := this.pc
 
+  dontTouch(this.io)
   // dontTouch(iWrite.io)
   // dontTouch(iDec.io)
   // dontTouch(iExe.io)
