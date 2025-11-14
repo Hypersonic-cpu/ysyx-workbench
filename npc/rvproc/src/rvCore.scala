@@ -282,11 +282,11 @@ class EXU extends Module {
   val skip = io.sel.isBranch
   val src1 = Mux(io.sel.rs1SelPC, io.pc, io.rs1V)
   val srcc = Mux(io.sel.rs2SelImm, io.imm, io.rs2V)
-  val src2 = Mux(flip, ~srcc + Mux(cmpu, 1.U, 0.U), srcc)
+  val src2 = Mux(flip, ~srcc, srcc)
   printf(cf"\tsrc1 ${src1}%x : src2 ${src2}%x inv${flip}\n")
   val ansc = 
     src1.pad(ISA.RegBits+1) + src2.pad(ISA.RegBits+1) + Mux(
-      flip, Mux(cmpu, 0.U, 1.U), 0.U
+      flip, 1.U, 0.U
     )
   // Add, Sltu, Slt
   val anst = MuxCase(ansc(ISA.RegBits-1, 0), Seq(
@@ -298,7 +298,7 @@ class EXU extends Module {
   ))
 
   val over = (~(src1.MSB() ^ src2.MSB())) & (src1.MSB() ^ anst.MSB())
-  val less = Mux(io.op === IntAluOp.Sltu, ~ansc.MSB(), anst.MSB() ^ over)
+  val less = Mux(cmpu, ~ansc.MSB(), anst.MSB() ^ over)
   io.brCmp.blt := less
   io.brCmp.beq := ~anst.orR
   io.res := MuxCase(anst, Seq(
