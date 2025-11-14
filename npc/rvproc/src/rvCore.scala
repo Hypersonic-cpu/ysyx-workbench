@@ -294,7 +294,7 @@ class EXU extends Module {
     )
   // Add, Sltu, Slt
   val anst = MuxCase(ansc(ISA.RegBits-1, 0), Seq(
-    (io.op === IntAluOp.Sll) -> (src1 << src2),
+    (io.op === IntAluOp.Sll) -> (src1 << src2(4, 0)),
     (io.op === IntAluOp.Srr) -> Mux(io.sel.rs2Invert,
       (src1.asSInt >> src2(4, 0)).asUInt, src1 >> src2(4, 0)),
     (io.op === IntAluOp.And) -> (src1 & src2),
