@@ -328,7 +328,7 @@ class rvCore() extends Module {
   val io = IO(new Bundle{
     // val regPin  = Input(Tp.RegIdxType())
     // val regPrb  = Output(Tp.RegType())
-    // val outPC   = Output(Tp.PCType())
+    val outPC   = Output(Tp.PCType())
   })
 
   // State
@@ -421,7 +421,7 @@ class rvCore() extends Module {
   // iDebug.io.probeOut := iReg.io.probeOut
   // iDebug.io.probePC  := this.pc
 
-  dontTouch(this.io)
+  io.outPC := pc
   // dontTouch(iWrite.io)
   // dontTouch(iDec.io)
   // dontTouch(iExe.io)
