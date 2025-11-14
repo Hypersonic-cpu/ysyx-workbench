@@ -305,7 +305,7 @@ class EXU extends Module {
     skip -> (io.pc + io.imm),
     cmp  -> less.asUInt
   ))
-  printf(cf"\t${src1}%x op ${src2}%x = o${over} c${} ${}%x\n")
+  printf(cf"\t${src1}%x op ${src2}%x = o${over} c${ansc.MSB()} ${anst}%x\n")
 }
 
 /**
