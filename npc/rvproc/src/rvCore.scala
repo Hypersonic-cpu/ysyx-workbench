@@ -272,6 +272,8 @@ class EXU extends Module {
     val brCmp = Output(new BrCmpBundle())
   })
 
+  val cmp = (io.op === IntAluOp.Sltu || io.op === IntAluOp.Slt)
+  val cmpu = io.op === IntAluOp.Sltu
   printf(cf"\trs1 PC?${io.sel.rs1SelPC} : rs2 Imm?${io.sel.rs2SelImm} = ${io.imm}%x\n")
   // printf(cf"\trs1V ${io.rs1V}%x, rs2V ${io.rs2V}%x, imm ${io.imm}%x\n");
   io.brCmp.beq := false.B
@@ -280,11 +282,11 @@ class EXU extends Module {
   val skip = io.sel.isBranch
   val src1 = Mux(io.sel.rs1SelPC, io.pc, io.rs1V)
   val srcc = Mux(io.sel.rs2SelImm, io.imm, io.rs2V)
-  val src2 = Mux(flip, ~srcc, srcc)
+  val src2 = Mux(flip, ~srcc + Mux(cmpu, 1.U, 0.U), srcc)
   printf(cf"\tsrc1 ${src1}%x : src2 ${src2}%x inv${flip}\n")
   val ansc = 
     src1.pad(ISA.RegBits+1) + src2.pad(ISA.RegBits+1) + Mux(
-      flip, 0b1.U, 0.U
+      flip, Mux(cmpu, 0.U, 1.U), 0.U
     )
   // Add, Sltu, Slt
   val anst = MuxCase(ansc(ISA.RegBits-1, 0), Seq(
@@ -301,10 +303,9 @@ class EXU extends Module {
   io.brCmp.beq := ~anst.orR
   io.res := MuxCase(anst, Seq(
     skip -> (io.pc + io.imm),
-    (io.op === IntAluOp.Sltu || io.op === IntAluOp.Slt) ->
-      less.asUInt
+    cmp  -> less.asUInt
   ))
-  // printf(cf"\t${src1}%x op ${src2}%x = ${io.res}%x\n")
+  printf(cf"\t${src1}%x op ${src2}%x = o${over} c${} ${}%x\n")
 }
 
 /**
