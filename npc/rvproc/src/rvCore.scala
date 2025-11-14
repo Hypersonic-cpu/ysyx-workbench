@@ -296,13 +296,13 @@ class EXU extends Module {
   ))
 
   val over = (~(src1.MSB() ^ src2.MSB())) & (src1.MSB() ^ anst.MSB())
-  io.brCmp.blt := 
-    Mux(io.op === IntAluOp.Sltu, ~ansc.MSB(), anst.MSB() ^ over)
+  val less = Mux(io.op === IntAluOp.Sltu, ~ansc.MSB(), anst.MSB() ^ over)
+  io.brCmp.blt := less
   io.brCmp.beq := ~anst.orR
   io.res := MuxCase(anst, Seq(
     skip -> (io.pc + io.imm),
     (io.op === IntAluOp.Sltu || io.op === IntAluOp.Slt) ->
-      io.brCmp.blt.asUInt.pad(ISA.RegBits)
+      less.asUInt
   ))
   // printf(cf"\t${src1}%x op ${src2}%x = ${io.res}%x\n")
 }
