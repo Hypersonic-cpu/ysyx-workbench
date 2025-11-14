@@ -1,6 +1,11 @@
+import scala.util.Properties
+import java.nio.file.Paths
+
 object Elaborate extends App {
+  val npcHome = sys.env.get("NPC_HOME").get
+
   val firtoolOptions = Array(
-    "-o" , "/home/kong/ysyx-workbench/npc/build-sv/rvproc/", 
+    "-o", Paths.get(npcHome, "npc/build-sv/rvproc/").toString(),
     "--split-verilog",
     "--lowering-options=" + List(
       // make yosys happy
