@@ -428,3 +428,10 @@ class rvCore() extends Module {
   // dontTouch(iExe.io)
   // dontTouch(iLsu.io)
 }
+
+class rvCoreWrapper() extends Module {
+  val io = IO(new Bundle{ })
+  val core = Module(new rvCore())
+  dontTouch(core.io)
+}
+
