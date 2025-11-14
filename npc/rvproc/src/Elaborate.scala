@@ -1,5 +1,6 @@
 object Elaborate extends App {
   val firtoolOptions = Array(
+    "-o " + "/home/kong/ysyx-workbench/npc/build-sv/rvproc/", 
     "--split-verilog",
     "--lowering-options=" + List(
       // make yosys happy
