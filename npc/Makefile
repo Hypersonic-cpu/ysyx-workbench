@@ -83,7 +83,7 @@ run: verilate verilog $(LIBCAPSTONE) $(SIM_BIN)
 verilog:
 	$(call git_commit, "generate verilog")
 	mkdir -p $(BUILD_SV_DIR)
-	mill -i $(PRJ).runMain Elaborate --target-dir $(BUILD_SV_DIR)
+	mill -i $(PRJ).runMain Elaborate -o=$(BUILD_SV_DIR)
 	@echo "Verilog written to " $(BUILD_SV_DIR)
 
 help:
