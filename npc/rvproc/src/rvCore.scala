@@ -144,7 +144,7 @@ class IDU extends Module {
   val funct3 = io.inst(14, 12)
   val funct7 = io.inst(31, 25)
   val rvBase  = opcode(1, 0) === 0b11.U(2.W)
-  // assert(rvBase, cf"Inst[1:0] is not 0b11: opcode=${opcode}%x")
+  assert(rvBase, cf"Inst[1:0] is not 0b11: opcode=${opcode}%x")
 
   val (opName, opValid) = InstOp.safe(opcode(6, 2))
   // assert(clock, opValid, reset, None, Some(cf"Invalid opcode encountered: opcode=${opcode}%x"))
@@ -157,7 +157,6 @@ class IDU extends Module {
   io.rs1    := MuxCase(io.inst(19, 15), Seq(
     isEbreak                -> 10.U,
     (opName === InstOp.Lui) -> 0.U
-    // ,(opName === InstOp.OpImm) -> 2.U // bug, triggering DiffTest
   ))
   // (isEbreak, 10.U, io.inst(19, 15))
   io.rs2    := io.inst(24, 20)
@@ -180,11 +179,12 @@ class IDU extends Module {
     ))
   val instArith = 
     opName === InstOp.OpReg || opName === InstOp.OpImm
+  // assert(instArith)
   io.aluOp := Mux(instArith, 
     IntAluOp(funct3), IntAluOp.Add)
   io.aluSel.rs2Invert := instArith && funct7(5).asBool
   io.aluSel.rs2SelImm := ~(instTp === ITYPE.tN || instTp === ITYPE.tR)
-  io.aluSel.rs1SelPC  := false.B // TODO: JAL
+  io.aluSel.rs1SelPC  := (opName === InstOp.Auipc) // TODO: JAL
 
   // TODO: SEXT
   io.imm    := MuxLookup(instTp, 0.U) (Seq(
@@ -236,6 +236,7 @@ class EXU extends Module {
     val brCmp = Output(new BrCmpBundle())
   })
 
+  printf(cf"\trs1 PC?${io.sel.rs1SelPC} : rs2 Imm?${io.sel.rs2SelImm}\n")
   // printf(cf"\trs1V ${io.rs1V}%x, rs2V ${io.rs2V}%x, imm ${io.imm}%x\n");
   io.res := 0.U
   io.brCmp.beq := false.B
@@ -420,8 +421,17 @@ class rvCore() extends Module {
   // iDebug.io.probeOut := iReg.io.probeOut
   // iDebug.io.probePC  := this.pc
 
+  // io.outPC := pc
+  // dontTouch(io)
   // dontTouch(iWrite.io)
   // dontTouch(iDec.io)
   // dontTouch(iExe.io)
   // dontTouch(iLsu.io)
 }
+
+class rvCoreWrapper() extends Module {
+  val io = IO(new Bundle{ })
+  val core = Module(new rvCore())
+  dontTouch(core.io)
+}
+
