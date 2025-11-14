@@ -299,7 +299,11 @@ class EXU extends Module {
   io.brCmp.blt := 
     Mux(io.op === IntAluOp.Sltu, ~ansc.MSB(), anst.MSB() ^ over)
   io.brCmp.beq := ~anst.orR
-  io.res := Mux(skip, io.pc + io.imm, anst)
+  io.res := MuxCase(anst, Seq(
+    skip -> (io.pc + io.imm),
+    (io.op === IntAluOp.Sltu || io.op === IntAluOp.Slt) ->
+      io.brCmp.blt.pad(ISA.RegBits)
+  ))
   // printf(cf"\t${src1}%x op ${src2}%x = ${io.res}%x\n")
 }
 
