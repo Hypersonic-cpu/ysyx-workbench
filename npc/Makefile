@@ -28,7 +28,7 @@ INC_PATH ?= $(abspath $(PRJ))/dpic $(abspath $(PRJ))/sim-cxx
 VERILATOR = verilator
 VERILATOR_COVERAGE = verilator_coverage
 VERILATOR_TRACE ?= --trace --trace-fst --trace-depth 99
-VERILATOR_CFLAGS += $(VERILATOR_TRACE) -DPRINTF_COND=0
+VERILATOR_CFLAGS += $(VERILATOR_TRACE) -DPRINTF_COND=1
 VERILATOR_CFLAGS += -MMD --build -cc  \
 										-O3 --x-assign fast --x-initial fast --noassert
 INCFLAGS = $(addprefix -I, $(INC_PATH))
@@ -46,6 +46,7 @@ $(SRC_AUTO_BIND): $(NXDC_FILES)
 	python3 $(NVBOARD_HOME)/scripts/auto_pin_bind.py $^ $@
 
 VSRCS = $(shell find $(abspath $(BUILD_SV_DIR)) -name "*.sv" -or -name "*.v")
+# FILELIST := $(shell find $(abspath $(BUILD_SV_DIR)/filelist.f))
 CSRCS = $(shell find $(abspath $(SIM_CXX_DIR)) -name "*.cc" -or -name "*.cpp")
 DPIC_SRCS = $(shell find $(abspath $(SRC_DPIC_DIR)) -name "*.cc" -or -name "*.cpp")
 
@@ -58,10 +59,12 @@ NVB_ARCHIVE=$(NVBOARD_ARCHIVE)
 CSRCS += $(SRC_AUTO_BIND)
 endif
 
-$(SIM_BIN): $(VSRCS) $(CSRCS) $(NVB_ARCHIVE)
+$(SIM_BIN): $(CSRCS) $(DPIC_SRCS) $(NVB_ARCHIVE)
 	@rm -rf $(BUILD_OBJ_DIR)
 	$(VERILATOR) $(VERILATOR_CFLAGS) \
-		--top-module $(TOPNAME) $^ $(DPIC_SRCS) \
+		$(VSRCS) \
+		--top-module $(TOPNAME) \
+		$^ \
 		$(addprefix -CFLAGS , $(CXXFLAGS)) $(addprefix -LDFLAGS , $(LDFLAGS)) \
 		--Mdir $(BUILD_OBJ_DIR) --exe -o $(abspath $(SIM_BIN))
 
@@ -81,6 +84,7 @@ verilog:
 	$(call git_commit, "generate verilog")
 	mkdir -p $(BUILD_SV_DIR)
 	mill -i $(PRJ).runMain Elaborate --target-dir $(BUILD_SV_DIR)
+	@echo "Verilog written to " $(BUILD_SV_DIR)
 
 help:
 	mill -i $(PRJ).runMain Elaborate --help

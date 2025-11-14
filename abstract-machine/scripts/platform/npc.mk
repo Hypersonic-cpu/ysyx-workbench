@@ -30,7 +30,7 @@ runam: insert-arg
 	@ln -sfn $(IMAGE).bin $(CHISEL_DPIC_MEMPATH)
 	@$(MAKE) -C $(NPC_HOME) runam
 
-run: insert-arg
+run: insert-arg cleancc
 	@ln -sfn $(IMAGE).bin $(CHISEL_DPIC_MEMPATH)
 	@$(MAKE) -C $(NPC_HOME) run
 
