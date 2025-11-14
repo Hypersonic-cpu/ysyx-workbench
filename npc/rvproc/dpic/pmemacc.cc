@@ -141,7 +141,8 @@ pmem_read(uint32_t raddr) {
     comm::device_access[comm::CurrCyc] = false;
     uint32_t aln_idx = (raddr - BaseAddr) >> 2;
     v_warn(ValidAccess(aln_idx), std::string("Read addr = "), raddr);
-    ret = pmem_raw[aln_idx];
+    if (!ValidAccess(aln_idx)) { ret = 0x55aa55aa; }
+    else { ret = pmem_raw[aln_idx]; }
   }
 #if PRINTF_COND
   std::cout << " ret = " << std::hex << ret << std::endl;
