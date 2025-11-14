@@ -37,10 +37,11 @@ class BrCmpBundle extends Bundle {
 }
 
 class PcJmpBundle extends Bundle {
-  val jIfeq = Bool()
-  val jIfne = Bool()
-  val jIflt = Bool()
-  val jIfge = Bool()
+  val bIfeq = Bool()
+  val bIfne = Bool()
+  val bIflt = Bool()
+  val bIfge = Bool()
+  val bEnable = Bool()
   val jUncond = Bool()
 }
 
@@ -203,7 +204,7 @@ class IDU extends Module {
     ))
   val instArith = 
     opName === InstOp.OpReg || opName === InstOp.OpImm
-  val instBr = instTp === InstOp.Branch
+  val instBr = opName === InstOp.Branch
   // assert(instArith)
   io.aluOp := MuxCase (IntAluOp.Add, Seq(
     instArith -> IntAluOp(funct3),
@@ -238,10 +239,11 @@ class IDU extends Module {
     instTp === ITYPE.tB || 
     instTp === ITYPE.tS)
 
-  io.pcJmp.jIfeq   := funct3 === 0b000.U
-  io.pcJmp.jIfne   := funct3 === 0b001.U
-  io.pcJmp.jIflt   := (funct3 & 0b101.U) === 0b100.U
-  io.pcJmp.jIfge   := (funct3 & 0b101.U) === 0b101.U
+  io.pcJmp.bIfeq   := funct3 === 0b000.U
+  io.pcJmp.bIfne   := funct3 === 0b001.U
+  io.pcJmp.bIflt   := (funct3 & 0b101.U) === 0b100.U
+  io.pcJmp.bIfge   := (funct3 & 0b101.U) === 0b101.U
+  io.pcJmp.bEnable := instBr
   io.pcJmp.jUncond := 
     (opName === InstOp.Jalr) || (opName === InstOp.Jal)
 
@@ -359,13 +361,20 @@ class WBU extends Module {
     val nxpc  = Output(Tp.RegType())
     val data  = Output(Tp.RegType())
   })
-  val jmp = io.pcJmp.jUncond
+  val jar = io.pcJmp.jUncond
+  val br  = io.pcJmp.bEnable
+  val cd  = io.pcJmp
+  val rs  = io.brCmp
+  val jmp = jar || (br && (
+    (cd.bIfeq && rs.beq) || 
+    (cd.bIfne && ~rs.beq) ||
+    (cd.bIfge && ~rs.blt) ||
+    (cd.bIflt && rs.blt)
+  ))
   val snpc = io.pc + 4.U
   printf(cf"\twbsel ${io.wbSel} alu ${io.aluV}%x snpc ${snpc}%x\n")
   val dnpc = io.aluV(31, 1) ## 0.U(1.W) 
   io.nxpc := Mux(jmp, io.aluV, snpc)
-  // NOTE: Once PC jumps, try store its next pc
-  // For B-type insts, wrEn had been set to false.
   io.data := MuxLookup(io.wbSel, 0.U) (Seq(
     WbSrcOp.fromAlu -> io.aluV, 
     WbSrcOp.fromMem -> io.memV,
