@@ -32,10 +32,8 @@ object Elaborate extends App {
     chiselArgs ++ firtoolOptionsString, 
     // Annotations：指定要编译的模块
     Seq(
-      // 明确告诉 ChiselStage 要生成哪个 Chisel 模块
-      ChiselGeneratorAnnotation(() => new rvproc.rvCore())
-      // 在新版本中，只要在第一个参数数组中包含了 -o 和 --split-verilog，
-      // ChiselStage/CIRCT 就会自动启用多文件生成逻辑，无需额外的 EmitAllModulesAnnotation。
+      ChiselGeneratorAnnotation(() => new rvproc.rvCore()),
+      FirtoolOption(firtoolOptionsString.mkString(" "))
     )
   )
 }
