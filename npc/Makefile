@@ -28,7 +28,7 @@ INC_PATH ?= $(abspath $(PRJ))/dpic $(abspath $(PRJ))/sim-cxx
 VERILATOR = verilator
 VERILATOR_COVERAGE = verilator_coverage
 VERILATOR_TRACE ?= --trace --trace-fst --trace-depth 99
-VERILATOR_CFLAGS += $(VERILATOR_TRACE) -DPRINTF_COND=1
+VERILATOR_CFLAGS += $(VERILATOR_TRACE) -DPRINTF_COND=0
 VERILATOR_CFLAGS += -MMD --build -cc  \
 										-O3 --x-assign fast --x-initial fast --noassert
 INCFLAGS = $(addprefix -I, $(INC_PATH))
@@ -77,6 +77,10 @@ runam:
 	mill -i $(PRJ).test.testOnly $(PRJ).test.$(TOPNAME)Am 
 
 run: verilate verilog $(LIBCAPSTONE) $(SIM_BIN)
+	$(call git_commit, "run with AM via verilator cc")
+	$(SIM_BIN) $(simccargs)
+
+runonly: $(SIM_BIN)
 	$(call git_commit, "run with AM via verilator cc")
 	$(SIM_BIN) $(simccargs)
 

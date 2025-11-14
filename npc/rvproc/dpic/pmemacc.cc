@@ -49,6 +49,17 @@ inline void v_assert(bool cond, const Args&... args) {
   }
 }
 
+template<typename... Args>
+inline void v_warn(bool cond, const Args&... args) {
+  if (!cond) {
+    std::cerr << "[ WARNIGN ] " << __FILE__ << ":" << __LINE__ << " " << std::hex;
+    ((std::cerr << args << " "), ...);
+    std::cerr << std::endl;
+    // std::abort();
+    vl_warn(__FILE__, __LINE__, "BlackBox", "assertion failed");
+  }
+}
+
 namespace rv_device {
   constexpr addr_t SerialAddr{ 0x1000'0000U };
   constexpr addr_t ClockAddr{ 0x1000'0020U };
@@ -129,8 +140,9 @@ pmem_read(uint32_t raddr) {
     // Memory
     comm::device_access[comm::CurrCyc] = false;
     uint32_t aln_idx = (raddr - BaseAddr) >> 2;
-    v_assert(ValidAccess(aln_idx), std::string("Read addr = "), raddr);
-    ret = pmem_raw[aln_idx];
+    v_warn(ValidAccess(aln_idx), std::string("Read addr = "), raddr);
+    if (!ValidAccess(aln_idx)) { ret = 0x55aa55aa; }
+    else { ret = pmem_raw[aln_idx]; }
   }
 #if PRINTF_COND
   std::cout << " ret = " << std::hex << ret << std::endl;
