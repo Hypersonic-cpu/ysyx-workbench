@@ -267,7 +267,7 @@ class EXU extends Module {
   val flip = io.sel.rs2Invert
   val src1 = Mux(io.sel.rs1SelPC, io.pc, io.rs1V)
   val srcc = Mux(io.sel.rs2SelImm, io.imm, io.rs2V)
-  val src2 = Mux(flip, srcc, ~srcc)
+  val src2 = Mux(flip, ~srcc, srcc)
   printf(cf"\tsrc1 ${src1}%x : src2 ${src2}%x inv${flip}\n")
   val ansc = 
     src1.pad(ISA.RegBits+1) + src2.pad(ISA.RegBits+1) + Mux(
