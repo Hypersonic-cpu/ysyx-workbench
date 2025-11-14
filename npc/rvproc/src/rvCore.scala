@@ -213,7 +213,8 @@ class IDU extends Module {
   io.aluSel.rs1SelPC  := (opName === InstOp.Auipc) || (opName === InstOp.Jal)
   io.aluSel.rs2Invert := 
     ((opName === InstOp.OpReg) && funct7(5).asBool) ||
-    io.aluOp === IntAluOp.Slt || 
+    io.aluOp === IntAluOp.Slt ||
+    io.aluOp === IntAluOp.Sltu ||
     instBr
   io.aluSel.isBranch := instBr
   io.aluSel.rs2SelImm := ~(instTp === ITYPE.tN || instTp === ITYPE.tR)
