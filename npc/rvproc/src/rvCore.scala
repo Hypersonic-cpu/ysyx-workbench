@@ -261,7 +261,6 @@ class EXU extends Module {
 
   printf(cf"\trs1 PC?${io.sel.rs1SelPC} : rs2 Imm?${io.sel.rs2SelImm} = ${io.imm}%x\n")
   // printf(cf"\trs1V ${io.rs1V}%x, rs2V ${io.rs2V}%x, imm ${io.imm}%x\n");
-  io.res := 0.U
   io.brCmp.beq := false.B
   io.brCmp.blt := false.B
   val flip = io.sel.rs2Invert
@@ -284,6 +283,7 @@ class EXU extends Module {
   val over = (~(src1.MSB() ^ src2.MSB())) & (src1.MSB() ^ anst.MSB())
   io.brCmp.blt := anst.MSB() ^ over
   io.brCmp.beq := ~anst.orR
+  io.res := anst
   // printf(cf"\t${src1}%x op ${src2}%x = ${io.res}%x\n")
 }
 
