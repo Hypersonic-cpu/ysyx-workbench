@@ -205,7 +205,7 @@ class IDU extends Module {
     IntAluOp(funct3), IntAluOp.Add)
   io.aluSel.rs1SelPC  := (opName === InstOp.Auipc) || (opName === InstOp.Jal)
   // TODO: SLT
-  io.aluSel.rs2Invert := instArith && funct7(5).asBool
+  io.aluSel.rs2Invert := (opName === InstOp.OpReg) && funct7(5).asBool
   io.aluSel.rs2SelImm := ~(instTp === ITYPE.tN || instTp === ITYPE.tR)
 
   // NOTE: imm is always sign-extended
