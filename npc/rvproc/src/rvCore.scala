@@ -14,14 +14,13 @@ object PATH {
 object ISA {
   val InstBits    = 32
   val RegBits     = 32
-  val PCBits      = 32
   val RegNum      = 16
   val RegIdxBits  =  4
   val AddrBits    = 32
 }
 
 object Tp {
-  def PCType() = UInt(ISA.PCBits.W)
+  def PCType() = UInt(ISA.RegBits.W)
   def RegType() = UInt(ISA.RegBits.W)
   def InstType() = UInt(ISA.InstBits.W)
   def RegIdxType() = UInt(ISA.RegIdxBits.W)
@@ -30,7 +29,7 @@ object Tp {
 }
 
 object ITYPE extends ChiselEnum {
-  val tR, tI, tS, tB, tU, tJ, tN = Value
+  val tR, tI, tS, tB, tU, tJ, tN, tX = Value
 }
 
 class BrCmpBundle extends Bundle {
@@ -53,6 +52,15 @@ class AluSelBundle extends Bundle {
   val rs2Invert = Bool()
 }
 
+object BitMath {
+  implicit class UIntSignExtender(val i: UInt) extends AnyVal {
+    def SExt(width: Int = ISA.RegBits): UInt = {
+      i.asSInt.pad(width).asUInt
+    }
+  }
+}
+import BitMath._
+
 object InstOp extends ChiselEnum {
   val Load   = Value(0b00000.U)
   val OpImm  = Value(0b00100.U)
@@ -63,7 +71,7 @@ object InstOp extends ChiselEnum {
   val Lui    = Value(0b01101.U)
   // val Branch = Value(0b11000.U)
   val Jalr   = Value(0b11001.U)
-  // val Jal    = Value(0b11011.U)
+  val Jal    = Value(0b11011.U)
   val System = Value(0b11100.U)
 }
 
@@ -147,7 +155,7 @@ class IDU extends Module {
   assert(rvBase, cf"Inst[1:0] is not 0b11: opcode=${opcode}%x")
 
   val (opName, opValid) = InstOp.safe(opcode(6, 2))
-  // assert(clock, opValid, reset, None, Some(cf"Invalid opcode encountered: opcode=${opcode}%x"))
+  assert(opValid, cf"Invalid opcode encountered: opcode=${opcode}%x")
   // val isEbreak = sysOp && io.inst(20)
   // val isEcall  = sysOp && (~io.inst(20))
   val isEbreak = opName === InstOp.System && io.inst(20)
@@ -161,16 +169,22 @@ class IDU extends Module {
   // (isEbreak, 10.U, io.inst(19, 15))
   io.rs2    := io.inst(24, 20)
   io.rd     := io.inst(11,  7)
-  val immIS  = io.inst(31, 20).asSInt.pad(32).asUInt
+  val immIS  = io.inst(31, 20).SExt()
   val immIU  = io.inst(31, 20).pad(32)
   val immU   = io.inst(31, 12) << 12
-  val immS   = (io.inst(31, 25) ## io.inst(11, 7)).asSInt.pad(32).asUInt
+  val immS   = 
+    (io.inst(31, 25) ## io.inst(11, 7)).SExt()
+  val immJ   = 
+    (io.inst(31, 31) ## io.inst(19, 12) ## 
+      io.inst(20, 20) ## io.inst(30, 21)).SExt()
+
 
   // TODO:
-  val instTp  = MuxLookup(opName, ITYPE.tN) ( Seq(
+  val instTp  = MuxLookup(opName, ITYPE.tX) ( Seq(
     InstOp.OpImm  -> ITYPE.tI,
     InstOp.OpReg  -> ITYPE.tR,
     InstOp.Jalr   -> ITYPE.tI,
+    InstOp.Jal    -> ITYPE.tJ,
     InstOp.Lui    -> ITYPE.tU,
     InstOp.Auipc  -> ITYPE.tU,
     InstOp.Load   -> ITYPE.tI,
@@ -248,7 +262,7 @@ class EXU extends Module {
       io.res := src1 + src2
     }
   }
-  printf(cf"\t${src1}%x op ${src2}%x = ${io.res}%x\n")
+  // printf(cf"\t${src1}%x op ${src2}%x = ${io.res}%x\n")
 }
 
 /**
@@ -332,7 +346,7 @@ class rvCore() extends Module {
   })
 
   // State
-  val pc     = RegInit(0x80000000L.U(ISA.PCBits.W))
+  val pc     = RegInit(0x80000000L.U(ISA.RegBits.W))
   val iReg   = Module(new RegFile())
 
   // Func
@@ -352,7 +366,7 @@ class rvCore() extends Module {
   iLsu.io.pcin := pc
   // IFU out
   val inst = iLsu.io.inst
-  printf(cf"[ PC = ${pc}%x ] inst = ${inst}%x\n")
+  // printf(cf"[ PC = ${pc}%x ] inst = ${inst}%x\n")
 
   // IDU in
   iDec.io.inst := inst
