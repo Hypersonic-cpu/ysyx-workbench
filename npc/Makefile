@@ -80,6 +80,10 @@ run: verilate verilog $(LIBCAPSTONE) $(SIM_BIN)
 	$(call git_commit, "run with AM via verilator cc")
 	$(SIM_BIN) $(simccargs)
 
+runonly: $(SIM_BIN)
+	$(call git_commit, "run with AM via verilator cc")
+	$(SIM_BIN) $(simccargs)
+
 verilog:
 	$(call git_commit, "generate verilog")
 	mkdir -p $(BUILD_SV_DIR)
