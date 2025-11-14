@@ -10,7 +10,7 @@ object Elaborate extends App {
 
   // 1. FIRTOOL 的命令行参数列表 (作为字符串数组)
   val firtoolOptionsString = Array(
-    s"-o=$outputDir", // 指定输出目录
+    "-o", outputDir, // 指定输出目录
     "--split-verilog", // 启用分文件输出
     "--top=rvCore", // 保持 Top 模块名称
     "--lowering-options=" + List(
