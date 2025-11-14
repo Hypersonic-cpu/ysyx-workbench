@@ -30,7 +30,9 @@ runam: insert-arg
 	@ln -sfn $(IMAGE).bin $(CHISEL_DPIC_MEMPATH)
 	@$(MAKE) -C $(NPC_HOME) runam
 
-run: insert-arg cleancc buildsv runonly
+run: insert-arg cleancc
+	@ln -sfn $(IMAGE).bin $(CHISEL_DPIC_MEMPATH)
+	@$(MAKE) -C $(NPC_HOME) run
 
 buildsv: 
 	@$(MAKE) -C $(NPC_HOME) verilog
