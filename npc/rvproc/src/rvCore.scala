@@ -3,7 +3,6 @@ package rvproc
 import chisel3._
 import chisel3.util._
 import chisel3.assert.Assert
-import rvproc.Tp.RegType
 // import chisel3.util.experimental.loadMemoryFromFileInline
 // import firrtl.annotations.MemoryLoadFileType
 
@@ -50,6 +49,7 @@ class AluSelBundle extends Bundle {
   val rs2SelImm = Bool()
   // NOTE: This field also represents SRA
   val rs2Invert = Bool()
+  val isBranch  = Bool()
 }
 
 object BitMath {
@@ -77,8 +77,7 @@ object InstOp extends ChiselEnum {
   val OpReg  = Value(0b01100.U)
   // val OpFP   = Value(0b10100.U)
   val Lui    = Value(0b01101.U)
-  // TODO: 
-  // val Branch = Value(0b11000.U)
+  val Branch = Value(0b11000.U)
   val Jalr   = Value(0b11001.U)
   val Jal    = Value(0b11011.U)
   val System = Value(0b11100.U)
@@ -185,9 +184,11 @@ class IDU extends Module {
   val immJ   = 
     (io.inst(31, 31) ## io.inst(19, 12) ## 
       io.inst(20, 20) ## io.inst(30, 21) ## 0.U(1.W)).SExt()
+  val immB = 
+    (io.inst(31, 31) ## io.inst(7, 7) ##
+      io.inst(30, 25) ## io.inst(11, 8) ## 0.U(1.W)).SExt()
 
 
-  // TODO:
   val instTp  = MuxLookup(opName, ITYPE.tX) ( Seq(
     InstOp.OpImm  -> ITYPE.tI,
     InstOp.OpReg  -> ITYPE.tR,
@@ -197,18 +198,23 @@ class IDU extends Module {
     InstOp.Auipc  -> ITYPE.tU,
     InstOp.Load   -> ITYPE.tI,
     InstOp.Store  -> ITYPE.tS,
+    InstOp.Branch -> ITYPE.tB,
     InstOp.System -> ITYPE.tN
     ))
   val instArith = 
     opName === InstOp.OpReg || opName === InstOp.OpImm
+  val instBr = instTp === InstOp.Branch
   // assert(instArith)
-  io.aluOp := Mux(instArith, 
-    IntAluOp(funct3), IntAluOp.Add)
+  io.aluOp := MuxCase (IntAluOp.Add, Seq(
+    instArith -> IntAluOp(funct3),
+    instBr -> Mux(funct3(1), IntAluOp.Sltu, IntAluOp.Slt)
+  ))
   io.aluSel.rs1SelPC  := (opName === InstOp.Auipc) || (opName === InstOp.Jal)
-  // TODO: SLT
   io.aluSel.rs2Invert := 
     ((opName === InstOp.OpReg) && funct7(5).asBool) ||
-    io.aluOp === IntAluOp.Slt
+    io.aluOp === IntAluOp.Slt || 
+    instBr
+  io.aluSel.isBranch := instBr
   io.aluSel.rs2SelImm := ~(instTp === ITYPE.tN || instTp === ITYPE.tR)
 
   // NOTE: imm is always sign-extended
@@ -217,6 +223,7 @@ class IDU extends Module {
     ITYPE.tU -> immU,
     ITYPE.tS -> immS,
     ITYPE.tJ -> immJ,
+    ITYPE.tB -> immB
   ))
 
   io.memAcc.lenOp := MemLenOp(Mux(
@@ -231,17 +238,16 @@ class IDU extends Module {
     instTp === ITYPE.tB || 
     instTp === ITYPE.tS)
 
-  io.pcJmp.jIfeq   := false.B
-  io.pcJmp.jIfne   := false.B
-  io.pcJmp.jIflt   := false.B
-  io.pcJmp.jIfge   := false.B
+  io.pcJmp.jIfeq   := funct3 === 0b000.U
+  io.pcJmp.jIfne   := funct3 === 0b001.U
+  io.pcJmp.jIflt   := (funct3 & 0b101.U) === 0b100.U
+  io.pcJmp.jIfge   := (funct3 & 0b101.U) === 0b101.U
   io.pcJmp.jUncond := 
     (opName === InstOp.Jalr) || (opName === InstOp.Jal)
 
   io.wbSel := MuxCase(WbSrcOp.fromAlu, Seq(
     (opName === InstOp.Jalr) -> WbSrcOp.fromPC,
     (opName === InstOp.Jal ) -> WbSrcOp.fromPC,
-    // TODO: Branch
     (opName === InstOp.Load) -> WbSrcOp.fromMem
   ))
 
@@ -268,6 +274,7 @@ class EXU extends Module {
   io.brCmp.beq := false.B
   io.brCmp.blt := false.B
   val flip = io.sel.rs2Invert
+  val skip = io.sel.isBranch
   val src1 = Mux(io.sel.rs1SelPC, io.pc, io.rs1V)
   val srcc = Mux(io.sel.rs2SelImm, io.imm, io.rs2V)
   val src2 = Mux(flip, ~srcc, srcc)
@@ -289,7 +296,7 @@ class EXU extends Module {
   io.brCmp.blt := 
     Mux(io.op === IntAluOp.Sltu, ~ansc.MSB(), anst.MSB() ^ over)
   io.brCmp.beq := ~anst.orR
-  io.res := anst
+  io.res := Mux(skip, io.pc + io.imm, anst)
   // printf(cf"\t${src1}%x op ${src2}%x = ${io.res}%x\n")
 }
 
@@ -355,13 +362,10 @@ class WBU extends Module {
   val jmp = io.pcJmp.jUncond
   val snpc = io.pc + 4.U
   printf(cf"\twbsel ${io.wbSel} alu ${io.aluV}%x snpc ${snpc}%x\n")
-  // TODO: Is truncation right on branch ? 
   val dnpc = io.aluV(31, 1) ## 0.U(1.W) 
   io.nxpc := Mux(jmp, io.aluV, snpc)
   // NOTE: Once PC jumps, try store its next pc
   // For B-type insts, wrEn had been set to false.
-  // FIXME: 目前的思路: 需要存储PC的Jmp(Link)不可能
-  // 是有条件的, 所以RegWB不需要考虑branch.
   io.data := MuxLookup(io.wbSel, 0.U) (Seq(
     WbSrcOp.fromAlu -> io.aluV, 
     WbSrcOp.fromMem -> io.memV,
