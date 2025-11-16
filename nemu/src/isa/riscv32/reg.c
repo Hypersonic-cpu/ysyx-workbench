@@ -14,8 +14,10 @@
 ***************************************************************************************/
 
 #include <isa.h>
+#include <stdint.h>
 #include <stdio.h>
 #include "local-include/reg.h"
+#include "isa-def.h"
 
 const char *regs[] = {
   // "$0",
@@ -62,3 +64,19 @@ word_t isa_reg_str2val(const char *s, bool *success) {
   }
   return 0;
 }
+
+const char* csrs[RISCV_CSR_NUM] = {
+  [RISCV_CSR_MSTATUS] = "mstatus"
+};
+
+void isa_csr_display() {
+  const size_t selidx[] = { RISCV_CSR_MSTATUS };
+  printf("\n === CSR Display === \n");
+  printf("No. Name  Value\n");
+  for (size_t j = 0; j < sizeof(selidx) / sizeof(size_t); ++j) {
+    size_t i = selidx[j];
+    printf("csr%-2lu %4s  " FMT_WORD ":%d\n", 
+           i, csr_name(i), csr(i), csr(i));
+  }
+}
+
