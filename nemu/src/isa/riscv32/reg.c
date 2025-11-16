@@ -66,7 +66,9 @@ word_t isa_reg_str2val(const char *s, bool *success) {
 }
 
 const char* csrs[RISCV_CSR_NUM] = {
-  [RISCV_CSR_MSTATUS] = "mstatus"
+  [RISCV_CSR_MSTATUS] = "mstatus",
+  [RISCV_CSR_MTVEC  ] = "mtvec",
+  [RISCV_CSR_MCAUSE ] = "mcause",
 };
 
 void isa_csr_display() {
