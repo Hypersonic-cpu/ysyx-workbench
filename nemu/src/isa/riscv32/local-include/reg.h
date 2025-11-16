@@ -20,6 +20,8 @@
 #include <common.h>
 
 #define RISCV_CSR_MSTATUS 0x300
+#define RISCV_CSR_MTVEC   0x305
+#define RISCV_CSR_MCAUSE  0x342
 
 static inline int check_reg_idx(int idx) {
   IFDEF(CONFIG_RT_CHECK, 
@@ -31,7 +33,10 @@ static inline int check_reg_idx(int idx) {
 
 static inline int check_csr_idx(int idx) {
   IFDEF(CONFIG_RT_CHECK, 
-      Assert(idx == RISCV_CSR_MSTATUS, 
+      Assert(
+        idx == RISCV_CSR_MSTATUS ||
+        idx == RISCV_CSR_MTVEC   ||
+        idx == RISCV_CSR_MCAUSE, 
         "Csr index 0x%x not implemented", idx)
   );
   return idx;
