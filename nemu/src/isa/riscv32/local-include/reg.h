@@ -16,16 +16,23 @@
 #ifndef __RISCV_REG_H__
 #define __RISCV_REG_H__
 
+#include "debug.h"
 #include <common.h>
+
+#define RISCV_CSR_MSTATUS 0x300
 
 static inline int check_reg_idx(int idx) {
   IFDEF(CONFIG_RT_CHECK, 
-      // TODO: Comment it out.
-      do {
-          bool success = (idx >= 0 && idx < MUXDEF(CONFIG_RVE, 16, 32));
-          if (!success) { printf("Reg index %d out of bound\n", idx); }
-      } while (0);
-      assert(idx >= 0 && idx < MUXDEF(CONFIG_RVE, 16, 32))
+      Assert(idx >= 0 && idx < MUXDEF(CONFIG_RVE, 16, 32), 
+        "Reg index %d out of bound", idx)
+  );
+  return idx;
+}
+
+static inline int check_csr_idx(int idx) {
+  IFDEF(CONFIG_RT_CHECK, 
+      Assert(idx == RISCV_CSR_MSTATUS, 
+        "Csr index 0x%x not implemented", idx)
   );
   return idx;
 }
@@ -35,6 +42,13 @@ static inline int check_reg_idx(int idx) {
 static inline const char* reg_name(int idx) {
   extern const char* regs[];
   return regs[check_reg_idx(idx)];
+}
+
+#define csr(idx) (cpu.csr[check_csr_idx(idx)])
+
+static inline const char* csr_name(int idx) {
+  extern const char* csrs[];
+  return csrs[check_csr_idx(idx)];
 }
 
 #endif
