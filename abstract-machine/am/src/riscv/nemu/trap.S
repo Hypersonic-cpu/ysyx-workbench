@@ -59,6 +59,7 @@ __am_asm_trap:
 
   mv a0, sp
   call __am_irq_handle
+  STORE sp, OFFSET_SP(sp)
   mv sp, a0
 
 // TODO: PDIR ? 
