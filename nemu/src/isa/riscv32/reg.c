@@ -73,12 +73,13 @@ const char* csrs[RISCV_CSR_NUM] = {
 };
 
 void isa_csr_display() {
-  const size_t selidx[] = { RISCV_CSR_MSTATUS };
+  const size_t selidx[] = { 
+    RISCV_CSR_MTVEC, RISCV_CSR_MSTATUS, RISCV_CSR_MCAUSE, RISCV_CSR_MEPC };
   printf("\n === CSR Display === \n");
-  printf("No. Name  Value\n");
+  printf("No.   Name \tValue\n");
   for (size_t j = 0; j < sizeof(selidx) / sizeof(size_t); ++j) {
     size_t i = selidx[j];
-    printf("csr%-2lu %4s  " FMT_WORD ":%d\n", 
+    printf("0x%-3lx %4s  " FMT_WORD ": \t%d\n", 
            i, csr_name(i), csr(i), csr(i));
   }
 }
