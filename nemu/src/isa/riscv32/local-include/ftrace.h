@@ -22,7 +22,7 @@ extern rv32_SymTable symbols;
 // Check if any symbol at addr. UINT_MAX if not.
 unsigned symbol_which(vaddr_t addr);
 
-#define FTRACE_STACK_SIZE 240
+#define FTRACE_STACK_SIZE 2048
 typedef struct {
   vaddr_t ra; // PC after func finish
   vaddr_t fn; // PC that matches the symbol table
