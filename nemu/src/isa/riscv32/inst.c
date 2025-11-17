@@ -18,6 +18,7 @@
 #include "isa.h"
 #include "local-include/ftrace.h"
 #include "local-include/reg.h"
+#include "macro.h"
 #include <cpu/cpu.h>
 #include <cpu/ifetch.h>
 #include <cpu/decode.h>
@@ -320,7 +321,7 @@ static int decode_exec(Decode *s) {
           );
   INSTPAT("0000000 00000 00000 000 00000 11100 11", 
           ecall  , N, 
-          s->dnpc = isa_raise_intr(11, s->pc)
+          s->dnpc = isa_raise_intr(MUXDEF(CONFIG_RVE, 15, 17), s->pc)
           );
   INSTPAT("??????? ????? ????? ??? ????? ????? ??", 
           inv    , N, INV(s->pc));
