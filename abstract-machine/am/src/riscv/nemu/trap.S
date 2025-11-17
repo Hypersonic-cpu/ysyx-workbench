@@ -59,11 +59,11 @@ __am_asm_trap:
 
   mv a0, sp
   call __am_irq_handle
+  mv sp, a0
 
+// TODO: PDIR ? 
   LOAD t1, OFFSET_STATUS(sp)
   LOAD t2, OFFSET_EPC(sp)
-  # FIXME: Should I +4 here?
-  addi t2, t2, 4
   csrw mstatus, t1
   csrw mepc, t2
 
