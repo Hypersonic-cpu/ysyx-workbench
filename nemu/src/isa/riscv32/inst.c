@@ -136,7 +136,7 @@ void frame_stack_display() {
 #ifdef CONFIG_ETRACE_ENABLE
 static void ecall_trace(word_t epc, word_t a7) {
   fprintf(stderr, "Ecall with arg " FMT_WORD " @ PC " FMT_WORD "\n",
-          epc, a7);
+          a7, epc);
 }
 #endif
 
