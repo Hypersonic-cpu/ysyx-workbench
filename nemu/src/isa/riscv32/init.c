@@ -14,6 +14,7 @@
 ***************************************************************************************/
 
 #include "common.h"
+#include "debug.h"
 #include "local-include/ftrace.h"
 #include "local-include/reg.h"
 #include <isa.h>
@@ -109,6 +110,7 @@ void init_elf(const char* elf_file) {
 
     if (type == STT_FUNC) {
       unsigned cur = symbols.sym_num++;
+      Assert(cur < SYM_TABLE_ENT, "Sym table overflow\n");
       symbols.table[cur].addr = sym_table[i].st_value;
       strncpy(symbols.table[cur].name, sym_name, 127);
     }
