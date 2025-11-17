@@ -18,7 +18,7 @@
 
 word_t isa_raise_intr(word_t NO, vaddr_t epc) {
   csr(RISCV_CSR_MEPC) = epc;
-  csr(RISCV_CSR_MCAUSE) = 11; // TODO: ????
+  csr(RISCV_CSR_MCAUSE) = NO; // TODO: ????
   return csr(RISCV_CSR_MTVEC);
 }
 
