@@ -135,6 +135,9 @@ inst_ringbuf_display() {
 void assert_fail_msg() {
   isa_reg_display();
   MUXDEF(CONFIG_ITRACE, inst_ringbuf_display(), printf("Inst ring buffer disabled\n"));
+  MUXDEF(CONFIG_FTRACE_ENABLE, 
+         void frame_stack_display(); frame_stack_display(), 
+         printf("Frame trace disabled\n"));
   statistic();
 }
 
