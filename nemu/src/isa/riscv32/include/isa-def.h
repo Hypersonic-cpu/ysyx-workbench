@@ -34,4 +34,6 @@ typedef struct {
 
 #define isa_mmu_check(vaddr, len, type) (MMU_DIRECT)
 
+void isa_csr_display();
+
 #endif
