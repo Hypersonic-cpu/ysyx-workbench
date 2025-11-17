@@ -116,11 +116,11 @@ void init_elf(const char* elf_file) {
     }
   }
 
-  fprintf(stderr, " === ELF Funct Symbols (%u total) === \n", symbols.sym_num);
-  for (unsigned i = 0; i < symbols.sym_num; ++i) {
-      fprintf(stderr, "[%3u] 0x%8x: %s\n" , i, 
-             symbols.table[i].addr, symbols.table[i].name);
-  }
+  // fprintf(stderr, " === ELF Funct Symbols (%u total) === \n", symbols.sym_num);
+  // for (unsigned i = 0; i < symbols.sym_num; ++i) {
+  //     fprintf(stderr, "[%3u] 0x%8x: %s\n" , i, 
+  //            symbols.table[i].addr, symbols.table[i].name);
+  // }
 
   munmap(map, st.st_size);
   close(fd);
