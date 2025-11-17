@@ -22,6 +22,7 @@
 #define RISCV_CSR_MSTATUS 0x300
 #define RISCV_CSR_MTVEC   0x305
 #define RISCV_CSR_MCAUSE  0x342
+#define RISCV_CSR_MEPC    0x341
 
 static inline int check_reg_idx(int idx) {
   IFDEF(CONFIG_RT_CHECK, 
@@ -36,7 +37,8 @@ static inline int check_csr_idx(int idx) {
       Assert(
         idx == RISCV_CSR_MSTATUS ||
         idx == RISCV_CSR_MTVEC   ||
-        idx == RISCV_CSR_MCAUSE, 
+        idx == RISCV_CSR_MCAUSE  || 
+        idx == RISCV_CSR_MEPC,
         "Csr index 0x%x not implemented", idx)
   );
   return idx;

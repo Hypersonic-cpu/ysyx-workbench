@@ -15,6 +15,7 @@
 
 #include "common.h"
 #include "debug.h"
+#include "isa.h"
 #include "local-include/ftrace.h"
 #include "local-include/reg.h"
 #include <cpu/cpu.h>
@@ -310,6 +311,10 @@ static int decode_exec(Decode *s) {
             int csrid = BITS(imm, 11, 0);
             word_t temp = csr(csrid); csr(csrid) = src1; R(rd) = temp;
           } while (0);
+          );
+  INSTPAT("0000000 00000 00000 000 00000 11100 11", 
+          ecall  , N, 
+          s->dnpc = isa_raise_intr(11, s->pc)
           );
   INSTPAT("??????? ????? ????? ??? ????? ????? ??", 
           inv    , N, INV(s->pc));
