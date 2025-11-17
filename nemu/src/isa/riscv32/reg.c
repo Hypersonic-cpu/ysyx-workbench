@@ -69,6 +69,7 @@ const char* csrs[RISCV_CSR_NUM] = {
   [RISCV_CSR_MSTATUS] = "mstatus",
   [RISCV_CSR_MTVEC  ] = "mtvec",
   [RISCV_CSR_MCAUSE ] = "mcause",
+  [RISCV_CSR_MEPC   ] = "mepc",
 };
 
 void isa_csr_display() {
