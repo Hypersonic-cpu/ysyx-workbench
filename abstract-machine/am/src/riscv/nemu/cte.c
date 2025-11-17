@@ -7,9 +7,9 @@ static Context* (*user_handler)(Event, Context*) = NULL;
 
 Context* __am_irq_handle(Context *c) {
   // Out of bound on purpose.
-  printf("\tmcause\t0x%x\n", (uint32_t) c->mcause);
-  printf("\tmstatus\t0x%x\n",(uint32_t) c->mstatus);
-  printf("\tmepc\t0x%x\n", (uint32_t) c->mepc);
+  // printf("\tmcause\t0x%x\n", (uint32_t) c->mcause);
+  // printf("\tmstatus\t0x%x\n",(uint32_t) c->mstatus);
+  // printf("\tmepc\t0x%x\n", (uint32_t) c->mepc);
   if (user_handler) {
     Event ev = {0};
     switch (c->mcause) {
