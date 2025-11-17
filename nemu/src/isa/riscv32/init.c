@@ -15,6 +15,7 @@
 
 #include "common.h"
 #include "local-include/ftrace.h"
+#include "local-include/reg.h"
 #include <isa.h>
 #include <memory/paddr.h>
 
@@ -43,6 +44,8 @@ static void restart() {
 
   /* The zero register is always 0. */
   cpu.gpr[0] = 0;
+
+  cpu.csr[RISCV_CSR_MSTATUS] = 0x1800;
 }
 
 void init_isa() {
