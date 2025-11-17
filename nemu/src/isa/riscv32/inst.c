@@ -133,6 +133,13 @@ void frame_stack_display() {
 }
 #endif
 
+#ifdef CONFIG_ETRACE_ENABLE
+static void ecall_trace(word_t epc, word_t a7) {
+  fprintf(stderr, "Ecall with arg " FMT_WORD " @ PC " FMT_WORD "\n",
+          epc, a7);
+}
+#endif
+
 static void decode_operand(Decode *s, int *rd, word_t *src1, word_t *src2, word_t *imm, int type) {
   uint32_t i = s->isa.inst;
   int rs1 = BITS(i, 19, 15);
@@ -321,6 +328,9 @@ static int decode_exec(Decode *s) {
           );
   INSTPAT("0000000 00000 00000 000 00000 11100 11", 
           ecall  , N, 
+          IFDEF(CONFIG_ETRACE_ENABLE, 
+                ecall_trace(s->pc, R(MUXDEF(CONFIG_RVE, 15, 17)))
+                );
           s->dnpc = isa_raise_intr(11, s->pc)
           );
   INSTPAT("0011000 00010 00000 000 00000 11100 11",
