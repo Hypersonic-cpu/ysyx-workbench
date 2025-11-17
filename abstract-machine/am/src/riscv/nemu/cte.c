@@ -7,7 +7,7 @@
 static Context* (*user_handler)(Event, Context*) = NULL;
 
 Context* __am_irq_handle(Context *c) {
-  printf("\t\t\t\t\t\t >>> IRQ\n");
+  // printf("\t\t\t\t\t\t >>> IRQ\n");
   if (user_handler) {
     Event ev = {0};
     switch (c->mcause) {
@@ -22,7 +22,7 @@ Context* __am_irq_handle(Context *c) {
     assert(c != NULL);
   }
 
-  printf("\t\t\t\t\t\t <<< IRQ\n");
+  // printf("\t\t\t\t\t\t <<< IRQ\n");
   return c;
 }
 
