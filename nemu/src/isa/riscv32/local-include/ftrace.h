@@ -6,7 +6,7 @@
 #include "macro.h"
 #include "debug.h"
 
-#define SYM_TABLE_ENT 240
+#define SYM_TABLE_ENT 8192
 typedef struct {
   vaddr_t addr;
   char name[128];
