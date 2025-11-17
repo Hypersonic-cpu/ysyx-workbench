@@ -312,6 +312,12 @@ static int decode_exec(Decode *s) {
             word_t temp = csr(csrid); csr(csrid) = src1; R(rd) = temp;
           } while (0);
           );
+  INSTPAT("??????? ????? ????? 010 ????? 11100 11",
+          csrrs  , I, do {
+            int csrid = BITS(imm, 11, 0);
+            word_t temp = csr(csrid); csr(csrid) = temp | src1; R(rd) = temp;
+          } while (0);
+          );
   INSTPAT("0000000 00000 00000 000 00000 11100 11", 
           ecall  , N, 
           s->dnpc = isa_raise_intr(11, s->pc)
