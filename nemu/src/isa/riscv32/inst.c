@@ -87,9 +87,12 @@ static void frame_trace(vaddr_t jtar, int rd, vaddr_t snpc) {
     stp->ra = snpc;
     stp->sp = R(2);
     stp->symt_idx = idx;
-    for (unsigned i = 10; i < 10 + MUXDEF(CONFIG_RVE, 6, 8); ++i) {
-      stp->args[i-10] = R(i);
+    for (unsigned i = 0; i < 32; ++i) {
+      stp->args[i] = R(i);
     }
+    // for (unsigned i = 10; i < 10 + MUXDEF(CONFIG_RVE, 6, 8); ++i) {
+    //   stp->args[i-10] = R(i);
+    // }
     IFNDEF(CONFIG_FTRACE_SILENT, print_fsingle(stderr, stp, sp, '+', ""));
   } else {
     // Jump to non-symbol places
