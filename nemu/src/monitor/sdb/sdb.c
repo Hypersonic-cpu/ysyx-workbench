@@ -20,6 +20,7 @@
 #include "sdb.h"
 #include "common.h"
 #include "debug.h"
+#include "isa-def.h"
 #include "memory/vaddr.h"
 #include "utils.h"
 
@@ -69,6 +70,9 @@ static int cmd_info(char *args) {
       return 0;
     case 'w':
       list_wp();
+      return 0;
+    case 'm':
+      isa_csr_display();
       return 0;
     default: 
       printf("Invalid argument `%c`, type `help info` for more info\n", arg[0]);
@@ -183,7 +187,7 @@ static struct {
   { "c", "Continue the execution of the program", cmd_c },
   { "q", "Exit NEMU", cmd_q },
   { "si", "Arg [$N=1], execute `$N` steps", cmd_si },
-  { "info", "Arg <r|w>, show info of registers|watchpoints", cmd_info }, 
+  { "info", "Arg <r|w|m>, show info of registers|watchpoints|csrs", cmd_info }, 
   { "x", "Arg <$nw> <$VA(hex)> scan next $nw words from mem $VA", cmd_x }, 
   { "p/x", "Arg <$expr> evaluate expression", cmd_p_hex }, 
   { "p", "Arg <$expr> evaluate expression", cmd_p_dec }, 
