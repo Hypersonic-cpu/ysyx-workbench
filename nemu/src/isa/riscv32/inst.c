@@ -67,7 +67,7 @@ print_fsingle(FILE* stream, const rv32_frame* frm, unsigned depth,
   fprintf(stream, "%cFr[%3d] 0x%8x: %s%s(", 
           prefix, depth, frm->fn, symbols.table[frm->symt_idx].name, extra);
   for (unsigned i = 0; i < 32; ++i) {
-    fprintf(stream, MUXDEF(CONFIG_ISA64, "0x%lx, ", "0x%x, "), frm->args[i]);
+    fprintf(stream, MUXDEF(CONFIG_ISA64, "0x%lx, ", "0x%x, ") "\t", frm->args[i]);
   }
   // for (unsigned i = 0; i < MUXDEF(CONFIG_RVE, 6, 8); ++i) {
   //   fprintf(stream, MUXDEF(CONFIG_ISA64, "0x%lx, ", "0x%x, "), frm->args[i]);
