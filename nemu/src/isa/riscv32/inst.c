@@ -323,6 +323,8 @@ static int decode_exec(Decode *s) {
           ecall  , N, 
           s->dnpc = isa_raise_intr(11, s->pc)
           );
+  INSTPAT("0011000 00010 00000 000 00000 11100 11",
+          mret   , N, s->dnpc = csr(RISCV_CSR_MEPC));
   INSTPAT("??????? ????? ????? ??? ????? ????? ??", 
           inv    , N, INV(s->pc));
   INSTPAT_END();
