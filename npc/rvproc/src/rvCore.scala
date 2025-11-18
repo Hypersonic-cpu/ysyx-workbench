@@ -257,6 +257,7 @@ class IDU extends Module {
     opName === InstOp.OpReg || opName === InstOp.OpImm
   val instBr = opName === InstOp.Branch
   val instSys = opName === InstOp.System
+  val instCsr = (instSys && sysOp =/= SysOp.ECall)
 
   /**
     * CSRRC: R[rd] = CSR, CSR &= ~R[rs1] = ~src1 & csr
@@ -310,7 +311,8 @@ class IDU extends Module {
   io.regWr  := ~(
     instTp === ITYPE.tN || 
     instTp === ITYPE.tB || 
-    instTp === ITYPE.tS)
+    instTp === ITYPE.tS
+  ) || (instCsr)
 
   io.pcJmp.bIfeq   := funct3 === 0b000.U
   io.pcJmp.bIfne   := funct3 === 0b001.U
@@ -321,7 +323,7 @@ class IDU extends Module {
     (opName === InstOp.Jalr) || (opName === InstOp.Jal)
 
   io.wbSel := MuxCase(WbSrcOp.fromAlu, Seq(
-    (instSys && sysOp =/= SysOp.ECall) -> WbSrcOp.fromCsr,
+    instCsr -> WbSrcOp.fromCsr,
     (opName === InstOp.Jalr) -> WbSrcOp.fromPC,
     (opName === InstOp.Jal ) -> WbSrcOp.fromPC,
     (opName === InstOp.Load) -> WbSrcOp.fromMem
