@@ -45,7 +45,7 @@ class PcJmpBundle extends Bundle {
   val bIfge = Bool()
   val bEnable = Bool()
   val jUncond = Bool()
-  val jMtvec  = Bool()
+  val jToCsr  = Bool()
 }
 
 class AluSelBundle extends Bundle {
@@ -278,6 +278,9 @@ class IDU extends Module {
     opName === InstOp.System && sysOp === SysOp.ECall && io.inst(20)
   val isEcall  = 
     opName === InstOp.System && sysOp === SysOp.ECall && ~io.inst(20)
+  val isMret   = 
+    opName === InstOp.System && sysOp === SysOp.ECall && 
+    funct7 === 0b0011000.U && io.inst(21)
   io.ebreak := isEbreak
   io.ecall  := isEcall
 
@@ -290,7 +293,10 @@ class IDU extends Module {
   io.rs2    := io.inst(24, 20)
   io.rd     := io.inst(11,  7)
   val immI   = io.inst(31, 20).SExt()
-  io.csrir  := Mux(isEcall, 0x305.U, immI(11, 0))
+  io.csrir  := MuxCase(immI(11, 0), Seq(
+    isEcall -> 0x305.U, 
+    isMret  -> 0x341.U
+  ))
   io.csriw  := Mux(isEcall, 0x341.U, immI(11, 0))
   
   val immU   = io.inst(31, 12) << 12
@@ -384,7 +390,7 @@ class IDU extends Module {
   io.pcJmp.bEnable := instBr
   io.pcJmp.jUncond := 
     (opName === InstOp.Jalr) || (opName === InstOp.Jal)
-  io.pcJmp.jMtvec  := isEcall
+  io.pcJmp.jToCsr  := isEcall || isMret
 
   io.wbSel := MuxCase(WbSrcOp.fromAlu, Seq(
     instCsr -> WbSrcOp.fromCsr,
@@ -531,7 +537,7 @@ class WBU extends Module {
   val dnpc = io.aluV(31, 1) ## 0.U(1.W) 
   io.nxpc := MuxCase(snpc, Seq(
     jmp       -> dnpc,
-    cd.jMtvec -> io.csrV
+    cd.jToCsr -> io.csrV
   ))
     // Mux(jmp, dnpc, snpc)
   io.gprdt := MuxLookup(io.wbSel, 0.U) (Seq(
