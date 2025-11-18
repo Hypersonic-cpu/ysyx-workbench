@@ -66,12 +66,12 @@ print_fsingle(FILE* stream, const rv32_frame* frm, unsigned depth,
   if (prefix == '+' || prefix == '-') { spaces_fmt(depth); }
   fprintf(stream, "%cFr[%3d] 0x%8x: %s%s(", 
           prefix, depth, frm->fn, symbols.table[frm->symt_idx].name, extra);
-  for (unsigned i = 0; i < 32; ++i) {
-    fprintf(stream, MUXDEF(CONFIG_ISA64, "0x%lx, ", "0x%x, ") "\t", frm->args[i]);
-  }
-  // for (unsigned i = 0; i < MUXDEF(CONFIG_RVE, 6, 8); ++i) {
-  //   fprintf(stream, MUXDEF(CONFIG_ISA64, "0x%lx, ", "0x%x, "), frm->args[i]);
+  // for (unsigned i = 0; i < 32; ++i) {
+  //   fprintf(stream, MUXDEF(CONFIG_ISA64, "0x%lx, ", "0x%x, ") "\t", frm->args[i]);
   // }
+  for (unsigned i = 0; i < MUXDEF(CONFIG_RVE, 6, 8); ++i) {
+    fprintf(stream, MUXDEF(CONFIG_ISA64, "0x%lx, ", "0x%x, "), frm->args[i]);
+  }
   fprintf(stream, ")\n");
 }
 
@@ -90,12 +90,12 @@ static void frame_trace(vaddr_t jtar, int rd, vaddr_t snpc) {
     stp->ra = snpc;
     stp->sp = R(2);
     stp->symt_idx = idx;
-    for (unsigned i = 0; i < 32; ++i) {
-      stp->args[i] = R(i);
-    }
-    // for (unsigned i = 10; i < 10 + MUXDEF(CONFIG_RVE, 6, 8); ++i) {
-    //   stp->args[i-10] = R(i);
+    // for (unsigned i = 0; i < 32; ++i) {
+    //   stp->args[i] = R(i);
     // }
+    for (unsigned i = 10; i < 10 + MUXDEF(CONFIG_RVE, 6, 8); ++i) {
+      stp->args[i-10] = R(i);
+    }
     IFNDEF(CONFIG_FTRACE_SILENT, print_fsingle(stderr, stp, sp, '+', ""));
   } else {
     // Jump to non-symbol places
