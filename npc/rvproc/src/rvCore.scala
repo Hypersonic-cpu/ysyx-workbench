@@ -460,7 +460,7 @@ class WBU extends Module {
     printf(cf"Branch if EQ${cd.bIfeq} NE${cd.bIfne} LT${cd.bIflt} GE${cd.bIfge}\n")
     printf(cf"Compare   EQ${rs.beq} NE${~rs.beq} LT${rs.blt} GE${~rs.blt}\n")
   }
-  printf(cf"\twbsel ${io.wbSel} alu ${io.aluV}%x snpc ${snpc}%x\n")
+  printf(cf"\twbsel ${io.wbSel} alu${io.aluV}%x csr${io.csrV}%x snpc${snpc}%x\n")
   val dnpc = io.aluV(31, 1) ## 0.U(1.W) 
   io.nxpc := Mux(jmp, io.aluV, snpc)
   io.gprdt := MuxLookup(io.wbSel, 0.U) (Seq(
