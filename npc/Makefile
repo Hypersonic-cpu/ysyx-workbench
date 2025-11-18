@@ -81,7 +81,7 @@ run: verilate verilog $(LIBCAPSTONE) $(SIM_BIN)
 	$(call git_commit, "run with AM via verilator cc")
 	$(SIM_BIN) $(simccargs)
 
-runonly: $(SIM_BIN)
+runonly: verilate $(SIM_BIN)
 	$(call git_commit, "run with AM via verilator cc")
 	$(SIM_BIN) $(simccargs)
 
