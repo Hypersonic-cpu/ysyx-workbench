@@ -473,6 +473,7 @@ class rvCore() extends Module {
   // Reg write
   iReg.io.rd := iDec.io.rd
   iReg.io.gprWE := iDec.io.regWr
+  iReg.io.csrWE := false.B
 
   // EXU in
   iExe.io.rs1V := rs1V
