@@ -16,6 +16,7 @@ object ISA {
   val RegBits     = 32
   val RegNum      = 16
   val RegIdxBits  =  4
+  val CsrIdxBits  = 12
   val AddrBits    = 32
 }
 
@@ -23,6 +24,7 @@ object Tp {
   def RegType() = UInt(ISA.RegBits.W)
   def InstType() = UInt(ISA.InstBits.W)
   def RegIdxType() = UInt(ISA.RegIdxBits.W)
+  def CsrIdxType() = UInt(ISA.RegIdxBits.W)
   // Now it equals RegType() so no padding is needed.
   def AddrType() = UInt(ISA.AddrBits.W)
 }
@@ -114,31 +116,59 @@ object WbSrcOp extends ChiselEnum {
   val fromAlu, fromPC, fromMem = Value
 }
 
+class CsrFile extends Module {
+  val io = IO(new Bundle {
+    val sel   = Input(Tp.CsrIdxType())
+    val wrEn  = Input(Bool())
+    val data  = Input(Tp.RegType())
+    val out   = Output(Tp.RegType())
+  })
+
+  val mcycle  = RegInit(0.U(ISA.RegBits.W))
+  val mcycleh = RegInit(0.U(ISA.RegBits.W))
+
+  mcycleh := Mux(mcycle.andR, mcycleh + 1.U, mcycle)
+  mcycle  := mcycle + 1.U
+
+  io.out := MuxLookup(io.sel, 0.U) (Seq (
+    0xB00.U -> mcycle,
+    0xB80.U -> mcycleh
+  ))
+}
+
 class RegFile extends Module {
   val io = IO(new Bundle {
     val rs1  = Input(Tp.RegIdxType())
     val rs2  = Input(Tp.RegIdxType())
     val rd   = Input(Tp.RegIdxType())
-    val data = Input(Tp.RegType())
-    val wrEn = Input(Bool())
+    val csrid = Input(Tp.CsrIdxType())
+    val gprdt = Input(Tp.RegType())
+    val csrdt = Input(Tp.RegType())
+    val gprWE = Input(Bool())
+    val csrWE = Input(Bool())
     val rs1V = Output(Tp.RegType())
     val rs2V = Output(Tp.RegType())
-
-    val probePin  = Input(Tp.RegIdxType())
-    val probeOut  = Output(Tp.RegType())
+    val csrV = Output(Tp.RegType())
   })
 
-  val regs = Reg(Vec(ISA.RegNum, Tp.RegType()))
+  val gprs = Reg(Vec(ISA.RegNum, Tp.RegType()))
+  val csrs = Module(new CsrFile())
+  csrs.io.data := io.csrdt
+  csrs.io.sel  := io.csrid
+  csrs.io.wrEn := io.csrWE
+  when (io.gprWE && io.rd.orR) {
+    gprs(io.rd) := io.gprWE
+  }
 
-  io.rs1V := Mux(io.rs1.orR, regs(io.rs1), 0.U)
-  io.rs2V := Mux(io.rs2.orR, regs(io.rs2), 0.U)
-  io.probeOut := Mux(io.probePin.orR, regs(io.probePin), 0.U)
+  val gpr1V = Mux(io.rs1.orR, gprs(io.rs1), 0.U)
+  val gpr2V = Mux(io.rs2.orR, gprs(io.rs2), 0.U)
+  val csrRd = csrs.io.out
 
+  io.rs1V := gpr1V 
+  io.rs2V := gpr1V
+  io.csrV := csrRd
   // printf(cf"<<REG>> R[${io.rs1}] = ${io.rs1V}%x\n")
   // printf(cf"<<REG>> R[${io.rs2}] = ${io.rs2V}%x\n")
-  when (io.wrEn && io.rd.orR) {
-    regs(io.rd) := io.data
-  }
 }
 
 class IDU extends Module {
@@ -371,7 +401,8 @@ class WBU extends Module {
     val aluV  = Input(Tp.RegType())
     val memV  = Input(Tp.RegType())
     val nxpc  = Output(Tp.RegType())
-    val data  = Output(Tp.RegType())
+    val csrdt = Output(Tp.RegType())
+    val gprdt = Output(Tp.RegType())
   })
   val jar = io.pcJmp.jUncond
   val br  = io.pcJmp.bEnable
@@ -387,11 +418,12 @@ class WBU extends Module {
   printf(cf"\twbsel ${io.wbSel} alu ${io.aluV}%x snpc ${snpc}%x\n")
   val dnpc = io.aluV(31, 1) ## 0.U(1.W) 
   io.nxpc := Mux(jmp, io.aluV, snpc)
-  io.data := MuxLookup(io.wbSel, 0.U) (Seq(
+  io.gprdt := MuxLookup(io.wbSel, 0.U) (Seq(
     WbSrcOp.fromAlu -> io.aluV, 
     WbSrcOp.fromMem -> io.memV,
     WbSrcOp.fromPC  -> snpc
   ))
+  io.csrdt := 0xBadC0DE.U //TODO: 
 }
 
 class rvCore() extends Module {
@@ -440,7 +472,7 @@ class rvCore() extends Module {
   val rs2V = iReg.io.rs2V
   // Reg write
   iReg.io.rd := iDec.io.rd
-  iReg.io.wrEn := iDec.io.regWr
+  iReg.io.gprWE := iDec.io.regWr
 
   // EXU in
   iExe.io.rs1V := rs1V
@@ -470,8 +502,9 @@ class rvCore() extends Module {
   iWrite.io.pcJmp := iDec.io.pcJmp
   iWrite.io.wbSel := iDec.io.wbSel
   // WB out 
-  pc           := iWrite.io.nxpc
-  iReg.io.data := iWrite.io.data
+  pc            := iWrite.io.nxpc
+  iReg.io.gprdt := iWrite.io.gprdt
+  iReg.io.csrdt := iWrite.io.csrdt
 
   // printf(cf"<<<WB>>> rd ${iReg.io.rd} data ${iReg.io.data}%x\n")
 
@@ -485,13 +518,6 @@ class rvCore() extends Module {
   iEcall.io.isEbreak := iDec.io.ebreak
   iEcall.io.isEcall  := false.B
 
-  // iDebug.io.clock := this.clock
-  // iDebug.io.reset := this.reset
-  iReg.io.probePin   := 0.U // iDebug.io.probePin
-  // iDebug.io.probeOut := iReg.io.probeOut
-  // iDebug.io.probePC  := this.pc
-
-  // io.outPC := pc
   // dontTouch(io)
   // dontTouch(iWrite.io)
   // dontTouch(iDec.io)
