@@ -106,7 +106,9 @@ main(int argc, char* argv[]) {
   while (!contextp->gotFinish()) {
     diff::copy();       // Comes before exec
     ccdb::inst_trace();
+    ccdb::dump_print(ccdb::DumpPrint{ true, false, false, true, false});
     single_cycle(top, contextp);
+    ccdb::dump_print(ccdb::DumpPrint{ true, false, false, true, false});
     diff::iota();       // Comes after exec
     auto diffvec = diff::match();
     if (!diffvec.empty()) {
