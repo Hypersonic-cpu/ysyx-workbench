@@ -378,7 +378,11 @@ class EXU extends Module {
     skip -> (io.pc + io.imm),
     cmp  -> less.asUInt
   ))
-  printf(cf"\t${src1}%x op ${src2}%x = o${over} c${ansc}%x ${anst}%x\n")
+  // printf(cf"\t${src1}%x op ${src2}%x = o${over} c${ansc}%x ${anst}%x\n")
+  when (io.sel.isBranch || io.op === IntAluOp.Slt || io.op === IntAluOp.Sltu) {
+    printf(cf"Cmp: src1 ${src1}%8x, src2 ${src2}%8x, "
+      + cf"ansc ${ansc}%9x OF${over} LT${less} EQ${io.brCmp.beq}")
+  }
 }
 
 /**
