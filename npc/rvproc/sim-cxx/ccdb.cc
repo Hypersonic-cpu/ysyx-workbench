@@ -66,8 +66,7 @@ ccdb::inst_trace() {
     comm::bits(inst, 6, 2) == 0b11100 &&
     comm::bits(inst, 14, 12) != 0b000;
   if (is_csr) { 
-    std::cerr << "IS CSR" << std::endl;
-    comm::device_access[comm::CurrCyc] = true; 
+    comm::device_access[comm::PrevCyc] = true; 
   }
 }
 
