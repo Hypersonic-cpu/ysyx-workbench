@@ -148,6 +148,7 @@ class CsrFile extends Module {
     0xB00.U -> mcycle,
     0xB80.U -> mcycleh
   ))
+  printf(cf"CSR Read ${io.sel}%x = ${io.out}%x\n")
 }
 
 class RegFile extends Module {
