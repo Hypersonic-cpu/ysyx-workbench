@@ -26,7 +26,7 @@ diff::init(const char* so, int port) {
   std::string so_file = (so[0] == '/') ? (std::string(so)) : 
     (std::string(nemu_path) + std::string("/") + std::string(so));
   // TODO: Change to RTLD_LAZY
-  void* dl = dlopen("/home/kong/ysyx-workbench/nemu/build/riscv32-nemu-interpreter-so", RTLD_NOW); 
+  void* dl = dlopen("/home/kong/ysyx-workbench/nemu/build/riscv32-nemu-interpreter-so", RTLD_NOW | RTLD_GLOBAL); 
   comm::v_assert(dl, "DiffTest .so", so_file, "open failed:", dlerror());
   // assert(dl && "DiffTest ref .so open failed");
   
