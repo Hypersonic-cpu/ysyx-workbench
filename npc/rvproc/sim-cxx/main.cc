@@ -84,7 +84,6 @@ main(int argc, char* argv[]) {
   const std::unique_ptr<VerilatedContext> contextp { new VerilatedContext };
 
   Verilated::traceEverOn(true);
-  // VerilatedVcdC* tfp = new VerilatedVcdC;
   VerilatedFstC* tfp = new VerilatedFstC;
 
   const std::unique_ptr<TOP_NAME> top{new TOP_NAME{contextp.get(), "TOP"}};
@@ -99,7 +98,6 @@ main(int argc, char* argv[]) {
 
   ccdb::trace_init();
   single_reset(top, contextp);
-  ccdb::dump_print(ccdb::DumpPrint{ true, false, false, true, false});
   diff::init();
 
   constexpr size_t MaxCyc{ 30U };
