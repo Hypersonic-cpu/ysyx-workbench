@@ -150,8 +150,8 @@ class CsrFile extends Module {
   io.out := MuxLookup(io.sel, 0xBadC0DE.U) (Seq (
     0xB00.U -> mcycle,
     0xB80.U -> mcycleh,
-    0xF11.U -> mvendorid,
-    0xF12.U -> marchid,
+    // 0xF11.U -> mvendorid,
+    // 0xF12.U -> marchid,
   ))
   printf(cf"CSR Read ${io.sel}%x = ${io.out}%x\n")
 }
