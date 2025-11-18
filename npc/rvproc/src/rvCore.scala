@@ -104,6 +104,13 @@ object MemLenOp extends ChiselEnum {
   val None = Value(0b11.U)
 }
 
+object SysOp extends ChiselEnum {
+  val ECall = Value(0b00.U)
+  val CsrRW = Value(0b01.U)
+  val CsrRS = Value(0b10.U)
+  val CsrRC = Value(0b11.U)
+}
+
 class MemAccBundle extends Bundle {
   // Whether enable mem access is ctrl by 
   // lenOp =?= None
@@ -113,27 +120,31 @@ class MemAccBundle extends Bundle {
 }
 
 object WbSrcOp extends ChiselEnum {
-  val fromAlu, fromPC, fromMem = Value
+  val fromAlu, fromPC, fromMem, fromCsr = Value
+}
+
+object CsrWbOp extends ChiselEnum {
+  val None, Write, Set, Clear = Value
 }
 
 class CsrFile extends Module {
   val io = IO(new Bundle {
     val sel   = Input(Tp.CsrIdxType())
-    val wrEn  = Input(Bool())
+    val wrMd  = Input(CsrWbOp())
     val data  = Input(Tp.RegType())
     val out   = Output(Tp.RegType())
   })
 
-  val mcycle  = RegInit("hfffffffc".U(ISA.RegBits.W))
-  val mcycleh = RegInit(0x5210.U(ISA.RegBits.W))
-
+  val mcycle  = RegInit(0.U(ISA.RegBits.W))
+  val mcycleh = RegInit(0.U(ISA.RegBits.W))
   mcycleh := Mux(mcycle.andR, mcycleh + 1.U, mcycleh)
   mcycle  := mcycle + 1.U
 
+  // val mvendo
   dontTouch(mcycle)
   dontTouch(mcycleh)
 
-  io.out := MuxLookup(io.sel, 0.U) (Seq (
+  io.out := MuxLookup(io.sel, 0xBadC0DE.U) (Seq (
     0xB00.U -> mcycle,
     0xB80.U -> mcycleh
   ))
@@ -148,7 +159,7 @@ class RegFile extends Module {
     val gprdt = Input(Tp.RegType())
     val csrdt = Input(Tp.RegType())
     val gprWE = Input(Bool())
-    val csrWE = Input(Bool())
+    val csrWM = Input(CsrWbOp())
     val rs1V = Output(Tp.RegType())
     val rs2V = Output(Tp.RegType())
     val csrV = Output(Tp.RegType())
@@ -158,7 +169,7 @@ class RegFile extends Module {
   val csrs = Module(new CsrFile())
   csrs.io.data := io.csrdt
   csrs.io.sel  := io.csrid
-  csrs.io.wrEn := io.csrWE
+  csrs.io.wrMd := io.csrWM
 
   when (io.gprWE && io.rd.orR) {
     gprs(io.rd) := io.gprdt
@@ -182,8 +193,10 @@ class IDU extends Module {
     val rs1    = Output(Tp.RegIdxType())
     val rs2    = Output(Tp.RegIdxType())
     val rd     = Output(Tp.RegIdxType())
+    val csrid  = Output(Tp.CsrIdxType())
     val imm    = Output(Tp.RegType())
     val regWr  = Output(Bool())
+    val csrWr  = Output(CsrWbOp())
     val memAcc = Output(new MemAccBundle())
     val aluOp  = Output(IntAluOp())
     val aluSel = Output(new AluSelBundle())
@@ -200,9 +213,10 @@ class IDU extends Module {
 
   val (opName, opValid) = InstOp.safe(opcode(6, 2))
   assert(opValid, cf"Invalid opcode encountered: opcode=${opcode}%x")
-  // val isEbreak = sysOp && io.inst(20)
   // val isEcall  = sysOp && (~io.inst(20))
-  val isEbreak = opName === InstOp.System && io.inst(20)
+  val sysOp = SysOp(funct3(1, 0))
+  val isEbreak = 
+    opName === InstOp.System && sysOp === SysOp.ECall && io.inst(20)
   io.ebreak := isEbreak
 
   // On ECALL we prepare reg a0 (x10)
@@ -214,6 +228,7 @@ class IDU extends Module {
   io.rs2    := io.inst(24, 20)
   io.rd     := io.inst(11,  7)
   val immI   = io.inst(31, 20).SExt()
+  io.csrid  := immI(11, 0)
   val immU   = io.inst(31, 12) << 12
   val immS   = 
     (io.inst(31, 25) ## io.inst(11, 7)).SExt()
@@ -240,7 +255,23 @@ class IDU extends Module {
   val instArith = 
     opName === InstOp.OpReg || opName === InstOp.OpImm
   val instBr = opName === InstOp.Branch
-  // assert(instArith)
+  val instSys = opName === InstOp.System
+
+  /**
+    * CSRRC: R[rd] = CSR, CSR &= ~R[rs1] = ~src1 & csr
+    * CSRRS: R[rd] = CSR, CSR |=  R[rs1] =  src1 | csr
+    * CSRRW: R[rd] = CSR, CSR  =  R[rs1] =     0 + csr
+    * We directly pass 0 + src1 to ALU and use ALU result 
+    * as csrdt.
+    */
+  io.csrWr := Mux(instSys, 
+    MuxLookup (sysOp, CsrWbOp.None) (Seq(
+      SysOp.CsrRC -> CsrWbOp.Clear,
+      SysOp.CsrRS -> CsrWbOp.Set,
+      SysOp.CsrRW -> CsrWbOp.Write,
+      SysOp.ECall -> CsrWbOp.None,
+      )), CsrWbOp.None
+  )
   io.aluOp := MuxCase (IntAluOp.Add, Seq(
     instArith -> IntAluOp(funct3),
     instBr -> Mux(funct3(1), IntAluOp.Sltu, IntAluOp.Slt)
@@ -254,7 +285,7 @@ class IDU extends Module {
     instBr
   io.aluSel.isBranch := instBr
   io.aluSel.rs2SelImm := ~(
-    instTp === ITYPE.tN || 
+    // instTp === ITYPE.tN || 
     instTp === ITYPE.tR ||
     instTp === ITYPE.tB
   )
@@ -289,6 +320,7 @@ class IDU extends Module {
     (opName === InstOp.Jalr) || (opName === InstOp.Jal)
 
   io.wbSel := MuxCase(WbSrcOp.fromAlu, Seq(
+    (instSys && sysOp =/= SysOp.ECall) -> WbSrcOp.fromCsr,
     (opName === InstOp.Jalr) -> WbSrcOp.fromPC,
     (opName === InstOp.Jal ) -> WbSrcOp.fromPC,
     (opName === InstOp.Load) -> WbSrcOp.fromMem
@@ -403,6 +435,7 @@ class WBU extends Module {
     val pcJmp = Input(new PcJmpBundle())
     val wbSel = Input(WbSrcOp())
     val pc    = Input(Tp.RegType())
+    val csrV  = Input(Tp.RegType())
     val aluV  = Input(Tp.RegType())
     val memV  = Input(Tp.RegType())
     val nxpc  = Output(Tp.RegType())
@@ -426,9 +459,10 @@ class WBU extends Module {
   io.gprdt := MuxLookup(io.wbSel, 0.U) (Seq(
     WbSrcOp.fromAlu -> io.aluV, 
     WbSrcOp.fromMem -> io.memV,
+    WbSrcOp.fromCsr -> io.csrV,
     WbSrcOp.fromPC  -> snpc
   ))
-  io.csrdt := 0xBadC0DE.U //TODO: 
+  io.csrdt := io.aluV
 }
 
 class rvCore() extends Module {
@@ -473,13 +507,14 @@ class rvCore() extends Module {
   // Reg read 
   iReg.io.rs1 := rs1
   iReg.io.rs2 := rs2
-  iReg.io.csrid := 0xB00.U
+  iReg.io.csrid := iDec.io.csrid
   val rs1V = iReg.io.rs1V
   val rs2V = iReg.io.rs2V
+  val csrV = iReg.io.csrV
   // Reg write
   iReg.io.rd := iDec.io.rd
   iReg.io.gprWE := iDec.io.regWr
-  iReg.io.csrWE := false.B
+  iReg.io.csrWM := iDec.io.csrWr
 
   // EXU in
   iExe.io.rs1V := rs1V
@@ -506,6 +541,7 @@ class rvCore() extends Module {
   iWrite.io.pc   := pc
   iWrite.io.aluV := res
   iWrite.io.memV := loadV
+  iWrite.io.csrV  := iReg.csrV
   iWrite.io.pcJmp := iDec.io.pcJmp
   iWrite.io.wbSel := iDec.io.wbSel
   // WB out 
