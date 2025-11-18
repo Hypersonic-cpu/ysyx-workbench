@@ -161,7 +161,7 @@ class RegFile extends Module {
   csrs.io.wrEn := io.csrWE
 
   when (io.gprWE && io.rd.orR) {
-    gprs(io.rd) := io.gprWE
+    gprs(io.rd) := io.gprdt
   }
 
   val gpr1V = Mux(io.rs1.orR, gprs(io.rs1), 0.U)
