@@ -130,6 +130,9 @@ class CsrFile extends Module {
   mcycleh := Mux(mcycle.andR, mcycleh + 1.U, mcycle)
   mcycle  := mcycle + 1.U
 
+  dontTouch(mcycle)
+  dontTouch(mcycleh)
+
   io.out := MuxLookup(io.sel, 0.U) (Seq (
     0xB00.U -> mcycle,
     0xB80.U -> mcycleh
