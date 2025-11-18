@@ -587,7 +587,8 @@ class rvCore() extends Module {
   // Reg read 
   iReg.io.rs1 := rs1
   iReg.io.rs2 := rs2
-  iReg.io.csrid := iDec.io.csrid
+  iReg.io.csrir := iDec.io.csrir
+  iReg.io.csriw := iDec.io.csriw
   val rs1V = iReg.io.rs1V
   val rs2V = iReg.io.rs2V
   val csrV = iReg.io.csrV
