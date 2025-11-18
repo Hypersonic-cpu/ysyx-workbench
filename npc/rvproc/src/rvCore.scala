@@ -124,8 +124,8 @@ class CsrFile extends Module {
     val out   = Output(Tp.RegType())
   })
 
-  val mcycle  = RegInit(0.U(ISA.RegBits.W))
-  val mcycleh = RegInit(0.U(ISA.RegBits.W))
+  val mcycle  = RegInit(0x1314.U(ISA.RegBits.W))
+  val mcycleh = RegInit(0x5210.U(ISA.RegBits.W))
 
   mcycleh := Mux(mcycle.andR, mcycleh + 1.U, mcycle)
   mcycle  := mcycle + 1.U
