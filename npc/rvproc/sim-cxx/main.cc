@@ -108,6 +108,9 @@ main(int argc, char* argv[]) {
     diff::copy();       // Comes before exec
     ccdb::inst_trace();
     single_cycle(top, contextp);
+    if (!comm::log_wavefile.empty()) {
+      tfp->dump(contextp->time());
+    }
     diff::iota();       // Comes after exec
     auto diffvec = diff::match();
     if (!diffvec.empty()) {
@@ -123,8 +126,6 @@ main(int argc, char* argv[]) {
     currCyc++;
   }
   top->final();
-
-  // ccdb::dump_print(ccdb::DumpPrint{});
 
   if (!comm::log_wavefile.empty()) {
     tfp->close();
