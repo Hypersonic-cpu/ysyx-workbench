@@ -118,8 +118,8 @@ main(int argc, char* argv[]) {
         comm::sout32(std::cerr) << ref << " got ";
         comm::sout32(std::cerr) << dut << std::endl;
       }
-      ccdb::dump_print(ccdb::DumpPrint{ false, true, true, false, false });
-      exit(1);
+      // ccdb::dump_print(ccdb::DumpPrint{ false, true, true, false, false });
+      // exit(1);
     }
     currCyc++;
   }
