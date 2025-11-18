@@ -140,13 +140,18 @@ class CsrFile extends Module {
   mcycleh := Mux(mcycle.andR, mcycleh + 1.U, mcycleh)
   mcycle  := mcycle + 1.U
 
+  val mvendorid = RegInit(0x79737978L.U)
+  val marchid   = RegInit(2510_0264.U)
+
   // val mvendo
   dontTouch(mcycle)
   dontTouch(mcycleh)
 
   io.out := MuxLookup(io.sel, 0xBadC0DE.U) (Seq (
     0xB00.U -> mcycle,
-    0xB80.U -> mcycleh
+    0xB80.U -> mcycleh,
+    0xF11.U -> mvendorid,
+    0xF12.U -> marchid,
   ))
   printf(cf"CSR Read ${io.sel}%x = ${io.out}%x\n")
 }
