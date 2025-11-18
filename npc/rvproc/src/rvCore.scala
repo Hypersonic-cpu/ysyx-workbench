@@ -459,7 +459,7 @@ class WBU extends Module {
   val snpc = io.pc + 4.U
   when (io.pcJmp.bEnable) {
     printf(cf"Branch if EQ${cd.bIfeq} NE${cd.bIfne} LT${cd.bIflt} GE${cd.bIfge}\n")
-    printf(cf"Compare   EQ${rs.bIfeq} NE${rs.bIfne} LT${rs.bIflt} GE${rs.bIfge}\n")
+    printf(cf"Compare   EQ${rs.beq} NE${~rs.beq} LT${rs.blt} GE${~rs.blt}\n")
   }
   printf(cf"\twbsel ${io.wbSel} alu ${io.aluV}%x snpc ${snpc}%x\n")
   val dnpc = io.aluV(31, 1) ## 0.U(1.W) 
