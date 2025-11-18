@@ -14,7 +14,9 @@
 ***************************************************************************************/
 
 #include "common.h"
+#include "debug.h"
 #include "local-include/ftrace.h"
+#include "local-include/reg.h"
 #include <isa.h>
 #include <memory/paddr.h>
 
@@ -43,6 +45,8 @@ static void restart() {
 
   /* The zero register is always 0. */
   cpu.gpr[0] = 0;
+
+  cpu.csr[RISCV_CSR_MSTATUS] = 0x1800;
 }
 
 void init_isa() {
@@ -106,16 +110,17 @@ void init_elf(const char* elf_file) {
 
     if (type == STT_FUNC) {
       unsigned cur = symbols.sym_num++;
+      Assert(cur < SYM_TABLE_ENT, "Sym table overflow\n");
       symbols.table[cur].addr = sym_table[i].st_value;
       strncpy(symbols.table[cur].name, sym_name, 127);
     }
   }
 
-  fprintf(stderr, " === ELF Funct Symbols (%u total) === \n", symbols.sym_num);
-  for (unsigned i = 0; i < symbols.sym_num; ++i) {
-      fprintf(stderr, "[%3u] 0x%8x: %s\n" , i, 
-             symbols.table[i].addr, symbols.table[i].name);
-  }
+  // fprintf(stderr, " === ELF Funct Symbols (%u total) === \n", symbols.sym_num);
+  // for (unsigned i = 0; i < symbols.sym_num; ++i) {
+  //     fprintf(stderr, "[%3u] 0x%8x: %s\n" , i, 
+  //            symbols.table[i].addr, symbols.table[i].name);
+  // }
 
   munmap(map, st.st_size);
   close(fd);
