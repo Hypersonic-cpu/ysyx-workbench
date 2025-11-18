@@ -52,7 +52,7 @@ DPIC_SRCS = $(shell find $(abspath $(SRC_DPIC_DIR)) -name "*.cc" -or -name "*.cp
 
 ifeq ($(WITH_NVBOARD),0)
 NVB_ARCHIVE=
-# LDFLAGS=
+LDFLAGS= -lreadline
 else
 include $(NVBOARD_HOME)/scripts/nvboard.mk
 NVB_ARCHIVE=$(NVBOARD_ARCHIVE)
