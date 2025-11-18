@@ -18,9 +18,13 @@
 
 #include <common.h>
 
+#define RISCV_CSR_NUM 4096
+
 typedef struct {
+  // WARN: Remind the order
   word_t gpr[MUXDEF(CONFIG_RVE, 16, 32)];
   vaddr_t pc;
+  word_t csr[RISCV_CSR_NUM];
 } MUXDEF(CONFIG_RV64, riscv64_CPU_state, riscv32_CPU_state);
 
 // decode
@@ -29,5 +33,7 @@ typedef struct {
 } MUXDEF(CONFIG_RV64, riscv64_ISADecodeInfo, riscv32_ISADecodeInfo);
 
 #define isa_mmu_check(vaddr, len, type) (MMU_DIRECT)
+
+void isa_csr_display();
 
 #endif

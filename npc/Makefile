@@ -28,7 +28,8 @@ INC_PATH ?= $(abspath $(PRJ))/dpic $(abspath $(PRJ))/sim-cxx
 VERILATOR = verilator
 VERILATOR_COVERAGE = verilator_coverage
 VERILATOR_TRACE ?= --trace --trace-fst --trace-depth 99
-VERILATOR_CFLAGS += $(VERILATOR_TRACE) -DPRINTF_COND=0
+DPRINTF?=0
+VERILATOR_CFLAGS += $(VERILATOR_TRACE) -DPRINTF_COND=$(DPRINTF)
 VERILATOR_CFLAGS += -MMD --build -cc  \
 										-O3 --x-assign fast --x-initial fast --noassert
 INCFLAGS = $(addprefix -I, $(INC_PATH))
@@ -52,7 +53,7 @@ DPIC_SRCS = $(shell find $(abspath $(SRC_DPIC_DIR)) -name "*.cc" -or -name "*.cp
 
 ifeq ($(WITH_NVBOARD),0)
 NVB_ARCHIVE=
-# LDFLAGS=
+LDFLAGS=
 else
 include $(NVBOARD_HOME)/scripts/nvboard.mk
 NVB_ARCHIVE=$(NVBOARD_ARCHIVE)
@@ -80,7 +81,7 @@ run: verilate verilog $(LIBCAPSTONE) $(SIM_BIN)
 	$(call git_commit, "run with AM via verilator cc")
 	$(SIM_BIN) $(simccargs)
 
-runonly: $(SIM_BIN)
+runonly: verilate $(SIM_BIN)
 	$(call git_commit, "run with AM via verilator cc")
 	$(SIM_BIN) $(simccargs)
 

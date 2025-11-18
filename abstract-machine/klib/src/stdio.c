@@ -74,24 +74,25 @@ int vsnprintf(char *out, size_t n, const char *fmt, va_list ap) {
         case 'd':
           {
             int outv = va_arg(ap, int);
+            unsigned outu = outv;
             // int64_t have 20 digits at most (including neg sign)
             // so 20 Byte buffer is enough
             char outbuf[32] = {0};
             panic_on(width > 31, "integer width out-of-buffer");
             unsigned bufptr = 0;
-            if (outv < 0) {
+            if (outv < 0 && intbase == 10) {
               if (cnt++ + 1 >= n) { goto vnfinish; }
               *out++ = '-';
-              outv = -outv;
+              outu = -outv;
             }
             do {
-              if (outv % intbase < 10) {
-                outbuf[bufptr++] = (outv % intbase) + '0';
+              if (outu % intbase < 10) {
+                outbuf[bufptr++] = (outu % intbase) + '0';
               } else {
-                outbuf[bufptr++] = (outv % intbase) - 10 + 'a';
+                outbuf[bufptr++] = (outu % intbase) - 10 + 'a';
               }
-              outv /= intbase;
-            } while (outv);
+              outu /= intbase;
+            } while (outu);
 
             // After this buffptr == width ([0] .. [width-1])
             while (bufptr < width) {

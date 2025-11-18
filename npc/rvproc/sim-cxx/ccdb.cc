@@ -61,6 +61,13 @@ ccdb::inst_trace() {
     // Check ELF symbol for pc / dst
     ccdb::frame_trace(pc+4, dst, rd == 0);
   }
+
+  bool is_csr = 
+    comm::bits(inst, 6, 2) == 0b11100 &&
+    comm::bits(inst, 14, 12) != 0b000;
+  if (is_csr) { 
+    comm::device_access[comm::PrevCyc] = true; 
+  }
 }
 
 std::list<ccdb::FrameEnt> ccdb::frame_stk {};

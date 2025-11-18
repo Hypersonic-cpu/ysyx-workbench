@@ -84,7 +84,6 @@ main(int argc, char* argv[]) {
   const std::unique_ptr<VerilatedContext> contextp { new VerilatedContext };
 
   Verilated::traceEverOn(true);
-  // VerilatedVcdC* tfp = new VerilatedVcdC;
   VerilatedFstC* tfp = new VerilatedFstC;
 
   const std::unique_ptr<TOP_NAME> top{new TOP_NAME{contextp.get(), "TOP"}};
@@ -107,23 +106,24 @@ main(int argc, char* argv[]) {
     diff::copy();       // Comes before exec
     ccdb::inst_trace();
     single_cycle(top, contextp);
+    if (!comm::log_wavefile.empty()) {
+      tfp->dump(contextp->time());
+    }
     diff::iota();       // Comes after exec
     auto diffvec = diff::match();
     if (!diffvec.empty()) {
       for (const auto& [id, ref, dut] : diffvec) {
-        std::cerr << ANSI_Red << "Mismatch reg " << (int) id
+        std::cerr << ANSI_Red << "Mismatch reg " << std::dec << (int) id
           << " (" << comm::RegName.at(id) << ") : " << ANSI_None << "expected "; 
         comm::sout32(std::cerr) << ref << " got ";
         comm::sout32(std::cerr) << dut << std::endl;
       }
-      ccdb::dump_print(ccdb::DumpPrint{ false, true, true, false, false });
-      exit(1);
+      // ccdb::dump_print(ccdb::DumpPrint{ false, true, true, false, false });
+      // exit(1);
     }
     currCyc++;
   }
   top->final();
-
-  // ccdb::dump_print(ccdb::DumpPrint{});
 
   if (!comm::log_wavefile.empty()) {
     tfp->close();

@@ -131,14 +131,13 @@ pmem_read(uint32_t raddr) {
 #if PRINTF_COND
   std::cout << "DPI-C >> pmem_read addr " << std::hex << raddr << std::endl;
 #endif
-  comm::device_access[comm::CurrCyc] = true;
   uint32_t ret = 0;
   if (raddr == 0) { ret = 0; }
   else if (rv_device::is_clock_range(raddr)) {
     ret = rv_device::read_clock(raddr != rv_device::ClockAddr);
+    comm::device_access[comm::CurrCyc] = true;
   } else {
     // Memory
-    comm::device_access[comm::CurrCyc] = false;
     uint32_t aln_idx = (raddr - BaseAddr) >> 2;
     v_warn(ValidAccess(aln_idx), std::string("Read addr = "), raddr);
     if (!ValidAccess(aln_idx)) { ret = 0x55aa55aa; }
@@ -154,13 +153,12 @@ pmem_read(uint32_t raddr) {
 
 extern "C" void
 pmem_write(uint32_t waddr, uint32_t wdata, uint8_t wmask) {
-  comm::device_access[comm::CurrCyc] = true;
   if (rv_device::is_serial_range(waddr)) {
     v_assert((wmask & 0x1), "Serial write masked out, wmask = ", wmask);
     rv_device::write_serial(wdata & 0xff);
+    comm::device_access[comm::CurrCyc] = true;
     // std::cerr << "==> Identifier " << comm::device_access[comm::CurrCyc] << std::endl;
   } else {
-    comm::device_access[comm::CurrCyc] = false;
     uint32_t aln_idx = (waddr - BaseAddr) >> 2;
     v_assert(ValidAccess(aln_idx), std::string("Write addr = "), waddr);
     uint32_t m = 0U;
