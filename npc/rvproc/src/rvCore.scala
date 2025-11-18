@@ -169,7 +169,7 @@ class CsrFile extends Module {
     csrMap.map { case (idx, reg, _) => idx -> reg }
   )
   io.out := csrVal
-  printf(cf"CSR Read ${io.sel}%x = ${io.out}%x\n")
+  printf(cf"CSR Read ${io.idxr}%x = ${io.out}%x\n")
 
   // Input
   val wbVal = MuxLookup(io.wrMd, 0.U) (Seq(
@@ -183,6 +183,7 @@ class CsrFile extends Module {
         if (writeable) {
           when (io.idxw === idx) {
             reg := wbVal
+            printf(cf"CSR Write ${io.idxw}%x = ${io.data}%x\n")
           }
         }
       }
@@ -192,9 +193,6 @@ class CsrFile extends Module {
   when (io.ecall) {
     mcause := 11.U
   }
-
-  io.out := csrVal
-  printf(cf"CSR Read ${io.sel}%x = ${io.out}%x\n")
 
   dontTouch(mcycle)
   dontTouch(mcycleh)
