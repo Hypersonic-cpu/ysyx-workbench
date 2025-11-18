@@ -27,7 +27,8 @@ diff::init(const char* so, int port) {
     (std::string(nemu_path) + std::string("/") + std::string(so));
   // TODO: Change to RTLD_LAZY
   void* dl = dlopen(so_file.c_str(), RTLD_NOW); 
-  assert(dl && "DiffTest ref .so open failed");
+  comm::v_assert(dl, "DiffTest .so ", so_file, " open failed.");
+  // assert(dl && "DiffTest ref .so open failed");
   
   diff::ref_init   = (init_t) dlsym(dl, "difftest_init");
   diff::ref_exec   = (exec_t) dlsym(dl, "difftest_exec");
