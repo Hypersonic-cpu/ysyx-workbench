@@ -381,7 +381,7 @@ class EXU extends Module {
   // printf(cf"\t${src1}%x op ${src2}%x = o${over} c${ansc}%x ${anst}%x\n")
   when (io.sel.isBranch || io.op === IntAluOp.Slt || io.op === IntAluOp.Sltu) {
     printf(cf"Cmp: src1 ${src1}%x, src2 ${src2}%x, "
-      + cf"ansc ${ansc}%x OF${over} LT${less} EQ${io.brCmp.beq}")
+      + cf"ansc ${ansc}%x OF${over} LT${less} EQ${io.brCmp.beq}\n")
   }
 }
 
@@ -457,6 +457,10 @@ class WBU extends Module {
     (cd.bIflt && rs.blt)
   ))
   val snpc = io.pc + 4.U
+  when (io.pcJmp.bEnable) {
+    printf(cf"Branch if EQ${cd.bIfeq} NE${cd.bIfne} LT${cd.bIflt} GE${cd.bIfge}\n")
+    printf(cf"Compare   EQ${rs.bIfeq} NE${rs.bIfne} LT${rs.bIflt} GE${rs.bIfge}\n")
+  }
   printf(cf"\twbsel ${io.wbSel} alu ${io.aluV}%x snpc ${snpc}%x\n")
   val dnpc = io.aluV(31, 1) ## 0.U(1.W) 
   io.nxpc := Mux(jmp, io.aluV, snpc)
