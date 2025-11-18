@@ -79,6 +79,7 @@ static void frame_trace(vaddr_t jtar, int rd, vaddr_t snpc) {
   unsigned idx = symbol_which(jtar);
   // TODO: 目前尾递归会导致stack一直增加, 事实上如果有 TCO
   // 并不会. 可以考虑不增加缩进, 而是直接同depth覆盖, 并输出.
+  // TODO: (2) 在有yield的情况下需要更改吗? yield 多了会爆栈
   //
   // If jumps to a symbol, must be a funct call.
   // TCO can be detected.
