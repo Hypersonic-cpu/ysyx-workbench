@@ -17,7 +17,9 @@ Context* __am_irq_handle(Context *c) {
       default: ev.event = EVENT_ERROR; break;
     }
 
+    printf("AM Context switch from %x ", (uintptr_t) c);
     c = user_handler(ev, c);
+    printf("to %x \n", (uintptr_t) c);
     assert(c != NULL);
   }
 
