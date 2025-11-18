@@ -541,7 +541,7 @@ class rvCore() extends Module {
   iWrite.io.pc   := pc
   iWrite.io.aluV := res
   iWrite.io.memV := loadV
-  iWrite.io.csrV  := iReg.csrV
+  iWrite.io.csrV  := csrV
   iWrite.io.pcJmp := iDec.io.pcJmp
   iWrite.io.wbSel := iDec.io.wbSel
   // WB out 
