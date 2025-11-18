@@ -326,8 +326,7 @@ class IDU extends Module {
     (opName === InstOp.Load) -> WbSrcOp.fromMem
   ))
 
-  // printf(cf"IDU ${io.inst}%x ${instTp} alu${io.aluOp} " + 
-  //   cf"wr[M|R] = ${io.memAcc.lenOp}|${io.regWr} jmp ${io.pcJmp.jUncond}\n")
+  printf(cf"IDU ${instTp} rs1 ${io.rs1} rs2 ${io.rs2} rd ${io.rd}\n")
   // printf(cf"\trs1 ${io.rs1}%d, rs2 ${io.rs2}%d, imm ${io.imm}%x\n");
 
 }
@@ -355,7 +354,7 @@ class EXU extends Module {
   val src1 = Mux(io.sel.rs1SelPC, io.pc, io.rs1V)
   val srcc = Mux(io.sel.rs2SelImm, io.imm, io.rs2V)
   val src2 = Mux(flip, ~srcc, srcc)
-  printf(cf"\tsrc1 ${src1}%x : src2 ${src2}%x inv${flip}\n")
+  printf(cf"\tsrc1${src1}%x : src2${src2}%x\n")
   val ansc = 
     src1.pad(ISA.RegBits+1) + src2.pad(ISA.RegBits+1) + Mux(
       flip, 1.U, 0.U
