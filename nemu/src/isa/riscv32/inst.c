@@ -15,8 +15,10 @@
 
 #include "common.h"
 #include "debug.h"
+#include "isa.h"
 #include "local-include/ftrace.h"
 #include "local-include/reg.h"
+#include "macro.h"
 #include <cpu/cpu.h>
 #include <cpu/ifetch.h>
 #include <cpu/decode.h>
@@ -64,6 +66,9 @@ print_fsingle(FILE* stream, const rv32_frame* frm, unsigned depth,
   if (prefix == '+' || prefix == '-') { spaces_fmt(depth); }
   fprintf(stream, "%cFr[%3d] 0x%8x: %s%s(", 
           prefix, depth, frm->fn, symbols.table[frm->symt_idx].name, extra);
+  // for (unsigned i = 0; i < 32; ++i) {
+  //   fprintf(stream, MUXDEF(CONFIG_ISA64, "0x%lx, ", "0x%x, ") "\t", frm->args[i]);
+  // }
   for (unsigned i = 0; i < MUXDEF(CONFIG_RVE, 6, 8); ++i) {
     fprintf(stream, MUXDEF(CONFIG_ISA64, "0x%lx, ", "0x%x, "), frm->args[i]);
   }
@@ -74,6 +79,7 @@ static void frame_trace(vaddr_t jtar, int rd, vaddr_t snpc) {
   unsigned idx = symbol_which(jtar);
   // TODO: 目前尾递归会导致stack一直增加, 事实上如果有 TCO
   // 并不会. 可以考虑不增加缩进, 而是直接同depth覆盖, 并输出.
+  // TODO: (2) 在有yield的情况下需要更改吗? yield 多了会爆栈
   //
   // If jumps to a symbol, must be a funct call.
   // TCO can be detected.
@@ -85,6 +91,9 @@ static void frame_trace(vaddr_t jtar, int rd, vaddr_t snpc) {
     stp->ra = snpc;
     stp->sp = R(2);
     stp->symt_idx = idx;
+    // for (unsigned i = 0; i < 32; ++i) {
+    //   stp->args[i] = R(i);
+    // }
     for (unsigned i = 10; i < 10 + MUXDEF(CONFIG_RVE, 6, 8); ++i) {
       stp->args[i-10] = R(i);
     }
@@ -128,6 +137,13 @@ void frame_stack_display() {
     // printf(" Fr[%3d] " FMT_WORD ": %s\n", i, frm.fn, 
     //        symbols.table[frm.symt_idx].name);
   }
+}
+#endif
+
+#ifdef CONFIG_ETRACE_ENABLE
+static void ecall_trace(word_t epc, word_t a7) {
+  fprintf(stderr, "Ecall with arg " FMT_WORD " @ PC " FMT_WORD "\n",
+          a7, epc);
 }
 #endif
 
@@ -305,6 +321,27 @@ static int decode_exec(Decode *s) {
   INSTPAT("0000001 ????? ????? 111 ????? 01100 11", 
           remu   , R, 
           R(rd) = (src2 == 0U) ? src1 : (src1 % src2));
+  INSTPAT("??????? ????? ????? 001 ????? 11100 11",
+          csrrw  , I, do {
+            int csrid = BITS(imm, 11, 0);
+            word_t temp = csr(csrid); csr(csrid) = src1; R(rd) = temp;
+          } while (0);
+          );
+  INSTPAT("??????? ????? ????? 010 ????? 11100 11",
+          csrrs  , I, do {
+            int csrid = BITS(imm, 11, 0);
+            word_t temp = csr(csrid); csr(csrid) = temp | src1; R(rd) = temp;
+          } while (0);
+          );
+  INSTPAT("0000000 00000 00000 000 00000 11100 11", 
+          ecall  , N, 
+          IFDEF(CONFIG_ETRACE_ENABLE, 
+                ecall_trace(s->pc, R(MUXDEF(CONFIG_RVE, 15, 17)))
+                );
+          s->dnpc = isa_raise_intr(11, s->pc)
+          );
+  INSTPAT("0011000 00010 00000 000 00000 11100 11",
+          mret   , N, s->dnpc = csr(RISCV_CSR_MEPC));
   INSTPAT("??????? ????? ????? ??? ????? ????? ??", 
           inv    , N, INV(s->pc));
   INSTPAT_END();
