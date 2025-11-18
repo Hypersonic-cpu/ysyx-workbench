@@ -180,7 +180,7 @@ class RegFile extends Module {
   val csrV  = csrs.io.out
 
   io.rs1V := gpr1V 
-  io.rs2V := gpr1V
+  io.rs2V := gpr2V
   io.csrV := csrV
   printf(cf"<<REG>> R[${io.rs1}] = ${io.rs1V}%x\n")
   printf(cf"<<REG>> R[${io.rs2}] = ${io.rs2V}%x\n")
