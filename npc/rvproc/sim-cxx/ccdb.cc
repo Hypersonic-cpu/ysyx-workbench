@@ -21,6 +21,11 @@ ccdb::read_reg(uint8_t regid) {
 }
 
 std::pair<bool, uint32_t>
+ccdb::read_csr(uint8_t fakeid) {
+  return ccdb::_read_verilator_csr(fakeid);
+}
+
+std::pair<bool, uint32_t>
 ccdb::read_mem(uint32_t addr) {
   return dpic::pmem_probe(addr);
 }

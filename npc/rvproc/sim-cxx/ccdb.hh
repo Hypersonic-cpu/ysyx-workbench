@@ -25,6 +25,7 @@ namespace ccdb {
   extern ptop_t top;
 
   std::pair<bool, uint32_t> read_reg(uint8_t regid);
+  std::pair<bool, uint32_t> read_csr(uint8_t fakeid);
 
   // 0x10 for PC
   inline std::pair<bool, uint32_t> 
@@ -50,6 +51,25 @@ namespace ccdb {
       case 0xe: ret = r->rvCore__DOT__iReg__DOT__gprs_14; break;
       case 0xf: ret = r->rvCore__DOT__iReg__DOT__gprs_15; break;
       case 0x10: ret = r->rvCore__DOT__pc; break;
+      default: valid = false; break;
+    }
+    return std::make_pair(valid, ret);
+  }
+
+  constexpr std::array<const char*, 4> csr_list {
+    "mtvec", "mepc", "mstatus", "mcause"
+  };
+
+  inline std::pair<bool, uint32_t> 
+  _read_verilator_csr(uint8_t fakeid) {
+    auto r = top->rootp;
+    uint32_t ret = 0;
+    bool valid = true;
+    switch (fakeid) {
+      case 0x0: ret = r->rvCore__DOT__iReg__DOT__csrs__DOT__mtvec;   break;
+      case 0x1: ret = r->rvCore__DOT__iReg__DOT__csrs__DOT__mepc;    break;
+      case 0x2: ret = r->rvCore__DOT__iReg__DOT__csrs__DOT__mstatus; break;
+      case 0x3: ret = r->rvCore__DOT__iReg__DOT__csrs__DOT__mcause;  break;
       default: valid = false; break;
     }
     return std::make_pair(valid, ret);
@@ -126,6 +146,11 @@ namespace ccdb {
         os << std::dec << std::setw(2) << i;
       }
       os << "] " << comm::RegName.at(i) << " : ";
+      comm::sout32(os) << read_reg(i).second << std::endl;
+    }
+    for (size_t i = 0; i < ccdb::csr_list.size(); ++i) {
+      os << std::setfill(' ') << "CSRs " << 
+        std::setw(10) << comm::RegName.at(i) << " : ";
       comm::sout32(os) << read_reg(i).second << std::endl;
     }
   }
