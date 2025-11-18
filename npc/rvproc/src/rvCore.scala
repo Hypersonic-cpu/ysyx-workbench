@@ -348,8 +348,8 @@ class EXU extends Module {
   val cmpu = io.op === IntAluOp.Sltu
   printf(cf"\trs1 PC?${io.sel.rs1SelPC} : rs2 Imm?${io.sel.rs2SelImm} = ${io.imm}%x\n")
   // printf(cf"\trs1V ${io.rs1V}%x, rs2V ${io.rs2V}%x, imm ${io.imm}%x\n");
-  io.brCmp.beq := false.B
-  io.brCmp.blt := false.B
+  // io.brCmp.beq := false.B
+  // io.brCmp.blt := false.B
   val flip = io.sel.rs2Invert && (io.op =/= IntAluOp.Srr)
   val skip = io.sel.isBranch
   val src1 = Mux(io.sel.rs1SelPC, io.pc, io.rs1V)
