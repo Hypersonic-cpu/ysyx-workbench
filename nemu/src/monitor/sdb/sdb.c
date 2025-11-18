@@ -176,6 +176,14 @@ static int cmd_d(char *args) {
   return 0;
 }
 
+static int cmd_bt(char *args) {
+  IFDEF(CONFIG_FTRACE_ENABLE,
+    void frame_stack_display();
+    frame_stack_display();
+  );
+  return 0;
+}
+
 static int cmd_help(char *args);
 
 static struct {
@@ -187,6 +195,7 @@ static struct {
   { "c", "Continue the execution of the program", cmd_c },
   { "q", "Exit NEMU", cmd_q },
   { "si", "Arg [$N=1], execute `$N` steps", cmd_si },
+  { "bt", "Stack trace display", cmd_bt },
   { "info", "Arg <r|w|m>, show info of registers|watchpoints|csrs", cmd_info }, 
   { "x", "Arg <$nw> <$VA(hex)> scan next $nw words from mem $VA", cmd_x }, 
   { "p/x", "Arg <$expr> evaluate expression", cmd_p_hex }, 
