@@ -182,9 +182,9 @@ class RegFile extends Module {
   io.rs1V := gpr1V 
   io.rs2V := gpr1V
   io.csrV := csrV
-  printf(cf"<<REG>> R[${io.rs1}] = ${io.rs1V}%x\n")
-  printf(cf"<<REG>> R[${io.rs2}] = ${io.rs2V}%x\n")
-  printf(cf"<<REG>> R[${io.rd}] <- ${io.gprdt}%x\n")
+  // printf(cf"<<REG>> R[${io.rs1}] = ${io.rs1V}%x\n")
+  // printf(cf"<<REG>> R[${io.rs2}] = ${io.rs2V}%x\n")
+  // printf(cf"<<REG>> R[${io.rd}] <- ${io.gprdt}%x\n")
 }
 
 class IDU extends Module {
