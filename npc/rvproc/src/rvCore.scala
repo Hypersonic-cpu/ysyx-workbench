@@ -143,17 +143,61 @@ class CsrFile extends Module {
   val mvendorid = RegInit(0x79737978L.U)
   val marchid   = RegInit(2510_0264.U)
 
-  // val mvendo
+  val mstatus   = RegInit(0.U(ISA.RegBits.W))
+  val mepc      = RegInit(0.U(ISA.RegBits.W))
+  val mcause    = RegInit(0.U(ISA.RegBits.W))
+  val mtvec     = RegInit(0.U(ISA.RegBits.W))
+
+  // case(Index, Reg, Writable)
+  val csrMap = Seq[(UInt, UInt, Boolean)] (
+    (0x300.U, mstatus,   true),
+    (0x305.U, mtvec,     true),
+    (0x341.U, mepc,      true),
+    (0x342.U, mcause,    true),
+
+    (0xB00.U, mcycle,    false),
+    (0xB80.U, mcycleh,   false),
+    (0xF11.U, mvendorid, false),
+    (0xF12.U, marchid,   false)
+  )
+
+  val csrVal = MuxLookup(io.sel, 0xBadC0DE.U) (
+    csrMap.map { case (idx, reg, _) => idx -> reg }
+  )
+
+  // Output
+  io.out := csrVal
+  printf(cf"CSR Read ${io.sel}%x = ${io.out}%x\n")
+
+  // Input
+  val wbVal = MuxLookup(io.wrMd, 0.U) (Seq(
+    CsrWbOp.Write -> (io.data),
+    CsrWbOp.Set   -> (csrVal | io.data),
+    CsrWbOp.Clear -> (csrVal & (~io.data))
+  ))
+  when (io.wrMd =/= CsrWbOp.None) {
+    csrMap.foreach{ 
+      case (idx, reg, writeable) => {
+        if (writeable) {
+          when (io.sel === idx) {
+            reg := wbVal
+          }
+        }
+      }
+    }
+  }
+
+  io.out := csrVal
+  printf(cf"CSR Read ${io.sel}%x = ${io.out}%x\n")
+
   dontTouch(mcycle)
   dontTouch(mcycleh)
-
-  io.out := MuxLookup(io.sel, 0xBadC0DE.U) (Seq (
-    0xB00.U -> mcycle,
-    0xB80.U -> mcycleh,
-    0xF11.U -> mvendorid,
-    0xF12.U -> marchid,
-  ))
-  printf(cf"CSR Read ${io.sel}%x = ${io.out}%x\n")
+  dontTouch(mvendorid)
+  dontTouch(marchid)
+  dontTouch(mepc)
+  dontTouch(mtvec)
+  dontTouch(mstatus)
+  dontTouch(mcause)
 }
 
 class RegFile extends Module {
