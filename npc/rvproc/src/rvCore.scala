@@ -24,7 +24,7 @@ object Tp {
   def RegType() = UInt(ISA.RegBits.W)
   def InstType() = UInt(ISA.InstBits.W)
   def RegIdxType() = UInt(ISA.RegIdxBits.W)
-  def CsrIdxType() = UInt(ISA.RegIdxBits.W)
+  def CsrIdxType() = UInt(ISA.CsrIdxBits.W)
   // Now it equals RegType() so no padding is needed.
   def AddrType() = UInt(ISA.AddrBits.W)
 }
