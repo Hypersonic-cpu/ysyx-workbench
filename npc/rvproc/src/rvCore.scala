@@ -156,19 +156,21 @@ class RegFile extends Module {
   csrs.io.data := io.csrdt
   csrs.io.sel  := io.csrid
   csrs.io.wrEn := io.csrWE
+
   when (io.gprWE && io.rd.orR) {
     gprs(io.rd) := io.gprWE
   }
 
   val gpr1V = Mux(io.rs1.orR, gprs(io.rs1), 0.U)
   val gpr2V = Mux(io.rs2.orR, gprs(io.rs2), 0.U)
-  val csrRd = csrs.io.out
+  val csrV  = csrs.io.out
 
   io.rs1V := gpr1V 
   io.rs2V := gpr1V
-  io.csrV := csrRd
-  // printf(cf"<<REG>> R[${io.rs1}] = ${io.rs1V}%x\n")
-  // printf(cf"<<REG>> R[${io.rs2}] = ${io.rs2V}%x\n")
+  io.csrV := csrV
+  printf(cf"<<REG>> R[${io.rs1}] = ${io.rs1V}%x\n")
+  printf(cf"<<REG>> R[${io.rs2}] = ${io.rs2V}%x\n")
+  printf(cf"<<REG>> R[${io.rd}] <- ${io.gprdt}%x\n")
 }
 
 class IDU extends Module {
