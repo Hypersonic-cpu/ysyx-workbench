@@ -349,7 +349,7 @@ static int decode_exec(Decode *s) {
 
   R(0) = 0; // NOTE: reset $zero to 0
 
-  isa_csr_display();
+  // isa_csr_display();
   return 0;
 }
 
