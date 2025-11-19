@@ -8,6 +8,11 @@ Context* __am_irq_handle(Context *c) {
   if (user_handler) {
     Event ev = {0};
     switch (c->mcause) {
+      // TODO: Check c->gpr[15] (a5 or a7) for reason
+      case 11: 
+        ev.event = EVENT_YIELD; 
+        c->mepc += 4;
+        break;
       default: ev.event = EVENT_ERROR; break;
     }
 
