@@ -18,6 +18,8 @@ namespace diff {
   extern rcpy_t ref_regcpy;
   extern intr_t ref_raise_intr;
 
+  extern bool enable;
+
   struct CpyDir {
     constexpr static bool ToDut = 0;
     constexpr static bool ToRef = 1;
