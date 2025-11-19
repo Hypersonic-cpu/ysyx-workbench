@@ -194,6 +194,8 @@ class CsrFile extends Module {
     mcause := 11.U
   }
 
+  printf(cf"CSRDUMP MEPC ${mepc} MTVec ${mtvec} MCause ${mcause}%x\n")
+
   dontTouch(mcycle)
   dontTouch(mcycleh)
   dontTouch(mvendorid)
