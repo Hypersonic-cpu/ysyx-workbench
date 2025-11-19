@@ -269,18 +269,19 @@ class IDU extends Module {
   val funct3 = io.inst(14, 12)
   val funct7 = io.inst(31, 25)
   val rvBase  = opcode(1, 0) === 0b11.U(2.W)
+  val csrid12 = opcode(31, 20)
   assert(rvBase, cf"Inst[1:0] is not 0b11: opcode=${opcode}%x")
 
   val (opName, opValid) = InstOp.safe(opcode(6, 2))
   assert(opValid, cf"Invalid opcode encountered: opcode=${opcode}%x")
   val sysOp = SysOp(funct3(1, 0))
   val isEbreak = 
-    opName === InstOp.System && sysOp === SysOp.ECall && io.inst(20)
+    opName === InstOp.System && ~io.inst(19, 7).orR && csrid12 === 1.U
   val isEcall  = 
-    opName === InstOp.System && sysOp === SysOp.ECall && ~io.inst(20)
+    opName === InstOp.System && ~io.inst(19, 7).orR && csrid12 === 1.U
   val isMret   = 
-    opName === InstOp.System && sysOp === SysOp.ECall && 
-    funct7 === 0b0011000.U && io.inst(21)
+    opName === InstOp.System && ~io.inst(19, 7).orR && csrid12 === 0b_0011000_00010.U
+  printf(cf"temp: Call Brk Ret ${isEcall} ${isEbreak} ${isMret}\n")
   io.ebreak := isEbreak
   io.ecall  := isEcall
 
@@ -297,7 +298,7 @@ class IDU extends Module {
     isEcall -> 0x305.U, 
     isMret  -> 0x341.U
   ))
-  io.csriw  := Mux(isEcall, 0x341.U, immI(11, 0))
+  io.csriw  := Mux(isEcall, 0x341.U, csrid12)
   
   val immU   = io.inst(31, 12) << 12
   val immS   = 
