@@ -334,13 +334,13 @@ class IDU extends Module {
     * We directly pass 0 + src1 to ALU and use ALU result 
     * as csrdt.
     */
-  io.csrWr := Mux(instSys, 
+  io.csrWr := Mux(instCsr, 
     MuxLookup (sysOp, CsrWbOp.None) (Seq(
       SysOp.CsrRC -> CsrWbOp.Clear,
       SysOp.CsrRS -> CsrWbOp.Set,
       SysOp.CsrRW -> CsrWbOp.Write,
-      SysOp.ECall -> Mux(isEcall, CsrWbOp.Write, CsrWbOp.None),
-      )), CsrWbOp.None
+      )),
+    Mux(isEcall, CsrWbOp.Write, CsrWbOp.None)
   )
   io.aluOp := MuxCase (IntAluOp.Add, Seq(
     instArith -> IntAluOp(funct3),
