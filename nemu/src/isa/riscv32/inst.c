@@ -15,6 +15,7 @@
 
 #include "common.h"
 #include "debug.h"
+#include "isa-def.h"
 #include "isa.h"
 #include "local-include/ftrace.h"
 #include "local-include/reg.h"
@@ -348,6 +349,7 @@ static int decode_exec(Decode *s) {
 
   R(0) = 0; // NOTE: reset $zero to 0
 
+  isa_csr_display();
   return 0;
 }
 
