@@ -67,12 +67,14 @@ ccdb::inst_trace() {
     ccdb::frame_trace(pc+4, dst, rd == 0);
   }
 
-  // bool is_csr = 
-  //   comm::bits(inst, 6, 2) == 0b11100 &&
-  //   comm::bits(inst, 14, 12) != 0b000;
-  // if (is_csr) { 
-  //   comm::device_access[comm::PrevCyc] = true; 
-  // }
+  bool is_csr = 
+    comm::bits(inst, 6, 2) == 0b11100 &&
+    comm::bits(inst, 14, 12) != 0b000;
+  uint16_t csrid = comm::bits(inst, 31, 20);
+  bool diff_csrs = (csrid == 0xF11 || csrid == 0xF12);
+  if (is_csr && diff_csrs) { 
+    comm::device_access[comm::PrevCyc] = true; 
+  }
 }
 
 std::list<ccdb::FrameEnt> ccdb::frame_stk {};
