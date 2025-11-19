@@ -71,7 +71,9 @@ ccdb::inst_trace() {
     comm::bits(inst, 6, 2) == 0b11100 &&
     comm::bits(inst, 14, 12) != 0b000;
   uint16_t csrid = comm::bits(inst, 31, 20);
-  bool diff_csrs = (csrid == 0xF11 || csrid == 0xF12);
+  bool diff_csrs = (
+      csrid == 0xB00 || csrid == 0xB80 ||
+      csrid == 0xF11 || csrid == 0xF12);
   if (is_csr && diff_csrs) { 
     comm::device_access[comm::PrevCyc] = true; 
   }
