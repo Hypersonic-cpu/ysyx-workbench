@@ -55,7 +55,7 @@ __am_asm_trap:
   mv a0, sp
   call __am_irq_handle
 
-  ; NOTE: Store-and-Change sp
+  // NOTE: Store-and-Change sp
   STORE sp, OFFSET_SP(sp)
   mv sp, a0
 
