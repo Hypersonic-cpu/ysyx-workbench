@@ -194,7 +194,7 @@ class CsrFile extends Module {
     mcause := 11.U
   }
 
-  printf(cf"CSRDUMP MEPC ${mepc}%x MTVec ${mtvec}%x MCause ${mcause}%x")
+  printf(cf"CSRDUMP MEPC ${mepc}%x MTVec ${mtvec}%x MCause ${mcause}%x\n")
 
   dontTouch(mcycle)
   dontTouch(mcycleh)
@@ -280,7 +280,7 @@ class IDU extends Module {
   val isEbreak = 
     opName === InstOp.System && ~io.inst(19, 7).orR && csrid12 === 1.U
   val isEcall  = 
-    opName === InstOp.System && ~io.inst(19, 7).orR && csrid12 === 1.U
+    opName === InstOp.System && ~io.inst(19, 7).orR && csrid12 === 0.U
   val isMret   = 
     opName === InstOp.System && ~io.inst(19, 7).orR && csrid12 === 0b_0011000_00010.U
   printf(cf"temp: Call Brk Ret ${isEcall} ${isEbreak} ${isMret}\n")
