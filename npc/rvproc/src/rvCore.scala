@@ -339,7 +339,7 @@ class IDU extends Module {
       SysOp.CsrRC -> CsrWbOp.Clear,
       SysOp.CsrRS -> CsrWbOp.Set,
       SysOp.CsrRW -> CsrWbOp.Write,
-      SysOp.ECall -> CsrWbOp.None,
+      SysOp.ECall -> Mux(isEcall, CsrWbOp.Write, CsrWbOp.None),
       )), CsrWbOp.None
   )
   io.aluOp := MuxCase (IntAluOp.Add, Seq(
