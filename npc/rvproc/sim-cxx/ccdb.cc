@@ -21,6 +21,11 @@ ccdb::read_reg(uint8_t regid) {
 }
 
 std::pair<bool, uint32_t>
+ccdb::read_csr(uint8_t fakeid) {
+  return ccdb::_read_verilator_csr(fakeid);
+}
+
+std::pair<bool, uint32_t>
 ccdb::read_mem(uint32_t addr) {
   return dpic::pmem_probe(addr);
 }
@@ -65,7 +70,11 @@ ccdb::inst_trace() {
   bool is_csr = 
     comm::bits(inst, 6, 2) == 0b11100 &&
     comm::bits(inst, 14, 12) != 0b000;
-  if (is_csr) { 
+  uint16_t csrid = comm::bits(inst, 31, 20);
+  bool diff_csrs = (
+      csrid == 0xB00 || csrid == 0xB80 ||
+      csrid == 0xF11 || csrid == 0xF12);
+  if (is_csr && diff_csrs) { 
     comm::device_access[comm::PrevCyc] = true; 
   }
 }
