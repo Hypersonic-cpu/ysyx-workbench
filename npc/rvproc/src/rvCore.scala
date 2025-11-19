@@ -169,7 +169,7 @@ class CsrFile extends Module {
     csrMap.map { case (idx, reg, _) => idx -> reg }
   )
   io.out := csrVal
-  printf(cf"CSR Read ${io.idxr}%x = ${io.out}%x\n")
+  printf(cf"CSR Read ${io.idxr}%x = ${io.out}%x M${io.wrMd}\n")
 
   // Input
   val wbVal = MuxLookup(io.wrMd, 0.U) (Seq(
