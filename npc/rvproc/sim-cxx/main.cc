@@ -28,6 +28,7 @@ void parse_args(int argc, char* argv[]) {
     {"print-inst" , no_argument      , NULL, 'i'},
     {"print-dev"  , no_argument      , NULL, 'd'},
     {"print-frame", no_argument      , NULL, 'f'},
+    {"no-difftest", no_argument      , NULL, 'n'},
     {"log"        , required_argument, NULL, 'l'},
     {"elf"        , required_argument, NULL, 'e'},
     {"help"       , no_argument      , NULL, 'h'},
@@ -42,6 +43,7 @@ void parse_args(int argc, char* argv[]) {
       case 'i': ccdb::runtime_dump_opt.inst_buf  = true; break;
       case 'l': comm::log_wavefile = std::string(optarg); break;
       case 'e': comm::elf_file = optarg; break;
+      case 'n': diff::enable = false; break;
       default:
         std::cerr << ANSI_Red << "Invalid Arguments.\n" << ANSI_None << std::endl;
         exit(1);
@@ -103,23 +105,27 @@ main(int argc, char* argv[]) {
   constexpr size_t MaxCyc{ 30U };
   size_t currCyc{ 1U };
   while (!contextp->gotFinish()) {
-    diff::copy();       // Comes before exec
+    if (diff::enable) { diff::copy(); }       // Comes before exec
+
     ccdb::inst_trace();
     single_cycle(top, contextp);
     if (!comm::log_wavefile.empty()) {
       tfp->dump(contextp->time());
     }
-    diff::iota();       // Comes after exec
-    auto diffvec = diff::match();
-    if (!diffvec.empty()) {
-      for (const auto& [id, ref, dut] : diffvec) {
-        std::cerr << ANSI_Red << "Mismatch reg " << std::dec << (int) id
-          << " (" << comm::RegName.at(id) << ") : " << ANSI_None << "expected "; 
-        comm::sout32(std::cerr) << ref << " got ";
-        comm::sout32(std::cerr) << dut << std::endl;
+
+    if (diff::enable) {
+      diff::iota();       // Comes after exec
+      auto diffvec = diff::match();
+      if (!diffvec.empty()) {
+        for (const auto& [id, ref, dut] : diffvec) {
+          std::cerr << ANSI_Red << "Mismatch reg " << std::dec << (int) id
+            << " (" << comm::RegName.at(id) << ") : " << ANSI_None << "expected "; 
+          comm::sout32(std::cerr) << ref << " got ";
+          comm::sout32(std::cerr) << dut << std::endl;
+        }
+        ccdb::dump_print(ccdb::DumpPrint{ false, true, true, false, false });
+        exit(1);
       }
-      // ccdb::dump_print(ccdb::DumpPrint{ false, true, true, false, false });
-      // exit(1);
     }
     currCyc++;
   }
