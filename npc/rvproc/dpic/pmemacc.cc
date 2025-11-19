@@ -79,6 +79,7 @@ namespace rv_device {
     std::cout << "WRITE SERIAL !! \'" << ch << "\'" << std::endl; 
 #endif
     putchar(ch);
+    fflush(stdout);
   }
 
   inline std::chrono::microseconds 
