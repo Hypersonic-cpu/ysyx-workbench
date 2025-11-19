@@ -63,5 +63,4 @@ bool ienabled() {
 }
 
 void iset(bool enable) {
-  asm volatile ("nop; nop; nop; nop; nop");
 }

@@ -17,6 +17,7 @@ namespace diff {
   mcpy_t ref_memcpy = nullptr;
   rcpy_t ref_regcpy = nullptr;
   intr_t ref_raise_intr = nullptr;
+  bool enable = true;
 }
 
 // NOTE: Must after the NPC memory is initialized.
