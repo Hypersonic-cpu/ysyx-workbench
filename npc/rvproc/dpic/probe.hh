@@ -176,6 +176,8 @@ namespace comm {
     "s0", "s1", "a0", "a1", "a2", "a3", "a4", "a5",
     "pc" 
   };
+
+  extern bool fast;
 }
 
 // NOTE: 这是main用于窥探dpic SV 的namespace.
