@@ -11,6 +11,8 @@ namespace comm {
 
   std::string log_wavefile{ };
   std::string elf_file{ };
+
+  bool fast{ false };
 }
 
 void 

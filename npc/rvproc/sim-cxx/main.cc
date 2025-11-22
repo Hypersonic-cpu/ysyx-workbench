@@ -28,6 +28,7 @@ void parse_args(int argc, char* argv[]) {
     {"print-inst" , no_argument      , NULL, 'i'},
     {"print-dev"  , no_argument      , NULL, 'd'},
     {"print-frame", no_argument      , NULL, 'f'},
+    {"fast-mode"  , no_argument      , NULL, 'F'},
     {"no-difftest", no_argument      , NULL, 'n'},
     {"log"        , required_argument, NULL, 'l'},
     {"elf"        , required_argument, NULL, 'e'},
@@ -35,7 +36,7 @@ void parse_args(int argc, char* argv[]) {
     {0            , 0                , NULL,  0 },
   };
   int o;
-  while ( (o = getopt_long(argc, argv, "-hmidfnl:e:", table, NULL)) != -1) {
+  while ( (o = getopt_long(argc, argv, "-hmidfnTl:e:", table, NULL)) != -1) {
     switch (o) {
       case 'm': ccdb::runtime_dump_opt.mem_buf   = true; break;
       // case 'd': ccdb::runtime_dump_opt. = true; break;
@@ -44,6 +45,7 @@ void parse_args(int argc, char* argv[]) {
       case 'l': comm::log_wavefile = std::string(optarg); break;
       case 'e': comm::elf_file = optarg; break;
       case 'n': diff::enable = false; break;
+      case 'F': comm::fast = true; break;
       default:
         std::cerr << ANSI_Red << "Invalid Arguments.\n" << ANSI_None << std::endl;
         exit(1);
@@ -85,7 +87,9 @@ main(int argc, char* argv[]) {
 
   const std::unique_ptr<VerilatedContext> contextp { new VerilatedContext };
 
-  Verilated::traceEverOn(true);
+  if (!comm::log_wavefile.empty()) {
+    Verilated::traceEverOn(true);
+  }
   VerilatedFstC* tfp = new VerilatedFstC;
 
   const std::unique_ptr<TOP_NAME> top{new TOP_NAME{contextp.get(), "TOP"}};
@@ -98,7 +102,7 @@ main(int argc, char* argv[]) {
     tfp->open(comm::log_wavefile.c_str());
   }
 
-  ccdb::trace_init();
+  if (!comm::fast) { ccdb::trace_init(); }
   single_reset(top, contextp);
 
   if (diff::enable) { diff::init(); }
@@ -108,7 +112,7 @@ main(int argc, char* argv[]) {
   while (!contextp->gotFinish()) {
     if (diff::enable) { diff::copy(); }       // Comes before exec
 
-    ccdb::inst_trace();
+    if (!comm::fast) { ccdb::inst_trace(); }
     single_cycle(top, contextp);
     if (!comm::log_wavefile.empty()) {
       tfp->dump(contextp->time());
