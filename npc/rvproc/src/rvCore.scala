@@ -37,9 +37,6 @@ class rvCore() extends Module {
   val lss = Module(new MemoryStage)
   val wbs = Module(new WrBackStage)
   val reg = Module(new RegFile)
-  // wbs.io.toReg := DontCare
-  // ids.io.toReg := DontCare
-  // ids.io.fromReg := DontCare
 
   BusConnect(ifs.io.out, ids.io.in)
   BusConnect(ids.io.out, exs.io.in)
