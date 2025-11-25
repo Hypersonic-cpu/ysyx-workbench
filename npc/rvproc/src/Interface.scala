@@ -107,7 +107,7 @@ class DecodeToExecute extends Bundle {
   val imm    = Tp.RegType()
   val aluOp  = AluOp()
   val aluSel = new AluSel()
-  val brJmp  = Bool()
+  val brJmp  = new BrJmp()
   val memOp  = new MemOp()
 
   val foward = new DecodeFoward()
