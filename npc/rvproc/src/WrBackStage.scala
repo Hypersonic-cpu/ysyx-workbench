@@ -18,7 +18,7 @@ class WBU extends Module {
     val gprdt  = Output(Tp.RegType())
   })
 
-  val snpc = io.pc + 4.U
+  val snpc = io.pc + 8.U
   val dnpc = io.aluV(31, 1) ## 0.U(1.W) 
   io.nxpc := MuxCase(snpc, Seq(
     io.takeBr -> dnpc,
