@@ -63,4 +63,5 @@ class WrBackStage extends Module {
   ioreg.csrw     := iols.aluOut
   ioreg.gpre     := iofw.gprWE
   ioreg.gprw     := iWbu.io.gprdt
+  ioreg.rd       := iofw.rd
 }
