@@ -32,16 +32,17 @@ class rvCore() extends Module {
   })
 
   val ifs = Module(new FetchStage)
+  val ids = Module(new DecodeStage)
   ifs.io.in := DontCare
-  ifs.io.out := DontCare
-  dontTouch(ifs.io.out)
-  // val ids = Module(new DecodeStage)
+  ids.io.out := DontCare
+  ids.io.toReg := DontCare
+  ids.io.fromReg := DontCare
   // val exs = Module(new ExecuteStage)
   // val lss = Module(new MemoryStage)
   // val wbs = Module(new WrBackStage)
   // val reg = Module(new RegFile)
 
-  // BusConnect(ifs.io.out, ids.io.in)
+  BusConnect(ifs.io.out, ids.io.in)
   // BusConnect(ids.io.out, exs.io.in)
   // BusConnect(exs.io.out, lss.io.in)
   // BusConnect(lss.io.out, wbs.io.in)
@@ -50,6 +51,12 @@ class rvCore() extends Module {
   // BusConnect(ids.io.toReg, reg.io.fromId, BusType.SingleCyc)
   // BusConnect(reg.io.toId, ids.io.fromReg, BusType.SingleCyc)
   // BusConnect(wbs.io.toReg, reg.io.fromWb, BusType.SingleCyc)
+  //
+  dontTouch(ifs.io.out)
+  // dontTouch(ifs.io.out)
+  // dontTouch(ifs.io.out)
+  // dontTouch(ifs.io.out)
+  // dontTouch(ifs.io.out)
 }
 
 class rvCoreWrapper() extends Module {
