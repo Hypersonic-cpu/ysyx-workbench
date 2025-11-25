@@ -50,7 +50,7 @@ class EXU extends Module {
   val src2 = Mux(flip2, ~raw2, raw2)
 
   printf(
-    cf"\tsrc1 Rsel${~io.sel.rs1SelPC} Inv${io.sel.rs1Invert} = ${src1}%x, : src2 Rsel${~io.sel.rs2SelImm} Inv${io.sel.rs2Invert} = ${src2}%x : Imm = ${io.imm}%x\n")
+    cf"[ ${io.pc}%x EX ] src1 Rsel${~io.sel.rs1SelPC} Inv${io.sel.rs1Invert} = ${src1}%x, : src2 Rsel${~io.sel.rs2SelImm} Inv${io.sel.rs2Invert} = ${src2}%x : Imm = ${io.imm}%x\n")
 
   // Compute Add for op = Sltu, Slt
   // Since B-Type uses address
