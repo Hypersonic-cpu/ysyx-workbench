@@ -50,6 +50,8 @@ class IDU extends Module {
     val csrir  = Output(Tp.CsrIdxType())
   })
 
+  printf(cf"[ ID ] ${instTp} rs1 ${io.rs1} rs2 ${io.rs2} rd ${io.rd}\n")
+
   val opcode = io.inst(6, 0)
   val funct3 = io.inst(14, 12)
   val funct7 = io.inst(31, 25)
@@ -182,7 +184,6 @@ class IDU extends Module {
     (opName === InstOp.Load) -> WbSel.fromMem
   ))
 
-  printf(cf"IDU ${instTp} rs1 ${io.rs1} rs2 ${io.rs2} rd ${io.rd}\n")
   // printf(cf"\trs1 ${io.rs1}%d, rs2 ${io.rs2}%d, imm ${io.imm}%x\n");
 }
 
