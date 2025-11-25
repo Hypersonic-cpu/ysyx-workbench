@@ -173,7 +173,6 @@ class IDU extends Module {
   val uncondJmp = 
     (opName === InstOp.Jalr) || (opName === InstOp.Jal)
 
-  val instBr = instTp === ITYPE.tB
   io.brJmp.bIfeq   := (instBr && (funct3 === 0b000.U)) || uncondJmp
   io.brJmp.bIfne   := (instBr && (funct3 === 0b001.U)) || uncondJmp
   io.brJmp.bIflt   := instBr && ((funct3 & 0b101.U) === 0b100.U)
