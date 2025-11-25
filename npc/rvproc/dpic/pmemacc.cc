@@ -195,5 +195,6 @@ dpic::pmem_probe(uint32_t addr) {
   if (valid) {
     ret = pmem_raw[aln_idx];
   }
+  comm::v_warn(valid, "invalid probe at memory", std::hex, addr);
   return std::make_pair(valid, ret);
 }
