@@ -6,7 +6,6 @@ import chisel3.assert.Assert
 
 class WrBackToFetch extends Bundle {
   val npc    = Tp.RegType()
-  val takeBr = Bool()
 }
 
 class FetchToDecode extends Bundle {
