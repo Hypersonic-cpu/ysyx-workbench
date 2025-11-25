@@ -134,7 +134,8 @@ class IDU extends Module {
     instArith && (aluOp === AluOp.Slt || aluOp === AluOp.Sltu)
 
   io.aluSel.rs1SelPC  :=
-    (opName === InstOp.Auipc) || (opName === InstOp.Jal) || (isEcall)
+    (opName === InstOp.Auipc) || (opName === InstOp.Jal) || 
+    isEcall || instBr
   io.aluSel.rs2Invert :=
     ((opName === InstOp.OpReg) && funct7(5).asBool) ||
     (instArith && (io.aluOp === AluOp.Srr) && funct7(5).asBool)
@@ -143,8 +144,9 @@ class IDU extends Module {
   io.aluSel.saveCmp := instSlt
   io.aluSel.rs2SelImm := ~(
     // instTp === ITYPE.tN ||
-    instTp === ITYPE.tR ||
-    instTp === ITYPE.tB
+    instTp === ITYPE.tR 
+    // ||
+    // instTp === ITYPE.tB
   ) || (isEcall)
 
   // NOTE: imm is always sign-extended
