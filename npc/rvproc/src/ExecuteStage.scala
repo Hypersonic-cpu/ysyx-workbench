@@ -93,6 +93,7 @@ class ExecuteStage extends Module {
   iInt.io.clock := clock
   iInt.io.reset := reset
   iInt.io.a0in  := ioid.rs1V
+  iInt.io.pcin  := ioid.foward.pc
   iInt.io.isEbreak := ioid.foward.ebreak
   iInt.io.isEcall  := ioid.foward.ecall 
 
