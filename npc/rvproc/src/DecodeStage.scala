@@ -39,7 +39,7 @@ class IDU extends Module {
     val memAcc = Output(new MemOp)
     val aluOp  = Output(AluOp())
     val aluSel = Output(new AluSel)
-    val pcJmp  = Output(new BrJmp)
+    val brJmp  = Output(new BrJmp)
     val wbSel  = Output(WbSel())
     val ebreak = Output(Bool())
     val ecall  = Output(Bool())
@@ -168,11 +168,11 @@ class IDU extends Module {
   val uncondJmp = 
     (opName === InstOp.Jalr) || (opName === InstOp.Jal)
 
-  io.pcJmp.bIfeq   := funct3 === 0b000.U || uncondJmp
-  io.pcJmp.bIfne   := funct3 === 0b001.U || uncondJmp
-  io.pcJmp.bIflt   := (funct3 & 0b101.U) === 0b100.U
-  io.pcJmp.bIfge   := (funct3 & 0b101.U) === 0b101.U
-  // io.pcJmp.jToCsr  := isEcall || isMret
+  io.brJmp.bIfeq   := funct3 === 0b000.U || uncondJmp
+  io.brJmp.bIfne   := funct3 === 0b001.U || uncondJmp
+  io.brJmp.bIflt   := (funct3 & 0b101.U) === 0b100.U
+  io.brJmp.bIfge   := (funct3 & 0b101.U) === 0b101.U
+  // io.brJmp.jToCsr  := isEcall || isMret
 
   io.wbSel := MuxCase(WbSel.fromAlu, Seq(
     instCsr -> WbSel.fromCsr,
@@ -227,10 +227,10 @@ class DecodeStage extends Module {
   ioex.aluOp  := iDec.io.aluOp
   ioex.aluSel := iDec.io.aluSel
   ioex.memOp  := iDec.io.memAcc
-  ioex.pcJmp  := iDec.io.pcJmp
+  ioex.brJmp  := iDec.io.brJmp
 
   iofw.rd     := iDec.io.rd
-  iofw.csrw   := iDec.io.csriw
+  iofw.csrVal := iDec.io.csriw
   iofw.gprWE  := iDec.io.gprWE
   iofw.csrWE  := iDec.io.csrWE
   iofw.wbSel  := iDec.io.wbSel
