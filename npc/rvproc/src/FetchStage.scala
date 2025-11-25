@@ -13,12 +13,12 @@ class FetchStage extends Module {
   })
 
   // wait for NEXT stage
-  val idle :: wait :: Nil = Enum(2)
+  val idle :: hold :: Nil = Enum(2)
   val state = RegInit(idle)
   state := MuxLookup(state, idle) (Seq(
     // Transferred and reset
-    wait -> Mux(io.out.ready, idle, wait),
-    idle -> Mux(io.in.valid , wait, idle)
+    hold -> Mux(io.out.ready, idle, hold),
+    idle -> Mux(io.in.valid , hold, idle)
   ))
   io.in.ready  := true.B
   io.out.valid := true.B
