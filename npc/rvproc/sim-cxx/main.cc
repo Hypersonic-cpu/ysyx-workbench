@@ -61,10 +61,6 @@ single_cycle(
   context->timeInc(1);
   top->clock = 1;
   top->eval();
-
-  comm::sout32(std::cerr) << top->rootp->
-        rvCore__DOT__ifs__DOT__pc << "  <<== PC" << std::endl;
-
   top->clock = 0;
   top->eval();
 }
@@ -114,6 +110,10 @@ main(int argc, char* argv[]) {
   constexpr size_t MaxCyc{ 30U };
   size_t currCyc{ 1U };
   while (!contextp->gotFinish() && currCyc < 10) {
+
+  comm::sout32(std::cerr) << top->rootp->
+        rvCore__DOT__ifs__DOT__pc << "  <<== PC" << std::endl;
+
     if (diff::enable) { diff::copy(); }       // Comes before exec
 
     if (!comm::fast) { ccdb::inst_trace(); }
