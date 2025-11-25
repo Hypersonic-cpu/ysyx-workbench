@@ -61,6 +61,10 @@ single_cycle(
   context->timeInc(1);
   top->clock = 1;
   top->eval();
+
+  comm::sout32(std::cerr) << top->rootp->
+        rvCore__DOT__ifs__DOT__pc << "  <<== PC" << std::endl;
+
   top->clock = 0;
   top->eval();
 }
