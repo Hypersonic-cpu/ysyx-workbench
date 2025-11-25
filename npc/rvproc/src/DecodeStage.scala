@@ -188,15 +188,15 @@ class IDU extends Module {
 
 class DecodeStage extends Module {
   val io = IO(new Bundle{
-    val in  = Decoupled(new FetchToDecode())
-    val out = Flipped(Decoupled(new DecodeToExecute))
+    val in  = Flipped(Decoupled(new FetchToDecode))
+    val out = Decoupled(new DecodeToExecute)
     // always_comb
-    val toReg   = Decoupled(new RegFromIDU())
     val fromReg = Flipped(Decoupled(new RegToIDU()))
+    val toReg   = Decoupled(new RegFromIDU())
   })
 
   // wait for NEXT stage
-  val idle :: hold :: Nil = Enum(2)
+  // val idle :: hold :: Nil = Enum(2)
   // TODO:
   io.in.ready  := true.B
   io.out.valid := true.B
