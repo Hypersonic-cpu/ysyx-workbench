@@ -108,7 +108,7 @@ main(int argc, char* argv[]) {
 
   constexpr size_t MaxCyc{ 30U };
   size_t currCyc{ 1U };
-  while (!contextp->gotFinish() && currCyc < MaxCyc) {
+  while (!contextp->gotFinish()) {
 
   comm::sout32(std::cerr) << top->rootp->
         rvCore__DOT__ifs__DOT__pc << "  <<== PC" << std::endl;
