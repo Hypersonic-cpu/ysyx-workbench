@@ -110,8 +110,8 @@ main(int argc, char* argv[]) {
   size_t currCyc{ 1U };
   while (!contextp->gotFinish()) {
 
-  comm::sout32(std::cerr) << top->rootp->
-        rvCore__DOT__ifs__DOT__pc << "  <<== PC" << std::endl;
+  // comm::sout32(std::cerr) << top->rootp->
+  //       rvCore__DOT__ifs__DOT__pc << "  <<== PC" << std::endl;
 
     if (diff::enable) { diff::copy(); }       // Comes before exec
 
