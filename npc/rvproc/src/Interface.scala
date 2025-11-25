@@ -54,6 +54,7 @@ class AluSel extends Bundle {
   val rs1Invert = Bool()
   // NOTE: True if cmp result saved to reg
   val saveCmp   = Bool()
+  val cmpImm    = Bool()
 }
 
 class BrCmp extends Bundle {
