@@ -32,7 +32,8 @@ ccdb::read_mem(uint32_t addr) {
 
 void 
 ccdb::inst_trace() {
-  auto pc = read_reg(comm::RegNum).second;
+  auto [w, pc] = read_reg(comm::RegNum);
+  assert(w && "ccdb pc read fail");
   auto [v, inst] = ccdb::read_mem(pc);
   assert(v && "ccdb inst read fail");
 
