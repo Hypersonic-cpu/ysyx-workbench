@@ -111,9 +111,9 @@ main(int argc, char* argv[]) {
 
   if (diff::enable) { diff::init(); }
 
-  // constexpr size_t MaxCyc{ 30U };
+  constexpr size_t MaxCyc{ 30U };
   size_t currCyc{ 1U };
-  while (!contextp->gotFinish()) {
+  while (!contextp->gotFinish() && currCyc < 10) {
     if (diff::enable) { diff::copy(); }       // Comes before exec
 
     // if (!comm::fast) { ccdb::inst_trace(); }
