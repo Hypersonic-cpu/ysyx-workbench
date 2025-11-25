@@ -89,7 +89,7 @@ object WbSel extends ChiselEnum {
 }
 
 class DecodeFoward extends Bundle {
-  val wbSel  = Bool()
+  val wbSel  = WbSel()
   val rd     = Tp.RegIdxType()
   val gprWE  = Bool()
   // val csrw   = Tp.CsrIdxType()
