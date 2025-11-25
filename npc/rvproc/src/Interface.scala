@@ -26,11 +26,13 @@ class RegToIDU extends Bundle {
 }
 
 class RegFromWBU extends Bundle {
-  val rd   = Tp.RegIdxType()
-  val gpre = Bool()
-  val gprw = Tp.RegType()
-  val csre = Bool()
-  val csrw = Tp.CsrIdxType()
+  val gprRd = Tp.RegIdxType()
+  val gprWE = Bool()
+  val gprIn = Tp.RegType()
+
+  val csrRd = Tp.CsrIdxType()
+  val csrWE = Bool()
+  val csrIn = Tp.RegType()
 }
 
 object AluOp extends ChiselEnum {
@@ -89,9 +91,9 @@ object WbSel extends ChiselEnum {
 
 class DecodeFoward extends Bundle {
   val wbSel  = WbSel()
-  val rd     = Tp.RegIdxType()
+  val gprRd  = Tp.RegIdxType()
   val gprWE  = Bool()
-  // val csrw   = Tp.CsrIdxType()
+  val csrRd  = Tp.CsrIdxType()
   val csrWE  = Bool()
   // val wbMode = Bool()
   val ebreak = Bool()
