@@ -36,10 +36,10 @@ class rvCore() extends Module {
   val exs = Module(new ExecuteStage)
   val lss = Module(new MemoryStage)
   val wbs = Module(new WrBackStage)
-  // val reg = Module(new RegFile)
-  wbs.io.toReg := DontCare
-  ids.io.toReg := DontCare
-  ids.io.fromReg := DontCare
+  val reg = Module(new RegFile)
+  // wbs.io.toReg := DontCare
+  // ids.io.toReg := DontCare
+  // ids.io.fromReg := DontCare
 
   BusConnect(ifs.io.out, ids.io.in)
   BusConnect(ids.io.out, exs.io.in)
@@ -47,16 +47,16 @@ class rvCore() extends Module {
   BusConnect(lss.io.out, wbs.io.in)
   BusConnect(wbs.io.out, ifs.io.in)
   // always_comb
-  // BusConnect(ids.io.toReg, reg.io.fromId, BusType.SingleCyc)
-  // BusConnect(reg.io.toId, ids.io.fromReg, BusType.SingleCyc)
-  // BusConnect(wbs.io.toReg, reg.io.fromWb, BusType.SingleCyc)
-  //
-  dontTouch(ifs.io.out)
-  dontTouch(ids.io.out)
-  dontTouch(exs.io.out)
-  dontTouch(lss.io.out)
-  dontTouch(wbs.io.out)
-  // dontTouch(reg.io)
+  BusConnect(ids.io.toReg, reg.io.fromId, BusType.SingleCyc)
+  BusConnect(reg.io.toId, ids.io.fromReg, BusType.SingleCyc)
+  BusConnect(wbs.io.toReg, reg.io.fromWb, BusType.SingleCyc)
+  
+  dontTouch(ifs.io)
+  dontTouch(ids.io)
+  dontTouch(exs.io)
+  dontTouch(lss.io)
+  dontTouch(wbs.io)
+  dontTouch(reg.io)
 }
 
 class rvCoreWrapper() extends Module {
