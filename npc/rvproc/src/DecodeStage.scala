@@ -58,7 +58,7 @@ class IDU extends Module {
   val csrid12 = io.inst(31, 20)
 
   val (opName, opValid) = InstOp.safe(opcode(6, 2))
-  printf(cf"[ ${io.pc}%x ID ]${opName} rs1 ${io.rs1} rs2 ${io.rs2} rd ${io.rd}\n")
+  printf(cf"[ ${io.pc}%x ID ] ${opName} rs1 ${io.rs1} rs2 ${io.rs2} rd ${io.rd}\n")
 
   assert(rvBase, cf"Inst[1:0] is not 0b11: opcode=${opcode}%x")
   assert(opValid, cf"Invalid opcode encountered: opcode=${opcode}%x")
@@ -137,8 +137,7 @@ class IDU extends Module {
     (opName === InstOp.Auipc) || (opName === InstOp.Jal) || (isEcall)
   io.aluSel.rs2Invert :=
     ((opName === InstOp.OpReg) && funct7(5).asBool) ||
-    ((io.aluOp === AluOp.Srr) && funct7(5).asBool) ||
-    instSlt || instBr
+    (instArith && (io.aluOp === AluOp.Srr) && funct7(5).asBool)
   io.aluSel.rs1Invert := false.B // FIXME:
 
   io.aluSel.saveCmp := instSlt
