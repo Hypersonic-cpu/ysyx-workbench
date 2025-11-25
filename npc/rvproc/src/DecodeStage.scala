@@ -135,6 +135,7 @@ class IDU extends Module {
     ((opName === InstOp.OpReg) && funct7(5).asBool) ||
     ((io.aluOp === AluOp.Srr) && funct7(5).asBool) ||
     instSlt || instBr
+  io.aluSel.rs1Invert := false.B // FIXME:
 
   io.aluSel.saveCmp := instSlt
   io.aluSel.rs2SelImm := ~(
@@ -236,6 +237,7 @@ class DecodeStage extends Module {
   iofw.wbSel  := iDec.io.wbSel
   iofw.ebreak := iDec.io.ebreak
   iofw.ecall  := iDec.io.ecall
+  iofw.pc     := ioif.pc
 
   ioex.rs1V   := rs1Val
   ioex.rs2V   := rs2Val
