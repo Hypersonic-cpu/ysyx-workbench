@@ -25,7 +25,7 @@ class EXU extends Module {
   val cmpu = io.op === AluOp.Sltu
 
   val cmp1s = io.rs1V
-  val cmp2s = ~io.rs2V
+  val cmp2s = ~Mux(io.sel.cmpImm, io.imm, io.rs2V)
   val cmpSum = 1.U + cmp1s.UExt() + cmp2s.UExt()
   val cmpOF = (
     ~(cmp1s.MSB() ^ cmp2s.MSB())) & 

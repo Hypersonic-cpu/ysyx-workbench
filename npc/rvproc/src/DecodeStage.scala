@@ -133,6 +133,7 @@ class IDU extends Module {
   val instSlt = 
     instArith && (aluOp === AluOp.Slt || aluOp === AluOp.Sltu)
 
+  io.aluSel.cmpImm    := instSlt && (instTp === ITYPE.tI)
   io.aluSel.rs1SelPC  :=
     (opName === InstOp.Auipc) || (opName === InstOp.Jal) || 
     isEcall || instBr
