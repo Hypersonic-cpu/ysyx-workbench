@@ -25,7 +25,7 @@ class WBU extends Module {
     // io.jToCsr -> io.csrV
   ))
 
-  printf(cf"[ ${iofw.pc}%x WB ] dnpc ${io.nxpc}%x br${io.takeBr}\n")
+  printf(cf"[ ${io.pc}%x WB ] dnpc ${io.nxpc}%x br${io.takeBr}\n")
 
     // Mux(jmp, dnpc, snpc)
   io.gprdt := MuxLookup(io.wbSel, 0.U) (Seq(
