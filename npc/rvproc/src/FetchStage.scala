@@ -43,5 +43,5 @@ class FetchStage extends Module {
   ioid.pc   := pc
   ioid.inst := iMem.io.loadRaw
 
-  printf(cf"[ IF ] pc ${pc}%x inst ${ioid.inst}%x\n")
+  printf(cf"[ ${pc}%x IF ] inst ${ioid.inst}%x\n")
 }
