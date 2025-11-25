@@ -1,0 +1,136 @@
+package rvproc
+
+import chisel3._
+import chisel3.util._
+import chisel3.assert.Assert
+
+class CsrFile extends Module {
+  val io = IO(new Bundle {
+    // val ecall = Input(Bool())
+    val idxr  = Input(Tp.CsrIdxType())
+    val idxw  = Input(Tp.CsrIdxType())
+    val wrEn  = Input(Bool())
+    val data  = Input(Tp.RegType())
+    val out   = Output(Tp.RegType())
+  })
+
+  val mcycle  = RegInit(0.U(ISA.RegBits.W))
+  val mcycleh = RegInit(0.U(ISA.RegBits.W))
+  mcycleh := Mux(mcycle.andR, mcycleh + 1.U, mcycleh)
+  mcycle  := mcycle + 1.U
+
+  val mvendorid = RegInit(0x79737978L.U)
+  val marchid   = RegInit(2510_0264.U)
+
+  val mstatus   = RegInit(0x1800.U(ISA.RegBits.W))
+  val mepc      = RegInit(0.U(ISA.RegBits.W))
+  val mcause    = RegInit(11.U(ISA.RegBits.W))
+  val mtvec     = RegInit(0.U(ISA.RegBits.W))
+
+  // case(Index, Reg, Writable)
+  val csrMap = Seq[(UInt, UInt, Boolean)] (
+    (0x300.U, mstatus,   true),
+    (0x305.U, mtvec,     true),
+    (0x341.U, mepc,      true),
+    (0x342.U, mcause,    true), // Handled by when block
+
+    (0xB00.U, mcycle,    false),
+    (0xB80.U, mcycleh,   false),
+    (0xF11.U, mvendorid, false),
+    (0xF12.U, marchid,   false)
+  )
+
+  // Output
+  val csrVal = MuxLookup(io.idxr, 0xBadC0DE.U) (
+    csrMap.map { case (idx, reg, _) => idx -> reg }
+  )
+  io.out := csrVal
+  printf(cf"CSR Read ${io.idxr}%x = ${io.out}%x M${io.wrEn}\n")
+
+  // Input
+  when (io.wrEn) {
+    csrMap.foreach{ 
+      case (idx, reg, writeable) => {
+        if (writeable) {
+          when (io.idxw === idx) {
+            reg := io.data
+          }
+        }
+      }
+    }
+  }
+
+  // when (io.ecall) {
+  //   mcause := 11.U
+  // }
+  //
+  dontTouch(mcycle)
+  dontTouch(mcycleh)
+  dontTouch(mvendorid)
+  dontTouch(marchid)
+  dontTouch(mepc)
+  dontTouch(mtvec)
+  dontTouch(mstatus)
+  dontTouch(mcause)
+}
+
+class GprFile extends Module {
+  val io = IO(new Bundle {
+    val rs1  = Input(Tp.RegIdxType())
+    val rs2  = Input(Tp.RegIdxType())
+    val rd   = Input(Tp.RegIdxType())
+    val data = Input(Tp.RegType())
+    val wrEn = Input(Bool())
+    val rs1V = Output(Tp.RegType())
+    val rs2V = Output(Tp.RegType())
+  })
+
+  val gprs = Reg(Vec(ISA.RegNum, Tp.RegType()))
+
+  when (io.wrEn && io.rd.orR) {
+    gprs(io.rd) := io.data
+  }
+
+  val gpr1V = Mux(io.rs1.orR, gprs(io.rs1), 0.U)
+  val gpr2V = Mux(io.rs2.orR, gprs(io.rs2), 0.U)
+
+  io.rs1V := gpr1V 
+  io.rs2V := gpr2V
+  printf(cf"<<REG>> R[${io.rs1}] = ${io.rs1V}%x\n")
+  printf(cf"<<REG>> R[${io.rs2}] = ${io.rs2V}%x\n")
+  printf(cf"<<REG>> R[${io.rd}] <- ${io.data}%x\n")
+}
+
+class RegFile extends Module {
+  val io = IO(new Bundle{
+    val fromWb = Flipped(Decoupled(new RegFromWBU))
+    val fromId = Flipped(Decoupled(new RegFromIDU))
+    val toId   = Decoupled(new RegToIDU)
+  })
+  
+  io.toId.valid   := true.B
+  io.fromId.ready := false.B
+  io.fromWb.ready := false.B
+
+  val gpr = Module(new GprFile)
+  val csr = Module(new CsrFile)
+
+  val ioid = io.fromId.bits
+  val iowb = io.fromWb.bits
+  val out  = io.toId.bits
+  val wbValid = io.fromWb.valid
+
+  gpr.io.rs1 := ioid.rs1
+  gpr.io.rs2 := ioid.rs2
+  gpr.io.rd  := iowb.gprRd
+  gpr.io.data := iowb.gprIn
+  gpr.io.wrEn := iowb.gprWE && wbValid
+  out.rs1Val  := gpr.io.rs1V
+  out.rs2Val  := gpr.io.rs2V
+
+  csr.io.idxr := ioid.csrr
+  csr.io.idxw := iowb.csrRd
+  csr.io.wrEn := iowb.csrWE && wbValid
+  csr.io.data := iowb.csrIn
+  out.csrVal := csr.io.out
+}

@@ -76,7 +76,6 @@ single_reset(
     single_cycle(top, context);
   }
   top->reset = 0;
-  single_cycle(top, context);
 }
 
 ccdb::ptop_t ccdb::top = nullptr;
