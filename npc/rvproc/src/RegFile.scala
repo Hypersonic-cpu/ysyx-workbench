@@ -6,7 +6,7 @@ import chisel3.assert.Assert
 
 class CsrFile extends Module {
   val io = IO(new Bundle {
-    val ecall = Input(Bool())
+    // val ecall = Input(Bool())
     val idxr  = Input(Tp.CsrIdxType())
     val idxw  = Input(Tp.CsrIdxType())
     val wrEn  = Input(Bool())
@@ -24,7 +24,7 @@ class CsrFile extends Module {
 
   val mstatus   = RegInit(0x1800.U(ISA.RegBits.W))
   val mepc      = RegInit(0.U(ISA.RegBits.W))
-  val mcause    = RegInit(0.U(ISA.RegBits.W))
+  val mcause    = RegInit(11.U(ISA.RegBits.W))
   val mtvec     = RegInit(0.U(ISA.RegBits.W))
 
   // case(Index, Reg, Writable)
@@ -60,9 +60,9 @@ class CsrFile extends Module {
     }
   }
 
-  when (io.ecall) {
-    mcause := 11.U
-  }
+  // when (io.ecall) {
+  //   mcause := 11.U
+  // }
 
   dontTouch(mcycle)
   dontTouch(mcycleh)
@@ -122,14 +122,15 @@ class RegFile extends Module {
 
   gpr.io.rs1 := ioid.rs1
   gpr.io.rs2 := ioid.rs2
-  gpr.io.rd  := iowb.rd
-  gpr.io.data := iowb.gprw
-  gpr.io.wrEn := iowb.gpre && wbValid
-  out.rs1Val := gpr.io.rs1V
-  out.rs2Val := gpr.io.rs2V
+  gpr.io.rd  := iowb.gprRd
+  gpr.io.data := iowb.gprIn
+  gpr.io.wrEn := iowb.gprWE && wbValid
+  out.rs1Val  := gpr.io.rs1V
+  out.rs2Val  := gpr.io.rs2V
 
   csr.io.idxr := ioid.csrr
-  csr.io.idxw := iowb.csrw
-  csr.io.wrEn := iowb.csre && wbValid
+  csr.io.idxw := iowb.csrRd
+  csr.io.wrEn := iowb.csrWE && wbValid
+  csr.io.data := iowb.csrIn
   out.csrVal := csr.io.out
 }

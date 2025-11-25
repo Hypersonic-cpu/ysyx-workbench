@@ -230,8 +230,8 @@ class DecodeStage extends Module {
   ioex.memOp  := iDec.io.memAcc
   ioex.brJmp  := iDec.io.brJmp
 
-  iofw.rd     := iDec.io.rd
-  iofw.csrVal := iDec.io.csriw
+  iofw.gprRd  := iDec.io.rd
+  iofw.csrRd  := iDec.io.csriw
   iofw.gprWE  := iDec.io.gprWE
   iofw.csrWE  := iDec.io.csrWE
   iofw.wbSel  := iDec.io.wbSel
