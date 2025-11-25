@@ -33,7 +33,7 @@ class rvCore() extends Module {
 
   val ifs = Module(new FetchStage)
   val ids = Module(new DecodeStage)
-  ids.io.in := DontCare
+  ifs.io.in := DontCare
   ids.io.out := DontCare
   ids.io.toReg := DontCare
   ids.io.fromReg := DontCare
