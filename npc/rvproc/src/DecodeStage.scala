@@ -50,17 +50,19 @@ class IDU extends Module {
     val csrir  = Output(Tp.CsrIdxType())
   })
 
-  printf(cf"[ ID ] ${instTp} rs1 ${io.rs1} rs2 ${io.rs2} rd ${io.rd}\n")
 
   val opcode = io.inst(6, 0)
   val funct3 = io.inst(14, 12)
   val funct7 = io.inst(31, 25)
   val rvBase  = opcode(1, 0) === 0b11.U(2.W)
   val csrid12 = io.inst(31, 20)
-  assert(rvBase, cf"Inst[1:0] is not 0b11: opcode=${opcode}%x")
 
   val (opName, opValid) = InstOp.safe(opcode(6, 2))
+  printf(cf"[ ID ] ${opName} rs1 ${io.rs1} rs2 ${io.rs2} rd ${io.rd}\n")
+
+  assert(rvBase, cf"Inst[1:0] is not 0b11: opcode=${opcode}%x")
   assert(opValid, cf"Invalid opcode encountered: opcode=${opcode}%x")
+
   val sysOp = SysOp(funct3(1, 0))
   val sysRel = opName === InstOp.System && ~io.inst(19, 7).orR
   val isEbreak = sysRel && csrid12 === 1.U
