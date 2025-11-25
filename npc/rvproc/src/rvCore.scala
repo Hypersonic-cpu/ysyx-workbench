@@ -6,7 +6,6 @@ import chisel3.assert.Assert
 // import chisel3.util.experimental.loadMemoryFromFileInline
 // import firrtl.annotations.MemoryLoadFileType
 
-
 object BitMath {
   implicit class UIntSignExtender(val i: UInt) extends AnyVal {
     def SExt(width: Int = ISA.RegBits): UInt = {
