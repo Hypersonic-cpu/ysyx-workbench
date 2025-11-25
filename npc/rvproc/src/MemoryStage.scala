@@ -67,5 +67,5 @@ class MemoryStage extends Module {
   iowb.takeBr  := ioex.takeBr
   iowb.foward  <> ioex.foward
 
-  printf(cf"[ ${ioex.foawrd.pc} LS ]\n")
+  printf(cf"[ ${ioex.foward.pc} LS ]\n")
 }
