@@ -196,7 +196,7 @@ class DecodeStage extends Module {
   })
 
   // wait for NEXT stage
-  val idle :: wait :: Nil = Enum(2)
+  val idle :: hold :: Nil = Enum(2)
   // TODO:
   io.in.ready  := true.B
   io.out.valid := true.B
