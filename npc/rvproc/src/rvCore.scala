@@ -39,7 +39,7 @@ class rvCore() extends Module {
   // val reg = Module(new RegFile)
   wbs.io.in := DontCare
   wbs.io.toReg := DontCare
-  ids.io.out := DontCare
+  // ids.io.out := DontCare
   ids.io.toReg := DontCare
   ids.io.fromReg := DontCare
 
