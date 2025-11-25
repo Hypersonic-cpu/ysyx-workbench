@@ -1,13 +1,11 @@
 module PMemBox(
   input clock,
   input reset,
-  input [31:0] pcin,
   input [31:0] addr,
   input [31:0] data,
   input [7:0]  byteMask,
   input memEn,
   input wrEn,
-  output[31:0] instRaw,
   output[31:0] loadRaw
   );
 
@@ -42,6 +40,5 @@ module PMemBox(
     end
   end
 
-  assign instRaw = pmem_read(pcin);
   assign loadRaw = rdata;
 endmodule
