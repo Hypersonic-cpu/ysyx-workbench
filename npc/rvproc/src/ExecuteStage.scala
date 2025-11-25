@@ -89,6 +89,13 @@ class ExecuteStage extends Module {
   io.in.ready  := true.B
   io.out.valid := true.B
 
+  val iInt = Module(new EcallBox)
+  iInt.io.clock := clock
+  iInt.io.reset := reset
+  iInt.io.a0in  := ioid.rs1V
+  iInt.io.isEbreak := ioid.foward.ebreak
+  iInt.io.isEcall  := ioid.foward.ecall 
+
   val iExe = Module(new EXU)
   val ioid = io.in.bits
   val iols = io.out.bits
