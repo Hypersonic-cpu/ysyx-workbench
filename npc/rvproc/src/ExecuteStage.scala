@@ -42,16 +42,15 @@ class EXU extends Module {
   // io.brCmp.blt := cmpLT
   // io.brCmp.beq := ~cmpSum(ISA.RegBits-1, 0).orR
 
-  printf(
-    cf"\tsrc1 Rsel${~io.sel.rs1SelPC} Inv${io.sel.rs1Invert} = ${src1}%x, : src2 Rsel${~io.sel.rs2SelImm} Inv${io.sel.rs2Invert} = ${src2}%x : Imm = ${io.imm}%x\n")
-
   val flip1 = io.sel.rs1Invert
   val flip2 = io.sel.rs2Invert && (io.op =/= AluOp.Srr)
   val raw1 = Mux(io.sel.rs1SelPC, io.pc, io.rs1V)
   val raw2 = Mux(io.sel.rs2SelImm, io.imm, io.rs2V)
   val src1 = Mux(flip1, ~raw1, raw1)
   val src2 = Mux(flip2, ~raw2, raw2)
-  printf(cf"\tsrc1${src1}%x : src2${src2}%x\n")
+
+  printf(
+    cf"\tsrc1 Rsel${~io.sel.rs1SelPC} Inv${io.sel.rs1Invert} = ${src1}%x, : src2 Rsel${~io.sel.rs2SelImm} Inv${io.sel.rs2Invert} = ${src2}%x : Imm = ${io.imm}%x\n")
 
   // Compute Add for op = Sltu, Slt
   // Since B-Type uses address
