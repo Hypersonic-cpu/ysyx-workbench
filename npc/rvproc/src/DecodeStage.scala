@@ -152,7 +152,7 @@ class IDU extends Module {
   io.aluSel.saveCmp := instSlt
   io.aluSel.rs2SelImm := instTp =/= ITYPE.tR 
 
-  // NOTE: imm is always sign-extended
+  // imm is always sign-extended
   io.imm    := MuxLookup(instTp, 0.U) (Seq(
     ITYPE.tI -> immI,
     ITYPE.tU -> immU,
