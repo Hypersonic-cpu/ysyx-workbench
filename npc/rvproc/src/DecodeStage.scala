@@ -19,8 +19,8 @@ object InstOp extends ChiselEnum {
   val System = Value(0b11100.U)
 }
 
-object SysOp extends ChiselEnum {
-  val ECall = Value(0b00.U)
+object CsrOp extends ChiselEnum {
+  val None  = Value(0b00.U)
   val CsrRW = Value(0b01.U)
   val CsrRS = Value(0b10.U)
   val CsrRC = Value(0b11.U)
@@ -63,8 +63,8 @@ class IDU extends Module {
   assert(rvBase, cf"Inst[1:0] is not 0b11: opcode=${opcode}%x")
   assert(opValid, cf"Invalid opcode encountered: opcode=${opcode}%x")
 
-  val sysOp = SysOp(funct3(1, 0))
-  val sysRel = opName === InstOp.System && ~io.inst(19, 7).orR
+  val sysRel = 
+    (opName === InstOp.System) && ~io.inst(19, 7).orR
   val isEbreak = sysRel && csrid12 === 1.U
   val isEcall  = sysRel && csrid12 === 0.U
   val isMret   = sysRel && csrid12 === 0b_0011000_00010.U
@@ -76,7 +76,7 @@ class IDU extends Module {
   // On Ecall  we prepare reg a5 (x15)
   io.rs1    := MuxCase(io.inst(19, 15), Seq(
     isEbreak                -> 10.U,
-    isEcall                 -> 15.U,
+    // isEcall                 -> 15.U,
     (opName === InstOp.Lui) -> 0.U
   ))
 
@@ -114,9 +114,11 @@ class IDU extends Module {
     ))
   val instArith =
     opName === InstOp.OpReg || opName === InstOp.OpImm
-  val instBr = opName === InstOp.Branch
+  val instBr  = opName === InstOp.Branch
   val instSys = opName === InstOp.System
-  val instCsr = (instSys && sysOp =/= SysOp.ECall)
+  val sysOp   = Mux(isEcall, 
+    CsrOp.CsrRW, CsrOp(funct3(1, 0)))
+  val instCsr = instSys && (sysOp =/= CsrOp.None)
 
   /**
     * CSRRC: R[rd] = CSR, CSR &= ~R[rs1] = ~src1 & csr
@@ -125,32 +127,30 @@ class IDU extends Module {
     * We directly pass 0 + src1 to ALU and use ALU result
     * as csrdt.
     */
-  io.csrWE := instCsr // TODO: CSR
+  io.csrWE := instCsr
 
   val aluOp = MuxCase (AluOp.Add, Seq(
     instArith -> AluOp(funct3),
-    instBr -> Mux(funct3(1), AluOp.Sltu, AluOp.Slt)
+    instBr    -> Mux(funct3(1), AluOp.Sltu, AluOp.Slt),
+    (instCsr && sysOp === CsrOp.CsrRW) -> AluOp.Add,
+    (instCsr && sysOp === CsrOp.CsrRC) -> AluOp.And,
+    (instCsr && sysOp === CsrOp.CsrRS) -> AluOp.Or,
   ))
   io.aluOp := aluOp
   val instSlt = 
     instArith && (aluOp === AluOp.Slt || aluOp === AluOp.Sltu)
 
-  io.aluSel.cmpImm    := instSlt && (instTp === ITYPE.tI)
+  io.aluSel.cmpImm    := instSlt && instTp === ITYPE.tI
   io.aluSel.rs1SelPC  :=
-    (opName === InstOp.Auipc) || (opName === InstOp.Jal) || 
+    opName === InstOp.Auipc || opName === InstOp.Jal ||
     isEcall || instBr
   io.aluSel.rs2Invert :=
-    ((opName === InstOp.OpReg) && funct7(5).asBool) ||
-    (instArith && (io.aluOp === AluOp.Srr) && funct7(5).asBool)
-  io.aluSel.rs1Invert := false.B // FIXME:
+    (opName === InstOp.OpReg && funct7(5).asBool) ||
+    (instArith && io.aluOp === AluOp.Srr && funct7(5).asBool)
+  io.aluSel.rs1Invert := instCsr && sysOp === CsrOp.CsrRC
 
   io.aluSel.saveCmp := instSlt
-  io.aluSel.rs2SelImm := ~(
-    // instTp === ITYPE.tN ||
-    instTp === ITYPE.tR 
-    // ||
-    // instTp === ITYPE.tB
-  ) || (isEcall)
+  io.aluSel.rs2SelImm := instTp =/= ITYPE.tR 
 
   // NOTE: imm is always sign-extended
   io.imm    := MuxLookup(instTp, 0.U) (Seq(
