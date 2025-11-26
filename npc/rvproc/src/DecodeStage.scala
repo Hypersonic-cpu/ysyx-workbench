@@ -72,9 +72,11 @@ class IDU extends Module {
   io.ebreak := isEbreak
   io.ecall  := isEcall
 
-  // On ECALL we prepare reg a0 (x10)
+  // On Ebreak we prepare reg a0 (x10)
+  // On Ecall  we prepare reg a5 (x15)
   io.rs1    := MuxCase(io.inst(19, 15), Seq(
     isEbreak                -> 10.U,
+    isEcall                 -> 15.U,
     (opName === InstOp.Lui) -> 0.U
   ))
 
