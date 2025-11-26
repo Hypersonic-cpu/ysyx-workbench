@@ -23,7 +23,7 @@ module EcallBox (
       end
 
       if (isEcall) begin
-        $display("Unknown ECALL\n");
+        $display("Ecall with a5 %x @ pc %x\n", a0in, pc);
       end
     end
   end
