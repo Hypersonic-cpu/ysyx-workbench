@@ -8,8 +8,8 @@ import chisel3.assert.Assert
 class WBU extends Module {
   val io = IO(new Bundle {
     val takeBr = Input(Bool())
-    // val jToCsr = Input(Bool())
     val wbSel  = Input(WbSel())
+    val brSel  = Input(BrSel())
     val pc     = Input(Tp.RegType())
     val csrV   = Input(Tp.RegType())
     val aluV   = Input(Tp.RegType())
@@ -19,11 +19,12 @@ class WBU extends Module {
   })
 
   val snpc = io.pc + 4.U
-  val dnpc = io.aluV(31, 1) ## 0.U(1.W) 
-  io.nxpc := MuxCase(snpc, Seq(
-    io.takeBr -> dnpc,
-    // io.jToCsr -> io.csrV
+  val aluc = io.aluV(31, 1) ## 0.U(1.W)
+  val dnpc = MuxLookup(io.brSel, aluc) (Seq(
+    BrSel.fromAlu -> aluc,
+    BrSel.fromCsr -> io.csrV
   ))
+  io.nxpc := Mux(io.takeBr, dnpc, snpc)
 
   printf(cf"[ ${io.pc}%x WB ] dnpc ${io.nxpc}%x br${io.takeBr}\n")
 
@@ -58,6 +59,7 @@ class WrBackStage extends Module {
   iWbu.io.csrV   := iofw.csrVal
   iWbu.io.pc     := iofw.pc
   iWbu.io.wbSel  := iofw.wbSel
+  iWbu.io.brSel  := iofw.brSel
 
   ioif.npc := iWbu.io.nxpc
 
