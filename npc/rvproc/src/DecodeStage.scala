@@ -191,7 +191,7 @@ class IDU extends Module {
     (opName === InstOp.Jal ) -> WbSel.fromPC,
     (opName === InstOp.Load) -> WbSel.fromMem
   ))
-  io.brSel := Mux(isEcall, BrSel.fromCsr, BrSel.fromAlu)
+  io.brSel := Mux(isEcall || isMret, BrSel.fromCsr, BrSel.fromAlu)
 
   // printf(cf"\trs1 ${io.rs1}%d, rs2 ${io.rs2}%d, imm ${io.imm}%x\n");
 }
