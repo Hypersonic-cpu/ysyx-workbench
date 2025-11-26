@@ -177,10 +177,10 @@ class IDU extends Module {
   val uncondJmp = 
     (opName === InstOp.Jalr) || (opName === InstOp.Jal)
 
-  io.brJmp.bIfeq   := (instBr && (funct3 === 0b000.U)) || uncondJmp
-  io.brJmp.bIfne   := (instBr && (funct3 === 0b001.U)) || uncondJmp
-  io.brJmp.bIflt   := instBr && ((funct3 & 0b101.U) === 0b100.U)
-  io.brJmp.bIfge   := instBr && ((funct3 & 0b101.U) === 0b101.U)
+  io.brJmp.bIfeq := (instBr && funct3 === 0b000.U) || uncondJmp || isEcall
+  io.brJmp.bIfne := (instBr && funct3 === 0b001.U) || uncondJmp || isEcall
+  io.brJmp.bIflt := instBr && ((funct3 & 0b101.U) === 0b100.U)
+  io.brJmp.bIfge := instBr && ((funct3 & 0b101.U) === 0b101.U)
   // io.brJmp.jToCsr  := isEcall || isMret
 
   io.wbSel := MuxCase(WbSel.fromAlu, Seq(
