@@ -32,7 +32,7 @@ class CsrFile extends Module {
     (0x300.U, mstatus,   true),
     (0x305.U, mtvec,     true),
     (0x341.U, mepc,      true),
-    (0x342.U, mcause,    true), // Handled by when block
+    (0x342.U, mcause,    false), // Handled by when block
 
     (0xB00.U, mcycle,    false),
     (0xB80.U, mcycleh,   false),
