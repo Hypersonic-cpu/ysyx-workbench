@@ -32,7 +32,7 @@ class CsrFile extends Module {
     (0x300.U, mstatus,   true),
     (0x305.U, mtvec,     true),
     (0x341.U, mepc,      true),
-    (0x342.U, mcause,    true), // Handled by when block
+    (0x342.U, mcause,    false), // Handled by when block
 
     (0xB00.U, mcycle,    false),
     (0xB80.U, mcycleh,   false),
@@ -45,8 +45,8 @@ class CsrFile extends Module {
     csrMap.map { case (idx, reg, _) => idx -> reg }
   )
   io.out := csrVal
-  printf(cf"CSR Read ${io.idxr}%x = ${io.out}%x M${io.wrEn}\n")
-
+  // printf(cf"CSR Read ${io.idxr}%x = ${io.out}%x M${io.wrEn}\n")
+  //
   // Input
   when (io.wrEn) {
     csrMap.foreach{ 
@@ -59,6 +59,9 @@ class CsrFile extends Module {
       }
     }
   }
+
+  printf(cf"[ CSR ] C[${io.idxr}%x] = ${io.out}%x"
+       + cf" C[${io.idxw}%x] <${io.wrEn} ${io.data}%x\n")
 
   // when (io.ecall) {
   //   mcause := 11.U
@@ -96,9 +99,9 @@ class GprFile extends Module {
 
   io.rs1V := gpr1V 
   io.rs2V := gpr2V
-  printf(cf"<<REG>> R[${io.rs1}] = ${io.rs1V}%x\n")
-  printf(cf"<<REG>> R[${io.rs2}] = ${io.rs2V}%x\n")
-  printf(cf"<<REG>> R[${io.rd}] <- ${io.data}%x\n")
+  printf(cf"[ GPR ] R[${io.rs1}] = ${io.rs1V}%x"
+       + cf" R[${io.rs2}] = ${io.rs2V}%x"
+       + cf" R[${io.rd}] <${io.wrEn} ${io.data}%x\n")
 }
 
 class RegFile extends Module {
