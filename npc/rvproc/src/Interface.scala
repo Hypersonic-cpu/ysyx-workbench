@@ -90,8 +90,13 @@ object WbSel extends ChiselEnum {
   val fromAlu, fromPC, fromMem, fromCsr = Value
 }
 
+object BrSel extends ChiselEnum {
+  val fromAlu, fromCsr = Value
+}
+
 class DecodeFoward extends Bundle {
   val wbSel  = WbSel()
+  val brSel  = BrSel()
   val gprRd  = Tp.RegIdxType()
   val gprWE  = Bool()
   val csrRd  = Tp.CsrIdxType()

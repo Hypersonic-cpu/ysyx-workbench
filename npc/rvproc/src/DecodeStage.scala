@@ -41,6 +41,7 @@ class IDU extends Module {
     val aluSel = Output(new AluSel)
     val brJmp  = Output(new BrJmp)
     val wbSel  = Output(WbSel())
+    val brSel  = Output(BrSel())
     val ebreak = Output(Bool())
     val ecall  = Output(Bool())
 
@@ -189,6 +190,7 @@ class IDU extends Module {
     (opName === InstOp.Jal ) -> WbSel.fromPC,
     (opName === InstOp.Load) -> WbSel.fromMem
   ))
+  io.brSel := Mux(isEcall, BrSel.fromCsr, BrSel.fromAlu)
 
   // printf(cf"\trs1 ${io.rs1}%d, rs2 ${io.rs2}%d, imm ${io.imm}%x\n");
 }
@@ -242,6 +244,7 @@ class DecodeStage extends Module {
   iofw.gprWE  := iDec.io.gprWE
   iofw.csrWE  := iDec.io.csrWE
   iofw.wbSel  := iDec.io.wbSel
+  iofw.brSel  := iDec.io.brSel
   iofw.ebreak := iDec.io.ebreak
   iofw.ecall  := iDec.io.ecall
   iofw.pc     := ioif.pc
