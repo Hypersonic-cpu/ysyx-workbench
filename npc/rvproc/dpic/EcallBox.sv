@@ -22,9 +22,9 @@ module EcallBox (
         // $finish;
       end
 
-      if (isEcall) begin
-        $display("Ecall @ pc %x\n", pcin);
-      end
+      // if (isEcall) begin
+      //   $display("Ecall @ pc %x\n", pcin);
+      // end
     end
   end
 
