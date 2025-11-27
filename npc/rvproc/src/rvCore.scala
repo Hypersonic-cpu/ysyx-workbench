@@ -37,15 +37,17 @@ class rvCore() extends Module {
   val wbs = Module(new WrBackStage)
   val reg = Module(new RegFile)
 
+  BusConnect(ids.io.toFetch, ifs.io.fromId)
+  BusConnect(exs.io.toFetch, ifs.io.fromEx)
   BusConnect(ifs.io.out, ids.io.in)
   BusConnect(ids.io.out, exs.io.in)
   BusConnect(exs.io.out, lss.io.in)
   BusConnect(lss.io.out, wbs.io.in)
-  BusConnect(wbs.io.out, ifs.io.in)
+  BusConnect(wbs.io.toReg, reg.io.fromWb)
+
   // always_comb
   BusConnect(ids.io.toReg, reg.io.fromId, BusType.SingleCyc)
   BusConnect(reg.io.toId, ids.io.fromReg, BusType.SingleCyc)
-  BusConnect(wbs.io.toReg, reg.io.fromWb, BusType.SingleCyc)
   
   dontTouch(ifs.io)
   dontTouch(ids.io)
