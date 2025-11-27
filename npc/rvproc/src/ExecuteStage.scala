@@ -14,7 +14,6 @@ class EXU extends Module {
     val imm   = Input(Tp.RegType())
     val op    = Input(AluOp())
     val sel   = Input(new AluSel)
-    val brJmp = Input(new BrJmp)
     val aluOut = Output(Tp.RegType())
   })
 
