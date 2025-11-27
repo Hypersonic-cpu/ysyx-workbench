@@ -48,9 +48,9 @@ class AluSel extends Bundle {
   // NOTE: This field also represents SRA
   val rs2Invert = Bool()
   val rs1Invert = Bool()
-  // NOTE: True if cmp result saved to reg
-  val saveCmp   = Bool()
-  val cmpImm    = Bool()
+  val outSelCsr = Bool()
+  // val saveCmp   = Bool()
+  // val cmpImm    = Bool()
 }
 
 class BrCmp extends Bundle {
