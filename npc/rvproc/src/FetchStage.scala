@@ -21,7 +21,9 @@ class FetchStage extends Module {
   //   hold -> Mux(io.out.ready, idle, hold),
   //   idle -> Mux(io.in.valid , hold, idle)
   // ))
-  // io.out.valid := true.B
+  io.out.valid := true.B
+  io.fromEx.ready := true.B
+  io.fromId.ready := true.B
 
   // TODO: Add state
   val pc = RegInit(0x80000000L.U(ISA.RegBits.W))
