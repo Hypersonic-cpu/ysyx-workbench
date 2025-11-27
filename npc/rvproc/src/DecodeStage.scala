@@ -152,6 +152,7 @@ class IDU extends Module {
   val instSys = opName === InstOp.System
   val sysOp   = Mux(isEcall, 
     CsrOp.CsrRW, CsrOp(funct3(1, 0)))
+  val instCsr = instSys && (sysOp =/= CsrOp.None)
 
   /** NOTE: ALU commands -> EXU */
   val aluEn = (instTp =/= ITYPE.tB) && (opName =/= InstOp.Jalr)
@@ -233,8 +234,6 @@ class IDU extends Module {
     instTp === ITYPE.tB ||
     instTp === ITYPE.tS
   ) || instCsr
-
-  val instCsr = instSys && (sysOp =/= CsrOp.None)
 
   /**
     * CSRRC: R[rd] = CSR, CSR &= ~R[rs1] = ~src1 & csr
