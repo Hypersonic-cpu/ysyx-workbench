@@ -177,7 +177,7 @@ class IDU extends Module {
     // opName === InstOp.Jalr || 
     // || instBr
   io.aluSel.rs2SelImm := instTp =/= ITYPE.tR 
-  io.aluSel.outSelCsr := isEcall || isMret
+  io.aluSel.brSelCsr  := isEcall || isMret
 
   io.aluSel.rs1Invert := instCsr && sysOp === CsrOp.CsrRC
   io.aluSel.rs2Invert :=
