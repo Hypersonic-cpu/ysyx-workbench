@@ -298,6 +298,7 @@ class DecodeStage extends Module {
   ioex.aluSel := iDec.io.aluSel
   ioex.memOp  := iDec.io.memAcc
   ioex.brAbs  := iDec.io.brAbs
+  ioex.aluEn  := iDec.io.aluEn
 
   val iofw = ioex.foward
   iofw.gprRd  := iDec.io.rd

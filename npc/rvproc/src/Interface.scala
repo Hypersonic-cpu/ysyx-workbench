@@ -116,9 +116,6 @@ class DecodeFoward extends Bundle {
   // PC is debug only...
   val pc     = Tp.RegType()
   val csrVal = Tp.RegType()
-
-  val aluEn  = Bool()
-  val memEn  = Bool()
 }
 
 class DecodeToExecute extends Bundle {
@@ -130,6 +127,8 @@ class DecodeToExecute extends Bundle {
   val brAbs  = Bool()
 
   val memOp  = new MemOp()
+  val aluEn  = Bool()
+  // val memEn  = Bool()
 
   val foward = new DecodeFoward()
 }
