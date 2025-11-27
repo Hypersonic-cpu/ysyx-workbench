@@ -6,7 +6,6 @@ import chisel3.assert.Assert
 
 import BitMath._
 
-// NOTE: CSR should be placed in rs2V
 class EXU extends Module {
   val io = IO(new Bundle {
     val rs1V  = Input(Tp.RegType())
@@ -16,31 +15,14 @@ class EXU extends Module {
     val op    = Input(AluOp())
     val sel   = Input(new AluSel)
     val brJmp = Input(new BrJmp)
-    val res   = Output(Tp.RegType())
-    val takeBr = Output(Bool())
+    val aluOut = Output(Tp.RegType())
   })
 
   // Cmp: Always compare rs1V and rs2V
-  val cmpe = (io.op === AluOp.Sltu || io.op === AluOp.Slt)
-  val cmpu = io.op === AluOp.Sltu
 
-  val cmp1s = io.rs1V
-  val cmp2s = ~Mux(io.sel.cmpImm, io.imm, io.rs2V)
-  val cmpSum = 1.U + cmp1s.UExt() + cmp2s.UExt()
-  val cmpOF = (
-    ~(cmp1s.MSB() ^ cmp2s.MSB())) & 
-     (cmp1s.MSB() ^ cmpSum.MSB())
-  val cmpLT = Mux(cmpu, 
-    ~cmpSum.MSB(-1), cmpSum.MSB() ^ cmpOF).asBool
-  val cmpEQ = ~cmpSum(ISA.RegBits-1, 0).orR.asBool
-
-  val b = io.brJmp
-  io.takeBr := 
-    (cmpLT && b.bIflt) || (~cmpLT && b.bIfge) ||
-    (cmpEQ && b.bIfeq) || (~cmpEQ && b.bIfne)
-
-  // io.brCmp.blt := cmpLT
-  // io.brCmp.beq := ~cmpSum(ISA.RegBits-1, 0).orR
+  // val cmp1s = io.rs1V
+  // val cmp2s = ~Mux(io.sel.cmpImm, io.imm, io.rs2V)
+  // val cmpSum = 1.U + cmp1s.UExt() + cmp2s.UExt()
 
   val flip1 = io.sel.rs1Invert
   val flip2 = io.sel.rs2Invert && (io.op =/= AluOp.Srr)
@@ -54,37 +36,44 @@ class EXU extends Module {
     +cf"src1 selR${~io.sel.rs1SelPC} Inv${io.sel.rs1Invert} = ${src1}%x, "
     +cf"src2 selR${~io.sel.rs2SelImm} Inv${io.sel.rs2Invert} = ${src2}%x,"
     +cf" Imm = ${io.imm}%x" 
-    +cf" cmp(<,=) (${cmpLT},${cmpEQ}), jmp(<,>=,=,!=) (${b.bIflt},${b.bIfge},${b.bIfeq},${b.bIfne})"
+    // +cf" cmp(<,=) (${cmpLT},${cmpEQ}), jmp(<,>=,=,!=) (${b.bIflt},${b.bIfge},${b.bIfeq},${b.bIfne})"
     + "\n")
 
-  // Compute Add for op = Sltu, Slt
-  // Since B-Type uses address
-  val sums = src1 + src2 + Mux(flip2, 1.U, 0.U)
-  val aout = MuxCase(sums, Seq(
+  val cmpEn = 
+    io.op === AluOp.Sltu || io.op === AluOp.Slt
+  val cmpU = io.op === AluOp.Sltu
+  // p->q <=> ~p or q
+  assert(~cmpEn || (~flip1 && flip2))
+  val esum = 
+    src1.UExt() + src2.UExt() + Mux(flip2, 1.U, 0.U)
+  // Corner case: INT_MIN
+  // pos+neg will not cause overflow
+  // same sign addition not altering sign
+  val cmpOF = 
+    ~(src1.MSB() ^ src2.MSB()) &
+     (src1.MSB() ^ esum.MSB())
+
+  val cmpLT = Mux(cmpU, 
+    ~esum.MSB(-1), esum.MSB() ^ cmpOF).asBool
+  val aout = MuxCase(esum, Seq(
     (io.op === AluOp.Sll) -> (src1 << src2(4, 0)),
     (io.op === AluOp.Srr) -> Mux(io.sel.rs2Invert,
-      (src1.asSInt >> src2(4, 0)).asUInt, src1 >> src2(4, 0)),
+      (src1.asSInt >> src2(4, 0)).asUInt,
+      src1 >> src2(4, 0)
+    ),
     (io.op === AluOp.And) -> (src1 & src2),
     (io.op === AluOp.Or ) -> (src1 | src2),
     (io.op === AluOp.Xor) -> (src1 ^ src2),
   ))
 
-  io.res := Mux(io.sel.saveCmp,
-    /* SLT, SLTU */ cmpLT.asUInt,
-    aout
-  )
-
-  // printf(cf"\t${src1}%x op ${src2}%x = o${over} c${ansc}%x ${anst}%x\n")
-  // when (io.sel.isBranch || io.op === AluOp.Slt || io.op === AluOp.Sltu) {
-  //   printf(cf"Cmp: src1 ${src1}%x, src2 ${src2}%x, "
-  //     + cf"ansc ${ansc}%x OF${over} LT${less} EQ${io.brCmp.beq}\n")
-  // }
+  io.aluOut := Mux(cmpEn, cmpLT.asUInt, aout)
 }
 
 class ExecuteStage extends Module {
   val io = IO(new Bundle {
     val in  = Flipped(Decoupled(new DecodeToExecute))
     val out = Decoupled(new ExecuteToMemory)
+    val toFetch = Decoupled(new ExecuteBackward)
   })
   io.in.ready  := true.B
   io.out.valid := true.B
@@ -101,17 +90,20 @@ class ExecuteStage extends Module {
   iExe.io.imm  := ioid.imm
   iExe.io.pc   := ioid.foward.pc
 
-  iExe.io.brJmp := ioid.brJmp
+  /** NOTE: Back to Fetch */
+  val iobk = io.toFetch.bits
+  iobk.brAbs := ioid.brAbs
+  iobk.brVal := iExe.io.aluOut
 
-  iols.aluOut  := iExe.io.res
-  iols.takeBr  := iExe.io.takeBr
-
+  /** NOTE: To LSU, AluOut = Addr */
+  iols.aluOut  := iExe.io.aluOut
   iols.memOp   := ioid.memOp
   iols.rs2Val  := ioid.rs2V
 
-  // Foward only
+  /** NOTE: Foward */
   ioid.foward <> iols.foward
 
+  /** NOTE: Interrupt */
   val iInt = Module(new EcallBox)
   iInt.io.clock := clock
   iInt.io.reset := reset

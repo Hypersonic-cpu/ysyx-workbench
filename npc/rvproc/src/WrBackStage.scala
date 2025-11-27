@@ -7,26 +7,26 @@ import chisel3.assert.Assert
 // MUX, Write data selection
 class WBU extends Module {
   val io = IO(new Bundle {
-    val takeBr = Input(Bool())
+    // val takeBr = Input(Bool())
     val wbSel  = Input(WbSel())
-    val brSel  = Input(BrSel())
+    // val brSel  = Input(BrSel())
     val pc     = Input(Tp.RegType())
     val csrV   = Input(Tp.RegType())
     val aluV   = Input(Tp.RegType())
     val memV   = Input(Tp.RegType())
-    val nxpc   = Output(Tp.RegType())
+    // val nxpc   = Output(Tp.RegType())
     val gprdt  = Output(Tp.RegType())
   })
 
   val snpc = io.pc + 4.U
-  val aluc = io.aluV(31, 1) ## 0.U(1.W)
-  val dnpc = MuxLookup(io.brSel, aluc) (Seq(
-    BrSel.fromAlu -> aluc,
-    BrSel.fromCsr -> io.csrV
-  ))
-  io.nxpc := Mux(io.takeBr, dnpc, snpc)
+  // val aluc = io.aluV(31, 1) ## 0.U(1.W)
+  // val dnpc = MuxLookup(io.brSel, aluc) (Seq(
+  //   BrSel.fromAlu -> aluc,
+  //   BrSel.fromCsr -> io.csrV
+  // ))
+  // io.nxpc := Mux(io.takeBr, dnpc, snpc)
 
-  printf(cf"[ ${io.pc}%x WB ] dnpc ${io.nxpc}%x br${io.takeBr}\n")
+  printf(cf"[ ${io.pc}%x WB ] Data = ${io.gprdt}%x\n")
 
     // Mux(jmp, dnpc, snpc)
   io.gprdt := MuxLookup(io.wbSel, 0.U) (Seq(
@@ -40,28 +40,20 @@ class WBU extends Module {
 class WrBackStage extends Module {
   val io = IO(new Bundle {
     val in  = Flipped(Decoupled(new MemoryToWrBack))
-    val out = Decoupled(new WrBackToFetch)
     val toReg = Decoupled(new RegFromWBU)
   })
   io.in.ready  := true.B
-  io.out.valid := true.B
 
   io.toReg.valid  := true.B
 
-  // TODO: 将PC跳转提前到EXU之后甚至IDU
   val iWbu = Module(new WBU)
   val iols = io.in.bits
-  val ioif = io.out.bits
   val iofw = io.in.bits.foward
   iWbu.io.aluV   := iols.aluOut
   iWbu.io.memV   := iols.lsuOut
-  iWbu.io.takeBr := iols.takeBr
   iWbu.io.csrV   := iofw.csrVal
   iWbu.io.pc     := iofw.pc
   iWbu.io.wbSel  := iofw.wbSel
-  iWbu.io.brSel  := iofw.brSel
-
-  ioif.npc := iWbu.io.nxpc
 
   val ioreg = io.toReg.bits
   ioreg.csrWE    := iofw.csrWE
