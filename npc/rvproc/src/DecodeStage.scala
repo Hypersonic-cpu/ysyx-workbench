@@ -221,6 +221,7 @@ class IDU extends Module {
     (bIfeq && brEq) || (bIfne && ~brEq) ||
     (bIflt && brLt) || (bIfge && ~brLt)
   // brDel = imm
+  printf(cf"cmp(<,=) (${brLt},${brEq}), jmp(<,>=,=,!=) (${bIflt},${bIfge},${bIfeq},${bIfne})\n")
 
   /** NOTE: Foward -> WBU */
   io.wbSel := MuxCase(WbSel.fromAlu, Seq(
