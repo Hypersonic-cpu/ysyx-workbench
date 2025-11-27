@@ -77,6 +77,7 @@ class ExecuteStage extends Module {
   })
   io.in.ready  := true.B
   io.out.valid := true.B
+  io.toFetch.valid := true.B
 
   val iExe = Module(new EXU)
   val ioid = io.in.bits
