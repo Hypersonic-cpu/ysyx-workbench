@@ -149,6 +149,7 @@ class IDU extends Module {
   val instArith =
     opName === InstOp.OpReg || opName === InstOp.OpImm
   val instBr  = opName === InstOp.Branch
+  val cmpUsgn = funct3(1).asBool
   val instSys = opName === InstOp.System
   val sysOp   = Mux(isEcall, 
     CsrOp.CsrRW, CsrOp(funct3(1, 0)))
@@ -215,8 +216,7 @@ class IDU extends Module {
   iCmp.io.in2 := io.rs2Val
   val brCmp = iCmp.io.out
   val brEq  = brCmp.beq
-  val brLt  = Mux(instBr && aluOp === AluOp.Sltu, 
-    brCmp.bltu, brCmp.blts)
+  val brLt  = Mux(instBr && cmpUsgn, brCmp.bltu, brCmp.blts)
   io.brRel := 
     (bIfeq && brEq) || (bIfne && ~brEq) ||
     (bIflt && brLt) || (bIfge && ~brLt)
