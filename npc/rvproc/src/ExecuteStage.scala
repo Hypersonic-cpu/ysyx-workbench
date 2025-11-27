@@ -17,6 +17,7 @@ class EXU extends Module {
     val op    = Input(AluOp())
     val sel   = Input(new AluSel)
     val aluOut = Output(Tp.RegType())
+    val brVal  = Output(Tp.RegType())
   })
 
   // Cmp: Always compare rs1V and rs2V
@@ -62,10 +63,9 @@ class EXU extends Module {
     (io.op === AluOp.Xor) -> (src1 ^ src2),
   ))
 
-  io.aluOut := MuxCase(aout, Seq(
-    cmpEn -> cmpLT.asUInt,
-    io.sel.outSelCsr -> io.csrV
-  ))
+  io.aluOut := Mux(cmpEn, cmpLT.asUInt, aout)
+  io.brVal  :=
+    Mux(io.sel.brSelCsr, io.csrV, io.aluOut)
 
   printf(
     cf"[ ${io.pc}%x EX ] "
@@ -104,7 +104,7 @@ class ExecuteStage extends Module {
   /** NOTE: Back to Fetch */
   val iobk = io.toFetch.bits
   iobk.brAbs := ioid.brAbs
-  iobk.brVal := iExe.io.aluOut
+  iobk.brVal := iExe.io.brVal
 
   /** NOTE: To LSU, AluOut = Addr */
   iols.aluOut  := iExe.io.aluOut

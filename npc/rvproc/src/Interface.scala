@@ -48,7 +48,7 @@ class AluSel extends Bundle {
   // NOTE: This field also represents SRA
   val rs2Invert = Bool()
   val rs1Invert = Bool()
-  val outSelCsr = Bool()
+  val brSelCsr = Bool()
   // val saveCmp   = Bool()
   // val cmpImm    = Bool()
 }
