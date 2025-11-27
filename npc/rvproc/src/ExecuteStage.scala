@@ -42,7 +42,8 @@ class EXU extends Module {
     io.op === AluOp.Sltu || io.op === AluOp.Slt
   val cmpU = io.op === AluOp.Sltu
   // p->q <=> ~p or q
-  assert(~cmpEn || (~flip1 && flip2))
+  assert(~cmpEn || (~flip1 && flip2),
+    cf"CmpEn ${cmpEn} inv1 ${flip1} inv2 ${flip2}\n")
   val esum = 
     src1.UExt() + src2.UExt() + Mux(flip2, 1.U, 0.U)
   // Corner case: INT_MIN
