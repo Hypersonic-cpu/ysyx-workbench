@@ -163,6 +163,10 @@ class IDU extends Module {
     (instCsr && sysOp === CsrOp.CsrRC) -> AluOp.And,
     (instCsr && sysOp === CsrOp.CsrRS) -> AluOp.Or,
   ))
+  val instSlt = 
+    instArith && (aluOp === AluOp.Slt || aluOp === AluOp.Sltu)
+  io.aluSel.saveCmp   := instSlt
+
   io.aluOp := aluOp
   io.aluEn := aluEn
   io.aluSel.cmpImm    := instSlt && instTp === ITYPE.tI
@@ -178,10 +182,6 @@ class IDU extends Module {
   io.aluSel.rs2Invert :=
     (opName === InstOp.OpReg && funct7(5).asBool) ||
     (instArith && io.aluOp === AluOp.Srr && funct7(5).asBool)
-
-  val instSlt = 
-    instArith && (aluOp === AluOp.Slt || aluOp === AluOp.Sltu)
-  io.aluSel.saveCmp   := instSlt
 
   // imm is always sign-extended
   io.imm    := MuxLookup(instTp, 0.U) (Seq(
