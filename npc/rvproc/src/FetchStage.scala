@@ -42,7 +42,7 @@ class FetchStage extends Module {
   /** NOTE: Next PC */
   val brid = io.fromId.bits
   val brex = io.fromEx.bits
-  assert(brid.brRel && brex.brAbs, 
+  assert(~(brid.brRel && brex.brAbs),
     cf"Rel|Abs jump = ${brid.brRel}|${brex.brAbs}")
   val nextPC = MuxCase(pc + 4.U, Seq(
     brid.brRel -> (pc + brid.brDel),
