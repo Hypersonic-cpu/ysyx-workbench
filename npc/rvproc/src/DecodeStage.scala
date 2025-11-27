@@ -264,6 +264,7 @@ class DecodeStage extends Module {
   // TODO:
   io.in.ready  := true.B
   io.out.valid := true.B
+  io.toFetch.valid := true.B
   // val state = RegInit(wait)
   // state := MuxLookup(state, wait) (Seq(
   //   idle   -> Mux(io.out.valid, ),
