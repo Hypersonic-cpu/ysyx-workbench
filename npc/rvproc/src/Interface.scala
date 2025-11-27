@@ -4,10 +4,6 @@ import chisel3._
 import chisel3.util._
 import chisel3.assert.Assert
 
-class WrBackToFetch extends Bundle {
-  val npc    = Tp.RegType()
-}
-
 class FetchToDecode extends Bundle {
   val pc     = Tp.RegType()
   val inst   = Tp.RegType()
@@ -58,8 +54,9 @@ class AluSel extends Bundle {
 }
 
 class BrCmp extends Bundle {
-  val beq = Bool()
-  val blt = Bool()
+  val beq  = Bool()
+  val bltu = Bool()
+  val blts = Bool()
 }
 
 class BrJmp extends Bundle {
@@ -90,22 +87,38 @@ object WbSel extends ChiselEnum {
   val fromAlu, fromPC, fromMem, fromCsr = Value
 }
 
-object BrSel extends ChiselEnum {
-  val fromAlu, fromCsr = Value
+// object BrType extends ChiselEnum {
+//   val rel, abs = Value
+// }
+
+// object BrSel extends ChiselEnum {
+//   val fromAlu, fromCsr = Value
+// }
+
+class DecodeBackward extends Bundle {
+  val brRel  = Bool()
+  val brDel  = Tp.RegType()
+}
+
+class ExecuteBackward extends Bundle {
+  val brAbs  = Bool()
+  val brVal  = Tp.RegType()
 }
 
 class DecodeFoward extends Bundle {
   val wbSel  = WbSel()
-  val brSel  = BrSel()
   val gprRd  = Tp.RegIdxType()
   val gprWE  = Bool()
   val csrRd  = Tp.CsrIdxType()
   val csrWE  = Bool()
-  // val wbMode = Bool()
   val ebreak = Bool()
   val ecall  = Bool()
+  // PC is debug only...
   val pc     = Tp.RegType()
   val csrVal = Tp.RegType()
+
+  val aluEn  = Bool()
+  val memEn  = Bool()
 }
 
 class DecodeToExecute extends Bundle {
@@ -114,7 +127,8 @@ class DecodeToExecute extends Bundle {
   val imm    = Tp.RegType()
   val aluOp  = AluOp()
   val aluSel = new AluSel()
-  val brJmp  = new BrJmp()
+  val brAbs  = Bool()
+
   val memOp  = new MemOp()
 
   val foward = new DecodeFoward()
@@ -122,7 +136,7 @@ class DecodeToExecute extends Bundle {
 
 class ExecuteToMemory extends Bundle {
   val memOp  = new MemOp()
-  val takeBr = Bool()
+  // val takeBr = Bool()
   val aluOut = Tp.RegType()
   val rs2Val = Tp.RegType()
 
@@ -130,7 +144,6 @@ class ExecuteToMemory extends Bundle {
 }
 
 class MemoryToWrBack extends Bundle {
-  val takeBr = Bool()
   val aluOut = Tp.RegType()
   val lsuOut = Tp.RegType()
 
