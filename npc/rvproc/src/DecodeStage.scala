@@ -172,9 +172,9 @@ class IDU extends Module {
   io.aluSel.cmpImm    := instSlt && instTp === ITYPE.tI
   io.aluSel.rs1SelPC  :=
     opName === InstOp.Auipc || 
-    opName === InstOp.Jalr || 
     opName === InstOp.Jal ||
     isEcall
+    // opName === InstOp.Jalr || 
     // || instBr
   io.aluSel.rs2SelImm := instTp =/= ITYPE.tR 
 
