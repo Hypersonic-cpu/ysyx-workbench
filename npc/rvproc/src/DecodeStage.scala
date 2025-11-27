@@ -158,18 +158,18 @@ class IDU extends Module {
   val aluEn = (instTp =/= ITYPE.tB) && (opName =/= InstOp.Jalr)
   val aluOp = MuxCase (AluOp.Add, Seq(
     instArith -> AluOp(funct3),
-    instBr    -> Mux(funct3(1), AluOp.Sltu, AluOp.Slt),
+    // instBr    -> Mux(funct3(1), AluOp.Sltu, AluOp.Slt),
     (instCsr && sysOp === CsrOp.CsrRW) -> AluOp.Add,
     (instCsr && sysOp === CsrOp.CsrRC) -> AluOp.And,
     (instCsr && sysOp === CsrOp.CsrRS) -> AluOp.Or,
   ))
-  val instSlt = 
-    instArith && (aluOp === AluOp.Slt || aluOp === AluOp.Sltu)
-  io.aluSel.saveCmp   := instSlt
+  // val instSlt = 
+  //   instArith && (aluOp === AluOp.Slt || aluOp === AluOp.Sltu)
+  // io.aluSel.saveCmp   := instSlt
 
   io.aluOp := aluOp
   io.aluEn := aluEn
-  io.aluSel.cmpImm    := instSlt && instTp === ITYPE.tI
+  // io.aluSel.cmpImm    := instSlt && instTp === ITYPE.tI
   io.aluSel.rs1SelPC  :=
     opName === InstOp.Auipc || 
     opName === InstOp.Jal ||
@@ -177,6 +177,7 @@ class IDU extends Module {
     // opName === InstOp.Jalr || 
     // || instBr
   io.aluSel.rs2SelImm := instTp =/= ITYPE.tR 
+  io.aluSel.outSelCsr := isEcall || isMret
 
   io.aluSel.rs1Invert := instCsr && sysOp === CsrOp.CsrRC
   io.aluSel.rs2Invert :=

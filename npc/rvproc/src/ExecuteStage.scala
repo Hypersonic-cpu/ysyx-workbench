@@ -11,6 +11,7 @@ class EXU extends Module {
     val aluEn = Input(Bool())
     val rs1V  = Input(Tp.RegType())
     val rs2V  = Input(Tp.RegType())
+    val csrV  = Input(Tp.RegType())
     val pc    = Input(Tp.RegType())
     val imm   = Input(Tp.RegType())
     val op    = Input(AluOp())
@@ -61,7 +62,10 @@ class EXU extends Module {
     (io.op === AluOp.Xor) -> (src1 ^ src2),
   ))
 
-  io.aluOut := Mux(cmpEn, cmpLT.asUInt, aout)
+  io.aluOut := MuxCase(aout, Seq(
+    cmpEn -> cmpLT.asUInt,
+    io.sel.outSelCsr -> io.csrV
+  ))
 
   printf(
     cf"[ ${io.pc}%x EX ] "
@@ -92,6 +96,7 @@ class ExecuteStage extends Module {
   iExe.io.sel  := ioid.aluSel
   iExe.io.rs1V := ioid.rs1V
   iExe.io.rs2V := ioid.rs2V
+  iExe.io.csrV := ioid.foward.csrVal
   iExe.io.imm  := ioid.imm
   iExe.io.pc   := ioid.foward.pc
   iExe.io.aluEn := ioid.aluEn
