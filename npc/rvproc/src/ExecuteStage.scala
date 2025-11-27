@@ -72,7 +72,6 @@ class EXU extends Module {
     +cf"src1 selR${~io.sel.rs1SelPC} Inv${io.sel.rs1Invert} = ${src1}%x, "
     +cf"src2 selR${~io.sel.rs2SelImm} Inv${io.sel.rs2Invert} = ${src2}%x,"
     +cf" Imm = ${io.imm}%x" 
-    // +cf" cmp(<,=) (${cmpLT},${cmpEQ}), jmp(<,>=,=,!=) (${b.bIflt},${b.bIfge},${b.bIfeq},${b.bIfne})"
     + "\n")
 
 }
