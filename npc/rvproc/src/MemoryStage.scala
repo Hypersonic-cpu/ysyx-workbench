@@ -64,7 +64,6 @@ class MemoryStage extends Module {
 
   // Foward
   iowb.aluOut  := ioex.aluOut
-  iowb.takeBr  := ioex.takeBr
   iowb.foward  <> ioex.foward
 
   printf(cf"[ ${ioex.foward.pc}%x LS ]\n")
