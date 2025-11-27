@@ -71,7 +71,6 @@ class IDU extends Module {
     val brAbs  = Output(Bool())
 
     val wbSel  = Output(WbSel())
-    val brSel  = Output(BrSel())
     val ebreak = Output(Bool())
     val ecall  = Output(Bool())
 
@@ -310,7 +309,6 @@ class DecodeStage extends Module {
   iofw.gprWE  := iDec.io.gprWE
   iofw.csrWE  := iDec.io.csrWE
   iofw.wbSel  := iDec.io.wbSel
-  iofw.brSel  := iDec.io.brSel
   iofw.ebreak := iDec.io.ebreak
   iofw.ecall  := iDec.io.ecall
   iofw.pc     := ioif.pc

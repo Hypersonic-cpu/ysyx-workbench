@@ -54,7 +54,6 @@ class WrBackStage extends Module {
   iWbu.io.csrV   := iofw.csrVal
   iWbu.io.pc     := iofw.pc
   iWbu.io.wbSel  := iofw.wbSel
-  iWbu.io.brSel  := iofw.brSel
 
   val ioreg = io.toReg.bits
   ioreg.csrWE    := iofw.csrWE
