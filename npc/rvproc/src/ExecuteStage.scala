@@ -8,6 +8,7 @@ import BitMath._
 
 class EXU extends Module {
   val io = IO(new Bundle {
+    val aluEn = Input(Bool())
     val rs1V  = Input(Tp.RegType())
     val rs2V  = Input(Tp.RegType())
     val pc    = Input(Tp.RegType())
@@ -23,27 +24,21 @@ class EXU extends Module {
   // val cmp2s = ~Mux(io.sel.cmpImm, io.imm, io.rs2V)
   // val cmpSum = 1.U + cmp1s.UExt() + cmp2s.UExt()
 
+  val cmpEn = 
+    io.op === AluOp.Sltu || io.op === AluOp.Slt
+  val cmpU = io.op === AluOp.Sltu
+
   val flip1 = io.sel.rs1Invert
-  val flip2 = io.sel.rs2Invert && (io.op =/= AluOp.Srr)
+  val flip2 = cmpEn || (io.sel.rs2Invert && (io.op =/= AluOp.Srr))
   val raw1 = Mux(io.sel.rs1SelPC, io.pc, io.rs1V)
   val raw2 = Mux(io.sel.rs2SelImm, io.imm, io.rs2V)
   val src1 = Mux(flip1, ~raw1, raw1)
   val src2 = Mux(flip2, ~raw2, raw2)
 
-  printf(
-    cf"[ ${io.pc}%x EX ] "
-    +cf"src1 selR${~io.sel.rs1SelPC} Inv${io.sel.rs1Invert} = ${src1}%x, "
-    +cf"src2 selR${~io.sel.rs2SelImm} Inv${io.sel.rs2Invert} = ${src2}%x,"
-    +cf" Imm = ${io.imm}%x" 
-    // +cf" cmp(<,=) (${cmpLT},${cmpEQ}), jmp(<,>=,=,!=) (${b.bIflt},${b.bIfge},${b.bIfeq},${b.bIfne})"
-    + "\n")
-
-  val cmpEn = 
-    io.op === AluOp.Sltu || io.op === AluOp.Slt
-  val cmpU = io.op === AluOp.Sltu
   // p->q <=> ~p or q
-  assert(~cmpEn || (~flip1 && flip2),
-    cf"CmpEn ${cmpEn} inv1 ${flip1} inv2 ${flip2}\n")
+  assert(~io.aluEn || ~cmpEn || (~flip1 && flip2),
+    cf"AluEn ${io.aluEn} CmpEn ${cmpEn} "
+    +cf"inv1 ${flip1} inv2 ${flip2}\n")
   val esum = 
     src1.UExt() + src2.UExt() + Mux(flip2, 1.U, 0.U)
   // Corner case: INT_MIN
@@ -67,6 +62,15 @@ class EXU extends Module {
   ))
 
   io.aluOut := Mux(cmpEn, cmpLT.asUInt, aout)
+
+  printf(
+    cf"[ ${io.pc}%x EX ] "
+    +cf"src1 selR${~io.sel.rs1SelPC} Inv${io.sel.rs1Invert} = ${src1}%x, "
+    +cf"src2 selR${~io.sel.rs2SelImm} Inv${io.sel.rs2Invert} = ${src2}%x,"
+    +cf" Imm = ${io.imm}%x" 
+    // +cf" cmp(<,=) (${cmpLT},${cmpEQ}), jmp(<,>=,=,!=) (${b.bIflt},${b.bIfge},${b.bIfeq},${b.bIfne})"
+    + "\n")
+
 }
 
 class ExecuteStage extends Module {
@@ -90,6 +94,7 @@ class ExecuteStage extends Module {
   iExe.io.rs2V := ioid.rs2V
   iExe.io.imm  := ioid.imm
   iExe.io.pc   := ioid.foward.pc
+  iExe.io.aluEn := ioid.aluEn
 
   /** NOTE: Back to Fetch */
   val iobk = io.toFetch.bits
