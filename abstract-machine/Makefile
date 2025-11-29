@@ -146,12 +146,16 @@ endif
 -include $(addprefix $(DST_DIR)/, $(addsuffix .d, $(basename $(SRCS))))
 
 ## 6. Miscellaneous
+print_debug:
+	@echo "<<>><<> DEBUG <<>><<>>"
+	@echo $(addprefix $(DST_DIR)/, $(addsuffix .d, $(basename $(SRCS))))
+
 
 ### Build order control
-image: image-dep
+image: print_debug image-dep
 archive: $(ARCHIVE)
 image-dep: $(IMAGE).elf
-.PHONY: image image-dep archive run
+.PHONY: image image-dep archive run print_debug
 
 ### Force to rebuild a rule
 force:

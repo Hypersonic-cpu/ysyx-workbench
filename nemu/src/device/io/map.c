@@ -49,6 +49,7 @@ static void invoke_callback(io_callback_t c, paddr_t offset, int len, bool is_wr
 #ifdef CONFIG_DTRACE_ENABLE
 // NOTE: Negative length for write.
 static void device_trace(paddr_t addr, int len, word_t value, const char* name) {
+  // if (!strcmp(name, "vmem")) return;
   unsigned ulen;
   if (len < 0) {
     fprintf(stderr, "> WRITE  to");
