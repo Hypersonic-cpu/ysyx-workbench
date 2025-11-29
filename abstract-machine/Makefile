@@ -148,7 +148,7 @@ endif
 ## 6. Miscellaneous
 
 ### Build order control
-image: print_debug image-dep
+image: image-dep
 archive: $(ARCHIVE)
 image-dep: $(IMAGE).elf
 .PHONY: image image-dep archive run
