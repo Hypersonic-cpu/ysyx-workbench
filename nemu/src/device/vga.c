@@ -79,17 +79,18 @@ update_screen() {
 #endif
 #endif
 
+static IOMap* vga_ctrl_map = NULL;
 void vga_update_screen() {
   // call `update_screen()` when the sync register is non-zero,
   // then zero out the sync register
   bool s = MUXDEF(CONFIG_TARGET_AM, io_read(AM_GPU_FBDRAW).sync, 
-           mmio_read(CONFIG_VGA_CTL_MMIO + 4, 4));
+           map_read(CONFIG_VGA_CTL_MMIO + 4, 4, vga_ctrl_map));
   // printf("DISPLAY = %s\n", s ? "SHOW" : "HIDE");
   if (s) {
     IFDEF(CONFIG_VGA_SHOW_SCREEN, update_screen());
     MUXDEF(CONFIG_TARGET_AM, 
            io_write(AM_GPU_FBDRAW, 0, 0, vmem, screen_width(), screen_height(), false), 
-           mmio_write(CONFIG_VGA_CTL_MMIO + 4, 4, 0);
+           map_write(CONFIG_VGA_CTL_MMIO + 4, 4, 0, vga_ctrl_map);
            );
   }
 }
@@ -100,7 +101,8 @@ void init_vga() {
 #ifdef CONFIG_HAS_PORT_IO
   add_pio_map ("vgactl", CONFIG_VGA_CTL_PORT, vgactl_port_base, 8, NULL);
 #else
-  add_mmio_map("vgactl", CONFIG_VGA_CTL_MMIO, vgactl_port_base, 8, NULL);
+  vga_ctrl_map = add_mmio_map("vgactl", CONFIG_VGA_CTL_MMIO, vgactl_port_base, 8, NULL);
+  assert(vga_ctrl_map);
 #endif
 
   vmem = new_space(screen_size());
