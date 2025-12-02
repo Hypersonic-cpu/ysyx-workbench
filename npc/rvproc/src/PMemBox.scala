@@ -5,7 +5,7 @@ import chisel3.util._
 import chisel3.util.HasBlackBoxPath
 
 // PMemBox : Single memory port
-class PMemBox extends BlackBox with HasBlackBoxPath {
+class PMemBox extends Module { // BlackBox with HasBlackBoxPath {
   val io = IO(new Bundle {
     val clock    = Input(Clock())
     val reset    = Input(Reset())
@@ -17,5 +17,14 @@ class PMemBox extends BlackBox with HasBlackBoxPath {
     val loadRaw  = Output(Tp.RegType())  // NOTE: always with the same length
   })
 
-  addPath(PATH.dpic("PMemBox.sv"))
+  val fakeMem = Mem(512, UInt(32.W))
+  io.loadRaw := 0.U
+  when (io.memEn) {
+    when (io.wrEn) {
+      fakeMem.write(io.addr(10, 2), io.data & io.byteMask) // BUG:
+    }.otherwise {
+      io.loadRaw := fakeMem.read(io.addr(10, 2))
+    }
+  }
+  // addPath(PATH.dpic("PMemBox.sv"))
 }

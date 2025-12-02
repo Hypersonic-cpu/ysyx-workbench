@@ -28,6 +28,9 @@ import BitMath._
 
 class rvCore() extends Module {
   val io = IO(new Bundle{
+    val syscalls = Output(Bool())
+    val curpc    = Output(Tp.RegType())
+    val lsuio    = Output(new ExecuteToMemory)
   })
 
   val ifs = Module(new FetchStage)
@@ -55,11 +58,22 @@ class rvCore() extends Module {
   dontTouch(lss.io)
   dontTouch(wbs.io)
   dontTouch(reg.io)
+  dontTouch(io)
+  io.syscalls := ids.io.out.bits.foward.ecall
+  io.curpc    := ifs.io.out.bits.pc
+  io.lsuio    := exs.io.out.bits
 }
 
 class rvCoreWrapper() extends Module {
-  val io = IO(new Bundle{ })
+  val io = IO(new Bundle{ 
+    val ecall = Output(Bool())
+    val curpc = Output(Tp.RegType())
+    val lsuio    = Output(new ExecuteToMemory)
+  })
   val core = Module(new rvCore())
+  io.ecall := core.io.syscalls
+  io.curpc := core.io.curpc
+  io.lsuio := core.io.lsuio
   dontTouch(core.io)
 }
 

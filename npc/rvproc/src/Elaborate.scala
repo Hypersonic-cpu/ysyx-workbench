@@ -3,11 +3,12 @@ import java.nio.file.Paths
 
 object Elaborate extends App {
 
-  val outputPath = "/home/kong/ysyx-workbench/npc/build-sv/rvproc/"
+  val outputPath = "/home/kong/ysyx-workbench/npc/build-sv/rvproc/rvCoreFull.sv"
 
   val firtoolOptions = Array(
-    "--split-verilog",
-    "-o", outputPath,
+    "--verilog",
+    // "--split-verilog",
+    // "-o", outputPath,
     // "--disable-aggressive-merge-connections",
     // "--disable-opt",
     // "--preserve-values=all",

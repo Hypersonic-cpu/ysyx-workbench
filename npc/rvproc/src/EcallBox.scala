@@ -4,7 +4,7 @@ import chisel3._
 import chisel3.util._
 import chisel3.util.HasBlackBoxPath
 
-class EcallBox extends BlackBox with HasBlackBoxPath {
+class EcallBox extends Module { // BlackBox with HasBlackBoxPath {
   val io = IO(new Bundle {
     val clock = Input(Clock())
     val reset = Input(Reset())
@@ -14,5 +14,5 @@ class EcallBox extends BlackBox with HasBlackBoxPath {
     val a0in = Input(Tp.RegType())
   })
   
-  addPath(PATH.dpic("EcallBox.sv"))
+  // addPath(PATH.dpic("EcallBox.sv"))
 }
