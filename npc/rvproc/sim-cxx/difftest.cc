@@ -6,36 +6,38 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdlib>
-#include <string>
 #include <dlfcn.h>
+#include <string>
 #include <tuple>
 #include <utility>
 
 namespace diff {
-  init_t ref_init = nullptr;
-  exec_t ref_exec = nullptr;
-  mcpy_t ref_memcpy = nullptr;
-  rcpy_t ref_regcpy = nullptr;
-  intr_t ref_raise_intr = nullptr;
-  bool enable = true;
-}
+init_t ref_init = nullptr;
+exec_t ref_exec = nullptr;
+mcpy_t ref_memcpy = nullptr;
+rcpy_t ref_regcpy = nullptr;
+intr_t ref_raise_intr = nullptr;
+bool enable = true;
+} // namespace diff
 
 // NOTE: Must after the NPC memory is initialized.
-void 
-diff::init(const char* so, int port) {
+void
+diff::init(const char *so, int port) {
   auto nemu_path = getenv("NEMU_HOME");
-  std::string so_file = (so[0] == '/') ? (std::string(so)) : 
-    (std::string(nemu_path) + std::string("/") + std::string(so));
+  std::string so_file =
+    (so[0] == '/')
+      ? (std::string(so))
+      : (std::string(nemu_path) + std::string("/") + std::string(so));
   // TODO: Change to RTLD_LAZY
-  void* dl = dlopen(so_file.c_str(), RTLD_NOW | RTLD_GLOBAL); 
+  void *dl = dlopen(so_file.c_str(), RTLD_NOW | RTLD_GLOBAL);
   comm::v_assert(dl, "DiffTest .so", so_file, "open failed:", dlerror());
   // assert(dl && "DiffTest ref .so open failed");
-  
-  diff::ref_init   = (init_t) dlsym(dl, "difftest_init");
-  diff::ref_exec   = (exec_t) dlsym(dl, "difftest_exec");
-  diff::ref_memcpy = (mcpy_t) dlsym(dl, "difftest_memcpy");
-  diff::ref_regcpy = (rcpy_t) dlsym(dl, "difftest_regcpy");
-  diff::ref_raise_intr = (intr_t) dlsym(dl, "difftest_raise_intr");
+
+  diff::ref_init = (init_t)dlsym(dl, "difftest_init");
+  diff::ref_exec = (exec_t)dlsym(dl, "difftest_exec");
+  diff::ref_memcpy = (mcpy_t)dlsym(dl, "difftest_memcpy");
+  diff::ref_regcpy = (rcpy_t)dlsym(dl, "difftest_regcpy");
+  diff::ref_raise_intr = (intr_t)dlsym(dl, "difftest_raise_intr");
 
   assert(ref_init && "difftest_init");
   assert(ref_exec && "difftest_exec");
@@ -50,35 +52,37 @@ diff::init(const char* so, int port) {
   ref_memcpy(diff::ResetVector, dpic::pmem_pointer_raw(), imgsz, CpyDir::ToRef);
 
   // TODO: Enable RVE for NEMU
-  uint32_t regbuf[comm::RegNum+1];
-  for (size_t i = 0; i < comm::RegNum+1; ++i) {
+  uint32_t regbuf[comm::RegNum + 1];
+  for (size_t i = 0; i < comm::RegNum + 1; ++i) {
     regbuf[i] = ccdb::read_reg(i).second;
   }
   ref_regcpy(regbuf, CpyDir::ToRef);
 }
 
-void 
+void
 diff::copy() {
   comm::device_access[comm::PrevCyc] = comm::device_access[comm::CurrCyc];
   comm::device_access[comm::CurrCyc] = false;
-  uint32_t regbuf[comm::RegNum+1];
-  for (size_t i = 0; i < comm::RegNum+1; ++i) {
+  uint32_t regbuf[comm::RegNum + 1];
+  for (size_t i = 0; i < comm::RegNum + 1; ++i) {
     regbuf[i] = ccdb::read_reg(i).second;
   }
   ref_regcpy(regbuf, CpyDir::ToRef);
 }
 
-void 
+void
 diff::iota(uint64_t n) {
-  if (comm::device_access[comm::PrevCyc]) return;
+  if (comm::device_access[comm::PrevCyc])
+    return;
   ref_exec(n);
 }
 
-std::vector<std::tuple<uint8_t, uint32_t, uint32_t> >
+std::vector<std::tuple<uint8_t, uint32_t, uint32_t>>
 diff::match() {
-  if (comm::device_access[comm::PrevCyc]) return {};
-  std::vector<std::tuple<uint8_t, uint32_t, uint32_t> > ret {};
-  uint32_t regbuf[comm::RegNum+1];
+  if (comm::device_access[comm::PrevCyc])
+    return {};
+  std::vector<std::tuple<uint8_t, uint32_t, uint32_t>> ret{};
+  uint32_t regbuf[comm::RegNum + 1];
   ref_regcpy(regbuf, CpyDir::ToDut);
 
   size_t i = 0;
@@ -91,8 +95,8 @@ diff::match() {
     }
   }
   // if (ref_pc != -1 && ref_pc != ccdb::read_reg(i).second) {
-    // comm::sout32(std::cerr) << regbuf[i] << "<- Ref"<< std::endl;
-    // return std::make_pair(false, i);
+  // comm::sout32(std::cerr) << regbuf[i] << "<- Ref"<< std::endl;
+  // return std::make_pair(false, i);
   // }
   return ret;
 }

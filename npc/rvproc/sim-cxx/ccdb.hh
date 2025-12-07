@@ -119,6 +119,8 @@ namespace ccdb {
   };
   extern DumpPrint runtime_dump_opt;
 
+  extern bool runtime_print_cycle;
+
   inline void 
   inst_dump(std::ostream& os=std::cerr) {
     os << "\n=== Inst Ring Buffer === " << std::endl;
