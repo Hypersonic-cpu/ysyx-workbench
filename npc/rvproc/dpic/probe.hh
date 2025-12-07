@@ -158,6 +158,7 @@ namespace comm {
 
   extern std::unordered_map<uint32_t, ElfSymEnt> elf_syms;
 
+  extern bool log_ena;
   extern std::string log_wavefile;
   extern std::string elf_file;
 

@@ -67,13 +67,14 @@ class EXU extends Module {
   io.brVal  :=
     Mux(io.sel.brSelCsr, io.csrV, io.aluOut)
 
-  printf(
-    cf"[ ${io.pc}%x EX ] "
-    +cf"src1 selR${~io.sel.rs1SelPC} Inv${io.sel.rs1Invert} = ${src1}%x, "
-    +cf"src2 selR${~io.sel.rs2SelImm} Inv${io.sel.rs2Invert} = ${src2}%x,"
-    +cf" Imm = ${io.imm}%x" 
-    + "\n")
-
+  when (io.aluEn) {
+    printf(
+      cf"[ ${io.pc}%x EX ] "
+      +cf"src1 selR${~io.sel.rs1SelPC} Inv${io.sel.rs1Invert} = ${src1}%x, "
+      +cf"src2 selR${~io.sel.rs2SelImm} Inv${io.sel.rs2Invert} = ${src2}%x,"
+      +cf" Imm = ${io.imm}%x" 
+      + "\n")
+  }
 }
 
 class ExecuteStage extends Module {
@@ -82,15 +83,13 @@ class ExecuteStage extends Module {
     val out = Decoupled(new ExecuteToMemory)
     val toFetch = Decoupled(new ExecuteBackward)
   })
-  io.in.ready  := true.B
-  io.out.valid := true.B
-  io.toFetch.valid := true.B
+  io.in.ready  := io.out.ready
+  io.out.valid := io.in.valid
+  io.toFetch.valid := io.in.valid
 
   val iExe = Module(new EXU)
   val ioid = io.in.bits
   val iols = io.out.bits
-  io.in.ready  := true.B
-  io.out.valid := true.B
   iExe.io.op   := ioid.aluOp
   iExe.io.sel  := ioid.aluSel
   iExe.io.rs1V := ioid.rs1V
@@ -98,7 +97,7 @@ class ExecuteStage extends Module {
   iExe.io.csrV := ioid.foward.csrVal
   iExe.io.imm  := ioid.imm
   iExe.io.pc   := ioid.foward.pc
-  iExe.io.aluEn := ioid.aluEn
+  iExe.io.aluEn := ioid.aluEn && io.in.valid
 
   /** NOTE: Back to Fetch */
   val iobk = io.toFetch.bits
