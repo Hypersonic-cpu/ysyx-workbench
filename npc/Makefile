@@ -120,9 +120,9 @@ verilate:
 # 	$(call git_commit, "sim RTL") # DO NOT REMOVE THIS LINE!!!
 # 	$(SIM_BIN)
 
+# WARN: DO NOT AUTO-CHANGE TO ANY OTHER BRANCHES!
+# THAT IS UNPREDICTABLE BY ANY USER.
 commit:
-	# WARN: DO NOT AUTO-CHANGE TO ANY OTHER BRANCHES!
-	# THAT IS UNPREDICTABLE BY ANY USER.
 	@git commit -am "npc: commit by Makefile script"
 
 -include ../Makefile
