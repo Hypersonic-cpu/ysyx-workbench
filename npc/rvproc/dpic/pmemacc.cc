@@ -15,11 +15,12 @@
 #include <sys/types.h>
 #include <utility>
 #include <verilated.h>
-// #define PRINTF_COND 1
+#define PRINTF_COND 1
 
 using addr_t = uint32_t;
-constexpr char PMemFile[] = "/home/kong/ysyx-workbench/npc/rvproc/prog-rom/meminit.bin";
-constexpr size_t PMemSize{ 0x1000'0000U }; // 32 MiB
+constexpr char PMemFile[] =
+  "/home/kong/ysyx-workbench/npc/rvproc/prog-rom/meminit.bin";
+constexpr size_t PMemSize{0x1000'0000U}; // 32 MiB
 static uint32_t pmem_raw[PMemSize >> 2];
 static size_t image_size = 0;
 
@@ -28,20 +29,22 @@ dpic::pmem_pointer_raw() {
   return (uint8_t *)pmem_raw;
 }
 
-size_t 
+size_t
 dpic::pmem_bytes_raw() {
   return image_size;
 }
 
-constexpr addr_t BaseAddr{ 0x8000'0000U };
+constexpr addr_t BaseAddr{0x8000'0000U};
 constexpr auto ValidAccess = [](size_t idx) -> bool {
   return idx < (PMemSize >> 2);
 };
 
-template<typename... Args>
-inline void v_assert(bool cond, const Args&... args) {
+template <typename... Args>
+inline void
+v_assert(bool cond, const Args &...args) {
   if (!cond) {
-    std::cerr << "[ASSERT FAILED] " << __FILE__ << ":" << __LINE__ << " " << std::hex;
+    std::cerr << "[ASSERT FAILED] " << __FILE__ << ":" << __LINE__ << " "
+              << std::hex;
     ((std::cerr << args << " "), ...);
     std::cerr << std::endl;
     // std::abort();
@@ -49,10 +52,12 @@ inline void v_assert(bool cond, const Args&... args) {
   }
 }
 
-template<typename... Args>
-inline void v_warn(bool cond, const Args&... args) {
+template <typename... Args>
+inline void
+v_warn(bool cond, const Args &...args) {
   if (!cond) {
-    std::cerr << "[ WARNIGN ] " << __FILE__ << ":" << __LINE__ << " " << std::hex;
+    std::cerr << "[ WARNING ] " << __FILE__ << ":" << __LINE__ << " "
+              << std::hex;
     ((std::cerr << args << " "), ...);
     std::cerr << std::endl;
     // std::abort();
@@ -61,47 +66,51 @@ inline void v_warn(bool cond, const Args&... args) {
 }
 
 namespace rv_device {
-  constexpr addr_t SerialAddr{ 0x1000'0000U };
-  constexpr addr_t ClockAddr{ 0x1000'0020U };
+constexpr addr_t SerialAddr{0x1000'0000U};
+constexpr addr_t ClockAddr{0x1000'0020U};
 
-  bool is_mem_range(addr_t a) {
-    return a >= BaseAddr;
-  }
-  bool is_clock_range(addr_t a) {
-    return a >= ClockAddr && a < ClockAddr + 8U;
-  }
-  bool is_serial_range(addr_t a) {
-    return a == SerialAddr;
-  }
-
-  void write_serial(unsigned char ch) {
-#ifdef PRINTF_COND
-    std::cout << "WRITE SERIAL !! \'" << ch << "\'" << std::endl; 
-#endif
-    putchar(ch);
-    fflush(stdout);
-  }
-
-  inline std::chrono::microseconds 
-  get_uptime() {
-    using std::chrono::duration_cast;
-    using std::chrono::seconds;
-    using std::chrono::milliseconds;
-    using std::chrono::nanoseconds;
-    std::timespec ts;
-    clock_gettime(CLOCK_BOOTTIME, &ts);
-    
-    return duration_cast<milliseconds>(
-      seconds(ts.tv_sec) + nanoseconds(ts.tv_nsec));
-  }
-
-  uint32_t read_clock(bool hi) {
-    return static_cast<uint64_t>(get_uptime().count()) >> 
-      (hi ? 32ULL : 0ULL);
-  }
+bool
+is_mem_range(addr_t a) {
+  return a >= BaseAddr;
+}
+bool
+is_clock_range(addr_t a) {
+  return a >= ClockAddr && a < ClockAddr + 8U;
+}
+bool
+is_serial_range(addr_t a) {
+  return a == SerialAddr;
 }
 
-extern "C" void 
+void
+write_serial(unsigned char ch) {
+#ifdef PRINTF_COND
+  std::cout << "WRITE SERIAL !! \'" << ch << "\'" << std::endl;
+#endif
+  putchar(ch);
+  fflush(stdout);
+}
+
+inline std::chrono::microseconds
+get_uptime() {
+  using std::chrono::duration_cast;
+  using std::chrono::milliseconds;
+  using std::chrono::nanoseconds;
+  using std::chrono::seconds;
+  std::timespec ts;
+  clock_gettime(CLOCK_BOOTTIME, &ts);
+
+  return duration_cast<milliseconds>(seconds(ts.tv_sec) +
+                                     nanoseconds(ts.tv_nsec));
+}
+
+uint32_t
+read_clock(bool hi) {
+  return static_cast<uint64_t>(get_uptime().count()) >> (hi ? 32ULL : 0ULL);
+}
+} // namespace rv_device
+
+extern "C" void
 pmem_init() {
   // ccdb::pmem_init_hello();
 #if PRINTF_COND
@@ -119,30 +128,34 @@ pmem_init() {
   image_size = file_size;
   ifs.seekg(0, std::ios::beg);
 
-  ifs.read((char *) pmem_raw, file_size);
+  ifs.read((char *)pmem_raw, file_size);
 #if PRINTF_COND
-  std::cout << "DPI-C >> fail " << ifs.fail() << " eof " << ifs.eof() << std::endl;
+  std::cout << "DPI-C >> fail " << ifs.fail() << " eof " << ifs.eof()
+            << std::endl;
 #endif
   assert(!ifs.fail());
 }
 
-
-extern "C" uint32_t 
+extern "C" uint32_t
 pmem_read(uint32_t raddr) {
 #if PRINTF_COND
   std::cout << "DPI-C >> pmem_read addr " << std::hex << raddr << std::endl;
 #endif
   uint32_t ret = 0;
-  if (raddr == 0) { ret = 0; }
-  else if (rv_device::is_clock_range(raddr)) {
+  if (raddr == 0) {
+    ret = 0;
+  } else if (rv_device::is_clock_range(raddr)) {
     ret = rv_device::read_clock(raddr != rv_device::ClockAddr);
     comm::device_access[comm::CurrCyc] = true;
   } else {
     // Memory
     uint32_t aln_idx = (raddr - BaseAddr) >> 2;
     v_warn(ValidAccess(aln_idx), std::string("Read addr = "), raddr);
-    if (!ValidAccess(aln_idx)) { ret = 0x55aa55aa; }
-    else { ret = pmem_raw[aln_idx]; }
+    if (!ValidAccess(aln_idx)) {
+      ret = 0xBadC0de;
+    } else {
+      ret = pmem_raw[aln_idx];
+    }
   }
 #if PRINTF_COND
   std::cout << " ret = " << std::hex << ret << std::endl;
@@ -158,7 +171,8 @@ pmem_write(uint32_t waddr, uint32_t wdata, uint8_t wmask) {
     v_assert((wmask & 0x1), "Serial write masked out, wmask = ", wmask);
     rv_device::write_serial(wdata & 0xff);
     comm::device_access[comm::CurrCyc] = true;
-    // std::cerr << "==> Identifier " << comm::device_access[comm::CurrCyc] << std::endl;
+    // std::cerr << "==> Identifier " << comm::device_access[comm::CurrCyc] <<
+    // std::endl;
   } else {
     uint32_t aln_idx = (waddr - BaseAddr) >> 2;
     v_assert(ValidAccess(aln_idx), std::string("Write addr = "), waddr);
@@ -168,11 +182,11 @@ pmem_write(uint32_t waddr, uint32_t wdata, uint8_t wmask) {
         m |= (0xff << (i * 8));
       }
     }
-    pmem_raw[aln_idx] = 
-      (pmem_raw[aln_idx] & ~m) | (wdata & m);
+    pmem_raw[aln_idx] = (pmem_raw[aln_idx] & ~m) | (wdata & m);
 #if PRINTF_COND
-    std::cout << "DPI-C >> pmem_write addr" << std::hex << waddr << " : " << wdata << " mask = " << m << std::endl;
-    for (size_t i = 0x100 >> 2; i < (0x100+20) >> 2; i++) {
+    std::cout << "DPI-C >> pmem_write addr" << std::hex << waddr << " : "
+              << wdata << " mask = " << m << std::endl;
+    for (size_t i = 0x100 >> 2; i < (0x100 + 20) >> 2; i++) {
       if (i % 4 == 0) {
         std::cout << std::hex << i << ":\t";
       }

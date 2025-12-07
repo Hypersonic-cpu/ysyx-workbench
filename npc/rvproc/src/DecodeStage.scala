@@ -53,6 +53,7 @@ class Comparator extends Module {
 
 class IDU extends Module {
   val io = IO(new Bundle {
+    val valid  = Input(Bool())
     val inst   = Input(Tp.InstType())
     val pc     = Input(Tp.RegType())
     val rd     = Output(Tp.RegIdxType())
@@ -92,10 +93,12 @@ class IDU extends Module {
   val csrid12 = io.inst(31, 20)
 
   val (opName, opValid) = InstOp.safe(opcode(6, 2))
-  printf(cf"[ ${io.pc}%x ID ] ${opName} rs1 ${io.rs1} rs2 ${io.rs2} rd ${io.rd}\n")
+  when (io.valid) {
+    printf(cf"[ ${io.pc}%x ID ] inst ${io.inst}%x ${opName} rs1 ${io.rs1} rs2 ${io.rs2} rd ${io.rd}\n")
 
-  assert(rvBase, cf"Inst[1:0] is not 0b11: opcode=${opcode}%x")
-  assert(opValid, cf"Invalid opcode encountered: opcode=${opcode}%x")
+    assert(rvBase, cf"Inst[1:0] is not 0b11: opcode=${opcode}%x")
+    assert(opValid, cf"Invalid opcode encountered: opcode=${opcode}%x")
+  }
 
   val sysRel = 
     (opName === InstOp.System) && ~io.inst(19, 7).orR
@@ -220,8 +223,10 @@ class IDU extends Module {
   io.brRel := 
     (bIfeq && brEq) || (bIfne && ~brEq) ||
     (bIflt && brLt) || (bIfge && ~brLt)
-  // brDel = imm
-  printf(cf"[ ${io.pc}%x CP ] cmp(<,=) (${brLt},${brEq}), jmp(<,>=,=,!=) (${bIflt},${bIfge},${bIfeq},${bIfne}) take${io.brRel}\n")
+  
+    when (io.valid) {
+      printf(cf"[ ${io.pc}%x CP ] cmp(<,=) (${brLt},${brEq}), jmp(<,>=,=,!=) (${bIflt},${bIfge},${bIfeq},${bIfne}) take${io.brRel}\n")
+    }
 
   /** NOTE: Foward -> WBU */
   io.wbSel := MuxCase(WbSel.fromAlu, Seq(
@@ -264,9 +269,9 @@ class DecodeStage extends Module {
   // wait for NEXT stage
   // val idle :: hold :: Nil = Enum(2)
   // TODO:
-  io.in.ready  := true.B
-  io.out.valid := true.B
-  io.toFetch.valid := true.B
+  io.in.ready  := io.out.ready
+  io.out.valid := io.in.valid
+  io.toFetch.valid := io.in.valid
   // val state = RegInit(wait)
   // state := MuxLookup(state, wait) (Seq(
   //   idle   -> Mux(io.out.valid, ),
@@ -274,9 +279,10 @@ class DecodeStage extends Module {
   // ))
 
   val iDec = Module(new IDU)
+  iDec.io.valid := io.in.valid
 
   /** NOTE: Reg Read */
-  io.toReg.valid := true.B
+  io.toReg.valid := io.in.valid
   io.toReg.bits.rs1  := iDec.io.rs1
   io.toReg.bits.rs2  := iDec.io.rs2
   io.toReg.bits.csrr := iDec.io.csrir

@@ -56,6 +56,15 @@ namespace ccdb {
     return std::make_pair(valid, ret);
   }
 
+  enum McState { Idle = 0, Hold, Fire };
+
+  inline McState 
+  read_ifs_mcstate() {
+    auto r = top->rootp;
+    uint8_t val = r->rvCore__DOT__ifs__DOT__state;
+    return McState(val);
+  }
+
   constexpr std::array<const char*, 4> csr_list {
     "mtvec", "mepc", "mstatus", "mcause"
   };

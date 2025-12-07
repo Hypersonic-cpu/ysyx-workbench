@@ -40,7 +40,7 @@ parse_args(int argc, char *argv[]) {
     {0, 0, NULL, 0},
   };
   int o;
-  while ((o = getopt_long(argc, argv, "-hmidfnTl:e:", table, NULL)) != -1) {
+  while ((o = getopt_long(argc, argv, "-hmidfcnTl:e:", table, NULL)) != -1) {
     switch (o) {
     case 'm':
       ccdb::runtime_dump_opt.mem_buf = true;
@@ -54,6 +54,7 @@ parse_args(int argc, char *argv[]) {
       break;
     case 'l':
       comm::log_wavefile = std::string(optarg);
+      comm::log_ena = true;
       break;
     case 'e':
       comm::elf_file = optarg;
@@ -64,6 +65,9 @@ parse_args(int argc, char *argv[]) {
     case 'F':
       comm::fast = true;
       break;
+    case 'c':
+      ccdb::runtime_print_cycle = true;
+      break;
     default:
       std::cerr << ANSI_Red << "Invalid Arguments.\n" << ANSI_None << std::endl;
       exit(1);
@@ -73,25 +77,41 @@ parse_args(int argc, char *argv[]) {
 
 inline void
 single_cycle(const std::unique_ptr<TOP_NAME> &top,
-             const std::unique_ptr<VerilatedContext> &context) {
+             const std::unique_ptr<VerilatedContext> &context,
+             const std::unique_ptr<VerilatedFstC> &fstwave) {
 
-  context->timeInc(1);
   top->clock = 1;
+  context->timeInc(1);
   top->eval();
+  if (comm::log_ena)
+    fstwave->dump(context->time());
   top->clock = 0;
+  context->timeInc(1);
   top->eval();
+  if (comm::log_ena)
+    fstwave->dump(context->time());
 }
 
 inline void
 single_reset(const std::unique_ptr<TOP_NAME> &top,
-             const std::unique_ptr<VerilatedContext> &context) {
+             const std::unique_ptr<VerilatedContext> &context,
+             const std::unique_ptr<VerilatedFstC> &fstwave) {
 
-  context->timeInc(1);
   top->reset = 1;
   for (size_t i = 0; i < 5; i++) {
-    single_cycle(top, context);
+    single_cycle(top, context, fstwave);
   }
-  top->reset = 0;
+  top->clock = 1;
+  context->timeInc(1);
+  top->eval();
+  if (comm::log_ena)
+    fstwave->dump(context->time());
+  top->clock = 0;
+  top->reset = 0; // cancel reset @ falling edge
+  context->timeInc(1);
+  top->eval();
+  if (comm::log_ena)
+    fstwave->dump(context->time());
 }
 
 ccdb::ptop_t ccdb::top = nullptr;
@@ -102,17 +122,18 @@ main(int argc, char *argv[]) {
 
   const std::unique_ptr<VerilatedContext> contextp{new VerilatedContext};
 
-  if (!comm::log_wavefile.empty()) {
+  if (comm::log_ena) {
     Verilated::traceEverOn(true);
   }
-  VerilatedFstC *tfp = new VerilatedFstC;
+  // VerilatedFstC *tfp = new VerilatedFstC;
+  const std::unique_ptr<VerilatedFstC> tfp{new VerilatedFstC};
 
   const std::unique_ptr<TOP_NAME> top{new TOP_NAME{contextp.get(), "TOP"}};
   ccdb::top = top.get();
 
-  if (!comm::log_wavefile.empty()) {
+  if (comm::log_ena) {
     // Trace 99 levels of hierarchy (or see below)
-    top->trace(tfp, 99);
+    top->trace(tfp.get(), 99);
     // tfp->dumpvars(1, "t"); // trace 1 level under "t"
     tfp->open(comm::log_wavefile.c_str());
   }
@@ -120,32 +141,33 @@ main(int argc, char *argv[]) {
   if (!comm::fast) {
     ccdb::trace_init();
   }
-  single_reset(top, contextp);
+  single_reset(top, contextp, tfp);
 
   if (diff::enable) {
     diff::init();
   }
 
   constexpr size_t MaxCyc{30U};
-  size_t currCyc{1U};
-  while (!contextp->gotFinish()) {
+  size_t currCyc{0U};
+  while (!contextp->gotFinish() && currCyc < MaxCyc) {
     if (ccdb::runtime_print_cycle) {
       std::cerr << std::format("== @posedge of Cycle #{} ==", currCyc)
                 << std::endl;
     }
-    if (diff::enable) {
+    // WARN: Skipping cycle 0
+    if (diff::enable && ccdb::read_ifs_mcstate() == ccdb::McState::Idle) {
       diff::copy();
     } // Comes before exec
 
     if (!comm::fast) {
       ccdb::inst_trace();
     }
-    single_cycle(top, contextp);
-    if (!comm::log_wavefile.empty()) {
-      tfp->dump(contextp->time());
-    }
 
-    if (diff::enable) {
+    std::cout << std::format("Before exec: mcstate = {}\n", (int)ccdb::read_ifs_mcstate());
+    single_cycle(top, contextp, tfp);
+    std::cout << std::format("After  exec: mcstate = {}\n", (int)ccdb::read_ifs_mcstate());
+
+    if (diff::enable && ccdb::read_ifs_mcstate() == ccdb::McState::Idle) {
       diff::iota(); // Comes after exec
       auto diffvec = diff::match();
       if (!diffvec.empty()) {
@@ -164,7 +186,7 @@ main(int argc, char *argv[]) {
   }
   top->final();
 
-  if (!comm::log_wavefile.empty()) {
+  if (comm::log_ena) {
     tfp->close();
   }
 

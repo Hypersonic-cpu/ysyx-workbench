@@ -18,7 +18,6 @@ class WBU extends Module {
     val gprdt  = Output(Tp.RegType())
   })
 
-  val snpc = io.pc + 4.U
   // val aluc = io.aluV(31, 1) ## 0.U(1.W)
   // val dnpc = MuxLookup(io.brSel, aluc) (Seq(
   //   BrSel.fromAlu -> aluc,
@@ -26,9 +25,8 @@ class WBU extends Module {
   // ))
   // io.nxpc := Mux(io.takeBr, dnpc, snpc)
 
-  printf(cf"[ ${io.pc}%x WB ] Data = ${io.gprdt}%x\n")
-
-    // Mux(jmp, dnpc, snpc)
+  // Mux(jmp, dnpc, snpc)
+  val snpc = io.pc + 4.U
   io.gprdt := MuxLookup(io.wbSel, 0.U) (Seq(
     WbSel.fromAlu -> io.aluV, 
     WbSel.fromMem -> io.memV,
@@ -41,10 +39,11 @@ class WrBackStage extends Module {
   val io = IO(new Bundle {
     val in  = Flipped(Decoupled(new MemoryToWrBack))
     val toReg = Decoupled(new RegFromWBU)
+    val toFetch = Decoupled(new InstCommit)
   })
-  io.in.ready  := true.B
-
-  io.toReg.valid  := true.B
+  io.in.ready  := io.toFetch.ready
+  io.toReg.valid  := io.in.valid
+  io.toFetch.valid := io.in.valid
 
   val iWbu = Module(new WBU)
   val iols = io.in.bits
@@ -54,6 +53,10 @@ class WrBackStage extends Module {
   iWbu.io.csrV   := iofw.csrVal
   iWbu.io.pc     := iofw.pc
   iWbu.io.wbSel  := iofw.wbSel
+
+  when (io.in.valid) {
+    printf(cf"[ ${iofw.pc}%x WB ] Data = ${iWbu.io.gprdt}%x\n")
+  }
 
   val ioreg = io.toReg.bits
   ioreg.csrWE    := iofw.csrWE
