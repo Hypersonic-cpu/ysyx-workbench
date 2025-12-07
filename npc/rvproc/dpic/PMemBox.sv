@@ -25,20 +25,22 @@ module PMemBox(
 
   reg [31:0] rdata;
 
-  always_comb begin
+  always_ff @(posedge clock)
     // $display("MEn %d Wr %d Addr %x Mask %x", memEn, wrEn, addr, byteMask);
-    if (memEn) begin
-      rdata = 0;
-      if (wrEn) begin
-        pmem_write(addr, data, byteMask);
+    if (reset) begin
+      rdata <= 0;
+    end else begin
+      if (memEn) begin
+        rdata <= 0;
+        if (wrEn) begin
+          pmem_write(addr, data, byteMask);
+        end else begin
+          rdata <= pmem_read(addr);
+        end
       end else begin
-        rdata = pmem_read(addr);
+        rdata <= 0;
       end
     end
-    else begin
-      rdata = 0;
-    end
-  end
 
   assign loadRaw = rdata;
 endmodule

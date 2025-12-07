@@ -23,6 +23,10 @@ object BitMath {
       i.pad(width)
     }
   }
+
+  implicit class LogicPropagator(val p: Bool) extends AnyVal{
+    def Implies(q: Bool): Bool = (~p) || q
+  }
 }
 import BitMath._
 
@@ -44,6 +48,7 @@ class rvCore() extends Module {
   BusConnect(exs.io.out, lss.io.in)
   BusConnect(lss.io.out, wbs.io.in)
   BusConnect(wbs.io.toReg, reg.io.fromWb)
+  BusConnect(wbs.io.toFetch, ifs.io.fromWb)
 
   // always_comb
   BusConnect(ids.io.toReg, reg.io.fromId, BusType.SingleCyc)
