@@ -1,62 +1,79 @@
 #include <cassert>
+#include <cstdlib>
 #include <ctime>
+#include <format>
+#include <getopt.h>
 #include <iomanip>
+#include <ios>
+#include <iostream>
 #include <iterator>
 #include <memory>
-#include <cstdlib>
-#include <iostream>
 #include <numeric>
-#include <getopt.h>
 
 #include <verilated.h>
 #include <verilated_fst_c.h>
 
 #include "VrvCore.h"
-#include "difftest.hh"
-#include "probe.hh"
 #include "ccdb.hh"
+#include "difftest.hh"
 #include "disasm.hh"
+#include "probe.hh"
 
-constexpr auto ANSI_Red    = "\033[31m";
+constexpr auto ANSI_Red = "\033[31m";
 constexpr auto ANSI_Yellow = "\033[32m";
-constexpr auto ANSI_Green  = "\033[33m";
-constexpr auto ANSI_Blue   = "\033[34m";
-constexpr auto ANSI_None   = "\033[0m";
-void parse_args(int argc, char* argv[]) {
+constexpr auto ANSI_Green = "\033[33m";
+constexpr auto ANSI_Blue = "\033[34m";
+constexpr auto ANSI_None = "\033[0m";
+void
+parse_args(int argc, char *argv[]) {
   constexpr struct option table[] = {
-    {"print-mem"  , no_argument      , NULL, 'm'},
-    {"print-inst" , no_argument      , NULL, 'i'},
-    {"print-dev"  , no_argument      , NULL, 'd'},
-    {"print-frame", no_argument      , NULL, 'f'},
-    {"fast-mode"  , no_argument      , NULL, 'F'},
-    {"no-difftest", no_argument      , NULL, 'n'},
-    {"log"        , required_argument, NULL, 'l'},
-    {"elf"        , required_argument, NULL, 'e'},
-    {"help"       , no_argument      , NULL, 'h'},
-    {0            , 0                , NULL,  0 },
+    {"print-mem", no_argument, NULL, 'm'},
+    {"print-inst", no_argument, NULL, 'i'},
+    {"print-dev", no_argument, NULL, 'd'},
+    {"print-frame", no_argument, NULL, 'f'},
+    {"print-cycle", no_argument, NULL, 'c'},
+    {"fast-mode", no_argument, NULL, 'F'},
+    {"no-difftest", no_argument, NULL, 'n'},
+    {"log", required_argument, NULL, 'l'},
+    {"elf", required_argument, NULL, 'e'},
+    {"help", no_argument, NULL, 'h'},
+    {0, 0, NULL, 0},
   };
   int o;
-  while ( (o = getopt_long(argc, argv, "-hmidfnTl:e:", table, NULL)) != -1) {
+  while ((o = getopt_long(argc, argv, "-hmidfnTl:e:", table, NULL)) != -1) {
     switch (o) {
-      case 'm': ccdb::runtime_dump_opt.mem_buf   = true; break;
+    case 'm':
+      ccdb::runtime_dump_opt.mem_buf = true;
+      break;
       // case 'd': ccdb::runtime_dump_opt. = true; break;
-      case 'f': ccdb::runtime_dump_opt.frame_stk = true; break;
-      case 'i': ccdb::runtime_dump_opt.inst_buf  = true; break;
-      case 'l': comm::log_wavefile = std::string(optarg); break;
-      case 'e': comm::elf_file = optarg; break;
-      case 'n': diff::enable = false; break;
-      case 'F': comm::fast = true; break;
-      default:
-        std::cerr << ANSI_Red << "Invalid Arguments.\n" << ANSI_None << std::endl;
-        exit(1);
+    case 'f':
+      ccdb::runtime_dump_opt.frame_stk = true;
+      break;
+    case 'i':
+      ccdb::runtime_dump_opt.inst_buf = true;
+      break;
+    case 'l':
+      comm::log_wavefile = std::string(optarg);
+      break;
+    case 'e':
+      comm::elf_file = optarg;
+      break;
+    case 'n':
+      diff::enable = false;
+      break;
+    case 'F':
+      comm::fast = true;
+      break;
+    default:
+      std::cerr << ANSI_Red << "Invalid Arguments.\n" << ANSI_None << std::endl;
+      exit(1);
     }
   }
 }
 
-inline void 
-single_cycle(
-    const std::unique_ptr<TOP_NAME>& top, 
-    const std::unique_ptr<VerilatedContext>& context) {
+inline void
+single_cycle(const std::unique_ptr<TOP_NAME> &top,
+             const std::unique_ptr<VerilatedContext> &context) {
 
   context->timeInc(1);
   top->clock = 1;
@@ -65,10 +82,9 @@ single_cycle(
   top->eval();
 }
 
-inline void 
-single_reset(
-    const std::unique_ptr<TOP_NAME>& top, 
-    const std::unique_ptr<VerilatedContext>& context) {
+inline void
+single_reset(const std::unique_ptr<TOP_NAME> &top,
+             const std::unique_ptr<VerilatedContext> &context) {
 
   context->timeInc(1);
   top->reset = 1;
@@ -80,16 +96,16 @@ single_reset(
 
 ccdb::ptop_t ccdb::top = nullptr;
 
-int 
-main(int argc, char* argv[]) {
+int
+main(int argc, char *argv[]) {
   parse_args(argc, argv);
 
-  const std::unique_ptr<VerilatedContext> contextp { new VerilatedContext };
+  const std::unique_ptr<VerilatedContext> contextp{new VerilatedContext};
 
   if (!comm::log_wavefile.empty()) {
     Verilated::traceEverOn(true);
   }
-  VerilatedFstC* tfp = new VerilatedFstC;
+  VerilatedFstC *tfp = new VerilatedFstC;
 
   const std::unique_ptr<TOP_NAME> top{new TOP_NAME{contextp.get(), "TOP"}};
   ccdb::top = top.get();
@@ -101,33 +117,46 @@ main(int argc, char* argv[]) {
     tfp->open(comm::log_wavefile.c_str());
   }
 
-  if (!comm::fast) { ccdb::trace_init(); }
+  if (!comm::fast) {
+    ccdb::trace_init();
+  }
   single_reset(top, contextp);
 
-  if (diff::enable) { diff::init(); }
+  if (diff::enable) {
+    diff::init();
+  }
 
-  constexpr size_t MaxCyc{ 30U };
-  size_t currCyc{ 1U };
+  constexpr size_t MaxCyc{30U};
+  size_t currCyc{1U};
   while (!contextp->gotFinish()) {
-    if (diff::enable) { diff::copy(); }       // Comes before exec
+    if (ccdb::runtime_print_cycle) {
+      std::cerr << std::format("== @posedge of Cycle #{} ==", currCyc)
+                << std::endl;
+    }
+    if (diff::enable) {
+      diff::copy();
+    } // Comes before exec
 
-    if (!comm::fast) { ccdb::inst_trace(); }
+    if (!comm::fast) {
+      ccdb::inst_trace();
+    }
     single_cycle(top, contextp);
     if (!comm::log_wavefile.empty()) {
       tfp->dump(contextp->time());
     }
 
     if (diff::enable) {
-      diff::iota();       // Comes after exec
+      diff::iota(); // Comes after exec
       auto diffvec = diff::match();
       if (!diffvec.empty()) {
-        for (const auto& [id, ref, dut] : diffvec) {
-          std::cerr << ANSI_Red << "Mismatch reg " << std::dec << (int) id
-            << " (" << comm::RegName.at(id) << ") : " << ANSI_None << "expected "; 
+        for (const auto &[id, ref, dut] : diffvec) {
+          std::cerr << ANSI_Red << "Mismatch reg " << std::dec << (int)id
+                    << " (" << comm::RegName.at(id) << ") : " << ANSI_None
+                    << "expected ";
           comm::sout32(std::cerr) << ref << " got ";
           comm::sout32(std::cerr) << dut << std::endl;
         }
-        ccdb::dump_print(ccdb::DumpPrint{ false, true, true, false, false });
+        ccdb::dump_print(ccdb::DumpPrint{false, true, true, false, false});
         exit(1);
       }
     }
@@ -138,6 +167,6 @@ main(int argc, char* argv[]) {
   if (!comm::log_wavefile.empty()) {
     tfp->close();
   }
+
   return 0;
 }
-
