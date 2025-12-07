@@ -33,7 +33,7 @@ VERILATOR_CFLAGS += $(VERILATOR_TRACE) -DPRINTF_COND=$(DPRINTF)
 VERILATOR_CFLAGS += -MMD --build -cc  \
 										-O3 --x-assign fast --x-initial fast --noassert
 INCFLAGS = $(addprefix -I, $(INC_PATH))
-CXXFLAGS += $(INCFLAGS) -DTOP_NAME="\"V$(TOPNAME)\"" -std=c++20 -g
+CXXFLAGS += $(INCFLAGS) -DTOP_NAME="\"V$(TOPNAME)\"" -std=c++23 -g
 simccargs ?= 
 
 # capstone
@@ -70,23 +70,24 @@ $(SIM_BIN): $(CSRCS) $(DPIC_SRCS) $(NVB_ARCHIVE)
 		--Mdir $(BUILD_OBJ_DIR) --exe -o $(abspath $(SIM_BIN))
 
 test:
-	$(call git_commit, "test RTL") # DO NOT REMOVE THIS LINE!!!
+	# $(call git_commit, "test RTL") 
+	# WARN: Removed this line. 会导致分支混乱且无法恢复.
 	mill -i $(PRJ).test.testOnly $(PRJ).test.$(TOPNAME)Spec
 
 runam:
-	$(call git_commit, "run with AM")
+	# $(call git_commit, "run with AM")
 	mill -i $(PRJ).test.testOnly $(PRJ).test.$(TOPNAME)Am 
 
 run: verilate verilog $(LIBCAPSTONE) $(SIM_BIN)
-	$(call git_commit, "run with AM via verilator cc")
+	# $(call git_commit, "run with AM via verilator cc")
 	$(SIM_BIN) $(simccargs)
 
 runonly: verilate $(SIM_BIN)
-	$(call git_commit, "run with AM via verilator cc")
+	# $(call git_commit, "run with AM via verilator cc")
 	$(SIM_BIN) $(simccargs)
 
 verilog:
-	$(call git_commit, "generate verilog")
+	$(call git_commit, "generate verilog") # WARN: Only reserve this commit
 	mkdir -p $(BUILD_SV_DIR)
 	mill -i $(PRJ).runMain Elaborate --target-dir $(BUILD_SV_DIR)
 	@echo "Verilog written to " $(BUILD_SV_DIR)
