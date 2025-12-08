@@ -241,7 +241,9 @@ main(int argc, char *argv[]) {
   if (currCyc == MaxCyc)
     exitBad |= true;
   else
-    std::cerr << std::format("== Exit SimLoop @ Cycle #{}", currCyc)
+    std::cerr << std::format(ANSI_Green
+                             "== Exit SimLoop @ Cycle #{} ==" ANSI_None,
+                             currCyc)
               << std::endl;
 
   return exitBad;
