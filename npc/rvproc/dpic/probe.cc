@@ -7,7 +7,9 @@ RingBuffer<InstEnt, 16> instBuf{};
 RingBuffer<MemEnt, 16> memBuf{};
 std::unordered_map<uint32_t, ElfSymEnt> elf_syms{};
 
-std::array<bool, Num_DelayTime> device_access{false, false};
+// std::array<bool, Num_DelayTime> device_access{false, false};
+bool device_access{false};
+WriteEvent mem_write_buf{0, 0};
 
 bool log_ena{false};
 std::string log_wavefile{};

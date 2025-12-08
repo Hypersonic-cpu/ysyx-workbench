@@ -36,12 +36,19 @@ class LSU extends Module {
   // Load and store should not happen together
   dMem.io.wrEn  := io.memOp.isSt
 
-  val lraw = dMem.io.loadRaw >> (io.addr(1, 0) << 3)
+
+  val delayedLenOp = RegInit(MemLen.None)
+  val delayedSext = RegInit(false.B)
+  val delayedAddr = Reg(Tp.AddrType())
   val sext = io.memOp.sExt
+  delayedSext := sext
+  delayedLenOp := lenOp
+  delayedAddr := io.addr
+  val lraw = dMem.io.loadRaw >> (delayedAddr(1, 0) << 3)
   // printf(cf"DPI Chisel Raw ${lraw}%x SEXT ${sext}\n")
-  io.load := MuxLookup(lenOp, 0.U) (Seq(
-    MemLen.Byte -> Mux(sext, lraw(7, 0).SExt(), lraw(7, 0)),
-    MemLen.Half -> Mux(sext, lraw(15, 0).SExt(), lraw(15, 0)),
+  io.load := MuxLookup(delayedLenOp, 0.U) (Seq(
+    MemLen.Byte -> Mux(delayedSext, lraw(7, 0).SExt(), lraw(7, 0)),
+    MemLen.Half -> Mux(delayedSext, lraw(15, 0).SExt(), lraw(15, 0)),
     MemLen.Word -> lraw
     )
   )
@@ -80,13 +87,21 @@ class MemoryStage extends Module {
   iLsu.io.memOp := ioex.memOp
   iowb.lsuOut  := iLsu.io.load
 
-  // Foward
-  iowb.aluOut  := ioex.aluOut
-  iowb.foward  <> ioex.foward
+  // NOTE: Fowards are delayed
+  val aluReg = Reg(Tp.RegType())
+  iowb.aluOut  := aluReg
+  // TODO: 新建一个foward逻辑, 进行锁存
+  val forwardReg = Reg(new DecodeFoward)
+  iowb.foward  := forwardReg
 
   when (io.in.valid) {
-    printf(cf"[ ${ioex.foward.pc}%x LS ] Requesting ${iLsu.io.addr}\n")
+    forwardReg := ioex.foward
+    aluReg := ioex.aluOut
+  }
+
+  when (io.in.valid) {
+    printf(cf"[ ${ioex.foward.pc}%x LS ] Requesting ${iLsu.io.addr}%x\n")
   }.elsewhen(state === hold) {
-    printf(cf"[ ${ioex.foward.pc}%x LS ] Response   ${iLsu.io.load}\n")
+    printf(cf"[ ${ioex.foward.pc}%x LS ] Response   ${iLsu.io.load}%x\n")
   }
 }

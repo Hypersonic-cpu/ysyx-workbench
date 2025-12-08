@@ -21,7 +21,7 @@ class FetchStage extends Module {
     * PC     Old Old Old Updated
     */
   val idle :: hold :: fire :: strt :: Nil = Enum(4)
-  val state = RegInit(fire)
+  val state = RegInit(strt)
   state := MuxLookup(state, strt) (Seq(
     hold -> Mux(io.out.ready, idle, hold),
     idle -> Mux(io.fromWb.valid , fire, idle),

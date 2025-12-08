@@ -15,7 +15,7 @@
 #include <sys/types.h>
 #include <utility>
 #include <verilated.h>
-#define PRINTF_COND 1
+// #define PRINTF_COND 1
 
 using addr_t = uint32_t;
 constexpr char PMemFile[] =
@@ -85,7 +85,7 @@ is_serial_range(addr_t a) {
 void
 write_serial(unsigned char ch) {
 #ifdef PRINTF_COND
-  std::cout << "WRITE SERIAL !! \'" << ch << "\'" << std::endl;
+  std::cerr << "WRITE SERIAL !! \'" << ch << "\'" << std::endl;
 #endif
   putchar(ch);
   fflush(stdout);
@@ -114,7 +114,7 @@ extern "C" void
 pmem_init() {
   // ccdb::pmem_init_hello();
 #if PRINTF_COND
-  std::cout << "DPI-C >> pmem_init called" << std::endl;
+  std::cerr << "DPI-C >> pmem_init called" << std::endl;
 #endif
   std::ifstream ifs(PMemFile, std::ios::binary | std::ios::in);
   assert(ifs.is_open());
@@ -122,7 +122,7 @@ pmem_init() {
   ifs.seekg(0, std::ios::end);
   auto const file_size = ifs.tellg();
 #if PRINTF_COND
-  std::cout << "DPI-C >> file size " << std::dec << file_size << std::endl;
+  std::cerr << "DPI-C >> file size " << std::dec << file_size << std::endl;
 #endif
   assert(file_size != std::ifstream::pos_type(-1));
   image_size = file_size;
@@ -130,7 +130,7 @@ pmem_init() {
 
   ifs.read((char *)pmem_raw, file_size);
 #if PRINTF_COND
-  std::cout << "DPI-C >> fail " << ifs.fail() << " eof " << ifs.eof()
+  std::cerr << "DPI-C >> fail " << ifs.fail() << " eof " << ifs.eof()
             << std::endl;
 #endif
   assert(!ifs.fail());
@@ -139,14 +139,15 @@ pmem_init() {
 extern "C" uint32_t
 pmem_read(uint32_t raddr) {
 #if PRINTF_COND
-  std::cout << "DPI-C >> pmem_read addr " << std::hex << raddr << std::endl;
+  std::cerr << "DPI-C >> pmem_read addr " << std::hex << raddr << std::endl;
 #endif
   uint32_t ret = 0;
   if (raddr == 0) {
     ret = 0;
   } else if (rv_device::is_clock_range(raddr)) {
     ret = rv_device::read_clock(raddr != rv_device::ClockAddr);
-    comm::device_access[comm::CurrCyc] = true;
+    // comm::device_access[comm::CurrCyc] = true;
+    comm::device_access = true;
   } else {
     // Memory
     uint32_t aln_idx = (raddr - BaseAddr) >> 2;
@@ -158,7 +159,7 @@ pmem_read(uint32_t raddr) {
     }
   }
 #if PRINTF_COND
-  std::cout << " ret = " << std::hex << ret << std::endl;
+  std::cerr << " ret = " << std::hex << ret << std::endl;
 #endif
   if (ccdb::runtime_dump_opt.mem_buf)
     comm::mem_acc_log(raddr, false, ret, 0xf);
@@ -166,11 +167,14 @@ pmem_read(uint32_t raddr) {
 }
 
 extern "C" void
-pmem_write(uint32_t waddr, uint32_t wdata, uint8_t wmask) {
+pmem_write(addr_t waddr, ureg_t wdata, uint8_t wmask) {
+  comm::mem_write_buf = comm::WriteEvent{waddr & (~0x3), wdata, wmask};
+
   if (rv_device::is_serial_range(waddr)) {
     v_assert((wmask & 0x1), "Serial write masked out, wmask = ", wmask);
     rv_device::write_serial(wdata & 0xff);
-    comm::device_access[comm::CurrCyc] = true;
+    comm::device_access = true;
+    // comm::device_access[comm::CurrCyc] = true;
     // std::cerr << "==> Identifier " << comm::device_access[comm::CurrCyc] <<
     // std::endl;
   } else {
@@ -184,15 +188,15 @@ pmem_write(uint32_t waddr, uint32_t wdata, uint8_t wmask) {
     }
     pmem_raw[aln_idx] = (pmem_raw[aln_idx] & ~m) | (wdata & m);
 #if PRINTF_COND
-    std::cout << "DPI-C >> pmem_write addr" << std::hex << waddr << " : "
+    std::cerr << "DPI-C >> pmem_write addr" << std::hex << waddr << " : "
               << wdata << " mask = " << m << std::endl;
     for (size_t i = 0x100 >> 2; i < (0x100 + 20) >> 2; i++) {
       if (i % 4 == 0) {
-        std::cout << std::hex << i << ":\t";
+        std::cerr << std::hex << i << ":\t";
       }
-      std::cout << std::hex << pmem_raw[i] << " ";
+      std::cerr << std::hex << pmem_raw[i] << " ";
       if (i % 4 == 3) {
-        std::cout << std::endl;
+        std::cerr << std::endl;
       }
     }
 #endif

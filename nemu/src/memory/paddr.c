@@ -38,11 +38,17 @@ static void pmem_write(paddr_t addr, int len, word_t data) {
 }
 
 static void out_of_bound(paddr_t addr) {
-  // panic("address = " FMT_PADDR " is out of bound of pmem [" FMT_PADDR ", " FMT_PADDR "] at pc = " FMT_WORD,
-  //     addr, PMEM_LEFT, PMEM_RIGHT, cpu.pc);
-  Log("address = " FMT_PADDR " is out of bound of pmem [" FMT_PADDR ", " FMT_PADDR "] at pc = " FMT_WORD 
-      " , may return junk",
+#ifdef CONFIG_TARGET_SHARE
+  // NOTE: For NEMU as a DiffTest ref, when write to device occured, 
+  // we still want to execute the ref to record memory write event (for check),
+  // So we simply ignore out-of-bound write
+#else
+  panic("address = " FMT_PADDR " is out of bound of pmem [" FMT_PADDR ", " FMT_PADDR "] at pc = " FMT_WORD,
       addr, PMEM_LEFT, PMEM_RIGHT, cpu.pc);
+  // Log("address = " FMT_PADDR " is out of bound of pmem [" FMT_PADDR ", " FMT_PADDR "] at pc = " FMT_WORD 
+  //     " , may return junk",
+      // addr, PMEM_LEFT, PMEM_RIGHT, cpu.pc);
+#endif
 }
 
 #ifdef CONFIG_MTRACE_ENABLE

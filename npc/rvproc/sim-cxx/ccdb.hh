@@ -56,7 +56,7 @@ namespace ccdb {
     return std::make_pair(valid, ret);
   }
 
-  enum McState { Idle = 0, Hold, Fire };
+  enum McState { Idle = 0, Hold, Fire, Strt };
 
   inline McState 
   read_ifs_mcstate() {
