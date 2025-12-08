@@ -72,7 +72,8 @@ ccdb::inst_trace() {
   bool diff_csrs =
     (csrid == 0xB00 || csrid == 0xB80 || csrid == 0xF11 || csrid == 0xF12);
   if (is_csr && diff_csrs) {
-    comm::device_access[comm::PrevCyc] = true;
+    // comm::device_access[comm::PrevCyc] = true;
+    comm::device_access = true;
   }
 }
 
