@@ -14,6 +14,10 @@
  *  该文件禁止引用 ccdb.{cc,hh} 和 pmemacc.{cc,hh}, 
  *  而只能被他们引用. 
  */
+
+using addr_t = uint32_t;
+using ureg_t = uint32_t;
+
 namespace comm {
   template<typename... Args>
   inline void v_assert(bool cond, const Args&... args) {
@@ -120,11 +124,11 @@ namespace comm {
       }
 
       const T atidx(size_t idx) const {
-        return buf.at((idx + ptr) % N);
+        return buf.at((idx + ptr + N) % N);
       }
 
       T& atidx(size_t idx) {
-        return buf.at((idx + ptr) % N);
+        return buf.at((idx + ptr + N) % N);
       }
 
       void printbuf(std::ostream& os, const std::string& title) const {
@@ -162,12 +166,21 @@ namespace comm {
   extern std::string log_wavefile;
   extern std::string elf_file;
 
-  enum DelayTime{
-    CurrCyc = 0,
-    PrevCyc = 1,
-    Num_DelayTime
+  // enum DelayTime{
+  //   CurrCyc = 0,
+  //   PrevCyc = 1,
+  //   Num_DelayTime
+  // };
+  // extern std::array<bool, Num_DelayTime> device_access;
+  extern bool device_access;
+
+  struct WriteEvent {
+    addr_t aligned;
+    ureg_t data;
+    uint8_t mask;
   };
-  extern std::array<bool, Num_DelayTime> device_access;
+  // TODO: Merge with MemRingBuffer
+  extern WriteEvent mem_write_buf;
 
   constexpr unsigned RegNum { 16U };
   constexpr unsigned FunctArgs { 6U };

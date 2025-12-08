@@ -19,11 +19,11 @@
 #include "disasm.hh"
 #include "probe.hh"
 
-constexpr auto ANSI_Red = "\033[31m";
-constexpr auto ANSI_Yellow = "\033[32m";
-constexpr auto ANSI_Green = "\033[33m";
-constexpr auto ANSI_Blue = "\033[34m";
-constexpr auto ANSI_None = "\033[0m";
+#define ANSI_Red "\033[31m"
+#define ANSI_Yellow "\033[32m"
+#define ANSI_Green "\033[33m"
+#define ANSI_Blue "\033[34m"
+#define ANSI_None "\033[0m"
 void
 parse_args(int argc, char *argv[]) {
   constexpr struct option table[] = {
@@ -147,39 +147,87 @@ main(int argc, char *argv[]) {
     diff::init();
   }
 
-  constexpr size_t MaxCyc{30U};
+  constexpr size_t MaxCyc{(size_t)(-1)};
   size_t currCyc{0U};
+  bool exitBad{false};
   while (!contextp->gotFinish() && currCyc < MaxCyc) {
     if (ccdb::runtime_print_cycle) {
       std::cerr << std::format("== @posedge of Cycle #{} ==", currCyc)
                 << std::endl;
     }
     // WARN: Skipping cycle 0
-    if (diff::enable && ccdb::read_ifs_mcstate() == ccdb::McState::Idle) {
-      diff::copy();
+    if (diff::enable) {
+      diff::state_checker.force_state(ccdb::read_ifs_mcstate());
+      if (ccdb::read_ifs_mcstate() == ccdb::McState::Fire) {
+        diff::copy();
+        comm::mem_write_buf = {0, 0, 0};
+      }
     } // Comes before exec
 
     if (!comm::fast) {
       ccdb::inst_trace();
     }
 
-    std::cout << std::format("Before exec: mcstate = {}\n", (int)ccdb::read_ifs_mcstate());
+    // NOTE: Dut Upd Here
     single_cycle(top, contextp, tfp);
-    std::cout << std::format("After  exec: mcstate = {}\n", (int)ccdb::read_ifs_mcstate());
 
-    if (diff::enable && ccdb::read_ifs_mcstate() == ccdb::McState::Idle) {
-      diff::iota(); // Comes after exec
-      auto diffvec = diff::match();
-      if (!diffvec.empty()) {
-        for (const auto &[id, ref, dut] : diffvec) {
-          std::cerr << ANSI_Red << "Mismatch reg " << std::dec << (int)id
-                    << " (" << comm::RegName.at(id) << ") : " << ANSI_None
-                    << "expected ";
-          comm::sout32(std::cerr) << ref << " got ";
-          comm::sout32(std::cerr) << dut << std::endl;
+    // std::cout << std::format("After  exec: mcstate = {}\n",
+    //                          (int)ccdb::read_ifs_mcstate());
+
+    if (diff::enable && currCyc) {
+      if (ccdb::read_ifs_mcstate() == ccdb::McState::Fire)
+        diff::iota();
+
+      if (true) {
+        diff::state_checker.iota();
+        auto [eq, golden] =
+          diff::state_checker.match_golden(ccdb::read_ifs_mcstate());
+        if (!eq) {
+          std::cerr << std::format(ANSI_Red "State Mismatch: " ANSI_None
+                                            "expected {} got {}",
+                                   (uint32_t)golden,
+                                   (uint32_t)ccdb::read_ifs_mcstate())
+                    << ANSI_None << std::endl;
+          exitBad = true;
+          break;
         }
-        ccdb::dump_print(ccdb::DumpPrint{false, true, true, false, false});
-        exit(1);
+      }
+
+      if (ccdb::read_ifs_mcstate() == ccdb::McState::Fire) {
+        // TODO: Memory check of writes to device
+        auto const &dut = comm::mem_write_buf;
+        auto [v, ref] = diff::match_memwr(dut);
+        if (!v) {
+          std::cerr
+            << ANSI_Red
+            << std::format(
+                 ANSI_Red
+                 "Memory Write Mismatch: " ANSI_None
+                 "expected (addr, data, mask) = ({:08x}, {:08x}, {:04b}) "
+                 "got = ({:08x}, {:08x}, {:04b})",
+                 ref.aligned, ref.data, ref.mask, dut.aligned, dut.data,
+                 dut.mask)
+            << std::endl;
+          exitBad = true;
+          break;
+        }
+      }
+
+      if (ccdb::read_ifs_mcstate() == ccdb::McState::Fire) {
+        auto diffvec = diff::match();
+        if (!diffvec.empty()) {
+          for (const auto &[id, ref, dut] : diffvec) {
+            std::cerr << ANSI_Red
+                      << std::format("Mismatch reg {:d} ({}) : expected ",
+                                     (int)id, comm::RegName.at(id))
+                      << ANSI_None << "expected ";
+            comm::sout32(std::cerr) << ref << " got ";
+            comm::sout32(std::cerr) << dut << std::endl;
+          }
+          ccdb::dump_print(ccdb::DumpPrint{false, true, true, false, false});
+          exitBad = true;
+          break;
+        }
       }
     }
     currCyc++;
@@ -190,5 +238,11 @@ main(int argc, char *argv[]) {
     tfp->close();
   }
 
-  return 0;
+  if (currCyc == MaxCyc)
+    exitBad |= true;
+  else
+    std::cerr << std::format("== Exit SimLoop @ Cycle #{}", currCyc)
+              << std::endl;
+
+  return exitBad;
 }

@@ -28,6 +28,9 @@
 #define R(i) gpr(i)
 #define Mr vaddr_read
 #define Mw vaddr_write
+#define Mwlog(addr, len, data) \
+  vaddr_write((addr), (len), (data)); \
+  isa_set_memwr_event((addr), (len), (data))
 
 enum {
   TYPE_R, TYPE_I, TYPE_S, TYPE_B, TYPE_U, TYPE_J,
@@ -148,6 +151,21 @@ static void ecall_trace(word_t epc, word_t a7) {
 }
 #endif
 
+static struct { word_t aligned; word_t data; uint8_t bytemask; } memwr_event;
+static void isa_set_memwr_event(word_t addr, uint8_t lenType, word_t data) {
+  memwr_event.aligned = addr & (~0x3);
+  uint8_t addr_lo = addr & 0x3;
+  uint8_t addr_hi = addr_lo + lenType;
+  uint8_t mask = (1 << addr_hi) - (1 << addr_lo);
+  memwr_event.data = data << (addr_lo << 3);
+  memwr_event.bytemask = mask;
+  // fprintf(stderr, "Set mem write: addr %08x data %08x mask %04b\n", addr, data, mask);
+}
+void isa_cpy_memwr_event(void *dst) {
+  // fprintf(stderr, "Copy mem write: addr %08x\n", memwr_event.aligned);
+  memcpy(dst, &memwr_event, sizeof(memwr_event));
+}
+
 static void decode_operand(Decode *s, int *rd, word_t *src1, word_t *src2, word_t *imm, int type) {
   uint32_t i = s->isa.inst;
   int rs1 = BITS(i, 19, 15);
@@ -167,6 +185,8 @@ static void decode_operand(Decode *s, int *rd, word_t *src1, word_t *src2, word_
 
 static int decode_exec(Decode *s) {
   s->dnpc = s->snpc;
+
+  isa_set_memwr_event(0, 0, 0);
 
 #define INSTPAT_INST(s) ((s)->isa.inst)
 #define INSTPAT_MATCH(s, name, type, ... /* execute body */ ) { \
@@ -223,11 +243,11 @@ static int decode_exec(Decode *s) {
   INSTPAT("??????? ????? ????? 101 ????? 00000 11", 
           lhu    , I, R(rd) = Mr(src1 + imm, 2));
   INSTPAT("??????? ????? ????? 000 ????? 01000 11", 
-          sb     , S, Mw(src1 + imm, 1, src2));
+          sb     , S, Mwlog(src1 + imm, 1, src2));
   INSTPAT("??????? ????? ????? 001 ????? 01000 11", 
-          sh     , S, Mw(src1 + imm, 2, src2));
+          sh     , S, Mwlog(src1 + imm, 2, src2));
   INSTPAT("??????? ????? ????? 010 ????? 01000 11", 
-          sw     , S, Mw(src1 + imm, 4, src2));
+          sw     , S, Mwlog(src1 + imm, 4, src2));
 
   INSTPAT("??????? ????? ????? 000 ????? 00100 11", 
           addi   , I, R(rd) = src1 + imm);

@@ -20,7 +20,6 @@
 #include <memory/paddr.h>
 
 __EXPORT void difftest_memcpy(paddr_t addr, void *buf, size_t n, bool direction) {
-  // TODO: DiffTest
   if (direction == DIFFTEST_TO_REF) { // =1
     for (size_t i = 0; i < n/4; i++) {
       size_t off = (i << 2);
@@ -75,4 +74,8 @@ __EXPORT void difftest_init(int port) {
   init_mem();
   /* Perform ISA dependent initialization. */
   init_isa();
+}
+
+__EXPORT void difftest_get_memwr_event(void *dst) {
+  isa_cpy_memwr_event(dst);
 }
