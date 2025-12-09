@@ -15,6 +15,7 @@ using ccdb::top;
 
 ccdb::DumpPrint ccdb::runtime_dump_opt{0, 0, 0, 0, 0};
 bool ccdb::runtime_print_cycle{false};
+ccdb::McState ccdb::last_state{ McState::Strt };
 
 std::pair<bool, uint32_t>
 ccdb::read_reg(uint8_t regid) {
