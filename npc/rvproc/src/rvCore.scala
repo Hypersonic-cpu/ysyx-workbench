@@ -26,6 +26,7 @@ object BitMath {
 
   implicit class LogicPropagator(val p: Bool) extends AnyVal{
     def Implies(q: Bool): Bool = (~p) || q
+    def Excludes(q: Bool): Bool = p Implies(~q)
   }
 }
 import BitMath._

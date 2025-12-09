@@ -56,7 +56,7 @@ namespace ccdb {
     return std::make_pair(valid, ret);
   }
 
-  enum McState { Idle = 0, Hold, Fire, Strt };
+  enum McState { Idle = 0, Serve, Hold, Strt };
 
   inline McState 
   read_ifs_mcstate() {
@@ -64,6 +64,15 @@ namespace ccdb {
     uint8_t val = r->rvCore__DOT__ifs__DOT__state;
     return McState(val);
   }
+
+  extern McState last_state;
+  inline bool
+  npc_inst_commit() {
+    return read_ifs_mcstate() == Serve && last_state == Idle;
+  }
+
+  inline void 
+  record_ifs_mcstate() { last_state = read_ifs_mcstate(); }
 
   constexpr std::array<const char*, 4> csr_list {
     "mtvec", "mepc", "mstatus", "mcause"

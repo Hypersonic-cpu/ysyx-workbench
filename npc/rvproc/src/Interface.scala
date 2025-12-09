@@ -80,7 +80,7 @@ class MemOp extends Bundle {
   val len = MemLen()
   val sExt  = Bool()
   val isSt  = Bool()
-  def isEn  = { len === MemLen.None }
+  def isEn  = { len =/= MemLen.None }
 }
 
 object WbSel extends ChiselEnum {
