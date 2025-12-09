@@ -20,10 +20,11 @@
 #include "probe.hh"
 
 #define ANSI_Red "\033[31m"
-#define ANSI_Yellow "\033[32m"
-#define ANSI_Green "\033[33m"
+#define ANSI_Green "\033[32m"
+#define ANSI_Yellow "\033[33m"
 #define ANSI_Blue "\033[34m"
 #define ANSI_None "\033[0m"
+
 void
 parse_args(int argc, char *argv[]) {
   constexpr struct option table[] = {
@@ -147,7 +148,7 @@ main(int argc, char *argv[]) {
     diff::init();
   }
 
-  constexpr size_t MaxCyc{(size_t)(-1)};
+  constexpr size_t MaxCyc{~284U};
   size_t currCyc{0U};
   bool exitBad{false};
   while (!contextp->gotFinish() && currCyc < MaxCyc) {
@@ -157,8 +158,8 @@ main(int argc, char *argv[]) {
     }
     // WARN: Skipping cycle 0
     if (diff::enable) {
-      diff::state_checker.force_state(ccdb::read_ifs_mcstate());
-      if (ccdb::read_ifs_mcstate() == ccdb::McState::Fire) {
+      // diff::state_checker.force_state(ccdb::read_ifs_mcstate());
+      if (ccdb::npc_inst_commit()) {
         diff::copy();
         comm::mem_write_buf = {0, 0, 0};
       }
@@ -168,6 +169,7 @@ main(int argc, char *argv[]) {
       ccdb::inst_trace();
     }
 
+    ccdb::record_ifs_mcstate();
     // NOTE: Dut Upd Here
     single_cycle(top, contextp, tfp);
 
@@ -175,25 +177,10 @@ main(int argc, char *argv[]) {
     //                          (int)ccdb::read_ifs_mcstate());
 
     if (diff::enable && currCyc) {
-      if (ccdb::read_ifs_mcstate() == ccdb::McState::Fire)
+      if (ccdb::npc_inst_commit())
         diff::iota();
 
-      if (true) {
-        diff::state_checker.iota();
-        auto [eq, golden] =
-          diff::state_checker.match_golden(ccdb::read_ifs_mcstate());
-        if (!eq) {
-          std::cerr << std::format(ANSI_Red "State Mismatch: " ANSI_None
-                                            "expected {} got {}",
-                                   (uint32_t)golden,
-                                   (uint32_t)ccdb::read_ifs_mcstate())
-                    << ANSI_None << std::endl;
-          exitBad = true;
-          break;
-        }
-      }
-
-      if (ccdb::read_ifs_mcstate() == ccdb::McState::Fire) {
+      if (ccdb::npc_inst_commit()) {
         // TODO: Memory check of writes to device
         auto const &dut = comm::mem_write_buf;
         auto [v, ref] = diff::match_memwr(dut);
@@ -213,7 +200,7 @@ main(int argc, char *argv[]) {
         }
       }
 
-      if (ccdb::read_ifs_mcstate() == ccdb::McState::Fire) {
+      if (ccdb::npc_inst_commit()) {
         auto diffvec = diff::match();
         if (!diffvec.empty()) {
           for (const auto &[id, ref, dut] : diffvec) {

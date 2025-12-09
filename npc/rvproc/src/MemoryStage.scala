@@ -6,102 +6,135 @@ import chisel3.assert.Assert
 
 import BitMath._
 
-class LSU extends Module {
-  val io = IO(new Bundle {
-    val valid  = Input(Bool())
-    val addr   = Input(Tp.AddrType())
-    val data   = Input(Tp.RegType())
-    val memOp = Input(new MemOp)
-    val load   = Output(Tp.RegType())
-  })
-
-  val dMem = Module(new PMemBox())
-  val lenOp = io.memOp.len
-  dMem.io.clock := clock
-  dMem.io.reset := reset
-  dMem.io.addr  := io.addr
-  dMem.io.data  := MuxLookup(lenOp, 0.U) (Seq(
-    MemLen.Byte -> (io.data(7, 0) << (io.addr(1,0) << 3.U)),
-    MemLen.Half -> (io.data(15,0) << (io.addr(1,1) << 4.U)),
-    MemLen.Word -> io.data
-  ))
-  dMem.io.byteMask := MuxLookup(lenOp, 0.U) (
-    Seq(
-      MemLen.Byte -> (0x1.U << io.addr(1, 0)),
-      MemLen.Half -> (0x3.U << (io.addr(1, 1) << 1.U)),
-      MemLen.Word -> 0xf.U
-    )
-  )
-  dMem.io.memEn := io.valid && lenOp =/= MemLen.None
-  // Load and store should not happen together
-  dMem.io.wrEn  := io.memOp.isSt
-
-
-  val delayedLenOp = RegInit(MemLen.None)
-  val delayedSext = RegInit(false.B)
-  val delayedAddr = Reg(Tp.AddrType())
-  val sext = io.memOp.sExt
-  delayedSext := sext
-  delayedLenOp := lenOp
-  delayedAddr := io.addr
-  val lraw = dMem.io.loadRaw >> (delayedAddr(1, 0) << 3)
-  // printf(cf"DPI Chisel Raw ${lraw}%x SEXT ${sext}\n")
-  io.load := MuxLookup(delayedLenOp, 0.U) (Seq(
-    MemLen.Byte -> Mux(delayedSext, lraw(7, 0).SExt(), lraw(7, 0)),
-    MemLen.Half -> Mux(delayedSext, lraw(15, 0).SExt(), lraw(15, 0)),
-    MemLen.Word -> lraw
-    )
-  )
-
-  when (io.valid && lenOp =/= MemLen.None) {
-    printf(cf"[          LS ] dMemPort Req W[${io.memOp.isSt}%d] addr ${io.addr}%x, byteMask ${dMem.io.byteMask}%x \n")
-  }
-}
+// State:
+// idle -(reqReady)-> macc -(respValid)-> hold
+//
 
 class MemoryStage extends Module {
-  val io = IO(new Bundle {
+  val io   = IO(new Bundle {
     val in  = Flipped(Decoupled(new ExecuteToMemory))
     val out = Decoupled(new MemoryToWrBack)
   })
-  /**
-    * Cycle  1   2   3   1
-    * State  I   H   I   I
-    * Time       Req Resp
-    */
-  val idle :: hold :: Nil = Enum(2)
+  val iowb = io.out.bits
+  val ioex = io.in.bits
+  val addr = ioex.aluOut
+  val wrdt = ioex.rs2Val
+  val dMem = Module(new PMemBox())
+
+  val idle :: serve :: hold :: Nil = Enum(3)
+
   val state = RegInit(idle)
-  state := MuxLookup(state, idle) (Seq(
-    hold -> Mux(io.out.ready, idle, hold),
-    idle -> Mux(io.in.valid , hold, idle)
-  ))
+  state := MuxLookup(state, idle)(
+    Seq(
+      idle  -> Mux(io.in.valid && dMem.io.reqReady, serve, idle),
+      serve -> Mux(
+        // TODO:: 没有LS操作的时候不需要等到内存空闲.
+        ioex.memOp.isEn,
+        Mux(dMem.io.respValid, hold, serve),
+        hold
+      ),
+      hold  -> Mux(io.out.ready, idle, hold)
+    )
+  )
 
   io.out.valid := state === hold
-  io.in.ready := state === idle
+  io.in.ready  := state === idle && dMem.io.reqReady
 
-  val iLsu = Module(new LSU)
-  val ioex = io.in.bits
-  val iowb = io.out.bits
-  iLsu.io.valid := io.in.valid
-  iLsu.io.addr := ioex.aluOut
-  iLsu.io.data := ioex.rs2Val
-  iLsu.io.memOp := ioex.memOp
-  iowb.lsuOut  := iLsu.io.load
-
-  // NOTE: Fowards are delayed
-  val aluReg = Reg(Tp.RegType())
-  iowb.aluOut  := aluReg
+  // NOTE: dMem Port related
+  dMem.io.clock     := clock
+  dMem.io.reset     := reset
+  dMem.io.addr      := addr
+  dMem.io.wrData    := MuxLookup(ioex.memOp.len, 0.U)(
+    Seq(
+      MemLen.Byte -> (wrdt(7, 0) << (addr(1, 0) << 3.U)),
+      MemLen.Half -> (wrdt(15, 0) << (addr(1, 1) << 4.U)),
+      MemLen.Word -> wrdt(31, 0)
+    )
+  )
+  dMem.io.byteMask  := MuxLookup(ioex.memOp.len, 0.U)(
+    Seq(
+      MemLen.Byte -> (0x1.U << addr(1, 0)),
+      MemLen.Half -> (0x3.U << (addr(1, 1) << 1.U)),
+      MemLen.Word -> 0xf.U
+    )
+  )
+  // TODO: 目前设计有点奇怪, 输入不由LSU锁存, 但是mem resp 的数据在
+  // WBU没有准备好的时候需要由LSU锁存. 但三MemPort本身也有锁存能力.
+  dMem.io.reqValid  := state === idle && io.in.valid && ioex.memOp.isEn
+  dMem.io.wrEn      := ioex.memOp.isSt
+  dMem.io.respReady := state === serve
   // TODO: 新建一个foward逻辑, 进行锁存
-  val forwardReg = Reg(new DecodeFoward)
-  iowb.foward  := forwardReg
+  val delayedLenOp = RegInit(MemLen.None)
+  val delayedSext  = RegInit(false.B)
+  val delayedAddr  = Reg(Tp.AddrType())
+  val aluReg       = Reg(Tp.RegType())
+  val forwardReg   = Reg(new DecodeFoward)
 
-  when (io.in.valid) {
-    forwardReg := ioex.foward
-    aluReg := ioex.aluOut
+  val sext      = ioex.memOp.sExt
+  val lraw      = dMem.io.respData >> (delayedAddr(1, 0) << 3)
+  val loadLatch = Reg(Tp.RegType())
+  iowb.lsuOut := loadLatch
+  when(dMem.io.respValid) {
+    loadLatch := MuxLookup(delayedLenOp, 0.U)(
+      Seq(
+        MemLen.Byte -> Mux(delayedSext, lraw(7, 0).SExt(), lraw(7, 0)),
+        MemLen.Half -> Mux(
+          delayedSext,
+          lraw(15, 0).SExt(),
+          lraw(15, 0)
+        ),
+        MemLen.Word -> lraw
+      )
+    )
   }
 
-  when (io.in.valid) {
-    printf(cf"[ ${ioex.foward.pc}%x LS ] Requesting ${iLsu.io.addr}%x\n")
+  iowb.aluOut := aluReg
+  iowb.foward := forwardReg
+
+  when(io.in.valid) {
+    forwardReg   := ioex.foward
+    aluReg       := ioex.aluOut
+    delayedSext  := sext
+    delayedLenOp := ioex.memOp.len
+    delayedAddr  := addr
+  }
+
+  when(io.in.valid && ioex.memOp.isEn) {
+    printf(
+      cf"[ ${ioex.foward.pc}%x LS ] Req W[${ioex.memOp.isSt}%d]"
+        + cf" addr ${addr}%x, byteMask ${dMem.io.byteMask}%x \n"
+    )
   }.elsewhen(state === hold) {
-    printf(cf"[ ${ioex.foward.pc}%x LS ] Response   ${iLsu.io.load}%x\n")
+    printf(
+      cf"[ ${ioex.foward.pc}%x LS ] Response   ${dMem.io.respData}%x\n"
+    )
   }
 }
+/*                  +---------------+
+ * lsu_reqValid     |               |
+ *               ---+               +------------------------
+ *                          +-------+
+ * lsu_reqReady             |       |
+ *               -----------+       +------------------------
+ *               --\ /-------------\ /-----------------------
+ * lsu_addr         X  0x80400000   X
+ *               --/ \-------------/ \-----------------------
+ *               --\                 /-----------------------
+ * lsu_wen          X               X
+ *               --/ --------------- \-----------------------
+ *               --------------------------------------------
+ * lsu_wdata
+ *               --------------------------------------------
+ *               --------------------------------------------
+ * lsu_wmask
+ *               --------------------------------------------
+ *                                       +---------------+
+ * lsu_respValid                         |               |
+ *               ------------------------+               +---
+ *                                               +-------+
+ * lsu_respReady                                 |       |
+ *               --------------------------------+       +---
+ *               -----------------------\ /-------------\ /--
+ * lsu_rdata                             X  0x12345678   X
+ *               -----------------------/ \-------------/ \--
+ */

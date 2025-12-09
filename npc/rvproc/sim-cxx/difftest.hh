@@ -40,57 +40,57 @@ std::vector<std::tuple<uint8_t, uint32_t, uint32_t>> match();
 void copy();
 void iota(uint64_t n = 1);
 void init(const char *so = NEMU_SO, int port = NEMUPort);
-
-class StateMatcher {
-  using McState = ccdb::McState;
-
-private:
-  McState state;
-
-public:
-  StateMatcher() : state{McState::Strt} {}
-  void
-  iota() {
-    switch (state) {
-    case McState::Fire:
-      state = McState::Hold;
-      break;
-    case McState::Hold:
-      state = McState::Idle;
-      break;
-    case McState::Idle:
-      state = McState::Fire;
-      break;
-    case McState::Strt:
-      state = McState::Fire;
-      break;
-    default:
-      comm::v_assert(false, "No such state", (int)state);
-    }
-  }
-
-  std::pair<bool, McState>
-  match_golden(uint32_t state_in) const {
-    return match_golden(McState(state_in));
-  }
-
-  std::pair<bool, McState>
-  match_golden(McState in) const {
-    return std::make_pair(in == state, state);
-  }
-
-  void
-  force_state(uint32_t state_in) {
-    force_state(McState(state_in));
-  }
-  void
-  force_state(McState in) {
-    state = in;
-  }
-};
-
+//
+// class StateMatcher {
+//   using McState = ccdb::McState;
+//
+// private:
+//   McState state;
+//
+// public:
+//   StateMatcher() : state{McState::Strt} {}
+//   void
+//   iota() {
+//     switch (state) {
+//     case McState::Fire:
+//       state = McState::Hold;
+//       break;
+//     case McState::Hold:
+//       state = McState::Idle;
+//       break;
+//     case McState::Idle:
+//       state = McState::Fire;
+//       break;
+//     case McState::Strt:
+//       state = McState::Fire;
+//       break;
+//     default:
+//       comm::v_assert(false, "No such state", (int)state);
+//     }
+//   }
+//
+//   std::pair<bool, McState>
+//   match_golden(uint32_t state_in) const {
+//     return match_golden(McState(state_in));
+//   }
+//
+//   std::pair<bool, McState>
+//   match_golden(McState in) const {
+//     return std::make_pair(in == state, state);
+//   }
+//
+//   void
+//   force_state(uint32_t state_in) {
+//     force_state(McState(state_in));
+//   }
+//   void
+//   force_state(McState in) {
+//     state = in;
+//   }
+// };
+//
 std::pair<bool, const comm::WriteEvent>
 match_memwr(const comm::WriteEvent& real);
 
-extern StateMatcher state_checker;
+// extern StateMatcher state_checker;
 } // namespace diff

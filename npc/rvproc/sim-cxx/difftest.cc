@@ -21,7 +21,7 @@ rcpy_t ref_regcpy = nullptr;
 intr_t ref_raise_intr = nullptr;
 memw_t ref_cpy_memwr_event = nullptr;
 bool enable = true;
-StateMatcher state_checker{};
+// StateMatcher state_checker{};
 } // namespace diff
 
 // NOTE: Must after the NPC memory is initialized.
