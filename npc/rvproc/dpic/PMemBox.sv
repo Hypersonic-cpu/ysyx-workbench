@@ -27,39 +27,39 @@ module PMemBox (
     input         io_master_rready,
     output        io_master_rvalid,
     output [ 1:0] io_master_rresp,
-    output [31:0] io_master_rdata,
+    output [31:0] io_master_rdata     // ,
     // output        io_master_rlast   ,
     // output [3:0]  io_master_rid     ,
 
-    input         io_slave_awready,
-    output        io_slave_awvalid,
-    output [31:0] io_slave_awaddr,
-    // output [3:0]   io_slave_awid    ,
-    // output [7:0]   io_slave_awlen   ,
-    // output [2:0]   io_slave_awsize  ,
-    // output [1:0]   io_slave_awburst ,
-    input         io_slave_wready,
-    output        io_slave_wvalid,
-    output [31:0] io_slave_wdata,
-    output [ 3:0] io_slave_wstrb,
-    // output         io_slave_wlast   ,
-    output        io_slave_bready,
-    input         io_slave_bvalid,
-    input  [ 1:0] io_slave_bresp,
-    // input  [3:0]   io_slave_bid     ,
-    input         io_slave_arready,
-    output        io_slave_arvalid,
-    output [31:0] io_slave_araddr,
-    // output [3:0]   io_slave_arid    ,
-    // output [7:0]   io_slave_arlen   ,
-    // output [2:0]   io_slave_arsize  ,
-    // output [1:0]   io_slave_arburst ,
-    output        io_slave_rready,
-    input         io_slave_rvalid,
-    input  [ 1:0] io_slave_rresp,
-    input  [31:0] io_slave_rdata     // ,
-    // input          io_slave_rlast   ,
-    // input  [3:0]   io_slave_rid
+    // input         io_slave_awready,
+    // output        io_slave_awvalid,
+    // output [31:0] io_slave_awaddr,
+    // // output [3:0]   io_slave_awid    ,
+    // // output [7:0]   io_slave_awlen   ,
+    // // output [2:0]   io_slave_awsize  ,
+    // // output [1:0]   io_slave_awburst ,
+    // input         io_slave_wready,
+    // output        io_slave_wvalid,
+    // output [31:0] io_slave_wdata,
+    // output [ 3:0] io_slave_wstrb,
+    // // output         io_slave_wlast   ,
+    // output        io_slave_bready,
+    // input         io_slave_bvalid,
+    // input  [ 1:0] io_slave_bresp,
+    // // input  [3:0]   io_slave_bid     ,
+    // input         io_slave_arready,
+    // output        io_slave_arvalid,
+    // output [31:0] io_slave_araddr,
+    // // output [3:0]   io_slave_arid    ,
+    // // output [7:0]   io_slave_arlen   ,
+    // // output [2:0]   io_slave_arsize  ,
+    // // output [1:0]   io_slave_arburst ,
+    // output        io_slave_rready,
+    // input         io_slave_rvalid,
+    // input  [ 1:0] io_slave_rresp,
+    // input  [31:0] io_slave_rdata     // ,
+    // // input          io_slave_rlast   ,
+    // // input  [3:0]   io_slave_rid
 );
 
   import "DPI-C" function void pmem_init();
@@ -102,28 +102,28 @@ module PMemBox (
       // .io_master_wlast  (io_master_wlast),
       .io_master_bready (io_master_bready),
       .io_master_bvalid (io_master_bvalid),
-      .io_master_bresp  (io_master_bresp),
+      .io_master_bresp  (io_master_bresp)     // ,
       // .io_master_bid    (io_master_bid),
   );
 
-  assign io_slave_awvalid = 0;
-  assign io_slave_awaddr  = 0;
-  assign io_slave_awid    = 0;
-  assign io_slave_awlen   = 0;
-  assign io_slave_awsize  = 0;
-  assign io_slave_awburst = 0;
-  assign io_slave_wvalid  = 0;
-  assign io_slave_wdata   = 0;
-  assign io_slave_wstrb   = 0;
-  assign io_slave_wlast   = 0;
-  assign io_slave_bready  = 0;
-  assign io_slave_arvalid = 0;
-  assign io_slave_araddr  = 0;
-  assign io_slave_arid    = 0;
-  assign io_slave_arlen   = 0;
-  assign io_slave_arsize  = 0;
-  assign io_slave_arburst = 0;
-  assign io_slave_rready  = 0;
+  // assign io_slave_awvalid = 0;
+  // assign io_slave_awaddr  = 0;
+  // assign io_slave_awid    = 0;
+  // assign io_slave_awlen   = 0;
+  // assign io_slave_awsize  = 0;
+  // assign io_slave_awburst = 0;
+  // assign io_slave_wvalid  = 0;
+  // assign io_slave_wdata   = 0;
+  // assign io_slave_wstrb   = 0;
+  // assign io_slave_wlast   = 0;
+  // assign io_slave_bready  = 0;
+  // assign io_slave_arvalid = 0;
+  // assign io_slave_araddr  = 0;
+  // assign io_slave_arid    = 0;
+  // assign io_slave_arlen   = 0;
+  // assign io_slave_arsize  = 0;
+  // assign io_slave_arburst = 0;
+  // assign io_slave_rready  = 0;
 endmodule
 
 
@@ -183,18 +183,18 @@ module PMemReader (
       state <= next_state;
       if (state == RECV) begin
         delay_remain <= {{27{1'b0}}, curr_delay};
-        rdata <= pmem_read(addr);
+        rdata <= pmem_read(io_master_araddr);
       end else begin
         if (state == SERVE) delay_remain <= delay_remain - 1;
       end
 
-      if (state == RECV || state == SERVE)
-        $strobe("> Reader State %x counter %d req %d", state, delay_remain, reqValid);
+      // if (state == RECV || state == SERVE)
+      //   $strobe("> Reader State %x counter %d req %d", state, delay_remain, io_master_arvalid);
     end
   end
 
   req_not_conflict :
-  assert property (@(posedge clock) (reqValid) |-> (state == IDLE));
+  assert property (@(posedge clock) (io_master_arvalid) |-> (state == IDLE));
   no_count_at_idle :
   assert property (@(posedge clock) (delay_remain != 0) |-> (state == SERVE));
 
@@ -263,7 +263,6 @@ module PMemWriter (
   end
 
   always_ff @(posedge clock) begin
-    // $strobe("State %x counter %d req %d", state, delay_remain, reqValid);
     if (reset) begin
       state <= IDLE;
       delay_remain <= 0;
@@ -271,18 +270,18 @@ module PMemWriter (
       state <= next_state;
       if (state == RECV) begin
         delay_remain <= {{27{1'b0}}, curr_delay};
-        pmem_write(io_master_awaddr, io_master_wdata, io_master_wstrb);
+        pmem_write(io_master_awaddr, io_master_wdata, {{4'h0}, io_master_wstrb});
       end else begin
         if (state == SERVE) delay_remain <= delay_remain - 1;
       end
 
-      if (state == RECV || state == SERVE)
-        $strobe("> Writer State %x counter %d req %d", state, delay_remain, reqValid);
+      // if (state == RECV || state == SERVE)
+      //   $strobe("> Writer State %x counter %d req %d", state, delay_remain, io_master_awvalid);
     end
   end
 
   req_not_conflict :
-  assert property (@(posedge clock) (reqValid) |-> (state == IDLE));
+  assert property (@(posedge clock) (io_master_awvalid) |-> (state == IDLE));
 
   no_count_at_idle :
   assert property (@(posedge clock) (delay_remain != 0) |-> (state == SERVE));

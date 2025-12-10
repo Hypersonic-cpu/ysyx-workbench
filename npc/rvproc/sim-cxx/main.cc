@@ -3,17 +3,13 @@
 #include <ctime>
 #include <format>
 #include <getopt.h>
-#include <iomanip>
-#include <ios>
 #include <iostream>
-#include <iterator>
 #include <memory>
-#include <numeric>
 
 #include <verilated.h>
 #include <verilated_fst_c.h>
 
-#include "VrvCore.h"
+#include "VrvCoreSocSim.h"
 #include "ccdb.hh"
 #include "difftest.hh"
 #include "disasm.hh"
@@ -34,6 +30,7 @@ parse_args(int argc, char *argv[]) {
     {"print-frame", no_argument, NULL, 'f'},
     {"print-cycle", no_argument, NULL, 'c'},
     {"fast-mode", no_argument, NULL, 'F'},
+    {"max-cycle", required_argument, NULL, 'M'},
     {"no-difftest", no_argument, NULL, 'n'},
     {"log", required_argument, NULL, 'l'},
     {"elf", required_argument, NULL, 'e'},
@@ -41,7 +38,7 @@ parse_args(int argc, char *argv[]) {
     {0, 0, NULL, 0},
   };
   int o;
-  while ((o = getopt_long(argc, argv, "-hmidfcnTl:e:", table, NULL)) != -1) {
+  while ((o = getopt_long(argc, argv, "-hmidfcnTM:l:e:", table, NULL)) != -1) {
     switch (o) {
     case 'm':
       ccdb::runtime_dump_opt.mem_buf = true;
@@ -65,6 +62,9 @@ parse_args(int argc, char *argv[]) {
       break;
     case 'F':
       comm::fast = true;
+      break;
+    case 'M':
+      ccdb::max_cycles = std::atoi(optarg);
       break;
     case 'c':
       ccdb::runtime_print_cycle = true;
@@ -148,7 +148,7 @@ main(int argc, char *argv[]) {
     diff::init();
   }
 
-  constexpr size_t MaxCyc{~284U};
+  const size_t MaxCyc = ccdb::max_cycles;
   size_t currCyc{0U};
   bool exitBad{false};
   while (!contextp->gotFinish() && currCyc < MaxCyc) {
@@ -165,17 +165,19 @@ main(int argc, char *argv[]) {
       }
     } // Comes before exec
 
-    if (!comm::fast) {
-      ccdb::inst_trace();
-    }
-
     ccdb::record_ifs_mcstate();
     // NOTE: Dut Upd Here
     single_cycle(top, contextp, tfp);
+    // std::cerr << std::format(
+    //   ANSI_Red "=>> Last:Curr state = {:d}:{:d}\n" ANSI_None,
+    //   (int)ccdb::last_state, (int)ccdb::read_ifs_mcstate());
 
     // std::cout << std::format("After  exec: mcstate = {}\n",
     //                          (int)ccdb::read_ifs_mcstate());
 
+    if (ccdb::npc_inst_commit() && !comm::fast) {
+      ccdb::inst_trace();
+    }
     if (diff::enable && currCyc) {
       if (ccdb::npc_inst_commit())
         diff::iota();
@@ -211,7 +213,6 @@ main(int argc, char *argv[]) {
             comm::sout32(std::cerr) << ref << " got ";
             comm::sout32(std::cerr) << dut << std::endl;
           }
-          ccdb::dump_print(ccdb::DumpPrint{false, true, true, false, false});
           exitBad = true;
           break;
         }
@@ -225,13 +226,19 @@ main(int argc, char *argv[]) {
     tfp->close();
   }
 
-  if (currCyc == MaxCyc)
+  if (currCyc == MaxCyc) {
     exitBad |= true;
-  else
+    std::cerr << std::format(
+                   ANSI_Yellow "== Max Cycles {} Reached ===" ANSI_None, MaxCyc)
+              << std::endl;
+  } else
     std::cerr << std::format(ANSI_Green
                              "== Exit SimLoop @ Cycle #{} ==" ANSI_None,
                              currCyc)
               << std::endl;
 
+  if (exitBad) {
+    ccdb::dump_print(ccdb::DumpPrint{false, true, true, false, false});
+  }
   return exitBad;
 }

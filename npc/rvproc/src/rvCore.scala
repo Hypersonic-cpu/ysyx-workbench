@@ -81,9 +81,13 @@ class rvCoreSocSim() extends Module {
   val io       = IO(new Bundle {})
   val iMemDpic = Module(new PMemBox)
   val dMemDpic = Module(new PMemBox)
+  iMemDpic.clock := clock
+  iMemDpic.reset := reset
+  dMemDpic.clock := clock
+  dMemDpic.reset := reset
   val core     = Module(new rvCore)
-  core.io.iMemPort <> iMemDpic.io
-  core.io.dMemPort <> dMemDpic.io
+  core.io.iMemPort <> iMemDpic.io.master
+  core.io.dMemPort <> dMemDpic.io.master
   dontTouch(core.io)
 }
 

@@ -33,15 +33,18 @@ class MemoryStage extends Module {
     delayedSt := ioex.memOp.isSt
   }
   val reqReady  = Mux(ioex.memOp.isSt, dMem.aw.ready, dMem.ar.ready)
-  val respValid = Mux(delayedSt, dMem.r.valid, dMem.b.valid)
+  val respValid = Mux(~delayedSt, dMem.r.valid, dMem.b.valid)
 
   state := MuxLookup(state, idle)(
     Seq(
       // 没有LS操作的时候不需要等到内存空闲, 避免等待
-      idle  -> Mux(
-        ioex.memOp.isEn,
-        Mux(trigIss && reqReady, serve, idle),
-        hold
+      idle  -> MuxCase(
+        idle,
+        Seq(
+          (io.in.valid && ioex.memOp.isEn)  ->
+            Mux(trigIss && reqReady, serve, idle),
+          (io.in.valid && ~ioex.memOp.isEn) -> hold
+        )
       ),
       serve -> Mux(respValid, hold, serve),
       hold  -> Mux(io.out.ready, idle, hold)
@@ -50,7 +53,7 @@ class MemoryStage extends Module {
 
   io.out.valid := state === hold
   // TODO: 内存没有就绪就让 Exu 等待是有问题的
-  io.in.ready  := trigIss
+  io.in.ready  := trigIss || ~ioex.memOp.isEn
 
   dMem.ar.bits.addr := addr & Tp.AddrAligner()
   dMem.aw.bits.addr := addr & Tp.AddrAligner()
@@ -71,8 +74,16 @@ class MemoryStage extends Module {
       MemLen.Word -> 0xf.U
     )
   ) << shamt
-  assert(ioex.memOp.len === Word Implies (addr(1, 0) === 0.U))
-  assert(ioex.memOp.len === Half Implies (addr(0, 0) === 0.U))
+  assert(
+    (io.in.valid && ioex.memOp.len === Word)
+      Implies (addr(1, 0) === 0.U),
+    "Unaligned word access"
+  )
+  assert(
+    (io.in.valid && ioex.memOp.len === Half)
+      Implies (addr(0, 0) === 0.U),
+    "Unaligned half access"
+  )
 
   dMem.ar.valid := ~ioex.memOp.isSt && trigIss
   dMem.aw.valid := ioex.memOp.isSt && trigIss

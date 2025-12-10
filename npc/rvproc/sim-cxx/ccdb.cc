@@ -1,10 +1,11 @@
 #include "ccdb.hh"
-#include "VrvCore.h"
-#include "VrvCore___024root.h"
+// #include "VrvCore.h"
+// #include "VrvCore___024root.h"
 #include "probe.hh"
 
 #include <cassert>
 #include <cstdint>
+#include <format>
 #include <iterator>
 #include <list>
 #include <ranges>
@@ -16,6 +17,7 @@ using ccdb::top;
 ccdb::DumpPrint ccdb::runtime_dump_opt{0, 0, 0, 0, 0};
 bool ccdb::runtime_print_cycle{false};
 ccdb::McState ccdb::last_state{ McState::Strt };
+size_t ccdb::max_cycles{ ~0ULL };
 
 std::pair<bool, uint32_t>
 ccdb::read_reg(uint8_t regid) {
@@ -45,6 +47,8 @@ ccdb::inst_trace() {
   disassemble(buf, BufferLen, pc, (uint8_t *)(&inst), 4);
 
   auto ent = comm::InstEnt{pc, inst, buf};
+  // std::cerr << std::format("Inserting: ");
+  // ent.printent(std::cerr);
   comm::instBuf.append(ent);
   if (ccdb::runtime_dump_opt.inst_buf) {
     ent.printent(std::cerr);
