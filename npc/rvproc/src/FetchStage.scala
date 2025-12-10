@@ -49,8 +49,8 @@ class FetchStage extends Module {
   iMem.io.reqValid  :=
     state === start || (state === idle && issueReq)
   iMem.io.respReady := state === serve // NOTE: 目前的 respReady 总是 true
-  iMem.io.byteMask  := DontCare
-  iMem.io.wrData    := DontCare
+  iMem.io.byteMask  := 0.U // DontCare
+  iMem.io.wrData    := 0.U // DontCare
 
   val brid = io.fromId.bits
   val brex = io.fromEx.bits
