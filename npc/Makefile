@@ -86,11 +86,16 @@ runonly: verilate $(SIM_BIN)
 	# $(call git_commit, "run with AM via verilator cc")
 	$(SIM_BIN) $(simccargs)
 
-verilog:
-	$(call git_commit, "generate verilog") # WARN: Only reserve this commit
+verilog: $(SCALA_SOURCES)
+	$(call git_commit, "generate verilog") # WARN: Only allow tracking here
 	mkdir -p $(BUILD_SV_DIR)
 	mill -i $(PRJ).runMain Elaborate --target-dir $(BUILD_SV_DIR)
 	@echo "Verilog written to " $(BUILD_SV_DIR)
+	@echo "Apply memory port changes for SoC"
+	@find $(BUILD_SV_DIR) -type f -name "*.v" -o -name "*.sv" -print0 | xargs -0 sed -i -e 's/_\(aw\|ar\|w\|r\|b\)_\(\|bits_\)/_\1/g'
+	@mv $(SRC_DPIC_DIR)/PMemBox.sv $(BUILD_SV_DIR)/PMemBox.sv
+	@echo "Memory port renaming done"
+
 
 help:
 	mill -i $(PRJ).runMain Elaborate --help
@@ -121,7 +126,7 @@ verilate:
 # 	$(SIM_BIN)
 
 # WARN: DO NOT AUTO-CHANGE TO ANY OTHER BRANCHES!
-# THAT IS UNPREDICTABLE BY ANY USER.
+# THAT INVOLVES UNPREDICTABLE.
 commit:
 	@git commit -am "npc: commit by Makefile script"
 

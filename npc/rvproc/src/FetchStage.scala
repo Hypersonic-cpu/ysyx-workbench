@@ -7,6 +7,8 @@ import chisel3.assert.Assert
 // import firrtl.annotations.MemoryLoadFileType
 
 import BitMath._
+import rvproc.axi4.AXILite
+import rvproc.axi4.ReadRespStatus
 
 class FetchStage extends Module {
   val io   = IO(new Bundle {
@@ -14,43 +16,45 @@ class FetchStage extends Module {
     val fromId = Flipped(Decoupled(new DecodeBackward))
     val fromEx = Flipped(Decoupled(new ExecuteBackward))
     val fromWb = Flipped(Decoupled(new InstCommit))
+    val iMem   = new AXILite
   })
-  val iMem = Module(new PMemBox)
+  // val iMem = Module(new PMemBox)
+  val iMem = io.iMem
 
   val idle :: serve :: hold :: start :: Nil = Enum(4)
 
-  val state     = RegInit(start)
-  val lastState = RegInit(start)
-  lastState := state
-  val issueReq = io.fromWb.valid && iMem.io.reqReady
+  val state   = RegInit(start)
+  val trigIss = (io.fromWb.valid && state === idle) || state === start
+  assert((io.fromEx.valid || io.fromId.valid) Implies (state === hold))
   state := MuxLookup(state, start)(
     Seq(
-      idle  -> Mux(issueReq, serve, idle),
-      serve -> Mux(iMem.io.respValid, hold, serve),
+      idle  -> Mux(trigIss && iMem.ar.ready, serve, idle),
+      serve -> Mux(iMem.r.valid, hold, serve),
       hold  -> Mux(io.out.ready, idle, hold),
-      start -> serve
+      start -> Mux(trigIss && iMem.ar.ready, serve, start)
     )
   )
 
   io.out.valid    := state === hold
   io.fromEx.ready := true.B
   io.fromId.ready := true.B
-  io.fromWb.ready := state === idle && iMem.io.reqReady
+  io.fromWb.ready := state === idle && iMem.ar.ready
   assert(io.fromWb.valid Implies (state === idle))
 
   val ResetVector = 0x80000000L.U(ISA.RegBits.W)
   val pc          = RegInit(ResetVector)
   val nextPC      = RegInit(ResetVector)
 
-  iMem.io.clock     := clock
-  iMem.io.reset     := reset
-  iMem.io.addr      := nextPC          // NOTE:
-  iMem.io.wrEn      := false.B
-  iMem.io.reqValid  :=
-    state === start || (state === idle && issueReq)
-  iMem.io.respReady := state === serve // NOTE: 目前的 respReady 总是 true
-  iMem.io.byteMask  := 0.U // DontCare
-  iMem.io.wrData    := 0.U // DontCare
+  iMem.ar.bits.addr := nextPC // NOTE:
+  iMem.ar.valid     := trigIss
+  iMem.r.ready      := state === serve
+  iMem.aw.valid     := false.B
+  iMem.aw.bits.addr := 0.U
+  iMem.w.valid      := false.B
+  iMem.w.bits.data  := 0.U
+  iMem.w.bits.strb  := 0.U
+  iMem.b.ready      := false.B
+  assert(~(iMem.b.valid), "Read only port")
 
   val brid = io.fromId.bits
   val brex = io.fromEx.bits
@@ -73,19 +77,21 @@ class FetchStage extends Module {
     brid.brRel Excludes (brex.brAbs),
     cf"Rel|Abs Jmp ${brid.brRel}|${brex.brAbs}"
   )
-  assert((io.fromEx.valid || io.fromId.valid) Implies (state === hold))
 
   when(io.fromWb.valid) {
     pc := nextPC
   }
-  assert(io.fromWb.valid Implies (state === idle))
 
   /** NOTE: To DecodeStage */
   val instLatch = Reg(Tp.InstType())
-  when(iMem.io.respValid) {
-    instLatch := iMem.io.respData
+  when(iMem.r.valid) {
+    instLatch := iMem.r.bits.data
   }
-  val ioid      = io.out.bits
+  assert(
+    iMem.r.valid Implies (iMem.r.bits.resp === ReadRespStatus.Success)
+  )
+
+  val ioid = io.out.bits
   ioid.pc   := pc
   ioid.inst := instLatch
 
@@ -93,8 +99,7 @@ class FetchStage extends Module {
     printf(cf"[ ${pc}%x IF ] Holding iMem Resp inst ${ioid.inst}%x\n")
   }.elsewhen(state === serve) {
     printf(
-      cf"[ ${pc}%x IF ] Waiting iMem Req addr ${pc}%x reqValid ${iMem.io.reqValid}\n"
-    )
+      cf"[ ${pc}%x IF ] Waiting iMem Req of addr ${pc}%x\n")
   }
   printf(cf"< IF > curr state ${state}\n")
 }

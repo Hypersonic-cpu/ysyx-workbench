@@ -6,21 +6,50 @@ import rvproc.BusType._
 
 sealed trait BusType
 object BusType {
-  case object SingleCyc  extends BusType 
+  case object SingleCyc  extends BusType
   case object MultiCyc   extends BusType
-  case object Pipeline   extends BusType 
-  case object OutOfOrder extends BusType 
+  case object Pipeline   extends BusType
+  case object OutOfOrder extends BusType
   val all = Seq(SingleCyc, MultiCyc, Pipeline, OutOfOrder)
 }
 
-object BusConnect{
-  def apply[T <: Data](lhs: DecoupledIO[T], rhs: DecoupledIO[T], busTp: BusType = SingleCyc) = {
+object BusConnect {
+  def apply[T <: Data](
+    lhs:   DecoupledIO[T],
+    rhs:   DecoupledIO[T],
+    busTp: BusType = SingleCyc
+  ) = {
     // val arch: BusType = SingleCyc
     busTp match {
       case SingleCyc  => { rhs <> lhs }
       case MultiCyc   => { rhs <> lhs }
       case Pipeline   => { rhs <> RegEnable(lhs, lhs.fire) }
       case OutOfOrder => { rhs <> Queue(lhs, 16) }
+    }
+  }
+}
+
+object PortPassing {
+  object DriveDir extends Enumeration {
+    val LeftDrivesRight, RightDrivesLeft = Value
+  }
+
+  def apply[T <: Data](
+    lhs: DecoupledIO[T],
+    rhs: DecoupledIO[T],
+    dir: DriveDir.Value
+  ): Unit = {
+    dir match {
+      case DriveDir.LeftDrivesRight => {
+        rhs.valid := lhs.valid
+        rhs.bits  := lhs.bits
+        lhs.ready := rhs.ready
+      }
+      case DriveDir.RightDrivesLeft => {
+        lhs.valid := rhs.valid
+        lhs.bits  := rhs.bits
+        rhs.ready := lhs.ready
+      }
     }
   }
 }
