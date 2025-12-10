@@ -2,8 +2,8 @@ package build
 
 // import Mill dependency
 import mill._
-import mill.define.Sources
-import mill.modules.Util
+// import mill.define.Sources
+// import mill.modules.Util
 import mill.scalalib.scalafmt.ScalafmtModule
 import mill.scalalib.TestModule.ScalaTest
 import mill.scalalib._
