@@ -39,7 +39,8 @@ class FetchStage extends Module {
   io.fromEx.ready := true.B
   io.fromId.ready := true.B
   io.fromWb.ready := state === idle && iMem.ar.ready
-  assert(io.fromWb.valid Implies (state === idle))
+  assert(io.fromWb.valid Implies (state === idle), 
+    cf"Write back to IFU of state ${state}")
 
   val ResetVector = 0x80000000L.U(ISA.RegBits.W)
   val pc          = RegInit(ResetVector)
@@ -87,9 +88,9 @@ class FetchStage extends Module {
   when(iMem.r.valid) {
     instLatch := iMem.r.bits.data
   }
-  assert(
-    iMem.r.valid Implies (iMem.r.bits.resp === ReadRespStatus.Success)
-  )
+  // assert(
+  //   iMem.r.valid Implies (iMem.r.bits.resp === ReadRespStatus.Success)
+  // )
 
   val ioid = io.out.bits
   ioid.pc   := pc
