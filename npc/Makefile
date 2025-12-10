@@ -93,7 +93,7 @@ verilog: $(SCALA_SOURCES)
 	@echo "Verilog written to " $(BUILD_SV_DIR)
 	@echo "Apply memory port changes for SoC"
 	@find $(BUILD_SV_DIR) -type f -name "*.v" -o -name "*.sv" -print0 | xargs -0 sed -i -e 's/_\(aw\|ar\|w\|r\|b\)_\(\|bits_\)/_\1/g'
-	@mv $(SRC_DPIC_DIR)/PMemBox.sv $(BUILD_SV_DIR)/PMemBox.sv
+	@cp $(SRC_DPIC_DIR)/PMemBox.sv $(BUILD_SV_DIR)/PMemBox.sv
 	@echo "Memory port renaming done"
 
 
