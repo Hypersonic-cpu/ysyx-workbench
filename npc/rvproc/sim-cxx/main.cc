@@ -38,7 +38,7 @@ parse_args(int argc, char *argv[]) {
     {0, 0, NULL, 0},
   };
   int o;
-  while ((o = getopt_long(argc, argv, "-hmidfcnTM:l:e:", table, NULL)) != -1) {
+  while ((o = getopt_long(argc, argv, "-hmidfFcnTM:l:e:", table, NULL)) != -1) {
     switch (o) {
     case 'm':
       ccdb::runtime_dump_opt.mem_buf = true;
@@ -152,10 +152,20 @@ main(int argc, char *argv[]) {
   size_t currCyc{0U};
   bool exitBad{false};
   while (!contextp->gotFinish() && currCyc < MaxCyc) {
-    if (ccdb::runtime_print_cycle) {
+    if (!comm::fast && ccdb::runtime_print_cycle) {
       std::cerr << std::format("== @posedge of Cycle #{} ==", currCyc)
                 << std::endl;
     }
+
+    currCyc++;
+    if (comm::fast) {
+      // FIXME: Skip all trace/check in multicore senerio.
+      // Traces are mt-unsafe.
+      single_cycle(top, contextp, nullptr);
+      continue;
+      // TODO: MT support (memory to be modified)
+    }
+
     // WARN: Skipping cycle 0
     if (diff::enable) {
       // diff::state_checker.force_state(ccdb::read_ifs_mcstate());
@@ -166,7 +176,7 @@ main(int argc, char *argv[]) {
     } // Comes before exec
 
     ccdb::record_ifs_mcstate();
-    // NOTE: Dut Upd Here
+
     single_cycle(top, contextp, tfp);
     // std::cerr << std::format(
     //   ANSI_Red "=>> Last:Curr state = {:d}:{:d}\n" ANSI_None,
@@ -175,7 +185,7 @@ main(int argc, char *argv[]) {
     // std::cout << std::format("After  exec: mcstate = {}\n",
     //                          (int)ccdb::read_ifs_mcstate());
 
-    if (ccdb::npc_inst_commit() && !comm::fast) {
+    if (ccdb::npc_inst_commit()) {
       ccdb::inst_trace();
     }
     if (diff::enable && currCyc) {
@@ -218,7 +228,6 @@ main(int argc, char *argv[]) {
         }
       }
     }
-    currCyc++;
   }
   top->final();
 

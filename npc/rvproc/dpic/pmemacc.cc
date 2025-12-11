@@ -1,6 +1,7 @@
 #include "ccdb.hh"
 #include "probe.hh"
 
+#include <atomic>
 #include <cassert>
 #include <chrono>
 #include <cstdint>
@@ -161,7 +162,7 @@ pmem_read(uint32_t raddr) {
 #if PRINTF_COND
   std::cerr << " ret = " << std::hex << ret << std::endl;
 #endif
-  if (ccdb::runtime_dump_opt.mem_buf)
+  if (!comm::fast && ccdb::runtime_dump_opt.mem_buf)
     comm::mem_acc_log(raddr, false, ret, 0xf);
   return ret;
 }
@@ -200,8 +201,10 @@ pmem_write(addr_t waddr, ureg_t wdata, uint8_t wmask) {
       }
     }
 #endif
-    if (ccdb::runtime_dump_opt.mem_buf)
+    if (!comm::fast && ccdb::runtime_dump_opt.mem_buf)
       comm::mem_acc_log(waddr, false, wdata, wmask);
+
+    // std::atomic_thread_fence(std::memory_order_seq_cst);
   }
 }
 
