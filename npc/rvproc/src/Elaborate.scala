@@ -3,10 +3,10 @@ import java.nio.file.Paths
 
 object Elaborate extends App {
 
-  val outputPath = "/home/kong/ysyx-workbench/npc/build-sv/rvproc/"
+  val outputPath = "/home/kong/ysyx-workbench/npc/build-sv/rvproc/mcRvCore.sv"
 
   val firtoolOptions = Array(
-    "--split-verilog",
+    // "--split-verilog",
     "-o", outputPath,
     // "--disable-aggressive-merge-connections",
     // "--disable-opt",
@@ -17,9 +17,9 @@ object Elaborate extends App {
       "disallowLocalVariables",
       "disallowPackedArrays",
       "locationInfoStyle=wrapInAtSquareBracket",
-      "emittedLineLength=76",
+      "emittedLineLength=72",
     ).reduce(_ + "," + _)
   )
 
-  circt.stage.ChiselStage.emitSystemVerilogFile(new rvproc.rvCoreWrapper(), args, firtoolOptions)
+  circt.stage.ChiselStage.emitSystemVerilogFile(new rvproc.rvCore(), args, firtoolOptions)
 }
