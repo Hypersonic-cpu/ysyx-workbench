@@ -24,13 +24,15 @@ endif
 NXDC_FILES = $(PRJ)/constr/$(TOPNAME).nxdc
 INC_PATH ?= $(abspath $(PRJ))/dpic $(abspath $(PRJ))/sim-cxx
 
+## Parallism 
+NTHREADS?=1
 ## Verilator related
 VERILATOR = verilator
 VERILATOR_COVERAGE = verilator_coverage
 VERILATOR_TRACE ?= --trace --trace-fst --trace-depth 99
 DPRINTF?=0
 VERILATOR_CFLAGS += $(VERILATOR_TRACE) -DPRINTF_COND=$(DPRINTF)
-VERILATOR_CFLAGS += -MMD --build -cc  \
+VERILATOR_CFLAGS += -MMD --build -cc  --threads $(NTHREADS) --threads-dpi none \
 										-O3 --x-assign fast --x-initial fast --noassert
 INCFLAGS = $(addprefix -I, $(INC_PATH))
 CXXFLAGS += $(INCFLAGS) -DTOP_NAME="\"V$(TOPNAME)\"" -std=c++23 -g
