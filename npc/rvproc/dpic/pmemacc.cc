@@ -85,9 +85,7 @@ is_serial_range(addr_t a) {
 
 void
 write_serial(unsigned char ch) {
-#ifdef PRINTF_COND
-  std::cerr << "WRITE SERIAL !! \'" << ch << "\'" << std::endl;
-#endif
+  v_assert(false, "Invalid Serial Write @ DRAM Port, ch = '", ch, "'");
   putchar(ch);
   fflush(stdout);
 }
@@ -113,41 +111,26 @@ read_clock(bool hi) {
 
 extern "C" void
 pmem_init() {
-  // ccdb::pmem_init_hello();
-#if PRINTF_COND
-  std::cerr << "DPI-C >> pmem_init called" << std::endl;
-#endif
   std::ifstream ifs(PMemFile, std::ios::binary | std::ios::in);
   assert(ifs.is_open());
 
   ifs.seekg(0, std::ios::end);
   auto const file_size = ifs.tellg();
-#if PRINTF_COND
-  std::cerr << "DPI-C >> file size " << std::dec << file_size << std::endl;
-#endif
   assert(file_size != std::ifstream::pos_type(-1));
   image_size = file_size;
   ifs.seekg(0, std::ios::beg);
 
   ifs.read((char *)pmem_raw, file_size);
-#if PRINTF_COND
-  std::cerr << "DPI-C >> fail " << ifs.fail() << " eof " << ifs.eof()
-            << std::endl;
-#endif
   assert(!ifs.fail());
 }
 
 extern "C" uint32_t
 pmem_read(uint32_t raddr) {
-#if PRINTF_COND
-  std::cerr << "DPI-C >> pmem_read addr " << std::hex << raddr << std::endl;
-#endif
   uint32_t ret = 0;
   if (raddr == 0) {
     ret = 0;
   } else if (rv_device::is_clock_range(raddr)) {
     ret = rv_device::read_clock(raddr != rv_device::ClockAddr);
-    // comm::device_access[comm::CurrCyc] = true;
     comm::device_access = true;
   } else {
     // Memory
@@ -159,9 +142,6 @@ pmem_read(uint32_t raddr) {
       ret = pmem_raw[aln_idx];
     }
   }
-#if PRINTF_COND
-  std::cerr << " ret = " << std::hex << ret << std::endl;
-#endif
   if (!comm::fast && ccdb::runtime_dump_opt.mem_buf)
     comm::mem_acc_log(raddr, false, ret, 0xf);
   return ret;
@@ -175,9 +155,6 @@ pmem_write(addr_t waddr, ureg_t wdata, uint8_t wmask) {
     v_assert((wmask & 0x1), "Serial write masked out, wmask = ", wmask);
     rv_device::write_serial(wdata & 0xff);
     comm::device_access = true;
-    // comm::device_access[comm::CurrCyc] = true;
-    // std::cerr << "==> Identifier " << comm::device_access[comm::CurrCyc] <<
-    // std::endl;
   } else {
     uint32_t aln_idx = (waddr - BaseAddr) >> 2;
     v_assert(ValidAccess(aln_idx), std::string("Write addr = "), waddr);
@@ -188,19 +165,6 @@ pmem_write(addr_t waddr, ureg_t wdata, uint8_t wmask) {
       }
     }
     pmem_raw[aln_idx] = (pmem_raw[aln_idx] & ~m) | (wdata & m);
-#if PRINTF_COND
-    std::cerr << "DPI-C >> pmem_write addr" << std::hex << waddr << " : "
-              << wdata << " mask = " << m << std::endl;
-    for (size_t i = 0x100 >> 2; i < (0x100 + 20) >> 2; i++) {
-      if (i % 4 == 0) {
-        std::cerr << std::hex << i << ":\t";
-      }
-      std::cerr << std::hex << pmem_raw[i] << " ";
-      if (i % 4 == 3) {
-        std::cerr << std::endl;
-      }
-    }
-#endif
     if (!comm::fast && ccdb::runtime_dump_opt.mem_buf)
       comm::mem_acc_log(waddr, false, wdata, wmask);
 

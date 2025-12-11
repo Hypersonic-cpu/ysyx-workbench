@@ -88,7 +88,7 @@ class AXIArbiter(N: Int) extends Module {
   val IdxWidth: Int = log2Ceil(N)
   def IdxType(): UInt = UInt(log2Ceil(N).W)
 
-  val idle :: serve :: hold :: Nil = Enum(3)
+  val idle :: serve :: Nil = Enum(2)
 
   val state   = RegInit(idle)
   val serveId = Reg(IdxType())
@@ -130,13 +130,59 @@ class AXIArbiter(N: Int) extends Module {
         idle,
         serve
       )
-      // hold  -> Mux(
-      //   (io.device.r.valid && pivot.r.ready)
-      //     || (io.device.b.valid && pivot.b.ready),
-      //   idle,
-      //   hold
-      // )
     )
   )
   state := nextState
+}
+
+case class AddrMap(lo: BigInt, hi: BigInt, id: Int)
+
+class AXIXBar(N: Int, amap: Seq[AddrMap]) extends Module {
+  require(N > 0 && amap.nonEmpty, "Empty address mapping")
+  val maxId = (amap map (_.id)).max
+  require(maxId < N, "Max MapId exceeds N")
+  require(amap forall (_.id >= 0), "Negative Id")
+
+  val io = IO(new Bundle {
+    val host    = Flipped(new AXILite)
+    val devices = Vec(N, new AXILite)
+  })
+
+  val IdxWidth:  Int  = log2Ceil(N)
+  def IdxType(): UInt = UInt(log2Ceil(N).W)
+
+  val idle :: serve :: Nil = Enum(2)
+
+  val state   = RegInit(idle)
+  val serveId = Reg(IdxType())
+
+  val inputRd = io.host.ar.valid
+  val inputWr = io.host.aw.valid
+  val inputVa = inputRd || inputWr
+  val inputAd =
+    Mux(io.host.aw.valid, io.host.aw.bits.addr, io.host.ar.bits.addr)
+  assert(
+    io.host.aw.valid Excludes io.host.ar.valid,
+    "ar and aw both valid"
+  )
+  val tarIdx  = MuxCase(
+    0.U(IdxWidth.W),
+    amap map { entry =>
+      (
+        (inputAd >= entry.lo.U(ISA.AddrBits.W) &&
+          inputAd < entry.hi.U(ISA.AddrBits.W))
+          -> entry.id.U
+      )
+    }
+  )
+  
+  val nextState = MuxLookup(state, idle)(
+    Seq(
+      idle -> Mux(inputVa, serve, idle), 
+      serve -> Mux(
+        
+        )
+      )
+    )
+
 }
