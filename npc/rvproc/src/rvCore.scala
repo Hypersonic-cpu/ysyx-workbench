@@ -6,6 +6,7 @@ import chisel3.assert.Assert
 import rvproc.axi4.AXILite
 import rvproc.PortPassing.DriveDir
 import rvproc.axi4.AXIPortPassing
+import rvproc.axi4.AXIArbiter
 // import chisel3.util.experimental.loadMemoryFromFileInline
 // import firrtl.annotations.MemoryLoadFileType
 
@@ -36,8 +37,7 @@ import BitMath._
 
 class rvCore() extends Module {
   val io = IO(new Bundle {
-    val iMemPort = new AXILite()
-    val dMemPort = new AXILite()
+    val master = new AXILite
   })
 
   val ifs = Module(new FetchStage)
@@ -46,6 +46,8 @@ class rvCore() extends Module {
   val lss = Module(new MemoryStage)
   val wbs = Module(new WrBackStage)
   val reg = Module(new RegFile)
+
+  val arbiter = Module(new AXIArbiter(2))
 
   BusConnect(ids.io.toFetch, ifs.io.fromId)
   BusConnect(exs.io.toFetch, ifs.io.fromEx)
@@ -56,18 +58,12 @@ class rvCore() extends Module {
   BusConnect(wbs.io.toReg, reg.io.fromWb)
   BusConnect(wbs.io.toFetch, ifs.io.fromWb)
 
-  // always_comb
-  // BusConnect(ids.io.toReg, reg.io.fromId, BusType.SingleCyc)
-  // BusConnect(reg.io.toId, ids.io.fromReg, BusType.SingleCyc)
-
-  // val imemp = Wire(Flipped(new AXILite()))
-  // val dmemp = Wire(Flipped(new AXILite()))
-
   ids.io.toReg <> reg.io.fromId
   reg.io.toId <> ids.io.fromReg
 
-  AXIPortPassing(io.iMemPort, ifs.io.iMem)
-  AXIPortPassing(io.dMemPort, lss.io.dMem)
+  AXIPortPassing(io.master, arbiter.io.device)
+  arbiter.io.hosts(0) <> ifs.io.iMem
+  arbiter.io.hosts(1) <> lss.io.dMem
 
   dontTouch(ifs.io)
   dontTouch(ids.io)
@@ -78,16 +74,12 @@ class rvCore() extends Module {
 }
 
 class rvCoreSocSim() extends Module {
-  val io       = IO(new Bundle {})
-  val iMemDpic = Module(new PMemBox)
-  val dMemDpic = Module(new PMemBox)
-  iMemDpic.clock := clock
-  iMemDpic.reset := reset
-  dMemDpic.clock := clock
-  dMemDpic.reset := reset
-  val core     = Module(new rvCore)
-  core.io.iMemPort <> iMemDpic.io.master
-  core.io.dMemPort <> dMemDpic.io.master
+  val io      = IO(new Bundle {})
+  val memDpic = Module(new PMemBox)
+  memDpic.clock := clock
+  memDpic.reset := reset
+  val core = Module(new rvCore)
+  core.io.master <> memDpic.io.master
   dontTouch(core.io)
 }
 

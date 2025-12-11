@@ -5,14 +5,16 @@ import rvproc._
 import chisel3._
 import chisel3.util._
 import java.nio.BufferUnderflowException
+
 import rvproc.PortPassing.DriveDir
+import rvproc.BitMath._
 
 /** NOTE: Ready should NOT wait for valid, Valid could be asserted
   * by/after ready.
   */
 
 object ReadRespStatus extends ChiselEnum {
-  // place holder 
+  // place holder
   val PHldr0, PHldr1, PHldr2, PHldr3 = Value
 }
 
@@ -57,7 +59,7 @@ class AXILite extends Bundle {
 
 object AXIPortPassing {
   // For connection between two masters, right side is inner
-  // (source, like IFU.iMemMaster) and left side is outer 
+  // (source, like IFU.iMemMaster) and left side is outer
   // (like Core.iMemMaster).
   def apply[T <: Data](dst: AXILite, src: AXILite): Unit = {
     PortPassing(dst.ar, src.ar, DriveDir.RightDrivesLeft)
@@ -66,4 +68,75 @@ object AXIPortPassing {
     PortPassing(dst.w, src.w, DriveDir.RightDrivesLeft)
     PortPassing(dst.b, src.b, DriveDir.LeftDrivesRight)
   }
+}
+
+object AXIPortConnect {
+  def apply[T <: Data](dst: AXILite, src: AXILite): Unit = {
+    dst.ar <> src.ar
+    dst.r <> src.r
+    dst.aw <> src.aw
+    dst.w <> src.w
+    dst.b <> src.b
+  }
+}
+
+class AXIArbiter(N: Int) extends Module {
+  val io = IO(new Bundle {
+    val hosts  = Vec(N, Flipped(new AXILite))
+    val device = new AXILite
+  })
+  val IdxWidth: Int = log2Ceil(N)
+  def IdxType(): UInt = UInt(log2Ceil(N).W)
+
+  val idle :: serve :: hold :: Nil = Enum(3)
+
+  val state   = RegInit(idle)
+  val serveId = Reg(IdxType())
+
+  val validReads = Cat(VecInit(io.hosts map (_.ar.valid)).reverse)
+  val validWrite = Cat(VecInit(io.hosts map (_.aw.valid)).reverse)
+  val validReqs  = validReads | validWrite
+  val validIdx   = PriorityEncoder(validReqs)
+  val usingIdx   = Mux(state === idle, validIdx, serveId)
+
+  val pivot = io.hosts(usingIdx)
+  pivot <> io.device
+  for (i <- 0 until N) {
+    // Can change to usingIdx
+    val selectThis = state === serve && i.U === serveId
+    val issueThis  = state === idle && i.U === validIdx
+    // Response
+    io.hosts(i).r.valid  := selectThis && io.device.r.valid
+    io.hosts(i).r.bits   := io.device.r.bits
+    io.hosts(i).b.valid  := selectThis && io.device.b.valid
+    io.hosts(i).b.bits   := io.device.b.bits
+    // Request
+    io.hosts(i).ar.ready := issueThis && io.device.ar.ready
+    io.hosts(i).aw.ready := issueThis && io.device.aw.ready
+    io.hosts(i).w.ready  := issueThis && io.device.w.ready
+  }
+
+  when(state === idle && validReqs.orR) {
+    serveId := validIdx
+  }
+
+  // MuxCase
+  val nextState = MuxLookup(state, idle)(
+    Seq(
+      idle  -> Mux(validReqs.orR, serve, idle),
+      serve -> Mux(
+        (io.device.r.valid && pivot.r.ready)
+          || (io.device.b.valid && pivot.b.ready),
+        idle,
+        serve
+      )
+      // hold  -> Mux(
+      //   (io.device.r.valid && pivot.r.ready)
+      //     || (io.device.b.valid && pivot.b.ready),
+      //   idle,
+      //   hold
+      // )
+    )
+  )
+  state := nextState
 }
