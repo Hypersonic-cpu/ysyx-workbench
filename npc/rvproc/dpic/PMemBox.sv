@@ -147,6 +147,7 @@ module PMemReader (
 );
   import "DPI-C" function int unsigned pmem_read(input int unsigned raddr);
 
+  // wire [4:0] curr_delay = 5'b00001;
   wire [4:0] curr_delay;
   lfsr_1_to_32 lfsr (
       .clk(clock),
