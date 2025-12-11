@@ -31,3 +31,10 @@ object Tp {
 object ITYPE extends ChiselEnum {
   val tR, tI, tS, tB, tU, tJ, tN, tX = Value
 }
+
+object SoC {
+  val DRAMLo = 0x8000_0000L
+  val DRAMHi = 0x8000_0000L
+  val CLKLo  = 0x1000_0020L
+  val SERIAL = 0x1000_0000L
+}
