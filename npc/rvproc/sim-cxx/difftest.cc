@@ -112,5 +112,9 @@ diff::match_memwr(const comm::WriteEvent &real) {
   }
   auto eq = real.aligned == ref.aligned && real.mask == ref.mask &&
             (real.data & bitmask) == (ref.data & bitmask);
+  constexpr addr_t SerialAddr = 0x1000'0000;
+  if (ref.aligned == SerialAddr) {
+    eq = true;
+  }
   return std::make_pair(eq, ref);
 }

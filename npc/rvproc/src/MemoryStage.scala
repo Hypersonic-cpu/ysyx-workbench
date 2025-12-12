@@ -5,7 +5,7 @@ import chisel3.util._
 import chisel3.assert.Assert
 
 import BitMath._
-import rvproc.axi4.AXILite
+import rvproc.axi4._
 import rvproc.MemLen._
 
 // State:

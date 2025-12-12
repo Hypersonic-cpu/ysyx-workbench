@@ -7,8 +7,8 @@ import chisel3.assert.Assert
 // import firrtl.annotations.MemoryLoadFileType
 
 import BitMath._
-import rvproc.axi4.AXILite
-import rvproc.axi4.ReadRespStatus
+import rvproc.axi4._
+import rvproc.axi4.AXIRespStatus.OKAY
 
 class FetchStage extends Module {
   val io   = IO(new Bundle {
@@ -56,6 +56,8 @@ class FetchStage extends Module {
   iMem.w.bits.strb  := 0.U
   iMem.b.ready      := false.B
   assert(~(iMem.b.valid), "Read only port")
+  assert(iMem.r.valid Implies (iMem.r.bits.resp === OKAY),
+    "Inst fetch error")
 
   val brid = io.fromId.bits
   val brex = io.fromEx.bits
