@@ -53,7 +53,7 @@ class MemoryStage extends Module {
 
   io.out.valid := state === hold
   // TODO: 内存没有就绪就让 Exu 等待是有问题的
-  io.in.ready  := trigIss || ~ioex.memOp.isEn
+  io.in.ready  := state === idle  // trigIss || ~ioex.memOp.isEn
 
   dMem.ar.bits.addr := addr & Tp.AddrAligner()
   dMem.aw.bits.addr := addr & Tp.AddrAligner()
