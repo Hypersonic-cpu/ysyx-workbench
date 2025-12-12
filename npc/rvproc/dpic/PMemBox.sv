@@ -202,7 +202,7 @@ module PMemReader (
   assign io_master_rvalid  = state == HOLD;
   assign io_master_rdata   = {32{io_master_rvalid}} & rdata;
   assign io_master_arready = state == IDLE;
-  assign io_master_rresp   = 2'b11;  // TODO:
+  assign io_master_rresp   = 2'b00;
 endmodule
 
 
@@ -290,7 +290,7 @@ module PMemWriter (
   assign io_master_bvalid  = state == HOLD;
   assign io_master_awready = state == IDLE;
   assign io_master_wready  = state == IDLE;
-  assign io_master_bresp   = 2'b11;  // TODO:
+  assign io_master_bresp   = 2'b00;
 endmodule
 
 

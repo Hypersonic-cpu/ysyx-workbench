@@ -13,19 +13,14 @@ import rvproc.BitMath._
   * by/after ready.
   */
 
-object ReadRespStatus extends ChiselEnum {
-  // place holder
-  val PHldr0, PHldr1, PHldr2, PHldr3 = Value
-}
-
-object WriteRespStatus extends ChiselEnum {
-  val PHldr0, PHldr1, PHldr2, PHldr3 = Value
+object AXIRespStatus extends ChiselEnum {
+  val OKAY, EXOKAY, SLVERR, DECERR = Value
 }
 
 // To host
 class RGroup extends Bundle {
   val data = Tp.RegType()
-  val resp = ReadRespStatus()
+  val resp = AXIRespStatus()
 }
 
 // To device
@@ -46,7 +41,7 @@ class WGroup extends Bundle {
 
 // To host
 class BGroup extends Bundle {
-  val resp = WriteRespStatus()
+  val resp = AXIRespStatus()
 }
 
 class AXILite extends Bundle {
@@ -103,24 +98,22 @@ class AXIArbiter(N: Int) extends Module {
   pivot <> io.device
   for (i <- 0 until N) {
     // Can change to usingIdx
-    val selectThis = state === serve && i.U === serveId
-    val issueThis  = state === idle && i.U === validIdx
+    val selectThis = i.U === usingIdx
     // Response
     io.hosts(i).r.valid  := selectThis && io.device.r.valid
     io.hosts(i).r.bits   := io.device.r.bits
     io.hosts(i).b.valid  := selectThis && io.device.b.valid
     io.hosts(i).b.bits   := io.device.b.bits
     // Request
-    io.hosts(i).ar.ready := issueThis && io.device.ar.ready
-    io.hosts(i).aw.ready := issueThis && io.device.aw.ready
-    io.hosts(i).w.ready  := issueThis && io.device.w.ready
+    io.hosts(i).ar.ready := selectThis && io.device.ar.ready
+    io.hosts(i).aw.ready := selectThis && io.device.aw.ready
+    io.hosts(i).w.ready  := selectThis && io.device.w.ready
   }
 
   when(state === idle && validReqs.orR) {
     serveId := validIdx
   }
 
-  // MuxCase
   val nextState = MuxLookup(state, idle)(
     Seq(
       idle  -> Mux(validReqs.orR, serve, idle),
@@ -151,38 +144,87 @@ class AXIXBar(N: Int, amap: Seq[AddrMap]) extends Module {
   val IdxWidth:  Int  = log2Ceil(N)
   def IdxType(): UInt = UInt(log2Ceil(N).W)
 
-  val idle :: serve :: Nil = Enum(2)
+  val idle :: serve :: rdce :: wdce :: Nil = Enum(4)
 
   val state   = RegInit(idle)
   val serveId = Reg(IdxType())
 
-  val inputRd = io.host.ar.valid
-  val inputWr = io.host.aw.valid
-  val inputVa = inputRd || inputWr
-  val inputAd =
+  val inputRd   = io.host.ar.valid
+  val inputWr   = io.host.aw.valid
+  val inputVa   = inputRd || inputWr
+  val inputAd   =
     Mux(io.host.aw.valid, io.host.aw.bits.addr, io.host.ar.bits.addr)
   assert(
     io.host.aw.valid Excludes io.host.ar.valid,
     "ar and aw both valid"
   )
-  val tarIdx  = MuxCase(
-    0.U(IdxWidth.W),
+  val tarIdxExt = MuxCase(
+    1.U(IdxWidth.W),
     amap map { entry =>
       (
         (inputAd >= entry.lo.U(ISA.AddrBits.W) &&
           inputAd < entry.hi.U(ISA.AddrBits.W))
-          -> entry.id.U
+          -> entry.id.U ## 0.U
       )
     }
   )
-  
+  val tarIdx    = tarIdxExt >> 1.U
+  val decodeErr = tarIdxExt(0)
+  assert(
+    (state === serve) Implies (!decodeErr),
+    "Serving un-mapped target"
+  )
+  val usingIdx  = Mux(state === idle, tarIdx, serveId)
+
+  val pivot = io.devices(usingIdx)
+  pivot <> io.host
+  io.host.r.bits.resp := Mux(
+    state === rdce,
+    AXIRespStatus.DECERR,
+    pivot.r.bits.resp
+  )
+  io.host.b.bits.resp := Mux(
+    state === wdce,
+    AXIRespStatus.DECERR,
+    pivot.b.bits.resp
+  )
+  io.host.r.valid     := Mux(state === rdce, true.B, pivot.r.valid)
+  io.host.b.valid     := Mux(state === wdce, true.B, pivot.b.valid)
+
+  for (i <- 0 until N) {
+    val selectThis = i.U === usingIdx;
+    io.devices(i).ar.valid := selectThis && io.host.ar.valid
+    io.devices(i).ar.bits  := io.host.ar.bits
+    io.devices(i).aw.valid := selectThis && io.host.aw.valid
+    io.devices(i).aw.bits  := io.host.aw.bits
+    io.devices(i).w.valid  := selectThis && io.host.w.valid
+    io.devices(i).w.bits   := io.host.w.bits
+    // Response
+    io.devices(i).r.ready  := selectThis && io.host.r.ready
+    io.devices(i).b.ready  := selectThis && io.host.b.ready
+  }
+
+  when(state === idle && inputVa) {
+    serveId := tarIdx
+  }
+
   val nextState = MuxLookup(state, idle)(
     Seq(
-      idle -> Mux(inputVa, serve, idle), 
+      idle  -> Mux(
+        inputVa,
+        Mux(decodeErr, Mux(io.host.ar.valid, rdce, wdce), serve),
+        idle
+      ),
       serve -> Mux(
-        
-        )
-      )
+        (pivot.r.valid && io.host.r.ready)
+          || (pivot.b.valid && io.host.b.ready),
+        idle,
+        serve
+      ),
+      rdce  -> Mux(io.host.r.ready, idle, rdce),
+      wdce  -> Mux(io.host.b.ready, idle, wdce)
     )
-
+  )
+  state := nextState
+  dontTouch(io)
 }

@@ -3,10 +3,9 @@ package rvproc
 import chisel3._
 import chisel3.util._
 import chisel3.assert.Assert
-import rvproc.axi4.AXILite
+import rvproc.axi4._
 import rvproc.PortPassing.DriveDir
-import rvproc.axi4.AXIPortPassing
-import rvproc.axi4.AXIArbiter
+import rvproc.device.UART
 // import chisel3.util.experimental.loadMemoryFromFileInline
 // import firrtl.annotations.MemoryLoadFileType
 
@@ -74,12 +73,33 @@ class rvCore() extends Module {
 }
 
 class rvCoreSocSim() extends Module {
-  val io      = IO(new Bundle {})
+  // val DRAMLo = 0x8000_0000L
+  // val DRAMHi = 0x8000_0000L
+  // val CLKLo  = 0x1000_0020L
+  // val SERIAL = 0x1000_0000L
+  val io = IO(new Bundle {})
+
+  val core    = Module(new rvCore)
   val memDpic = Module(new PMemBox)
   memDpic.clock := clock
   memDpic.reset := reset
-  val core = Module(new rvCore)
-  core.io.master <> memDpic.io.master
+  val uart = Module(new UART)
+
+  val xbar = Module(
+    new AXIXBar(
+      4,
+      Seq(
+        AddrMap(0x8000_0000L, 0x8800_0000L, 0),
+        AddrMap(0x1000_0000L, 0x1000_0001L, 1),
+        AddrMap(0x1000_0020L, 0x1000_0028L, 2)
+      )
+    )
+  )
+  xbar.io.host <> core.io.master
+  xbar.io.devices(0) <> memDpic.io.master
+  xbar.io.devices(1) <> uart.io.port
+  xbar.io.devices(2) := DontCare
+  xbar.io.devices(3) := DontCare
   dontTouch(core.io)
 }
 
