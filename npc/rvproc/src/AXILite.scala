@@ -171,8 +171,13 @@ class AXIXBar(N: Int, amap: Seq[AddrMap]) extends Module {
   val tarIdx    = tarIdxExt >> 1.U
   val decodeErr = tarIdxExt(0)
   assert(
-    (state === serve) Implies (!decodeErr),
-    "Serving un-mapped target"
+    io.host.ar.valid  Implies (!decodeErr),
+    cf"Encoutering un-mapped read @ raddr ${io.host.ar.bits.addr}%x" 
+  )
+  assert(
+    io.host.aw.valid Implies (!decodeErr),
+    cf"Encoutering un-mapped write "
+    + cf"waddr ${io.host.aw.bits.addr}%x data ${io.host.w.bits.data}%x "
   )
   val usingIdx  = Mux(state === idle, tarIdx, serveId)
 
