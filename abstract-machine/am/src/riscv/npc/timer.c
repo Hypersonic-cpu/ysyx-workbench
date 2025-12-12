@@ -7,9 +7,22 @@ void __am_timer_init() {
 }
 
 void __am_timer_uptime(AM_TIMER_UPTIME_T *uptime) {
-  uptime->us = inl(RV32_NPC_CLOCK+4); // Higher bits
-  uptime->us <<= 32;
-  uptime->us |= inl(RV32_NPC_CLOCK);  // Lower bits
+  uint32_t hi1 = inl(RV32_NPC_CLOCK + 4);
+  uint32_t lo1 = inl(RV32_NPC_CLOCK + 0);
+  uint32_t hi2 = inl(RV32_NPC_CLOCK + 4);
+  if (hi1 == hi2) {
+    uptime->us = hi1;
+    uptime->us <<= 32;
+    uptime->us |= lo1;
+  } else {
+    // Overflow on lower 32 bits. Read again and we 
+    // believe it's impossible to overflow again.
+    lo1 = inl(RV32_NPC_CLOCK + 0);
+    uptime->us = hi2;
+    uptime->us <<= 32;
+    uptime->us |= lo1;
+  }
+  uptime->us /= NPC_CYC_PER_US;
 }
 
 void __am_timer_rtc(AM_TIMER_RTC_T *rtc) {
