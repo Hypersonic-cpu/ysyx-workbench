@@ -6,6 +6,8 @@ import chisel3.assert.Assert
 import rvproc.axi4._
 import rvproc.PortPassing.DriveDir
 import rvproc.device.UART
+import rvproc.device.CLINT
+import rvproc.device.CLINTAddr
 // import chisel3.util.experimental.loadMemoryFromFileInline
 // import firrtl.annotations.MemoryLoadFileType
 
@@ -83,7 +85,8 @@ class rvCoreSocSim() extends Module {
   val memDpic = Module(new PMemBox)
   memDpic.clock := clock
   memDpic.reset := reset
-  val uart = Module(new UART)
+  val uart  = Module(new UART)
+  val clint = Module(new CLINT)
 
   val xbar = Module(
     new AXIXBar(
@@ -91,14 +94,14 @@ class rvCoreSocSim() extends Module {
       Seq(
         AddrMap(0x8000_0000L, 0x8800_0000L, 0),
         AddrMap(0x1000_0000L, 0x1000_0001L, 1),
-        // AddrMap(0x1000_0020L, 0x1000_0028L, 2)
+        AddrMap(CLINTAddr.Base, CLINTAddr.Base + CLINTAddr.Size, 2)
       )
     )
   )
   xbar.io.host <> core.io.master
   xbar.io.devices(0) <> memDpic.io.master
   xbar.io.devices(1) <> uart.io.port
-  xbar.io.devices(2) := DontCare
+  xbar.io.devices(2) <> clint.io.port
   xbar.io.devices(3) := DontCare
   dontTouch(core.io)
 }
