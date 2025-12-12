@@ -91,7 +91,7 @@ class rvCoreSocSim() extends Module {
       Seq(
         AddrMap(0x8000_0000L, 0x8800_0000L, 0),
         AddrMap(0x1000_0000L, 0x1000_0001L, 1),
-        AddrMap(0x1000_0020L, 0x1000_0028L, 2)
+        // AddrMap(0x1000_0020L, 0x1000_0028L, 2)
       )
     )
   )
