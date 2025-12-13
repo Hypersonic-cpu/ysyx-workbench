@@ -21,5 +21,5 @@ object Elaborate extends App {
     ).reduce(_ + "," + _)
   )
 
-  circt.stage.ChiselStage.emitSystemVerilogFile(new rvproc.rvCoreWrapper(), args, firtoolOptions)
+  circt.stage.ChiselStage.emitSystemVerilogFile(new rvproc.rvCore(), args, firtoolOptions)
 }

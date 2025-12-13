@@ -7,6 +7,8 @@ import chisel3.assert.Assert
 import BitMath._
 import rvproc.axi4._
 import rvproc.MemLen._
+import rvproc.axi4.AXI.BurstOpts._
+import rvproc.axi4.AXI.RespStatus._
 
 // State:
 // idle -(reqReady)-> macc -(respValid)-> hold
@@ -16,7 +18,7 @@ class MemoryStage extends Module {
   val io   = IO(new Bundle {
     val in   = Flipped(Decoupled(new ExecuteToMemory))
     val out  = Decoupled(new MemoryToWrBack)
-    val dMem = new AXILite
+    val dMem = new AXIBus
   })
   val iowb = io.out.bits
   val ioex = io.in.bits
@@ -53,10 +55,19 @@ class MemoryStage extends Module {
 
   io.out.valid := state === hold
   // TODO: 内存没有就绪就让 Exu 等待是有问题的
-  io.in.ready  := state === idle  // trigIss || ~ioex.memOp.isEn
+  io.in.ready  := state === idle // trigIss || ~ioex.memOp.isEn
 
-  dMem.ar.bits.addr := addr & Tp.AddrAligner()
-  dMem.aw.bits.addr := addr & Tp.AddrAligner()
+  dMem.ar.bits.addr  := addr & Tp.AddrAligner()
+  dMem.aw.bits.addr  := addr & Tp.AddrAligner()
+  dMem.ar.bits.burst := INCR
+  dMem.aw.bits.burst := INCR
+  dMem.ar.bits.size  := ioex.memOp.len.asUInt
+  dMem.aw.bits.size  := ioex.memOp.len.asUInt
+  dMem.ar.bits.id    := 1.U
+  dMem.aw.bits.id    := 1.U
+  dMem.ar.bits.len   := 0.U
+  dMem.aw.bits.len   := 0.U
+  dMem.w .bits.last  := true.B
 
   val shamt = addr(1, 0)
   val dmask = MuxLookup(ioex.memOp.len, 0.U)(
