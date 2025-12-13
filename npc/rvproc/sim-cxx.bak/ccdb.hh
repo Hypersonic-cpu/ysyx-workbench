@@ -14,8 +14,8 @@
 #include <utility>
 #include <vector>
 
-#include "VrvCoreSocSim.h"
-#include "VrvCoreSocSim___024root.h"
+#include "VysyxSoCFull.h"
+#include "VysyxSoCFull___024root.h"
 
 #include "disasm.hh"
 #include "probe.hh"
@@ -34,23 +34,23 @@ namespace ccdb {
     uint32_t ret = 0;
     bool valid = true;
     switch (regid) {
-      case 0x0: ret = r->rvCoreSocSim__DOT__core__DOT__reg_0__DOT__gpr__DOT__gprs_0; break;
-      case 0x1: ret = r->rvCoreSocSim__DOT__core__DOT__reg_0__DOT__gpr__DOT__gprs_1; break;
-      case 0x2: ret = r->rvCoreSocSim__DOT__core__DOT__reg_0__DOT__gpr__DOT__gprs_2; break;
-      case 0x3: ret = r->rvCoreSocSim__DOT__core__DOT__reg_0__DOT__gpr__DOT__gprs_3; break;
-      case 0x4: ret = r->rvCoreSocSim__DOT__core__DOT__reg_0__DOT__gpr__DOT__gprs_4; break;
-      case 0x5: ret = r->rvCoreSocSim__DOT__core__DOT__reg_0__DOT__gpr__DOT__gprs_5; break;
-      case 0x6: ret = r->rvCoreSocSim__DOT__core__DOT__reg_0__DOT__gpr__DOT__gprs_6; break;
-      case 0x7: ret = r->rvCoreSocSim__DOT__core__DOT__reg_0__DOT__gpr__DOT__gprs_7; break;
-      case 0x8: ret = r->rvCoreSocSim__DOT__core__DOT__reg_0__DOT__gpr__DOT__gprs_8; break;
-      case 0x9: ret = r->rvCoreSocSim__DOT__core__DOT__reg_0__DOT__gpr__DOT__gprs_9; break;
-      case 0xa: ret = r->rvCoreSocSim__DOT__core__DOT__reg_0__DOT__gpr__DOT__gprs_10; break;
-      case 0xb: ret = r->rvCoreSocSim__DOT__core__DOT__reg_0__DOT__gpr__DOT__gprs_11; break;
-      case 0xc: ret = r->rvCoreSocSim__DOT__core__DOT__reg_0__DOT__gpr__DOT__gprs_12; break;
-      case 0xd: ret = r->rvCoreSocSim__DOT__core__DOT__reg_0__DOT__gpr__DOT__gprs_13; break;
-      case 0xe: ret = r->rvCoreSocSim__DOT__core__DOT__reg_0__DOT__gpr__DOT__gprs_14; break;
-      case 0xf: ret = r->rvCoreSocSim__DOT__core__DOT__reg_0__DOT__gpr__DOT__gprs_15; break;
-      case 0x10:ret = r->rvCoreSocSim__DOT__core__DOT__ifs__DOT__pc; break;
+      // case 0x0: ret = r->rvCoreSocSim__DOT__core__DOT__reg_0__DOT__gpr__DOT__gprs_0; break;
+      // case 0x1: ret = r->rvCoreSocSim__DOT__core__DOT__reg_0__DOT__gpr__DOT__gprs_1; break;
+      // case 0x2: ret = r->rvCoreSocSim__DOT__core__DOT__reg_0__DOT__gpr__DOT__gprs_2; break;
+      // case 0x3: ret = r->rvCoreSocSim__DOT__core__DOT__reg_0__DOT__gpr__DOT__gprs_3; break;
+      // case 0x4: ret = r->rvCoreSocSim__DOT__core__DOT__reg_0__DOT__gpr__DOT__gprs_4; break;
+      // case 0x5: ret = r->rvCoreSocSim__DOT__core__DOT__reg_0__DOT__gpr__DOT__gprs_5; break;
+      // case 0x6: ret = r->rvCoreSocSim__DOT__core__DOT__reg_0__DOT__gpr__DOT__gprs_6; break;
+      // case 0x7: ret = r->rvCoreSocSim__DOT__core__DOT__reg_0__DOT__gpr__DOT__gprs_7; break;
+      // case 0x8: ret = r->rvCoreSocSim__DOT__core__DOT__reg_0__DOT__gpr__DOT__gprs_8; break;
+      // case 0x9: ret = r->rvCoreSocSim__DOT__core__DOT__reg_0__DOT__gpr__DOT__gprs_9; break;
+      // case 0xa: ret = r->rvCoreSocSim__DOT__core__DOT__reg_0__DOT__gpr__DOT__gprs_10; break;
+      // case 0xb: ret = r->rvCoreSocSim__DOT__core__DOT__reg_0__DOT__gpr__DOT__gprs_11; break;
+      // case 0xc: ret = r->rvCoreSocSim__DOT__core__DOT__reg_0__DOT__gpr__DOT__gprs_12; break;
+      // case 0xd: ret = r->rvCoreSocSim__DOT__core__DOT__reg_0__DOT__gpr__DOT__gprs_13; break;
+      // case 0xe: ret = r->rvCoreSocSim__DOT__core__DOT__reg_0__DOT__gpr__DOT__gprs_14; break;
+      // case 0xf: ret = r->rvCoreSocSim__DOT__core__DOT__reg_0__DOT__gpr__DOT__gprs_15; break;
+      // case 0x10:ret = r->rvCoreSocSim__DOT__core__DOT__ifs__DOT__pc; break;
       default: valid = false; break;
     }
     return std::make_pair(valid, ret);
@@ -61,7 +61,7 @@ namespace ccdb {
   inline McState 
   read_ifs_mcstate() {
     auto r = top->rootp;
-    uint8_t val = r->rvCoreSocSim__DOT__core__DOT__ifs__DOT__state;
+    uint8_t val = 0; // r->rvCoreSocSim__DOT__core__DOT__ifs__DOT__state;
     return McState(val);
   }
 
@@ -84,10 +84,10 @@ namespace ccdb {
     uint32_t ret = 0;
     bool valid = true;
     switch (fakeid) {
-      case 0x0: ret = r->rvCoreSocSim__DOT__core__DOT__reg_0__DOT__csr__DOT__mtvec;   break;
-      case 0x1: ret = r->rvCoreSocSim__DOT__core__DOT__reg_0__DOT__csr__DOT__mepc;    break;
-      case 0x2: ret = r->rvCoreSocSim__DOT__core__DOT__reg_0__DOT__csr__DOT__mstatus; break;
-      case 0x3: ret = r->rvCoreSocSim__DOT__core__DOT__reg_0__DOT__csr__DOT__mcause;  break;
+      // case 0x0: ret = r->rvCoreSocSim__DOT__core__DOT__reg_0__DOT__csr__DOT__mtvec;   break;
+      // case 0x1: ret = r->rvCoreSocSim__DOT__core__DOT__reg_0__DOT__csr__DOT__mepc;    break;
+      // case 0x2: ret = r->rvCoreSocSim__DOT__core__DOT__reg_0__DOT__csr__DOT__mstatus; break;
+      // case 0x3: ret = r->rvCoreSocSim__DOT__core__DOT__reg_0__DOT__csr__DOT__mcause;  break;
       default: valid = false; break;
     }
     return std::make_pair(valid, ret);
