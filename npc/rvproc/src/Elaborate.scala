@@ -7,7 +7,8 @@ object Elaborate extends App {
 
   val firtoolOptions = Array(
     "--split-verilog",
-    "-o", outputPath,
+    "-o",
+    outputPath,
     // "--disable-aggressive-merge-connections",
     // "--disable-opt",
     // "--preserve-values=all",
@@ -17,9 +18,13 @@ object Elaborate extends App {
       "disallowLocalVariables",
       "disallowPackedArrays",
       "locationInfoStyle=wrapInAtSquareBracket",
-      "emittedLineLength=76",
+      "emittedLineLength=76"
     ).reduce(_ + "," + _)
   )
 
-  circt.stage.ChiselStage.emitSystemVerilogFile(new rvproc.rvCore(), args, firtoolOptions)
+  circt.stage.ChiselStage.emitSystemVerilogFile(
+    new rvproc.rvCoreWrapper(),
+    args,
+    firtoolOptions
+  )
 }

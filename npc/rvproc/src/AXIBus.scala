@@ -86,16 +86,16 @@ object AXIPortPassing {
   }
 }
 
-object AXIPortConnect {
-  def apply[T <: Data](dst: AXIBus, src: AXIBus): Unit = {
-    dst.ar <> src.ar
-    dst.r <> src.r
-    dst.aw <> src.aw
-    dst.w <> src.w
-    dst.b <> src.b
-  }
-}
-
+// object AXIPortConnect {
+//   def apply[T <: Data](dst: AXIBus, src: AXIBus): Unit = {
+//     dst.ar <> src.ar
+//     dst.r <> src.r
+//     dst.aw <> src.aw
+//     dst.w <> src.w
+//     dst.b <> src.b
+//   }
+// }
+//
 // FIXME: 
 // TODO: ID and burst
 class AXIArbiter(N: Int) extends Module {
