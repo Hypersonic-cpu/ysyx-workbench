@@ -8,6 +8,10 @@ import rvproc.BitMath._
 import rvproc.axi4._
 import rvproc.axi4.AXI.RespStatus._
 
+// TODO: CLINT 需要接入 rvCore side
+// 在SoC中没有包含
+//
+
 object CLINTAddr {
   val Base   = 0x0200_0000L
   val Size   = 0xc000L

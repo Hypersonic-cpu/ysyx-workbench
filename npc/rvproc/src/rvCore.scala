@@ -38,8 +38,9 @@ import BitMath._
 
 class rvCore() extends Module {
   val io = IO(new Bundle {
-    val master = new AXIBus
-    val slave  = Flipped(new AXIBus)
+    val interrupt = Input(Bool())
+    val master    = new AXIBus
+    val slave     = Flipped(new AXIBus)
   })
 
   val ifs = Module(new FetchStage)
@@ -126,11 +127,13 @@ class rvCore() extends Module {
 // }
 //
 class rvCoreWrapper() extends Module {
-  val io     = IO(new Bundle {
+  val io   = IO(new Bundle {
+    val interrupt   = Input(Bool())
     val managerPort = new AXIBus
     val subordiPort = Flipped(new AXIBus)
   })
-  val core   = Module(new rvCore)
+  val core = Module(new rvCore)
+  core.io.interrupt := io.interrupt
   AXIPortPassing(io.managerPort, core.io.master)
   AXIPortPassing(core.io.slave, io.subordiPort)
   dontTouch(core.io)
