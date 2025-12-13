@@ -125,8 +125,15 @@ class rvCore() extends Module {
 //   dontTouch(core.io)
 // }
 //
-// class rvCoreWrapper() extends Module {
-//   val io     = IO(new Bundle {})
-//   val socSim = Module(new rvCoreSocSim)
-//   dontTouch(socSim.io)
-// }
+class rvCoreWrapper() extends Module {
+  val io     = IO(new Bundle {
+    val managerPort = new AXIBus
+    val subordiPort = Flipped(new AXIBus)
+  })
+  val core   = Module(new rvCore)
+  AXIPortPassing(io.managerPort, core.io.master)
+  AXIPortPassing(core.io.slave, io.subordiPort)
+  dontTouch(core.io)
+  // val socSim = Module(new rvCoreSocSim)
+  // dontTouch(socSim.io)
+}
