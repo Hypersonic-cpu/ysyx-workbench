@@ -38,7 +38,8 @@ import BitMath._
 
 class rvCore() extends Module {
   val io = IO(new Bundle {
-    val master = new AXILite
+    val master = new AXIBus
+    val slave  = Flipped(new AXIBus)
   })
 
   val ifs = Module(new FetchStage)
@@ -72,42 +73,60 @@ class rvCore() extends Module {
   dontTouch(lss.io)
   dontTouch(wbs.io)
   dontTouch(reg.io)
+
+  io.slave := DontCare
 }
 
-class rvCoreSocSim() extends Module {
-  // val DRAMLo = 0x8000_0000L
-  // val DRAMHi = 0x8000_0000L
-  // val CLKLo  = 0x1000_0020L
-  // val SERIAL = 0x1000_0000L
-  val io = IO(new Bundle {})
-
-  val core    = Module(new rvCore)
-  val memDpic = Module(new PMemBox)
-  memDpic.clock := clock
-  memDpic.reset := reset
-  val uart  = Module(new UART)
-  val clint = Module(new CLINT)
-
-  val xbar = Module(
-    new AXIXBar(
-      4,
-      Seq(
-        AddrMap(0x8000_0000L, 0x8800_0000L, 0),
-        AddrMap(0x1000_0000L, 0x1000_0001L, 1),
-        AddrMap(CLINTAddr.Base, CLINTAddr.Base + CLINTAddr.Size, 2)
-      )
-    )
-  )
-  xbar.io.host <> core.io.master
-  xbar.io.devices(0) <> memDpic.io.master
-  xbar.io.devices(1) <> uart.io.port
-  xbar.io.devices(2) <> clint.io.port
-  xbar.io.devices(3) := DontCare
-  dontTouch(core.io)
-}
-
-class rvCoreWrapper() extends Module {
-  val io     = IO(new Bundle {})
-  val socSim = Module(new rvCoreSocSim)
-  dontTouch(socSim.io)
-}
+// 设备	地址空间
+// CLINT	0x0200_0000~0x0200_ffff
+// SRAM	0x0f00_0000~0x0fff_ffff
+// UART16550	0x1000_0000~0x1000_0fff
+// SPI master	0x1000_1000~0x1000_1fff
+// GPIO	0x1000_2000~0x1000_200f
+// PS2	0x1001_1000~0x1001_1007
+// MROM	0x2000_0000~0x2000_0fff
+// VGA	0x2100_0000~0x211f_ffff
+// Flash	0x3000_0000~0x3fff_ffff
+// ChipLink MMIO	0x4000_0000~0x7fff_ffff
+// PSRAM	0x8000_0000~0x9fff_ffff
+// SDRAM	0xa000_0000~0xbfff_ffff
+// ChipLink MEM	0xc000_0000~0xffff_ffff
+// Reverse	其他
+//
+// class rvCoreSocSim() extends Module {
+//   // val DRAMLo = 0x8000_0000L
+//   // val DRAMHi = 0x8000_0000L
+//   // val CLKLo  = 0x1000_0020L
+//   // val SERIAL = 0x1000_0000L
+//   val io = IO(new Bundle {})
+//
+//   val core    = Module(new rvCore)
+//   val memDpic = Module(new PMemBox)
+//   memDpic.clock := clock
+//   memDpic.reset := reset
+//   val uart  = Module(new UART)
+//   val clint = Module(new CLINT)
+//
+//   val xbar = Module(
+//     new AXIXBar(
+//       4,
+//       Seq(
+//         AddrMap(0x8000_0000L, 0x8800_0000L, 0),
+//         AddrMap(0x1000_0000L, 0x1000_0001L, 1),
+//         AddrMap(CLINTAddr.Base, CLINTAddr.Base + CLINTAddr.Size, 2)
+//       )
+//     )
+//   )
+//   xbar.io.host <> core.io.master
+//   xbar.io.devices(0) <> memDpic.io.master
+//   xbar.io.devices(1) <> uart.io.port
+//   xbar.io.devices(2) <> clint.io.port
+//   xbar.io.devices(3) := DontCare
+//   dontTouch(core.io)
+// }
+//
+// class rvCoreWrapper() extends Module {
+//   val io     = IO(new Bundle {})
+//   val socSim = Module(new rvCoreSocSim)
+//   dontTouch(socSim.io)
+// }
