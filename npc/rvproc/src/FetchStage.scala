@@ -43,7 +43,8 @@ class FetchStage extends Module {
   assert(io.fromWb.valid Implies (state === idle), 
     cf"Write back to IFU of state ${state}")
 
-  val ResetVector = 0x80000000L.U(ISA.RegBits.W)
+  // val ResetVector = 0x80000000L.U(ISA.RegBits.W)
+  val ResetVector = 0x2000_0000L.U(ISA.RegBits.W)
   val pc          = RegInit(ResetVector)
   val nextPC      = RegInit(ResetVector)
 
