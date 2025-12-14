@@ -32,6 +32,8 @@ VERILATOR = verilator
 VERILATOR_COVERAGE = verilator_coverage
 VERILATOR_TRACE ?= --trace --trace-fst --trace-depth 99
 DPRINTF?=0
+LOGENA?=0
+DIFFENA?=1
 VERILATOR_CFLAGS += $(VERILATOR_TRACE) -DPRINTF_COND=$(DPRINTF)
 VERILATOR_CFLAGS += -MMD --build -cc  --threads $(NTHREADS) --threads-dpi none \
 										-O3 --x-assign fast --x-initial fast --noassert
@@ -40,6 +42,7 @@ VERILATOR_CFLAGS += --autoflush
 INCFLAGS = $(addprefix -I, $(INC_PATH))
 VINCFLAGS = $(addprefix -I, $(VINC_PATH))
 CXXFLAGS += $(INCFLAGS) -DTOP_NAME="\"V$(TOPNAME)\"" -std=c++23 -g
+CXXFLAGS += -DLOGENA=$(LOGENA) -DDIFFENA=$(DIFFENA)
 simccargs ?= 
 mrombin ?= 
 
