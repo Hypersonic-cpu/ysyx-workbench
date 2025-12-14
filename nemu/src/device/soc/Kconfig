@@ -1,0 +1,38 @@
+menuconfig SOC
+  depends on TARGET_SHARE
+  bool "SoC Devices"
+  default y
+  help
+    Provide device support for SoC NPC.
+
+if SOC
+menuconfig HAS_SRAM
+  bool "Enable SRAM"
+  default y
+
+if HAS_SRAM
+config SOC_SRAM_MMIO
+  hex "MMIO address of SRAM"
+  default 0x0f000000
+
+config SOC_SRAM_SIZE
+  hex "SRAM size (bytes)"
+  default 0x2000
+endif # SRAM
+
+menuconfig HAS_MROM
+  bool "Enable MROM"
+  default y
+
+if HAS_MROM
+config SOC_MROM_MMIO
+  hex "MMIO address of MROM"
+  default 0x20000000
+
+config SOC_MROM_SIZE
+  hex "MROM size (bytes)"
+  default 0x1000
+endif # MROM
+
+endif # SOC
+

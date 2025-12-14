@@ -1,0 +1,4 @@
+SRCS-$(CONFIG_SOC) += src/device/soc/soc.c
+SRCS-$(CONFIG_HAS_MROM) += src/device/soc/mrom.c
+SRCS-$(CONFIG_HAS_SRAM) += src/device/soc/sram.c
+

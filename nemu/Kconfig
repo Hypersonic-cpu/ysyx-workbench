@@ -220,7 +220,7 @@ endmenu
 if MODE_SYSTEM
 source "src/memory/Kconfig"
 source "src/device/Kconfig"
-source "src/soc/Kconfig"
+source "src/device/soc/Kconfig"
 endif
 
 menu "Miscellaneous"

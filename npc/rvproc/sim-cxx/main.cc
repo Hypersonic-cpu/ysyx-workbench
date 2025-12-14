@@ -8,6 +8,7 @@
 
 #include "VysyxSoCFull.h"
 
+#include "ccdb.hh"
 #include "difftest.hh"
 #include "options.hh"
 #include "probe.hh"
@@ -53,6 +54,9 @@ single_reset(const std::unique_ptr<TOP_NAME>& top,
   wave.dump(context->time());
 }
 
+const TOP_NAME* trace::ptop = nullptr;
+trace::IFState trace::last_state = trace::IFState::Start;
+
 int
 main(int argc, char* argv[]) {
   Verilated::commandArgs(argc, argv);
@@ -62,10 +66,12 @@ main(int argc, char* argv[]) {
   mrom = mromBin.get();
 
   options::parse_args(argc, argv);
+  if (options::wave_enable) { assert(!options::wave_file.empty()); }
 
   const std::unique_ptr<VerilatedContext> contextp{new VerilatedContext};
 
   const std::unique_ptr<TOP_NAME> top{new TOP_NAME{contextp.get(), "TOP"}};
+  trace::ptop = top.get();
   trace::FstTracer<options::wave_enable> tfp(options::wave_file);
   if constexpr (options::wave_enable) {
     Verilated::traceEverOn(true);
@@ -81,6 +87,7 @@ main(int argc, char* argv[]) {
   int retBad = 0;
 
   trace::DiffTester<options::diff_enable> diff(mrom->dataVec());
+  diff.copy(); // Force RESET_VECTOR = 0x2000'0000 in NEMU
 
   while (currCyc < MaxCyc) {
     if (options::runtime_dump_opt.cycle_no)
@@ -90,8 +97,10 @@ main(int argc, char* argv[]) {
     currCyc++;
 
     diff.copy();
+
     single_cycle(top, contextp, tfp);
-    if (auto mismatch = diff.match(); !mismatch.empty()) {
+
+    if (auto mismatch = diff.test_on_commit(); !mismatch.empty()) {
       for (auto const& [id, golden, real] : mismatch) {
         std::cerr << std::format(
                        "Reg {:>2d} mismatch: golden {:>8x} real ${:>8x}", id,

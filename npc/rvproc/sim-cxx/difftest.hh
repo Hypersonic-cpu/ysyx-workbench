@@ -1,0 +1,184 @@
+#pragma once
+#include "ccdb.hh"
+#include "probe.hh"
+
+#include <algorithm>
+#include <cstddef>
+#include <cstdint>
+#include <dlfcn.h>
+#include <format>
+#include <string>
+#include <unistd.h>
+#include <vector>
+
+namespace trace {
+
+template <bool E> class DiffTester {
+  using mcpy_t = void (*)(uint32_t addr, void* buf, size_t n,
+                          bool direction);
+  using rcpy_t = void (*)(void* dut, bool direction);
+  using exec_t = void (*)(uint64_t n);
+  using intr_t = void (*)(uint64_t no);
+  using init_t = void (*)(int port);
+  using memw_t = void (*)(void* dst);
+
+private:
+  init_t ref_init;
+  exec_t ref_exec;
+  mcpy_t ref_memcpy;
+  rcpy_t ref_regcpy;
+  intr_t ref_raise_intr;
+  // memw_t ref_cpy_memwr_event;
+
+private:
+  void
+  init(const std::vector<ureg_t>& image, const char* so = NEMU_SO,
+       int port = NEMUPort) {
+    if constexpr (!E)
+      return;
+    auto nemu_path = getenv("NEMU_HOME");
+    std::string so_file =
+      (so[0] == '/')
+        ? (std::string(so))
+        : (std::string(nemu_path) + std::string("/") + std::string(so));
+    void* dl = dlopen(so_file.c_str(), RTLD_NOW | RTLD_GLOBAL);
+    v_assert(dl, "DiffTest .so", so_file, "open failed:", dlerror());
+    std::cerr << std::format("Using difftest .so {}", so_file) << std::endl;
+
+    ref_init = (init_t)dlsym(dl, "difftest_init");
+    ref_exec = (exec_t)dlsym(dl, "difftest_exec");
+    ref_memcpy = (mcpy_t)dlsym(dl, "difftest_memcpy");
+    ref_regcpy = (rcpy_t)dlsym(dl, "difftest_regcpy");
+    ref_raise_intr = (intr_t)dlsym(dl, "difftest_raise_intr");
+    // ref_cpy_memwr_event = (memw_t)dlsym(dl, "difftest_get_memwr_event");
+
+    assert(ref_init && "difftest_init");
+    assert(ref_exec && "difftest_exec");
+    assert(ref_memcpy && "difftest_memcpy");
+    assert(ref_regcpy && "difftest_regcpy");
+    assert(ref_raise_intr && "difftest_raise_intr");
+    // assert(ref_cpy_memwr_event && "difftest_get_memwr_event");
+
+    ref_init(port);
+
+    auto imgsz = image.size() * 4;
+    ref_memcpy(ResetVector, (void*)const_cast<ureg_t*>(image.data()), imgsz,
+               CpyDir::ToRef);
+  }
+
+public:
+  DiffTester(const std::vector<ureg_t>& image) { init(image); }
+
+  struct CpyDir {
+    constexpr static bool ToDut = 0;
+    constexpr static bool ToRef = 1;
+  };
+
+  static constexpr char NEMU_SO[] = "build/riscv32-nemu-interpreter-so";
+  static constexpr int NEMUPort{1234};
+  static constexpr addr_t ResetVector{0x2000'0000};
+
+  std::vector<std::tuple<uint16_t, uint32_t, uint32_t>>
+  match() {
+    if constexpr (!E) {
+      return {};
+    }
+    // if (comm::device_access)
+    //   return {};
+    std::vector<std::tuple<uint16_t, uint32_t, uint32_t>> ret{};
+    uint32_t regbuf[RegNum + 1];
+    ref_regcpy(regbuf, CpyDir::ToDut);
+
+    size_t i = 0;
+    for (i = 0; i < RegNum + 1; ++i) {
+      auto dut = trace::read_reg(i);
+      if (regbuf[i] != dut) {
+        ret.emplace_back(i, regbuf[i], dut);
+      }
+    }
+    return std::move(ret);
+  }
+
+  void
+  copy() {
+    if constexpr (!E)
+      return;
+    uint32_t regbuf[RegNum + 1];
+    for (size_t i = 0; i < RegNum + 1; ++i) {
+      regbuf[i] = trace::read_reg(i);
+    }
+    ref_regcpy(regbuf, CpyDir::ToRef);
+  }
+
+  void
+  iota(uint64_t n = 1) {
+    if constexpr (!E)
+      return;
+    ref_exec(n);
+  }
+
+  std::vector<std::tuple<uint16_t, uint32_t, uint32_t>>
+  test_on_commit() {
+    if (!npc_inst_commit()) {
+      upd_ifs_mcstate();
+      return {};
+    }
+    upd_ifs_mcstate();
+
+    iota();
+    auto ret = match();
+    copy();
+    return ret;
+  }
+  
+};
+} // namespace trace
+
+// class StateMatcher {
+//   using McState = ccdb::McState;
+//
+// private:
+//   McState state;
+//
+// public:
+//   StateMatcher() : state{McState::Strt} {}
+//   void
+//   iota() {
+//     switch (state) {
+//     case McState::Fire:
+//       state = McState::Hold;
+//       break;
+//     case McState::Hold:
+//       state = McState::Idle;
+//       break;
+//     case McState::Idle:
+//       state = McState::Fire;
+//       break;
+//     case McState::Strt:
+//       state = McState::Fire;
+//       break;
+//     default:
+//       comm::v_assert(false, "No such state", (int)state);
+//     }
+//   }
+//
+//   std::pair<bool, McState>
+//   match_golden(uint32_t state_in) const {
+//     return match_golden(McState(state_in));
+//   }
+//
+//   std::pair<bool, McState>
+//   match_golden(McState in) const {
+//     return std::make_pair(in == state, state);
+//   }
+//
+//   void
+//   force_state(uint32_t state_in) {
+//     force_state(McState(state_in));
+//   }
+//   void
+//   force_state(McState in) {
+//     state = in;
+//   }
+// };
+//
