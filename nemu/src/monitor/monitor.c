@@ -22,6 +22,7 @@ void init_elf(const char *elf_file);
 void init_mem();
 void init_difftest(char *ref_so_file, long img_size, int port);
 void init_device();
+void init_soc();
 void init_sdb();
 void init_disasm();
 
@@ -107,10 +108,6 @@ void init_monitor(int argc, char *argv[]) {
   /* Perform some global initialization. */
 
   /* Parse arguments. */
-  // printf("Main Args Num %d\n", argc);
-  // for (int i = 0; i < argc; i ++) {
-  //   printf("Main Args[%d] = %s\n", i, argv[i]);
-  // }
   parse_args(argc, argv);
 
   /* Set random seed. */
@@ -127,6 +124,8 @@ void init_monitor(int argc, char *argv[]) {
 
   /* Initialize devices. */
   IFDEF(CONFIG_DEVICE, init_device());
+
+  IFDEF(CONFIG_SOC, init_soc());
 
   /* Perform ISA dependent initialization. */
   init_isa();
