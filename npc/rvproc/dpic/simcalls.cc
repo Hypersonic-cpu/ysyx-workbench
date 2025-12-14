@@ -3,6 +3,7 @@
 #include <iomanip>
 #include <ios>
 #include <iostream>
+#include <stdexcept>
 #include <verilated.h>
 
 #include "probe.hh"
@@ -18,8 +19,7 @@ call_ebreak(uint32_t pc, uint32_t a0reg) {
             << " at pc = 0x" << std::hex << pc << " with a0 = 0x" << std::hex
             << a0reg << std::endl;
   if (a0reg) {
-    vl_fatal(__FILE__, __LINE__, "EcallBox:call_ebreak",
-             "ebreak with nonzero a10");
+    throw std::runtime_error("EcallBox: hit bad trap");
   } else {
     vl_finish(__FILE__, __LINE__, "EcallBox:call_ebreak");
   }
