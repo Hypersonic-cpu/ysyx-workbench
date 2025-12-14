@@ -36,10 +36,12 @@ VERILATOR_CFLAGS += $(VERILATOR_TRACE) -DPRINTF_COND=$(DPRINTF)
 VERILATOR_CFLAGS += -MMD --build -cc  --threads $(NTHREADS) --threads-dpi none \
 										-O3 --x-assign fast --x-initial fast --noassert
 VERILATOR_CFLAGS += --timescale "1ns/1ns" --no-timing
+VERILATOR_CFLAGS += --autoflush
 INCFLAGS = $(addprefix -I, $(INC_PATH))
 VINCFLAGS = $(addprefix -I, $(VINC_PATH))
 CXXFLAGS += $(INCFLAGS) -DTOP_NAME="\"V$(TOPNAME)\"" -std=c++23 -g
 simccargs ?= 
+mrombin ?= 
 
 # capstone
 LIBCAPSTONE = $(NEMU_HOME)/tools/capstone/repo/libcapstone.so.5
@@ -86,11 +88,12 @@ runam:
 
 run: verilate verilog $(LIBCAPSTONE) $(SIM_BIN)
 	# $(call git_commit, "run with AM via verilator cc")
-	$(SIM_BIN) $(simccargs)
+	@echo "MROMBIN = $(mrombin)"
+	$(SIM_BIN) $(mrombin) $(simccargs)
 
 runonly: verilate $(SIM_BIN)
 	# $(call git_commit, "run with AM via verilator cc")
-	$(SIM_BIN) $(simccargs)
+	$(SIM_BIN) $(mrombin) $(simccargs)
 
 verilog: $(SCALA_SOURCES)
 	$(call git_commit, "generate verilog") # WARN: Only allow tracking here

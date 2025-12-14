@@ -25,7 +25,8 @@ class FetchStage extends Module {
   val idle :: serve :: hold :: start :: Nil = Enum(4)
 
   val state   = RegInit(start)
-  val trigIss = (io.fromWb.valid && state === idle) || state === start
+  val trigIss = (!reset.asBool) && 
+    ((state === start) || (io.fromWb.valid && state === idle))
   assert((io.fromEx.valid || io.fromId.valid) Implies (state === hold))
   state := MuxLookup(state, start)(
     Seq(
@@ -40,8 +41,10 @@ class FetchStage extends Module {
   io.fromEx.ready := true.B
   io.fromId.ready := true.B
   io.fromWb.ready := state === idle && iMem.ar.ready
-  assert(io.fromWb.valid Implies (state === idle), 
-    cf"Write back to IFU of state ${state}")
+  assert(
+    io.fromWb.valid Implies (state === idle),
+    cf"Write back to IFU of state ${state}"
+  )
 
   // val ResetVector = 0x80000000L.U(ISA.RegBits.W)
   val ResetVector = 0x2000_0000L.U(ISA.RegBits.W)
@@ -49,10 +52,10 @@ class FetchStage extends Module {
   val nextPC      = RegInit(ResetVector)
 
   iMem.ar.bits.addr  := nextPC // NOTE:
-  iMem.ar.bits.size  := 0b010.U // log2(4)
+  iMem.ar.bits.size  := 0x2.U  // log2(4)
   iMem.ar.bits.len   := 0.U
   iMem.ar.bits.burst := INCR
-  iMem.ar.bits.id    := 0.U // TODO: ID=0
+  iMem.ar.bits.id    := 0.U    // TODO: ID=0
   iMem.ar.valid      := trigIss
   iMem.r.ready       := state === serve
   iMem.aw.valid      := false.B
@@ -67,8 +70,10 @@ class FetchStage extends Module {
   iMem.w.bits.last   := false.B
   iMem.b.ready       := false.B
   assert(~(iMem.b.valid), "Read only port")
-  assert(iMem.r.valid Implies (iMem.r.bits.resp === OKAY),
-    "Inst fetch error")
+  assert(
+    iMem.r.valid Implies (iMem.r.bits.resp === OKAY),
+    "Inst fetch error"
+  )
   assert(
     iMem.r.valid Implies (iMem.r.bits.resp === OKAY),
     cf"Inst Fetch Failed, rresp = ${iMem.r.bits.resp}"
@@ -113,8 +118,7 @@ class FetchStage extends Module {
   when(state === hold) {
     printf(cf"[ ${pc}%x IF ] Holding iMem Resp inst ${ioid.inst}%x\n")
   }.elsewhen(state === serve) {
-    printf(
-      cf"[ ${pc}%x IF ] Waiting iMem Req of addr ${pc}%x\n")
+    printf(cf"[ ${pc}%x IF ] Waiting iMem Req of addr ${pc}%x\n")
   }
   printf(cf"< IF > curr state ${state}\n")
 }
