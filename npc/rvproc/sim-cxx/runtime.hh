@@ -54,4 +54,9 @@ public:
     v_assert(isAligned(addr), "Unaligned read @", addr);
     return data.at((addr - baseAddr) >> 2);
   }
+
+  const std::vector<ureg_t>&
+  dataVec() const {
+    return data;
+  }
 };
