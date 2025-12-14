@@ -1,5 +1,6 @@
 #include <cassert>
 #include <format>
+#include <getopt.h>
 #include <iostream>
 #include <memory>
 #include <verilated.h>
@@ -7,7 +8,9 @@
 
 #include "VysyxSoCFull.h"
 
+#include "difftest.hh"
 #include "options.hh"
+#include "probe.hh"
 #include "runtime.hh"
 #include "wave.hh"
 
@@ -74,16 +77,47 @@ main(int argc, char* argv[]) {
 
   constexpr size_t MaxCyc = 1000'000U;
   size_t currCyc{0U};
+  std::string retCause = "??";
+  int retBad = 0;
 
-  while (!contextp->gotFinish() && currCyc < MaxCyc) {
+  trace::DiffTester<options::diff_enable> diff(mrom->dataVec());
+
+  while (currCyc < MaxCyc) {
     if (options::runtime_dump_opt.cycle_no)
       std::cerr << std::format("\r== @posedge of Cycle #{} ==", currCyc)
                 << std::endl;
 
     currCyc++;
-    single_cycle(top, contextp, tfp);
 
+    diff.copy();
+    single_cycle(top, contextp, tfp);
+    if (auto mismatch = diff.match(); !mismatch.empty()) {
+      for (auto const& [id, golden, real] : mismatch) {
+        std::cerr << std::format(
+                       "Reg {:>2d} mismatch: golden {:>8x} real ${:>8x}", id,
+                       golden, real)
+                  << std::endl;
+      }
+      retCause = "DiffTest failed";
+      retBad = 1;
+      break;
+    }
+
+    if (contextp->gotFinish()) {
+      retCause = "Ecall";
+      retBad = 0;
+      break;
+    }
+    if (currCyc == MaxCyc) {
+      retCause = "Max cycles reached";
+      retBad = 1;
+    }
   }
   top->final();
-  return currCyc == MaxCyc;
+
+  std::cerr << std::format(ANSI_YELLOW
+                           "== Exit @ cycle {:d} : {:s} ==" ANSI_NONE,
+                           currCyc, retCause)
+            << std::endl;
+  return retBad;
 }
