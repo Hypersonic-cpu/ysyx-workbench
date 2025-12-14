@@ -7,44 +7,47 @@
 
 #include "VysyxSoCFull.h"
 
-#include "probe.hh"
+#include "options.hh"
 #include "runtime.hh"
+#include "wave.hh"
 
+template <bool E>
 inline void
 single_cycle(const std::unique_ptr<TOP_NAME>& top,
              const std::unique_ptr<VerilatedContext>& context,
-             const std::unique_ptr<VerilatedFstC>& fstwave) {
+             const trace::FstTracer<E>& wave) {
 
   top->clock = 1;
   context->timeInc(1);
   top->eval();
-  fstwave->dump(context->time());
+  wave.dump(context->time());
 
   top->clock = 0;
   context->timeInc(1);
   top->eval();
-  fstwave->dump(context->time());
+  wave.dump(context->time());
 }
 
+template <bool E>
 inline void
 single_reset(const std::unique_ptr<TOP_NAME>& top,
              const std::unique_ptr<VerilatedContext>& context,
-             const std::unique_ptr<VerilatedFstC>& fstwave) {
+             const trace::FstTracer<E>& wave) {
 
   top->reset = 1;
   for (size_t i = 0; i < 15; i++) {
-    single_cycle(top, context, fstwave);
+    single_cycle(top, context, wave);
   }
   top->clock = 1;
   context->timeInc(1);
   top->eval();
-  fstwave->dump(context->time());
+  wave.dump(context->time());
 
   top->clock = 0;
   top->reset = 0;
   context->timeInc(1);
   top->eval();
-  fstwave->dump(context->time());
+  wave.dump(context->time());
 }
 
 int
@@ -55,16 +58,17 @@ main(int argc, char* argv[]) {
   auto mromBin = std::make_shared<RuntimeBin>(argv[1], 0x2000'0000U);
   mrom = mromBin.get();
 
+  options::parse_args(argc, argv);
+
   const std::unique_ptr<VerilatedContext> contextp{new VerilatedContext};
 
-  Verilated::traceEverOn(true);
-  const std::unique_ptr<VerilatedFstC> tfp{new VerilatedFstC};
-
   const std::unique_ptr<TOP_NAME> top{new TOP_NAME{contextp.get(), "TOP"}};
-
-  top->trace(tfp.get(), 99);
-  // tfp->dumpvars(1, "t"); // trace 1 level under "t"
-  tfp->open("logs/soc.fst");
+  trace::FstTracer<options::wave_enable> tfp(options::wave_file);
+  if constexpr (options::wave_enable) {
+    Verilated::traceEverOn(true);
+    top->trace(tfp.get(), 99);
+    tfp.open();
+  }
 
   single_reset(top, contextp, tfp);
 
@@ -72,14 +76,14 @@ main(int argc, char* argv[]) {
   size_t currCyc{0U};
 
   while (!contextp->gotFinish() && currCyc < MaxCyc) {
+    if (options::runtime_dump_opt.cycle_no)
+      std::cerr << std::format("\r== @posedge of Cycle #{} ==", currCyc)
+                << std::endl;
 
-    // std::cerr << std::format("\r== @posedge of Cycle #{} ==", currCyc);
-              // << std::endl;
     currCyc++;
     single_cycle(top, contextp, tfp);
+
   }
   top->final();
-  tfp->close();
   return currCyc == MaxCyc;
 }
-

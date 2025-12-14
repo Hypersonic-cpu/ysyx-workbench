@@ -1,9 +1,12 @@
 #pragma once
 #include "verilated.h"
+
 #include <array>
 #include <cstdint>
+#include <format>
 #include <iomanip>
 #include <iostream>
+#include <stdexcept>
 #include <string>
 #include <unordered_map>
 
@@ -25,7 +28,8 @@ v_assert(bool cond, const Args&... args) {
               << " " ANSI_NONE << std::hex;
     ((std::cerr << args << " "), ...);
     std::cerr << std::endl;
-    vl_fatal(__FILE__, __LINE__, "v_assert", "FAIL");
+    // vl_fatal(__FILE__, __LINE__, "v_assert", "FAIL");
+    throw std::runtime_error("Assertion failed");
   }
 }
 
