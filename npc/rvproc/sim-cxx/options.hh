@@ -1,12 +1,10 @@
+#pragma once
+
 #include <cassert>
 #include <cstdlib>
 #include <ctime>
-#include <format>
 #include <getopt.h>
-#include <iostream>
-#include <memory>
-
-#include "probe.hh"
+#include <string>
 
 namespace options {
 
@@ -20,6 +18,7 @@ struct DumpPrintOpt {
 };
 constexpr bool wave_enable{LOGENA};
 constexpr bool diff_enable{DIFFENA};
+constexpr bool gdbg_enable{DBGENA};
 
 extern DumpPrintOpt runtime_dump_opt;
 extern std::string wave_file;
