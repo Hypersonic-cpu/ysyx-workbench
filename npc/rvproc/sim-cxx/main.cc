@@ -121,7 +121,7 @@ main(int argc, char* argv[]) {
     }
 
     if (contextp->gotFinish()) {
-      retCause = "Ecall";
+      retCause = "Ebreak";
       retBad = 0;
       break;
     }
