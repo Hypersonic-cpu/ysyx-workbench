@@ -30,6 +30,8 @@ private:
   intr_t ref_raise_intr;
   // memw_t ref_cpy_memwr_event;
 
+  bool device_access;
+
 private:
   void
   init(const std::vector<ureg_t>& image, const char* so = NEMU_SO,
@@ -67,7 +69,9 @@ private:
   }
 
 public:
-  DiffTester(const std::vector<ureg_t>& image) { init(image); }
+  DiffTester(const std::vector<ureg_t>& image) : device_access{false} {
+    init(image);
+  }
 
   struct CpyDir {
     constexpr static bool ToDut = 0;
@@ -78,13 +82,25 @@ public:
   static constexpr int NEMUPort{1234};
   static constexpr addr_t ResetVector{0x2000'0000};
 
+  // TODO: CSR support 
+  //
+      //
+      // bool is_csr =
+      //   bits(inst, 6, 2) == 0b11100 && bits(inst, 14, 12) != 0b000;
+      // uint16_t csrid = bits(inst, 31, 20);
+      // bool diff_csrs =
+      //   (csrid == 0xB00 || csrid == 0xB80 || csrid == 0xF11 || csrid == 0xF12);
+      // if (is_csr && diff_csrs) {
+      //   device_access = true;
+      // }
+  
   std::vector<std::tuple<uint16_t, uint32_t, uint32_t>>
   match() {
     if constexpr (!E) {
       return {};
     }
-    // if (comm::device_access)
-    //   return {};
+    if (device_access)
+      return {};
     std::vector<std::tuple<uint16_t, uint32_t, uint32_t>> ret{};
     uint32_t regbuf[RegNum + 1];
     ref_regcpy(regbuf, CpyDir::ToDut);
@@ -103,6 +119,7 @@ public:
   copy() {
     if constexpr (!E)
       return;
+    device_access = false;
     uint32_t regbuf[RegNum + 1];
     for (size_t i = 0; i < RegNum + 1; ++i) {
       regbuf[i] = trace::read_reg(i);
@@ -120,17 +137,14 @@ public:
   std::vector<std::tuple<uint16_t, uint32_t, uint32_t>>
   test_on_commit() {
     if (!npc_inst_commit()) {
-      upd_ifs_mcstate();
       return {};
     }
-    upd_ifs_mcstate();
 
     iota();
     auto ret = match();
     copy();
     return ret;
   }
-  
 };
 } // namespace trace
 

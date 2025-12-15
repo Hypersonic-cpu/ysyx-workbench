@@ -1,5 +1,9 @@
+#include "probe.hh"
 #include "options.hh"
+
 #include <getopt.h>
+#include <iostream>
+
 
 namespace options {
 
