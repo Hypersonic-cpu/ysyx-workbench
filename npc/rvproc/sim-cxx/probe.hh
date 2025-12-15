@@ -6,6 +6,7 @@
 #include <format>
 #include <iomanip>
 #include <iostream>
+#include <list>
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
@@ -171,33 +172,6 @@ protected:
   std::array<T, N> buf;
 };
 
-/** Global var */
-extern RingBuffer<InstEnt, 16> instBuf;
-extern RingBuffer<MemEnt, 16> memBuf;
-
-void mem_acc_log(uint32_t addr, bool is_write, uint32_t data,
-                 uint8_t byte_mask);
-
-struct ElfSymEnt {
-  std::string name;
-  uint32_t addr;
-  uint32_t size;
-};
-
-extern std::unordered_map<uint32_t, ElfSymEnt> elf_syms;
-
-extern bool log_ena;
-extern std::string log_wavefile;
-extern std::string elf_file;
-
-// enum DelayTime{
-//   CurrCyc = 0,
-//   PrevCyc = 1,
-//   Num_DelayTime
-// };
-// extern std::array<bool, Num_DelayTime> device_access;
-extern bool device_access;
-
 struct WriteEvent {
   addr_t aligned;
   ureg_t data;
@@ -212,14 +186,36 @@ constexpr std::array<std::string, RegNum + 1> RegName{
   "$0", "ra", "sp", "gp", "tp", "t0", "t1", "t2", "s0",
   "s1", "a0", "a1", "a2", "a3", "a4", "a5", "pc"};
 
-extern bool fast;
+struct ElfSymEnt {
+  std::string name;
+  uint32_t addr;
+  uint32_t size;
+};
+
+class FrameEnt {
+  public:
+  // Stack pointer before callee modify it.
+  unsigned depth;
+  std::string name;
+  uint32_t addr;
+  // uint32_t sp;
+  uint32_t ra;
+  std::array<uint32_t, FunctArgs> args;
+  void printent(std::ostream& os, const std::string& prefix="", bool indent=false) const {
+    if (indent) { std::string space(depth, ' '); os << space; }
+    os << prefix << " ";
+    os << "[" << std::setfill(' ') << std::setw(3) << std::dec << depth << "] "; 
+    util::sout32(os) << addr << " : " << name << "(";
+    for (auto arg: args) {
+      // sout32(os, ' ') << arg << ", ";
+      os << std::hex << "0x" << arg << ", ";
+    }
+    os << ")" << std::endl;
+  }
+};
+
+using ibuf_t = RingBuffer<InstEnt, 16>;
+using mbuf_t = RingBuffer<MemEnt, 16>;
+using ebuf_t = std::unordered_map<uint32_t, ElfSymEnt>;
+using fbuf_t = std::list<FrameEnt>;
 } // namespace trace
-
-// NOTE: 这是main用于窥探dpic SV 的namespace.
-// DPI-C 选择暴露这些接口. 定义应该在 pememacc.cc.
-namespace dpic {
-std::pair<bool, uint32_t> pmem_probe(uint32_t addr);
-
-uint8_t* pmem_pointer_raw();
-size_t pmem_bytes_raw();
-} // namespace dpic

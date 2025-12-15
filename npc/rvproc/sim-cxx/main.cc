@@ -66,7 +66,9 @@ main(int argc, char* argv[]) {
   mrom = mromBin.get();
 
   options::parse_args(argc, argv);
-  if (options::wave_enable) { assert(!options::wave_file.empty()); }
+  if (options::wave_enable) {
+    assert(!options::wave_file.empty());
+  }
 
   const std::unique_ptr<VerilatedContext> contextp{new VerilatedContext};
 
@@ -87,7 +89,9 @@ main(int argc, char* argv[]) {
   int retBad = 0;
 
   trace::DiffTester<options::diff_enable> diff(mrom->dataVec());
-  diff.copy(); // Force RESET_VECTOR = 0x2000'0000 in NEMU
+  // Force RESET_VECTOR = 0x2000'0000 in NEMU
+  diff.copy();
+  trace::GuestTracer<options::gdbg_enable> ccdb(options::elf_file);
 
   while (currCyc < MaxCyc) {
     if (options::runtime_dump_opt.cycle_no)
@@ -96,9 +100,10 @@ main(int argc, char* argv[]) {
 
     currCyc++;
 
-    diff.copy();
-
+    trace::upd_ifs_mcstate();
     single_cycle(top, contextp, tfp);
+
+    ccdb.inst_trace();
 
     if (auto mismatch = diff.test_on_commit(); !mismatch.empty()) {
       for (auto const& [id, golden, real] : mismatch) {
@@ -107,6 +112,9 @@ main(int argc, char* argv[]) {
                        golden, real)
                   << std::endl;
       }
+
+      ccdb.dump_print();
+
       retCause = "DiffTest failed";
       retBad = 1;
       break;

@@ -1,33 +1,49 @@
 ENTRY(_start)
-PHDRS { text PT_LOAD; data PT_LOAD; }
+/* PHDRS { text PT_LOAD; data PT_LOAD; } */
+
+MEMORY {
+  mrom : ORIGIN = 0x20000000, LENGTH = 4K
+  sram : ORIGIN = 0x0f000000, LENGTH = 8K
+}
 
 SECTIONS {
-  _stack_top = 0x0f000000;
-  . = _stack_top + 0x2000;
-  _stack_pointer = .;
-  /* _pmem_start and _entry_offset are defined in LDFLAGS */
-  . = _pmem_start + _entry_offset;
+  . = ORIGIN(mrom);
   .text : {
     *(entry)
     *(.text*)
-  } : text
-  etext = .;
-  _etext = .;
+  } > mrom
+
   .rodata : {
     *(.rodata*)
-  }
-  .data : {
+    _rodata_end = ALIGN(16);
+  } > mrom
+
+  .data : AT(_rodata_end) {
+    _data_beg = .;
     *(.data*)
-  } : data
+    *(.sdata*)
+    /* TODO: sdata 应该单独成段 */
+  } > sram
   edata = .;
   _data = .;
+  _data_load = LOADADDR(.data);
+
   .bss : {
+  . = ALIGN(16);
 	_bss_start = .;
     *(.bss*)
     *(.sbss*)
     *(.scommon)
-  }
-  _heap_start = ALIGN(0x1000);
+    . = ALIGN(16);
+  _bss_end = .;
+  } > sram
   end = .;
   _end = .;
+  _bss_load = LOADADDR(.bss);
+  _heap_start = ALIGN(16); /* ALIGN(0x1000); */
+
+  _stack_top = 0x0f001000;
+  . = _stack_top + 0x1000;
+  _stack_pointer = .;
 }
+

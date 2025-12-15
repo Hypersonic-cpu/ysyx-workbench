@@ -1,15 +1,17 @@
 #include <am.h>
+#include <klib.h>
 #include <klib-macros.h>
 
 #include "addrmap.h"
 
 int main(const char *args);
 
-// PSRAM         0x8000_0000 ~ 0x9fff_ffff
-// SDRAM         0xa000_0000 ~ 0xbfff_ffff
 extern char _pmem_start;
 #define PMEM_SIZE (128 << 20)
 #define PMEM_END  ((uintptr_t)&_pmem_start + PMEM_SIZE)
+
+extern char _bss_start, _bss_end, _bss_load;
+extern char _data_beg, _data, _data_load;
 
 extern char _heap_start;
 Area heap = RANGE(&_heap_start, PMEM_END);
@@ -25,6 +27,11 @@ void halt(int code) {
 }
 
 void _trm_init() {
+  uint32_t data_size = &_data - &_data_beg;
+  memcpy(&_data_beg, &_data_load , data_size);
+  uint32_t bss_size = &_bss_end - &_bss_start;
+  memset(&_bss_start, 0, bss_size);
+
   int ret = main(mainargs);
   halt(ret);
 }
