@@ -21,7 +21,7 @@ static const char mainargs[MAINARGS_MAX_LEN] =
 
 void uart_init() {
   // TODO: Set proper clock rate
-  uint16_t const divisor = 5; // 100 * 1000000 / UART_BAUD_RATE / 16;
+  uint16_t const divisor = 10 * 1000000 / UART_BAUD_RATE / 16;
   // Enable divisor IO
   uint8_t tmp_lcr = *(volatile uint8_t *)(RV32_SOC_UART_L + UART_OFF_LCR);
   tmp_lcr |= 0x80U;
