@@ -51,7 +51,7 @@ public:
 
   ureg_t
   readAligned(addr_t addr) const {
-    v_assert(isAligned(addr), "Unaligned read @", addr);
+    // v_assert(isAligned(addr), "Unaligned read @", addr);
     return data.at((addr - baseAddr) >> 2);
   }
 

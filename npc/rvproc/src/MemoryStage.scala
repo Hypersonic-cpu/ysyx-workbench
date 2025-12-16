@@ -57,8 +57,8 @@ class MemoryStage extends Module {
   // TODO: 内存没有就绪就让 Exu 等待是有问题的
   io.in.ready  := state === idle // trigIss || ~ioex.memOp.isEn
 
-  dMem.ar.bits.addr  := addr & Tp.AddrAligner()
-  dMem.aw.bits.addr  := addr & Tp.AddrAligner()
+  dMem.ar.bits.addr  := addr // & Tp.AddrAligner()
+  dMem.aw.bits.addr  := addr // & Tp.AddrAligner()
   dMem.ar.bits.burst := INCR
   dMem.aw.bits.burst := INCR
   dMem.ar.bits.size  := ioex.memOp.len.asUInt
