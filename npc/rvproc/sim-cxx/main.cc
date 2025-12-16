@@ -83,7 +83,7 @@ main(int argc, char* argv[]) {
 
   single_reset(top, contextp, tfp);
 
-  constexpr size_t MaxCyc = 1000'000U;
+  const size_t MaxCyc{ options::max_cycles };
   size_t currCyc{0U};
   std::string retCause = "??";
   int retBad = 0;
@@ -130,11 +130,12 @@ main(int argc, char* argv[]) {
       retBad = 1;
     }
   }
+  auto const lastPC{ trace::read_reg(trace::RegNum) };
   top->final();
 
   std::cerr << std::format(ANSI_YELLOW
-                           "== Exit @ cycle {:d} : {:s} ==" ANSI_NONE,
-                           currCyc, retCause)
+                           "== Exit @ cycle {:d} pc {:>08x} : {:s} ==" ANSI_NONE,
+                           currCyc, lastPC, retCause)
             << std::endl;
   return retBad;
 }

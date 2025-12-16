@@ -22,6 +22,12 @@
 #define RV32_SOC_SDRAM_L  0xa0000000U
 #define RV32_SOC_SDRAM_H  0xc0000000U
 
+#define UART_OFF_DIV      0U
+#define UART_OFF_THR      0U // Transmit holding reg
+#define UART_OFF_LCR      3U // Line control register
+#define UART_OFF_LS       5U // Line Status
+#define UART_BAUD_RATE    ((uint16_t)115200U)
+
 #define SOC_CYC_PER_US   16 // 6.25MHz
 
 #endif // !__RISCV_NPC_ADDRMAP_H__
