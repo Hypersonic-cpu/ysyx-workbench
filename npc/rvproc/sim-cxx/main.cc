@@ -62,8 +62,12 @@ main(int argc, char* argv[]) {
   Verilated::commandArgs(argc, argv);
   assert(argc >= 2);
 
-  auto mromBin = std::make_shared<RuntimeBin>(argv[1], 0x2000'0000U);
+  auto mromBin = std::make_shared<RuntimeBin>(argv[1], 0x2000'0000U, "MROM");
   mrom = mromBin.get();
+  auto flashBin = std::make_shared<RuntimeBin>(
+    std::vector<ureg_t>({0x03020100, 0x27262524, 0xffeeffee, 0x55aa55aa}),
+    0x0000'0000U, "Flash");
+  flash = flashBin.get();
 
   options::parse_args(argc, argv);
   if (options::wave_enable) {
@@ -83,7 +87,7 @@ main(int argc, char* argv[]) {
 
   single_reset(top, contextp, tfp);
 
-  const size_t MaxCyc{ options::max_cycles };
+  const size_t MaxCyc{options::max_cycles};
   size_t currCyc{0U};
   std::string retCause = "??";
   int retBad = 0;
@@ -130,12 +134,15 @@ main(int argc, char* argv[]) {
       retBad = 1;
     }
   }
-  auto const lastPC{ trace::read_reg(trace::RegNum) };
+
+final:
+  auto const lastPC{trace::read_reg(trace::RegNum)};
   top->final();
 
-  std::cerr << std::format(ANSI_YELLOW
-                           "== Exit @ cycle {:d} pc {:>08x} : {:s} ==" ANSI_NONE,
-                           currCyc, lastPC, retCause)
+  std::cerr << std::format(
+                 ANSI_YELLOW
+                 "== Exit @ cycle {:d} pc {:>08x} : {:s} ==" ANSI_NONE,
+                 currCyc, lastPC, retCause)
             << std::endl;
   return retBad;
 }
