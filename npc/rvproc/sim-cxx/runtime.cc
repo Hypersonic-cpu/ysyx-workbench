@@ -4,6 +4,7 @@
 #include <memory>
 
 const RuntimeBin* mrom = nullptr;
+const RuntimeBin* flash = nullptr;
 
 void
 mrom_read(int32_t addr, int32_t* data) {
@@ -12,5 +13,5 @@ mrom_read(int32_t addr, int32_t* data) {
 
 void
 flash_read(int32_t addr, int32_t* data) {
-  assert(0);
+  *(uint32_t*)data = flash->readAligned(addr);
 }
