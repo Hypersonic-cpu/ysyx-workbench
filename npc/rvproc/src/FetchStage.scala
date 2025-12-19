@@ -47,7 +47,7 @@ class FetchStage extends Module {
   )
 
   // val ResetVector = 0x80000000L.U(ISA.RegBits.W)
-  val ResetVector = 0x2000_0000L.U(ISA.RegBits.W)
+  val ResetVector = 0x3000_0000L.U(ISA.RegBits.W)
   val pc          = RegInit(ResetVector)
   val nextPC      = RegInit(ResetVector)
 

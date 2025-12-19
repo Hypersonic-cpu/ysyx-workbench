@@ -3,6 +3,7 @@
 #include <getopt.h>
 #include <iostream>
 #include <memory>
+#include <vector>
 #include <verilated.h>
 #include <verilated_fst_c.h>
 
@@ -62,11 +63,16 @@ main(int argc, char* argv[]) {
   Verilated::commandArgs(argc, argv);
   assert(argc >= 2);
 
-  auto mromBin = std::make_shared<RuntimeBin>(argv[1], 0x2000'0000U, "MROM");
+  auto mromBin = std::make_shared<RuntimeBin>(
+    std::vector<ureg_t>(0xbadc0de, 10U), 0x2000'0000U, "MROM");
   mrom = mromBin.get();
-  auto flashBin = std::make_shared<RuntimeBin>(
-    std::vector<ureg_t>({0x03020100, 0x27262524, 0xffeeffee, 0x55aa55aa}),
-    0x0000'0000U, "Flash");
+
+  auto flashBin =
+    std::make_shared<RuntimeBin>(argv[1], 0x0000'0000U, "Flash");
+
+  // auto flashBin = std::make_shared<RuntimeBin>(
+  //   std::vector<ureg_t>({0x04030201, 0x27262524, 0xffeeffee, 0x55aa55aa}),
+  //   0x0000'0000U, "Flash");
   flash = flashBin.get();
 
   options::parse_args(argc, argv);
@@ -93,7 +99,7 @@ main(int argc, char* argv[]) {
   int retBad = 0;
 
   trace::DiffTester<options::diff_enable> diff(mrom->dataVec());
-  // Force RESET_VECTOR = 0x2000'0000 in NEMU
+  // Force RESET_VECTOR of NEMU = current PC
   diff.copy();
   trace::GuestTracer<options::gdbg_enable> ccdb(options::elf_file);
 
