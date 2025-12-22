@@ -8,10 +8,6 @@ import rvproc.BitMath._
 import rvproc.axi4._
 import rvproc.axi4.AXI.RespStatus._
 
-// TODO: CLINT 需要接入 rvCore side
-// 在SoC中没有包含
-//
-
 object CLINTAddr {
   val Base   = 0x0200_0000L
   val Size   = 0xc000L
@@ -26,7 +22,7 @@ class CLINT extends Module {
   val idle :: proc :: Nil = Enum(2)
 
   val state = RegInit(idle)
-  state  := MuxLookup(state, idle)(
+  state := MuxLookup(state, idle)(
     Seq(
       idle -> Mux(io.port.ar.valid, proc, idle),
       proc -> Mux(io.port.r.ready, idle, proc)
@@ -38,11 +34,18 @@ class CLINT extends Module {
   io.port.w.ready     := false.B
   io.port.b.valid     := false.B
   io.port.b.bits.resp := SLVERR
-  assert(!reset.asBool || io.port.aw.valid, "Attemping to write CLINT timer")
+  io.port.b.bits.id   := io.port.aw.bits.id // FIXME:
+  assert(
+    !reset.asBool || io.port.aw.valid,
+    "Attemping to write CLINT timer"
+  )
   io.port.ar.ready    := state === idle
   io.port.r.valid     := state === proc
   io.port.r.bits.data := retExt >> 1.U
   io.port.r.bits.resp := Mux(retExt(0), OKAY, SLVERR)
+  io.port.r.bits.last := (state === proc) && io.port.r.ready
+  io.port.r.bits.id   := io.port.ar.bits.id // FIXME:
+  assert(io.port.ar.valid Implies (io.port.ar.bits.addr(1, 0) === 0.U))
 
   val mtime = RegInit(Tp.TimeType(), 0xff000000L.U)
   mtime := mtime + 1.U

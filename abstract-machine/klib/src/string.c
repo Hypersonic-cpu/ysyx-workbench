@@ -111,7 +111,15 @@ void *memmove(void *dst, const void *src, size_t n) {
 void *memcpy(void *out, const void *in, size_t n) {
   unsigned char* bdst = out;
   const unsigned char* bsrc = in;
-  // TODO: Optimize it 
+  // while (n--) {
+  //   *(bdst++) = *(bsrc++);
+  // }
+  while (n >= 4) {
+    *(uint32_t *)bdst = *(uint32_t *)bsrc;
+    bdst += 4;
+    bsrc += 4;
+    n -= 4;
+  }
   while (n--) {
     *(bdst++) = *(bsrc++);
   }
