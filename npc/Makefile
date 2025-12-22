@@ -23,7 +23,7 @@ endif
 ## NV Board related 
 NXDC_FILES = $(PRJ)/constr/$(TOPNAME).nxdc
 INC_PATH ?= $(abspath $(PRJ))/dpic $(abspath $(PRJ))/sim-cxx
-VINC_PATH += $(SOC_HOME)/perip/uart16550/rtl $(SOC_HOME)/perip/spi/rtl
+VINC_PATH += $(SOC_HOME)/perip/uart16550/rtl $(SOC_HOME)/perip/spi/rtl $(SOC_HOME)/perip/psram
 
 ## Parallism 
 NTHREADS?=1

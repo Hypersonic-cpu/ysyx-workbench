@@ -67,7 +67,7 @@ class MemoryStage extends Module {
   dMem.aw.bits.id    := 1.U
   dMem.ar.bits.len   := 0.U
   dMem.aw.bits.len   := 0.U
-  dMem.w .bits.last  := true.B
+  dMem.w.bits.last   := true.B
 
   val shamt = addr(1, 0)
   val dmask = MuxLookup(ioex.memOp.len, 0.U)(
@@ -95,6 +95,18 @@ class MemoryStage extends Module {
       Implies (addr(0, 0) === 0.U),
     "Unaligned half access"
   )
+  // TODO: Remove this. (any better methods?)
+  assert(
+    trigIss Implies (
+      ((addr >= 0x3000_0000L.U) && (addr <= 0x3fff_ffffL.U))        // FLASH
+        || ((addr >= 0x0f00_0000L.U) && (addr <= 0x0f00_1fffL.U))   // SRAM
+        || ((addr >= 0x1000_0000L.U) && (addr <= 0x1000_0fffL.U))   // SPI
+        || ((addr >= 0x0200_0000L.U) && (addr <= 0x0200_ffffL.U))   // CLINT
+        || ((addr >= 0x8000_0000L.U)) // PSRAM and CHIPLINK
+    ),
+    cf"Address ${addr}%x out of bound!"
+  )
+  // TODO: Fix difftest back
 
   dMem.ar.valid := ~ioex.memOp.isSt && trigIss
   dMem.aw.valid := ioex.memOp.isSt && trigIss

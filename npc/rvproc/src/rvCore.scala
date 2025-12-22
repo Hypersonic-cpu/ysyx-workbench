@@ -49,8 +49,18 @@ class rvCore() extends Module {
   val lss = Module(new MemoryStage)
   val wbs = Module(new WrBackStage)
   val reg = Module(new RegFile)
+  val clint = Module(new CLINT)
 
   val arbiter = Module(new AXIArbiter(2))
+  val locxbar = Module(
+    new AXIXBar(
+      2,
+      Seq(
+        AddrMap(0x0f00_0000L, 0xffff_ffffL, 0),
+        AddrMap(0x0200_0000L, 0x0201_0000L, 1)
+      )
+    )
+  )
 
   BusConnect(ids.io.toFetch, ifs.io.fromId)
   BusConnect(exs.io.toFetch, ifs.io.fromEx)
@@ -64,9 +74,12 @@ class rvCore() extends Module {
   ids.io.toReg <> reg.io.fromId
   reg.io.toId <> ids.io.fromReg
 
-  AXIPortPassing(io.master, arbiter.io.device)
+  // AXIPortPassing(io.master, arbiter.io.device)
   arbiter.io.hosts(0) <> ifs.io.iMem
   arbiter.io.hosts(1) <> lss.io.dMem
+  arbiter.io.device <> locxbar.io.host
+  locxbar.io.devices(1) <> clint.io.port
+  AXIPortPassing(io.master, locxbar.io.devices(0))
 
   dontTouch(ifs.io)
   dontTouch(ids.io)
@@ -125,7 +138,7 @@ class rvCore() extends Module {
 //   xbar.io.devices(3) := DontCare
 //   dontTouch(core.io)
 // }
-//
+
 class rvCoreWrapper() extends Module {
   val io   = IO(new Bundle {
     val interrupt   = Input(Bool())

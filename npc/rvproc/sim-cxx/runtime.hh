@@ -3,7 +3,6 @@
 #include <fstream>
 #include <ios>
 #include <iostream>
-#include <memory>
 #include <string>
 #include <vector>
 
@@ -13,9 +12,14 @@ extern "C" void flash_read(int32_t addr, int32_t* data);
 
 extern "C" void mrom_read(int32_t addr, int32_t* data);
 
+extern "C" uint8_t psram_read(uint32_t addr);
+
+extern "C" void psram_write(uint32_t addr, unsigned char data);
+
 class RuntimeBin;
 extern const RuntimeBin* mrom;
 extern const RuntimeBin* flash;
+extern RuntimeBin* psram;
 
 class RuntimeBin {
 private:
@@ -58,6 +62,25 @@ public:
     auto idx = (addr - baseAddr) >> 2;
     v_assert(idx < data.size(), "Out of bound read of", name, " @ ", addr);
     return data.at(idx);
+  }
+
+  uint8_t
+  readByte(addr_t addr) const {
+    // v_assert(isAligned(addr), "Unaligned read @", addr);
+    auto idx = (addr - baseAddr) >> 2;
+    v_assert(idx < data.size(), "Out of bound read of", name, " @ ", addr);
+    auto shamt = (addr % 4) * 8;
+    return 0xffU & (data.at(idx) >> shamt);
+  }
+
+  void
+  writeByte(addr_t addr, uint8_t wdata) {
+    auto idx = (addr - baseAddr) >> 2;
+    v_assert(idx < data.size(), "Out of bound write of", name, " @ ", addr);
+    auto shamt = (addr % 4) * 8;
+    auto mask32 = 0xffU << shamt;
+    data.at(idx) &= ~mask32;
+    data.at(idx) |= static_cast<uint32_t>(wdata) << shamt;
   }
 
   const std::vector<ureg_t>&

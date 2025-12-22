@@ -86,18 +86,6 @@ object AXIPortPassing {
   }
 }
 
-// object AXIPortConnect {
-//   def apply[T <: Data](dst: AXIBus, src: AXIBus): Unit = {
-//     dst.ar <> src.ar
-//     dst.r <> src.r
-//     dst.aw <> src.aw
-//     dst.w <> src.w
-//     dst.b <> src.b
-//   }
-// }
-//
-// FIXME: 
-// TODO: ID and burst
 class AXIArbiter(N: Int) extends Module {
   val io = IO(new Bundle {
     val hosts  = Vec(N, Flipped(new AXIBus))
@@ -191,7 +179,7 @@ class AXIXBar(N: Int, amap: Seq[AddrMap]) extends Module {
       )
     }
   )
-  val tarIdx    = tarIdxExt >> 1.U
+  val tarIdx    = tarIdxExt(IdxWidth, 1)
   val decodeErr = tarIdxExt(0)
   assert(
     io.host.ar.valid Implies (!decodeErr),
