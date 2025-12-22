@@ -69,11 +69,11 @@ main(int argc, char* argv[]) {
 
   auto flashBin =
     std::make_shared<RuntimeBin>(argv[1], 0x0000'0000U, "Flash");
-
-  // auto flashBin = std::make_shared<RuntimeBin>(
-  //   std::vector<ureg_t>({0x04030201, 0x27262524, 0xffeeffee, 0x55aa55aa}),
-  //   0x0000'0000U, "Flash");
   flash = flashBin.get();
+
+  auto psramBin = std::make_shared<RuntimeBin>(
+    std::vector<ureg_t>(0xbadc0de, 4096U), 0x0000'0000U, "Psram");
+  psram = psramBin.get();
 
   options::parse_args(argc, argv);
   if (options::wave_enable) {
