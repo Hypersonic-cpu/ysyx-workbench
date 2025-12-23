@@ -64,15 +64,17 @@ main(int argc, char* argv[]) {
   assert(argc >= 2);
 
   auto mromBin = std::make_shared<RuntimeBin>(
-    std::vector<ureg_t>(0xbadc0de, 10U), 0x2000'0000U, "MROM");
+    std::vector<ureg_t>(10U, 0xbadc0de), 0x2000'0000U, "MROM");
   mrom = mromBin.get();
 
   auto flashBin =
     std::make_shared<RuntimeBin>(argv[1], 0x0000'0000U, "Flash");
   flash = flashBin.get();
 
+  // NOTE: +1 here to disable out-of-bound read ? 
   auto psramBin = std::make_shared<RuntimeBin>(
-    std::vector<ureg_t>(0xbadc0de, 4096U), 0x0000'0000U, "Psram");
+    std::vector<ureg_t>((4U << 20U) / 4, 0xbadc0de), 0x0000'0000U,
+    "Psram");
   psram = psramBin.get();
 
   options::parse_args(argc, argv);

@@ -66,21 +66,24 @@ public:
 
   uint8_t
   readByte(addr_t addr) const {
-    // v_assert(isAligned(addr), "Unaligned read @", addr);
     auto idx = (addr - baseAddr) >> 2;
+    if (idx == data.size()) [[unlikely]] {
+      return 0b11000011U;
+    }
     v_assert(idx < data.size(), "Out of bound read of", name, " @ ", addr);
     auto shamt = (addr % 4) * 8;
-    return 0xffU & (data.at(idx) >> shamt);
+    return 0xffU & (data[idx] >> shamt);
   }
 
   void
   writeByte(addr_t addr, uint8_t wdata) {
     auto idx = (addr - baseAddr) >> 2;
+    // std::cerr << std::dec << idx << " <-> " << data.size() << std::endl;
     v_assert(idx < data.size(), "Out of bound write of", name, " @ ", addr);
     auto shamt = (addr % 4) * 8;
     auto mask32 = 0xffU << shamt;
-    data.at(idx) &= ~mask32;
-    data.at(idx) |= static_cast<uint32_t>(wdata) << shamt;
+    data[idx] &= ~mask32;
+    data[idx] |= static_cast<uint32_t>(wdata) << shamt;
   }
 
   const std::vector<ureg_t>&

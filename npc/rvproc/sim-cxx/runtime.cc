@@ -22,16 +22,16 @@ flash_read(int32_t addr, int32_t* data) {
 
 uint8_t
 psram_read(uint32_t addr) {
-  std::cerr << std::hex;
-  std::cerr << "DPI-C psram read @ " << addr << " data = " << psram->readAligned(addr)
-            << std::endl;
+  // std::cerr << std::hex;
+  // std::cerr << "DPI-C psram read @ " << addr << " data = " << psram->readAligned(addr)
+  //           << std::endl;
   return psram->readByte(addr);
 }
 
 void
 psram_write(uint32_t addr, unsigned char data) {
-  std::cerr << std::hex;
-  std::cerr << "DPI-C psram write @ " << addr << " data = " << (uint16_t) data
-            << std::endl;
+  // std::cerr << std::hex;
+  // std::cerr << "DPI-C psram write @ " << addr << " data = " << (uint16_t) data
+  //           << std::endl;
   psram->writeByte(addr, data);
 }
