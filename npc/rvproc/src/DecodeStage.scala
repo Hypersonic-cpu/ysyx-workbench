@@ -96,8 +96,8 @@ class IDU extends Module {
   when (io.valid) {
     printf(cf"[ ${io.pc}%x ID ] inst ${io.inst}%x ${opName} rs1 ${io.rs1} rs2 ${io.rs2} rd ${io.rd}\n")
 
+    assert(opValid, cf"Invalid opcode encountered: pc ${io.pc}%x : inst ${io.inst}%x")
     assert(rvBase, cf"Inst[1:0] is not 0b11: opcode=${opcode}%x")
-    assert(opValid, cf"Invalid opcode encountered: opcode=${opcode}%x")
   }
 
   val sysRel = 
