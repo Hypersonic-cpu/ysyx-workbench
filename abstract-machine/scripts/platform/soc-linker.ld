@@ -18,57 +18,59 @@ SECTIONS {
     _boot1_end = .;
   } > flash
 
-  .boot2 : AT(_boot1_end) {
+  .boot2 : {
     _boot2nd_beg = .;
     KEEP(*(boot2nd*))
     . = ALIGN(4);
     _boot2nd_end = .;
-  } > psram
+  } > psram AT> flash
   _boot2nd_load = LOADADDR(.boot2);
 
-  .text : AT(_boot2nd_load + SIZEOF(.boot2)) {
+  .text : {
     _text_beg = .;
     *(.text*)
     . = ALIGN(16);
     _text_end = .;
-  } > psram
+  } > psram AT> flash
   _text_load = LOADADDR(.text);
 
-  .rodata : AT(_text_load + SIZEOF(.text)) {
+  .rodata : {
     _rodata_beg = .;
     *(.rodata*)
     . = ALIGN(16);
     _rodata_end = .;
-  } > psram
+  } > psram AT> flash
   _rodata_load = LOADADDR(.rodata);
 
-  .data : AT(_rodata_load + SIZEOF(.rodata)) {
+  .data : {
     _data_beg = .;
     *(.data*)
     *(.sdata*)
     . = ALIGN(16);
     /* TODO: sdata 应该单独成段 */
-  } > psram
+  } > psram AT> flash
   edata = .;
   _data = .;
   _data_end = .;
   _data_load = LOADADDR(.data);
 
   .bss : {
-	_bss_start = .;
+	  _bss_start = .;
     *(.bss*)
     *(.sbss*)
     *(.scommon)
     . = ALIGN(16);
-  _bss_end = .;
+    _bss_end = .;
   } > psram
   end = .;
   _end = .;
   _bss_load = LOADADDR(.bss);
   _heap_start = ALIGN(16); /* ALIGN(0x1000); */
 
-  _stack_top = 0x0f000000;
-  . = _stack_top + 0x2000;
+  /* _stack_top = 0x0f000000; */
+  /* . = _stack_top + 0x2000; */
+  _stack_top = 0x80200000;
+  . = _stack_top + 0x100000;
   _stack_pointer = .;
 }
 
