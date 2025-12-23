@@ -8,6 +8,7 @@
 namespace options {
 
 DumpPrintOpt runtime_dump_opt {false, false, false, false, false};
+DumpPrintOpt error_dump_opt { false, true, true, true, false, false};
 std::string wave_file = "";
 std::string elf_file = "";
 bool fast = false;

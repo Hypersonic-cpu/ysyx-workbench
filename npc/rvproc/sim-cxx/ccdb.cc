@@ -45,11 +45,11 @@ regfile_dump(std::ostream& os) {
     os << "] " << RegName.at(i) << " : ";
     sout32(os) << read_reg(i) << std::endl;
   }
-  for (size_t i = 0; i < csr_list.size(); ++i) {
-    os << std::setfill(' ') << "CSRs " << std::setw(10) << RegName.at(i)
-       << " : ";
-    sout32(os) << read_reg(i) << std::endl;
-  }
+  // for (size_t i = 0; i < csr_list.size(); ++i) {
+  //   os << std::setfill(' ') << "CSRs " << std::setw(10) << CsrN
+  //      << " : ";
+  //   sout32(os) << read_reg(i) << std::endl;
+  // }
 }
 
 void

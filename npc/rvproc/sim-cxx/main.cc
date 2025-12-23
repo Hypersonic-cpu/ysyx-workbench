@@ -16,6 +16,14 @@
 #include "runtime.hh"
 #include "wave.hh"
 
+
+const trace::GuestTracer<options::gdbg_enable>* pccdb = nullptr;
+void dump_handler() {
+  pccdb->dump_print();
+  exit(1);
+}
+handler_t dumpHandler = dump_handler;
+
 template <bool E>
 inline void
 single_cycle(const std::unique_ptr<TOP_NAME>& top,
@@ -104,6 +112,7 @@ main(int argc, char* argv[]) {
   // Force RESET_VECTOR of NEMU = current PC
   diff.copy();
   trace::GuestTracer<options::gdbg_enable> ccdb(options::elf_file);
+  pccdb = &ccdb;
 
   while (currCyc < MaxCyc) {
     if (options::runtime_dump_opt.cycle_no)
