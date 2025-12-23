@@ -7,16 +7,11 @@
 
 int main(const char *args);
 
-extern char _pmem_start;
-#define PMEM_SIZE (128 << 20)
-#define PMEM_END ((uintptr_t)&_pmem_start + PMEM_SIZE)
-
-extern char _bss_start, _bss_end, _bss_load;
-extern char _data_beg, _data, _data_load;
-extern char _rodata_beg, _rodata_end, _rodata_load;
-
 extern char _heap_start;
-Area heap = RANGE(&_heap_start, PMEM_END);
+#define HEAP_SIZE (1 << 20)
+#define HEAP_END ((uintptr_t)&_heap_start + HEAP_SIZE)
+
+Area heap = RANGE(&_heap_start, HEAP_END);
 static const char mainargs[MAINARGS_MAX_LEN] =
     TOSTRING(MAINARGS_PLACEHOLDER); // defined in CFLAGS
 
@@ -55,14 +50,6 @@ void halt(int code) {
 }
 
 void _trm_init() {
-  uint32_t data_size = &_data - &_data_beg;
-  memcpy(&_data_beg, &_data_load, data_size);
-
-  uint32_t rodata_size = &_rodata_end - &_rodata_beg;
-  memcpy(&_rodata_beg, &_rodata_load, rodata_size);
-
-  uint32_t bss_size = &_bss_end - &_bss_start;
-  memset(&_bss_start, 0, bss_size);
   uart_init();
 
   int ret = main(mainargs);

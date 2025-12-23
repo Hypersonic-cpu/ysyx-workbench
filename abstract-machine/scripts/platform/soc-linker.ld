@@ -67,8 +67,8 @@ SECTIONS {
   _bss_load = LOADADDR(.bss);
   _heap_start = ALIGN(16); /* ALIGN(0x1000); */
 
-  _stack_top = 0x0f001000;
-  . = _stack_top + 0x1000;
+  _stack_top = 0x0f000000;
+  . = _stack_top + 0x2000;
   _stack_pointer = .;
 }
 
