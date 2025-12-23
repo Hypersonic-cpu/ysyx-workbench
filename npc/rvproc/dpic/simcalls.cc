@@ -12,6 +12,7 @@
 // like `extern void ecall_break(type...)`
 // WARN: param type must match
 //
+
 extern "C" void
 call_ebreak(uint32_t pc, uint32_t a0reg) {
   std::cout << (a0reg ? (ANSI_B_RED "Hit BAD trap" ANSI_NONE)
@@ -19,7 +20,9 @@ call_ebreak(uint32_t pc, uint32_t a0reg) {
             << " at pc = 0x" << std::hex << pc << " with a0 = 0x" << std::hex
             << a0reg << std::endl;
   if (a0reg) {
-    throw std::runtime_error("EcallBox: hit bad trap");
+    dumpHandler();
+    // throw std::runtime_error("EcallBox: hit bad trap");
+    exit(1);
   } else {
     vl_finish(__FILE__, __LINE__, "EcallBox:call_ebreak");
   }
