@@ -160,7 +160,7 @@ namespace trace {
     void
     dump_print() const {
       if constexpr (!E) return;
-      const options::DumpPrintOpt& opt = options::runtime_dump_opt;
+      const options::DumpPrintOpt& opt = options::error_dump_opt;
       if (opt.reg_file)   regfile_dump();
       if (opt.inst_buf)   inst_dump   (instBuf );
       if (opt.mem_buf)    membuf_dump (memBuf  );

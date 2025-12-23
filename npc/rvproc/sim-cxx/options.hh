@@ -21,6 +21,7 @@ constexpr bool diff_enable{DIFFENA};
 constexpr bool gdbg_enable{DBGENA};
 
 extern DumpPrintOpt runtime_dump_opt;
+extern DumpPrintOpt error_dump_opt;
 extern std::string wave_file;
 extern std::string elf_file;
 extern bool fast;
