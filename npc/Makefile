@@ -100,7 +100,7 @@ runonly: verilate $(SIM_BIN)
 	$(SIM_BIN) $(mrombin) $(simccargs)
 
 verilog: $(SCALA_SOURCES)
-	$(call git_commit, "generate verilog") # WARN: Only allow tracking here
+	# $(call git_commit, "generate verilog") # WARN: Only allow tracking here
 	mkdir -p $(BUILD_SV_DIR)
 	mill -i $(PRJ).runMain Elaborate --target-dir $(BUILD_SV_DIR)
 	@echo "Verilog written to " $(BUILD_SV_DIR)
@@ -142,6 +142,9 @@ verilate:
 # THAT INVOLVES UNPREDICTABLE.
 commit:
 	@git commit -am "npc: commit by Makefile script"
+
+tracer:
+	$(call git_commit, "manual trace") # WARN: Only allow tracking here
 
 -include ../Makefile
 

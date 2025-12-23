@@ -20,6 +20,8 @@
 
 using addr_t = uint32_t;
 using ureg_t = uint32_t;
+using handler_t = void(*)();
+extern handler_t dumpHandler;
 
 template <typename... Args>
 inline void
@@ -30,7 +32,8 @@ v_assert(bool cond, const Args&... args) {
     ((std::cerr << args << " "), ...);
     std::cerr << std::endl;
     // vl_fatal(__FILE__, __LINE__, "v_assert", "FAIL");
-    throw std::runtime_error("Assertion failed");
+    // throw std::runtime_error("Assertion failed");
+    dumpHandler();
   }
 }
 
