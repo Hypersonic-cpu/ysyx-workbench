@@ -16,10 +16,15 @@ extern "C" uint8_t psram_read(uint32_t addr);
 
 extern "C" void psram_write(uint32_t addr, unsigned char data);
 
+extern "C" uint16_t sdram_read(uint32_t addr);
+
+extern "C" void sdram_write(uint32_t addr, uint16_t data, unsigned char mask);
+
 class RuntimeBin;
 extern const RuntimeBin* mrom;
 extern const RuntimeBin* flash;
 extern RuntimeBin* psram;
+extern RuntimeBin* sdram;
 
 class RuntimeBin {
 private:
@@ -30,6 +35,17 @@ private:
   static inline bool
   isAligned(addr_t addr) {
     return (addr & 0b11) == 0;
+  }
+
+  ureg_t readAny(addr_t addr, uint8_t len) const {
+    auto idx = (addr - baseAddr) >> 2;
+    if (idx == data.size()) [[unlikely]] {
+      return 0b11000011U;
+    }
+    v_assert(idx < data.size(), "Out of bound read of", name, " @ ", addr);
+    v_assert(addr % len == 0, "Unaligned read @", addr, "len", (uint16_t) len);
+    auto shamt = (addr % 4) * 8;
+    return data[idx] >> shamt;
   }
 
 public:
@@ -58,21 +74,17 @@ public:
 
   ureg_t
   readAligned(addr_t addr) const {
-    // v_assert(isAligned(addr), "Unaligned read @", addr);
-    auto idx = (addr - baseAddr) >> 2;
-    v_assert(idx < data.size(), "Out of bound read of", name, " @ ", addr);
-    return data.at(idx);
+    return readAny(addr, 4);
   }
 
   uint8_t
   readByte(addr_t addr) const {
-    auto idx = (addr - baseAddr) >> 2;
-    if (idx == data.size()) [[unlikely]] {
-      return 0b11000011U;
-    }
-    v_assert(idx < data.size(), "Out of bound read of", name, " @ ", addr);
-    auto shamt = (addr % 4) * 8;
-    return 0xffU & (data[idx] >> shamt);
+    return readAny(addr, 1) & 0xffU;
+  }
+
+  uint16_t
+  readHalf(addr_t addr) const {
+    return readAny(addr, 2) & 0xffffU;
   }
 
   void
@@ -82,6 +94,20 @@ public:
     v_assert(idx < data.size(), "Out of bound write of", name, " @ ", addr);
     auto shamt = (addr % 4) * 8;
     auto mask32 = 0xffU << shamt;
+    data[idx] &= ~mask32;
+    data[idx] |= static_cast<uint32_t>(wdata) << shamt;
+  }
+
+  void
+  writeHalf(addr_t addr, uint16_t wdata, uint8_t bena) {
+    auto idx = (addr - baseAddr) >> 2;
+    v_assert(idx < data.size(), "Out of bound write of", name, " @ ", addr);
+    v_assert(addr % 2 == 0, "Unaligned write @", addr, "len 2");
+    auto shamt = (addr % 4) * 8;
+    uint32_t mask32 = 0;
+    if (bena & 1) mask32 |= 0xffU;
+    if (bena & 2) mask32 |= 0xff00U;
+    mask32 <<= shamt;
     data[idx] &= ~mask32;
     data[idx] |= static_cast<uint32_t>(wdata) << shamt;
   }

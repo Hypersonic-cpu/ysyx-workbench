@@ -16,9 +16,9 @@
 #include "runtime.hh"
 #include "wave.hh"
 
-
 const trace::GuestTracer<options::gdbg_enable>* pccdb = nullptr;
-void dump_handler() {
+void
+dump_handler() {
   pccdb->dump_print();
   exit(1);
 }
@@ -79,11 +79,14 @@ main(int argc, char* argv[]) {
     std::make_shared<RuntimeBin>(argv[1], 0x0000'0000U, "Flash");
   flash = flashBin.get();
 
-  // NOTE: +1 here to disable out-of-bound read ? 
+  // NOTE: +1 here to disable out-of-bound read ?
   auto psramBin = std::make_shared<RuntimeBin>(
-    std::vector<ureg_t>((4U << 20U) / 4, 0xbadc0de), 0x0000'0000U,
-    "Psram");
+    std::vector<ureg_t>((4U << 20U) / 4, 0xbadc0de), 0x0000'0000U, "Psram");
   psram = psramBin.get();
+
+  auto sdramBin = std::make_shared<RuntimeBin>(
+    std::vector<ureg_t>((1U << 10U) / 4, 0xc0de0bad), 0x0000'0000U, "Sdram");
+  sdram = sdramBin.get();
 
   options::parse_args(argc, argv);
   if (options::wave_enable) {
@@ -103,7 +106,7 @@ main(int argc, char* argv[]) {
 
   single_reset(top, contextp, tfp);
 
-  const size_t MaxCyc{options::max_cycles};
+  const size_t MaxCyc{options::max_cycles}; 
   size_t currCyc{0U};
   std::string retCause = "??";
   int retBad = 0;

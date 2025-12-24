@@ -51,7 +51,7 @@ void halt(int code) {
 
 void _trm_init() {
   uart_init();
-  printf("Heap %x : %x\n", heap.start, heap.end);
+  // printf("Heap %x : %x\n", heap.start, heap.end);
 
   int ret = main(mainargs);
   halt(ret);
