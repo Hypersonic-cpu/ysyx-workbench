@@ -37,7 +37,8 @@ DIFFENA?=1
 DBGENA?=1
 VERILATOR_CFLAGS += $(VERILATOR_TRACE) -DPRINTF_COND=$(DPRINTF)
 VERILATOR_CFLAGS += -MMD --build -cc  --threads $(NTHREADS) --threads-dpi none \
-										-O3 --x-assign fast --x-initial fast --noassert
+										-O3 --x-assign fast --x-initial fast
+										# --noassert
 VERILATOR_CFLAGS += --timescale "1ns/1ns" --no-timing
 VERILATOR_CFLAGS += --autoflush
 INCFLAGS = $(addprefix -I, $(INC_PATH))
