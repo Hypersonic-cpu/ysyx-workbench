@@ -33,17 +33,6 @@ _boot_second:
   la a1, _text_beg
   la a2, _data_end
   jal _boot_cpy
-  // la a1, _text_beg
-  // la a2, _text_end
-  // jal _boot_cpy
-  // la a0, _rodata_load
-  // la a1, _rodata_beg
-  // la a2, _rodata_end
-  // jal _boot_cpy
-  // la a0, _data_load
-  // la a1, _data_beg
-  // la a2, _data_end
-  // jal _boot_cpy
 
   la a0, _data_end
   la a1, _bss_end
