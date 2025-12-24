@@ -1,8 +1,10 @@
 #pragma once
+#include "options.hh"
 #include "verilated.h"
 
 #include <array>
 #include <cstdint>
+#include <exception>
 #include <format>
 #include <iomanip>
 #include <iostream>
@@ -20,13 +22,13 @@
 
 using addr_t = uint32_t;
 using ureg_t = uint32_t;
-using handler_t = void(*)();
+using handler_t = void (*)();
 extern handler_t dumpHandler;
 
 template <typename... Args>
 inline void
 v_assert(bool cond, const Args&... args) {
-  if (!cond) {
+  if (!cond) [[unlikely]] {
     std::cerr << ANSI_RED "[ASSERT FAILED] " << __FILE__ << ":" << __LINE__
               << " " ANSI_NONE << std::hex;
     ((std::cerr << args << " "), ...);
@@ -196,7 +198,7 @@ struct ElfSymEnt {
 };
 
 class FrameEnt {
-  public:
+public:
   // Stack pointer before callee modify it.
   unsigned depth;
   std::string name;
@@ -204,12 +206,18 @@ class FrameEnt {
   // uint32_t sp;
   uint32_t ra;
   std::array<uint32_t, FunctArgs> args;
-  void printent(std::ostream& os, const std::string& prefix="", bool indent=false) const {
-    if (indent) { std::string space(depth, ' '); os << space; }
+  void
+  printent(std::ostream& os, const std::string& prefix = "",
+           bool indent = false) const {
+    if (indent) {
+      std::string space(depth, ' ');
+      os << space;
+    }
     os << prefix << " ";
-    os << "[" << std::setfill(' ') << std::setw(3) << std::dec << depth << "] "; 
+    os << "[" << std::setfill(' ') << std::setw(3) << std::dec << depth
+       << "] ";
     util::sout32(os) << addr << " : " << name << "(";
-    for (auto arg: args) {
+    for (auto arg : args) {
       // sout32(os, ' ') << arg << ", ";
       os << std::hex << "0x" << arg << ", ";
     }
