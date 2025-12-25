@@ -72,6 +72,8 @@ SECTIONS {
   /* . = _stack_top + 0x2000; */
   _stack_top = 0x80200000;
   . = _stack_top + 0x100000;
+  /* _stack_top = 0xbc000000; */
+  /* . = _stack_top + 0x4000000; */
   _stack_pointer = .;
 }
 
