@@ -161,10 +161,10 @@ main(int argc, char* argv[]) {
   }
 
 final:
-  for (auto i = 0U; i < 8; i++) {
-    std::cerr << std::hex << sdramBin->dataVec().at(i) << " ";
-  }
-  std::cerr << std::endl;
+  // for (auto i = 0U; i < 8; i++) {
+  //   std::cerr << std::hex << sdramBin->dataVec().at(i) << " ";
+  // }
+  // std::cerr << std::endl;
 
   auto const lastPC{trace::read_reg(trace::RegNum)};
   top->final();
