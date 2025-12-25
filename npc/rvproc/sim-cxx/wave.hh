@@ -39,6 +39,9 @@ public:
   get() const noexcept {
     return tfp.get();
   }
+
+  void
+  close() { tfp->close(); }
 };
 
 } // namespace trace

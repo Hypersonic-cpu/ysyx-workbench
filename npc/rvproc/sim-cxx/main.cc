@@ -18,11 +18,14 @@
 #include "wave.hh"
 
 const trace::GuestTracer<options::gdbg_enable>* pccdb = nullptr;
+trace::FstTracer<options::wave_enable>* pwave = nullptr;
 void
 dump_handler() {
-  pccdb->dump_print();
+  if (pccdb) pccdb->dump_print();
+  if (pwave) pwave->close();
   exit(1);
 }
+
 handler_t dumpHandler = dump_handler;
 
 template <bool E>
@@ -86,7 +89,7 @@ main(int argc, char* argv[]) {
   psram = psramBin.get();
 
   auto sdramBin = std::make_shared<RuntimeBin>(
-    std::vector<ureg_t>((1U << 10U) / 4, 0xc0de0bad), 0x0000'0000U, "Sdram");
+    std::vector<ureg_t>((4U << 20U) / 4, 0xc0de0bad), 0x0000'0000U, "Sdram");
   sdram = sdramBin.get();
 
   options::parse_args(argc, argv);
@@ -99,6 +102,7 @@ main(int argc, char* argv[]) {
   const std::unique_ptr<TOP_NAME> top{new TOP_NAME{contextp.get(), "TOP"}};
   trace::ptop = top.get();
   trace::FstTracer<options::wave_enable> tfp(options::wave_file);
+  pwave = &tfp;
   if constexpr (options::wave_enable) {
     Verilated::traceEverOn(true);
     top->trace(tfp.get(), 99);
