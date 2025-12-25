@@ -41,18 +41,18 @@ psram_write(uint32_t addr, unsigned char data) {
 
 uint16_t
 sdram_read(uint32_t addr) {
-  std::cerr << std::hex;
-  std::cerr << "DPI-C sdram read @ " << addr
-            << " data = " << sdram->readHalf(addr) << std::endl;
-  assert(sdram && "De-ref nullptr");
+  // std::cerr << std::hex;
+  // std::cerr << "DPI-C sdram read @ " << addr
+  //           << " data = " << sdram->readHalf(addr) << std::endl;
+  // assert(sdram && "De-ref nullptr");
   return sdram->readHalf(addr);
 }
 
 void
 sdram_write(uint32_t addr, unsigned short data, unsigned char mask) {
-  std::cerr << std::hex;
-  std::cerr << "DPI-C sdram write @ " << addr << " data = " << data
-            << " mask = " << (uint16_t)mask << std::endl;
-  assert(sdram && "De-ref nullptr");
+  // std::cerr << std::hex;
+  // std::cerr << "DPI-C sdram write @ " << addr << " data = " << data
+  //           << " mask = " << (uint16_t)mask << std::endl;
+  // assert(sdram && "De-ref nullptr");
   sdram->writeHalf(addr, data, mask);
 }
