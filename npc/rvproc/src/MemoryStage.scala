@@ -65,7 +65,7 @@ class MemoryStage extends Module {
   dMem.aw.bits.size  := ioex.memOp.len.asUInt
   dMem.ar.bits.id    := 1.U
   dMem.aw.bits.id    := 1.U
-  dMem.ar.bits.len   := 0.U
+  dMem.ar.bits.len   := 0.U // NOTE: 传输的次数. 大小是 size
   dMem.aw.bits.len   := 0.U
   dMem.w.bits.last   := true.B
 
