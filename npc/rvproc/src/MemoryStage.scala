@@ -102,6 +102,8 @@ class MemoryStage extends Module {
         || ((addr >= 0x0f00_0000L.U) && (addr <= 0x0f00_1fffL.U))   // SRAM
         || ((addr >= 0x1000_0000L.U) && (addr <= 0x1000_0fffL.U))   // SPI
         || ((addr >= 0x0200_0000L.U) && (addr <= 0x0200_ffffL.U))   // CLINT
+        || ((addr >= 0x1000_2000L.U) && (addr <= 0x1000_200fL.U))   // GPIO
+        || ((addr >= 0x1001_1000L.U) && (addr <= 0x1001_1007L.U))   // PS/2
         || ((addr >= 0x8000_0000L.U)) // PSRAM and CHIPLINK
     ),
     cf"Address ${addr}%x out of bound!"
