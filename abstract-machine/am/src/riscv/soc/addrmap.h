@@ -24,6 +24,7 @@
 #define RV32_SOC_SDRAM_L  0xa0000000U
 #define RV32_SOC_SDRAM_H  0xc0000000U
 #define RV32_SOC_PS2      0x10011000U
+#define RV32_SOC_VGAMEM   0x21000000U
 
 #define UART_OFF_RTX      0U
 #define UART_OFF_DIV      0U
