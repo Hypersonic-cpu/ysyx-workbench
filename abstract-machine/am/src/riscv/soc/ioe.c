@@ -1,8 +1,9 @@
 #include <am.h>
+#include <klib.h>
 #include <klib-macros.h>
+#include <stdint.h>
 #include "addrmap.h"
 #include "riscv/riscv.h"
-#include <klib.h>
 
 void __am_timer_init();
 
@@ -23,6 +24,28 @@ static void __am_uart_rx(AM_UART_RX_T *r) {
   }
 }
 
+#define VGA_WIDTH  640
+#define VGA_HEIGHT 480
+
+static void __am_gpu_config(AM_GPU_CONFIG_T *cfg) {
+  cfg->has_accel = false;
+  cfg->present = true;
+  cfg->vmemsz = VGA_HEIGHT * VGA_WIDTH * 4;
+  cfg->height = VGA_HEIGHT;
+  cfg->width = VGA_WIDTH;
+}
+static void __am_gpu_fbdraw(AM_GPU_FBDRAW_T *ctl) {
+  uint32_t* cur_pos = 
+    ((uint32_t *)(uintptr_t) RV32_SOC_VGAMEM) 
+      + ctl->y * VGA_WIDTH + ctl->x;
+  uint32_t* src_pos = (uint32_t *) (ctl->pixels);
+  for (size_t j = 0; j < ctl->h; j++) {
+    memcpy(cur_pos, src_pos, ctl->w * sizeof(uint32_t));
+    cur_pos += VGA_WIDTH;
+    src_pos += ctl->w;
+  }
+}
+
 typedef void (*handler_t)(void *buf);
 static void *lut[128] = {
   [AM_TIMER_CONFIG] = __am_timer_config,
@@ -30,8 +53,10 @@ static void *lut[128] = {
   [AM_TIMER_UPTIME] = __am_timer_uptime,
   [AM_INPUT_CONFIG] = __am_input_config,
   [AM_INPUT_KEYBRD] = __am_input_keybrd,
-  [AM_UART_CONFIG]  = __am_uart_config,
-  [AM_UART_RX]      = __am_uart_rx,
+  [AM_UART_CONFIG ] = __am_uart_config,
+  [AM_UART_RX     ] = __am_uart_rx,
+  [AM_GPU_CONFIG  ] = __am_gpu_config,
+  [AM_GPU_FBDRAW  ] = __am_gpu_fbdraw,
 };
 
 static void fail(void *buf) { panic("access nonexist register"); }

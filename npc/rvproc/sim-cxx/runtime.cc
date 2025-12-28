@@ -60,18 +60,18 @@ sdram_write(uint32_t addr, unsigned short data, unsigned char mask) {
 
 void
 vga_write(uint32_t addr, uint32_t data, unsigned char strb) {
-  std::cerr << std::hex;
-  std::cerr << "DPI-C vga write @ " << addr << " data = " << data
-            << " mask = " << (uint16_t)strb << std::endl;
-  assert(vmem && "De-ref nullptr");
+  // std::cerr << std::hex;
+  // std::cerr << "DPI-C vga write @ " << addr << " data = " << data
+  //           << " mask = " << (uint16_t)strb << std::endl;
+  // assert(vmem && "De-ref nullptr");
   vmem->writeWord(addr, data, strb);
 }
 
 uint32_t
 vga_read(uint32_t addr) {
-  std::cerr << std::hex;
-  std::cerr << "DPI-C vga read @ " << addr
-            << " data = " << vmem->readWord(addr) << std::endl;
-  assert(vmem && "De-ref nullptr");
+  // std::cerr << std::hex;
+  // std::cerr << "DPI-C vga read @ " << addr
+  //           << " data = " << vmem->readWord(addr) << std::endl;
+  // assert(vmem && "De-ref nullptr");
   return vmem->readWord(addr);
 }
