@@ -98,6 +98,10 @@ main(int argc, char* argv[]) {
     std::vector<ureg_t>((4U << 20U) / 4, 0xc0de0bad), 0x0000'0000U, "Sdram");
   sdram = sdramBin.get();
 
+  auto vmemBin = std::make_shared<RuntimeBin>(
+    "/mnt/hgfs/Arch-PA/JiaoTongUniversity.bin", 0x0000'0000U, "VMem");
+  vmem = vmemBin.get();
+
   options::parse_args(argc, argv);
   if (options::wave_enable) {
     assert(!options::wave_file.empty());

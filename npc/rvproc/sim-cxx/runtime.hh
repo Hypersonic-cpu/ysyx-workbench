@@ -20,11 +20,16 @@ extern "C" uint16_t sdram_read(uint32_t addr);
 
 extern "C" void sdram_write(uint32_t addr, uint16_t data, unsigned char mask);
 
+extern "C" void vga_write(uint32_t addr, uint32_t data, unsigned char strb);
+
+extern "C" uint32_t vga_read(uint32_t addr);
+
 class RuntimeBin;
 extern const RuntimeBin* mrom;
 extern const RuntimeBin* flash;
 extern RuntimeBin* psram;
 extern RuntimeBin* sdram;
+extern RuntimeBin* vmem;
 
 class RuntimeBin {
 private:
@@ -46,6 +51,19 @@ private:
     v_assert(addr % len == 0, "Unaligned read @", addr, "len", (uint16_t) len);
     auto shamt = (addr % 4) * 8;
     return data[idx] >> shamt;
+  }
+
+  void writeAny(addr_t addr, ureg_t wdata, uint8_t strb) {
+    uint32_t idx = (addr - baseAddr) >> 2;
+    v_assert(idx < data.size(), "Out of bound write of", name, " @ ", addr);
+    v_assert(addr % 2 == 0, "Unaligned write @", addr, "len 2");
+    uint32_t mask32 = 0;
+    if (strb & 1) mask32 |= 0x0000'00ffLLU;
+    if (strb & 2) mask32 |= 0x0000'ff00LLU;
+    if (strb & 4) mask32 |= 0x00ff'0000LLU;
+    if (strb & 8) mask32 |= 0xff00'0000LLU;
+    data[idx] &= ~mask32;
+    data[idx] |= wdata;
   }
 
 public:
@@ -73,7 +91,7 @@ public:
       : data(vec), baseAddr{base}, name{name} {}
 
   ureg_t
-  readAligned(addr_t addr) const {
+  readWord(addr_t addr) const {
     return readAny(addr, 4);
   }
 
@@ -110,6 +128,12 @@ public:
     mask32 <<= shamt;
     data[idx] &= ~mask32;
     data[idx] |= static_cast<uint32_t>(wdata) << shamt;
+  }
+
+  void
+  writeWord(addr_t addr, ureg_t wdata, uint8_t strb) {
+    auto shamt = addr % 4;
+    writeAny(addr, wdata << (shamt * 8), strb << shamt);
   }
 
   const std::vector<ureg_t>&
