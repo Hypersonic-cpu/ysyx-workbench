@@ -79,7 +79,6 @@ single_reset(const std::unique_ptr<TOP_NAME>& top,
 
 int
 main(int argc, char* argv[]) {
-  Verilated::commandArgs(argc, argv);
   assert(argc >= 2);
 
   auto mromBin = std::make_shared<RuntimeBin>(
@@ -108,6 +107,7 @@ main(int argc, char* argv[]) {
   }
 
   const std::unique_ptr<VerilatedContext> contextp{new VerilatedContext};
+  contextp->commandArgs(argc, argv);
 
   const std::unique_ptr<TOP_NAME> top{new TOP_NAME{contextp.get(), "TOP"}};
   trace::ptop = top.get();
