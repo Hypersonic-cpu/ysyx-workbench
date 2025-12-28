@@ -1,5 +1,8 @@
 #include <am.h>
 #include <klib-macros.h>
+#include "addrmap.h"
+#include "riscv/riscv.h"
+#include <klib.h>
 
 void __am_timer_init();
 
@@ -11,6 +14,15 @@ static void __am_timer_config(AM_TIMER_CONFIG_T *cfg) { cfg->present = true; cfg
 static void __am_input_config(AM_INPUT_CONFIG_T *cfg) { cfg->present = true;  }
 static void __am_uart_config(AM_INPUT_CONFIG_T *cfg) { cfg->present = false;  }
 
+static void __am_uart_rx(AM_UART_RX_T *r) { 
+  int line_status = inb(RV32_SOC_UART_L+UART_OFF_LS);
+  if (line_status & 1) {
+    r->data = inb(RV32_SOC_UART_L);
+  } else {
+    r->data = 0xffU;
+  }
+}
+
 typedef void (*handler_t)(void *buf);
 static void *lut[128] = {
   [AM_TIMER_CONFIG] = __am_timer_config,
@@ -19,6 +31,7 @@ static void *lut[128] = {
   [AM_INPUT_CONFIG] = __am_input_config,
   [AM_INPUT_KEYBRD] = __am_input_keybrd,
   [AM_UART_CONFIG]  = __am_uart_config,
+  [AM_UART_RX]      = __am_uart_rx,
 };
 
 static void fail(void *buf) { panic("access nonexist register"); }

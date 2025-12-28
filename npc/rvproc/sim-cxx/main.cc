@@ -17,12 +17,23 @@
 #include "runtime.hh"
 #include "wave.hh"
 
+#if NVBENA
+#include <nvboard.h>
+
+void nvboard_bind_all_pins(TOP_NAME* top);
+#endif
+
 const trace::GuestTracer<options::gdbg_enable>* pccdb = nullptr;
 trace::FstTracer<options::wave_enable>* pwave = nullptr;
+const TOP_NAME* trace::ptop = nullptr;
+trace::IFState trace::last_state = trace::IFState::Start;
+
 void
 dump_handler() {
-  if (pccdb) pccdb->dump_print();
-  if (pwave) pwave->close();
+  if (pccdb)
+    pccdb->dump_print();
+  if (pwave)
+    pwave->close();
   exit(1);
 }
 
@@ -50,7 +61,6 @@ inline void
 single_reset(const std::unique_ptr<TOP_NAME>& top,
              const std::unique_ptr<VerilatedContext>& context,
              const trace::FstTracer<E>& wave) {
-
   top->reset = 1;
   for (size_t i = 0; i < 15; i++) {
     single_cycle(top, context, wave);
@@ -67,9 +77,6 @@ single_reset(const std::unique_ptr<TOP_NAME>& top,
   wave.dump(context->time());
 }
 
-const TOP_NAME* trace::ptop = nullptr;
-trace::IFState trace::last_state = trace::IFState::Start;
-
 int
 main(int argc, char* argv[]) {
   Verilated::commandArgs(argc, argv);
@@ -83,7 +90,6 @@ main(int argc, char* argv[]) {
     std::make_shared<RuntimeBin>(argv[1], 0x0000'0000U, "Flash");
   flash = flashBin.get();
 
-  // NOTE: +1 here to disable out-of-bound read ?
   auto psramBin = std::make_shared<RuntimeBin>(
     std::vector<ureg_t>((4U << 20U) / 4, 0xbadc0de), 0x0000'0000U, "Psram");
   psram = psramBin.get();
@@ -109,9 +115,14 @@ main(int argc, char* argv[]) {
     tfp.open();
   }
 
+#if NVBENA
+  nvboard_bind_all_pins(top.get());
+  nvboard_init();
+#endif
+
   single_reset(top, contextp, tfp);
 
-  const size_t MaxCyc{options::max_cycles}; 
+  const size_t MaxCyc{options::max_cycles};
   size_t currCyc{0U};
   std::string retCause = "??";
   int retBad = 0;
@@ -128,6 +139,10 @@ main(int argc, char* argv[]) {
                 << std::endl;
 
     currCyc++;
+
+#if NVBENA
+    nvboard_update();
+#endif
 
     trace::upd_ifs_mcstate();
     single_cycle(top, contextp, tfp);
@@ -174,5 +189,9 @@ final:
                  "== Exit @ cycle {:d} pc {:>08x} : {:s} ==" ANSI_NONE,
                  currCyc, lastPC, retCause)
             << std::endl;
+
+#if NVBENA
+  nvboard_quit();
+#endif
   return retBad;
 }
