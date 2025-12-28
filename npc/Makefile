@@ -12,13 +12,8 @@ SRC_DPIC_DIR = $(PRJ)/dpic
 SIM_BIN = $(BUILD_SIM_DIR)/$(PRJ).elf
 
 # if this build involve NV Board 
-WITH_NVBOARD ?= 0
-
-ifeq ($(WITH_NVBOARD),0)
+NVBENA ?= 0
 SIM_CXX_DIR = $(PRJ)/sim-cxx
-else
-SIM_CXX_DIR = $(PRJ)/sim-nvboard
-endif
 
 ## NV Board related 
 NXDC_FILES = $(PRJ)/constr/$(TOPNAME).nxdc
@@ -27,6 +22,7 @@ VINC_PATH += $(SOC_HOME)/perip/uart16550/rtl $(SOC_HOME)/perip/spi/rtl $(SOC_HOM
 
 ## Parallism 
 NTHREADS?=1
+
 ## Verilator related
 VERILATOR = verilator
 VERILATOR_COVERAGE = verilator_coverage
@@ -44,7 +40,7 @@ VERILATOR_CFLAGS += --autoflush
 INCFLAGS = $(addprefix -I, $(INC_PATH))
 VINCFLAGS = $(addprefix -I, $(VINC_PATH))
 CXXFLAGS += $(INCFLAGS) -DTOP_NAME="\"V$(TOPNAME)\"" -std=c++23 -g
-CXXFLAGS += -DLOGENA=$(LOGENA) -DDIFFENA=$(DIFFENA) -DDBGENA=$(DBGENA)
+CXXFLAGS += -DLOGENA=$(LOGENA) -DDIFFENA=$(DIFFENA) -DDBGENA=$(DBGENA) -DNVBENA=$(NVBENA)
 simccargs ?= 
 mrombin ?= 
 
@@ -54,6 +50,7 @@ CXXFLAGS += -I$(NEMU_HOME)/tools/capstone/repo/include
 $(LIBCAPSTONE):
 	$(MAKE) -C tools/capstone
 
+# NVBoard related
 SRC_AUTO_BIND = $(abspath $(BUILD_SIM_DIR)/auto_bind.cpp)
 $(SRC_AUTO_BIND): $(NXDC_FILES)
 	python3 $(NVBOARD_HOME)/scripts/auto_pin_bind.py $^ $@
@@ -64,10 +61,11 @@ VSOC = $(shell find "$(SOC_HOME)/perip" -name "*.sv" -or -name "*.v") $(SOC_HOME
 CSRCS = $(shell find $(abspath $(SIM_CXX_DIR)) -name "*.cc" -or -name "*.cpp")
 DPIC_SRCS = $(shell find $(abspath $(SRC_DPIC_DIR)) -name "*.cc" -or -name "*.cpp")
 
-ifeq ($(WITH_NVBOARD),0)
+ifeq ($(NVBENA),0)
 NVB_ARCHIVE=
 LDFLAGS=
 else
+CXXFLAGS += $(NVBOARD_HOME)/include
 include $(NVBOARD_HOME)/scripts/nvboard.mk
 NVB_ARCHIVE=$(NVBOARD_ARCHIVE)
 CSRCS += $(SRC_AUTO_BIND)
