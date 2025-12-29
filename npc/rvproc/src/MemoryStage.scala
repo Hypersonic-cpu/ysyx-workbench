@@ -126,19 +126,25 @@ class MemoryStage extends Module {
   val sext      = ioex.memOp.sExt
   val lraw      = dMem.r.bits.data >> (delayedShamt << 3)
   val loadLatch = Reg(Tp.RegType())
-  iowb.lsuOut := loadLatch
-  when(respValid) {
-    loadLatch := MuxLookup(delayedLenOp, 0.U)(
+  // iowb.lsuOut := loadLatch
+
+  // FIXME: 
+  // TODO: memory test
+  iowb.lsuOut := 
+    MuxLookup(delayedLenOp, 0.U)(
       Seq(
-        MemLen.Byte -> Mux(delayedSext, lraw(7, 0).SExt(), lraw(7, 0)),
+        MemLen.Byte -> Mux(delayedSext, loadLatch(7, 0).SExt(), loadLatch(7, 0)),
         MemLen.Half -> Mux(
           delayedSext,
-          lraw(15, 0).SExt(),
-          lraw(15, 0)
+          loadLatch(15, 0).SExt(),
+          loadLatch(15, 0)
         ),
-        MemLen.Word -> lraw
+        MemLen.Word -> loadLatch
       )
     )
+
+  when(respValid) {
+    loadLatch := lraw
   }
 
   iowb.aluOut := aluReg
