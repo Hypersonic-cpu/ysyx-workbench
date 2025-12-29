@@ -1,6 +1,4 @@
 #pragma once
-#include "options.hh"
-#include "verilated.h"
 
 #include <array>
 #include <cstdint>

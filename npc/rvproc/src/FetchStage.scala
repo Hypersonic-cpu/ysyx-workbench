@@ -10,6 +10,7 @@ import BitMath._
 import rvproc.axi4._
 import rvproc.axi4.AXI.RespStatus._
 import rvproc.axi4.AXI.BurstOpts._
+import rvproc.pmu.FetchPMU
 
 class FetchStage extends Module {
   val io   = IO(new Bundle {
@@ -115,10 +116,17 @@ class FetchStage extends Module {
   ioid.pc   := pc
   ioid.inst := instLatch
 
-  when(state === hold) {
-    printf(cf"[ ${pc}%x IF ] Holding iMem Resp inst ${ioid.inst}%x\n")
-  }.elsewhen(state === serve) {
-    printf(cf"[ ${pc}%x IF ] Waiting iMem Req of addr ${pc}%x\n")
-  }
-  printf(cf"< IF > curr state ${state}\n")
+  // when(state === hold) {
+  //   printf(cf"[ ${pc}%x IF ] Holding iMem Resp inst ${ioid.inst}%x\n")
+  // }.elsewhen(state === serve) {
+  //   printf(cf"[ ${pc}%x IF ] Waiting iMem Req of addr ${pc}%x\n")
+  // }
+  // printf(cf"< IF > curr state ${state}\n")
+
+  val pmu = Module(new FetchPMU)
+  pmu.io.clock := clock
+  pmu.io.reset := reset
+  pmu.io.trigFetch := state === idle && trigIss && iMem.ar.ready
+  pmu.io.trigIssue := state === serve && iMem.r.valid
+  pmu.io.pcChange  := pc
 }
