@@ -1,6 +1,8 @@
 #include <cassert>
 #include <format>
 #include <getopt.h>
+#include <iomanip>
+#include <ios>
 #include <iostream>
 #include <memory>
 #include <ostream>
@@ -23,7 +25,6 @@
 void nvboard_bind_all_pins(TOP_NAME* top);
 #endif
 
-const trace::GuestTracer<options::gdbg_enable>* pccdb = nullptr;
 trace::FstTracer<options::wave_enable>* pwave = nullptr;
 const TOP_NAME* trace::ptop = nullptr;
 trace::IFState trace::last_state = trace::IFState::Start;
@@ -35,6 +36,11 @@ dump_handler() {
   if (pwave)
     pwave->close();
   exit(1);
+}
+
+void
+dump_stats() {
+  pccdb->dump_stats();
 }
 
 handler_t dumpHandler = dump_handler;
@@ -188,12 +194,18 @@ final:
   auto const lastPC{trace::read_reg(trace::RegNum)};
   top->final();
 
-  std::cerr << std::format(
-                 ANSI_YELLOW
-                 "== Exit @ cycle {:d} pc {:>08x} : {:s} ==" ANSI_NONE,
-                 currCyc, lastPC, retCause)
+  std::cerr << std::format(ANSI_YELLOW
+                           "== Exit @ pc {:>08x} : {:s} ==" ANSI_NONE,
+                           lastPC, retCause)
+            << std::endl;
+  auto instNum = ccdb.get_inst_count();
+  auto ipc = static_cast<double>(instNum) / currCyc;
+  std::cout << std::format(ANSI_YELLOW
+                           "== #cyc {:d} #inst {:d} IPC {:6f}" ANSI_NONE,
+                           currCyc, instNum, ipc)
             << std::endl;
 
+  dump_stats();
 #if NVBENA
   nvboard_quit();
 #endif

@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 
+#include "ccdb.hh"
 #include "probe.hh"
 
 extern "C" void flash_read(int32_t addr, int32_t* data);
@@ -24,12 +25,19 @@ extern "C" void vga_write(uint32_t addr, uint32_t data, unsigned char strb);
 
 extern "C" uint32_t vga_read(uint32_t addr);
 
+extern "C" void notify_issue(uint32_t pc);
+extern "C" void notify_fetch(uint32_t pc);
+
+extern "C" void notify_ls_req(uint32_t addr);
+extern "C" void notify_ls_resp(uint32_t addr);
+
 class RuntimeBin;
 extern const RuntimeBin* mrom;
 extern const RuntimeBin* flash;
 extern RuntimeBin* psram;
 extern RuntimeBin* sdram;
 extern RuntimeBin* vmem;
+extern trace::GuestTracer<options::gdbg_enable>* pccdb;
 
 class RuntimeBin {
 private:

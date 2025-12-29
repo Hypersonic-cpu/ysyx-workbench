@@ -8,6 +8,7 @@ const RuntimeBin* flash = nullptr;
 RuntimeBin* psram = nullptr;
 RuntimeBin* sdram = nullptr;
 RuntimeBin* vmem = nullptr;
+trace::GuestTracer<options::gdbg_enable>* pccdb = nullptr;
 
 void
 mrom_read(int32_t addr, int32_t* data) {
@@ -74,4 +75,20 @@ vga_read(uint32_t addr) {
   //           << " data = " << vmem->readWord(addr) << std::endl;
   // assert(vmem && "De-ref nullptr");
   return vmem->readWord(addr);
+}
+
+void notify_issue(uint32_t pc) {
+  pccdb->notifyIFIssue(pc);
+}
+
+void notify_fetch(uint32_t pc) {
+  pccdb->notifyIFFetch(pc);
+}
+
+void notify_ls_req(uint32_t a) {
+  pccdb->notifyLSReq(a);
+}
+
+void notify_ls_resp(uint32_t a) {
+  pccdb->notifyLSResp(a);
 }

@@ -7,25 +7,14 @@ import chisel3.assert.Assert
 // MUX, Write data selection
 class WBU extends Module {
   val io = IO(new Bundle {
-    // val takeBr = Input(Bool())
     val wbSel = Input(WbSel())
-    // val brSel  = Input(BrSel())
     val pc    = Input(Tp.RegType())
     val csrV  = Input(Tp.RegType())
     val aluV  = Input(Tp.RegType())
     val memV  = Input(Tp.RegType())
-    // val nxpc   = Output(Tp.RegType())
     val gprdt = Output(Tp.RegType())
   })
 
-  // val aluc = io.aluV(31, 1) ## 0.U(1.W)
-  // val dnpc = MuxLookup(io.brSel, aluc) (Seq(
-  //   BrSel.fromAlu -> aluc,
-  //   BrSel.fromCsr -> io.csrV
-  // ))
-  // io.nxpc := Mux(io.takeBr, dnpc, snpc)
-
-  // Mux(jmp, dnpc, snpc)
   val snpc = io.pc + 4.U
   io.gprdt := MuxLookup(io.wbSel, 0.U)(
     Seq(
@@ -61,10 +50,12 @@ class WrBackStage extends Module {
   }
 
   val ioreg = io.toReg.bits
-  ioreg.csrWE := iofw.csrWE
-  ioreg.csrIn := iols.aluOut
-  ioreg.csrRd := iofw.csrRd
-  ioreg.gprWE := iofw.gprWE
-  ioreg.gprIn := iWbu.io.gprdt
-  ioreg.gprRd := iofw.gprRd
+  ioreg.csrWE   := iofw.csrWE
+  ioreg.csrIn   := iols.aluOut
+  ioreg.csrRd   := iofw.csrRd
+  ioreg.gprWE   := iofw.gprWE
+  ioreg.gprIn   := iWbu.io.gprdt
+  ioreg.gprRd   := iofw.gprRd
+  // FIXME: 可能有问题. 目前按照Valid & ready->完成传输来算一次.
+  ioreg.instRet := io.in.valid && io.toFetch.ready
 }
