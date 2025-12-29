@@ -126,7 +126,7 @@ class FetchStage extends Module {
   val pmu = Module(new FetchPMU)
   pmu.io.clock := clock
   pmu.io.reset := reset
-  pmu.io.trigFetch := state === idle && trigIss && iMem.ar.ready
+  pmu.io.trigFetch := (state === idle && trigIss && iMem.ar.ready) || state === start
   pmu.io.trigIssue := state === serve && iMem.r.valid
   pmu.io.pcChange  := pc
 }

@@ -13,7 +13,7 @@
 
 namespace trace {
 
-template <bool E> class DiffTester {
+class DiffTester {
   using mcpy_t = void (*)(uint32_t addr, void* buf, size_t n,
                           bool direction);
   using rcpy_t = void (*)(void* dut, bool direction);
@@ -36,7 +36,7 @@ private:
   void
   init(const std::vector<ureg_t>& image, const char* so = NEMU_SO,
        int port = NEMUPort) {
-    if constexpr (!E)
+    if constexpr (!options::diff_enable)
       return;
     auto nemu_path = getenv("NEMU_HOME");
     std::string so_file =
@@ -82,7 +82,7 @@ public:
   static constexpr int NEMUPort{1234};
   static constexpr addr_t ResetVector{0x2000'0000};
 
-  // TODO: CSR support 
+  // TODO: CSR support
   //
       //
       // bool is_csr =
@@ -93,10 +93,10 @@ public:
       // if (is_csr && diff_csrs) {
       //   device_access = true;
       // }
-  
+
   std::vector<std::tuple<uint16_t, uint32_t, uint32_t>>
   match() {
-    if constexpr (!E) {
+    if constexpr (!options::diff_enable) {
       return {};
     }
     if (device_access)
@@ -117,7 +117,7 @@ public:
 
   void
   copy() {
-    if constexpr (!E)
+    if constexpr (!options::diff_enable)
       return;
     device_access = false;
     uint32_t regbuf[RegNum + 1];
@@ -129,7 +129,7 @@ public:
 
   void
   iota(uint64_t n = 1) {
-    if constexpr (!E)
+    if constexpr (!options::diff_enable)
       return;
     ref_exec(n);
   }

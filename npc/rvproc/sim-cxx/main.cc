@@ -1,8 +1,7 @@
+#include <algorithm>
 #include <cassert>
 #include <format>
 #include <getopt.h>
-#include <iomanip>
-#include <ios>
 #include <iostream>
 #include <memory>
 #include <ostream>
@@ -15,6 +14,7 @@
 #include "ccdb.hh"
 #include "difftest.hh"
 #include "options.hh"
+#include "pmu.hh"
 #include "probe.hh"
 #include "runtime.hh"
 #include "wave.hh"
@@ -25,7 +25,7 @@
 void nvboard_bind_all_pins(TOP_NAME* top);
 #endif
 
-trace::FstTracer<options::wave_enable>* pwave = nullptr;
+trace::FstTracer* pwave = nullptr;
 const TOP_NAME* trace::ptop = nullptr;
 trace::IFState trace::last_state = trace::IFState::Start;
 
@@ -41,15 +41,15 @@ dump_handler() {
 void
 dump_stats() {
   pccdb->dump_stats();
+  ppmu->dump_stats();
 }
 
 handler_t dumpHandler = dump_handler;
 
-template <bool E>
 inline void
 single_cycle(const std::unique_ptr<TOP_NAME>& top,
              const std::unique_ptr<VerilatedContext>& context,
-             const trace::FstTracer<E>& wave) {
+             const trace::FstTracer& wave) {
 
   top->clock = 1;
   context->timeInc(1);
@@ -62,11 +62,10 @@ single_cycle(const std::unique_ptr<TOP_NAME>& top,
   wave.dump(context->time());
 }
 
-template <bool E>
 inline void
 single_reset(const std::unique_ptr<TOP_NAME>& top,
              const std::unique_ptr<VerilatedContext>& context,
-             const trace::FstTracer<E>& wave) {
+             const trace::FstTracer& wave) {
   top->reset = 1;
   for (size_t i = 0; i < 15; i++) {
     single_cycle(top, context, wave);
@@ -117,7 +116,7 @@ main(int argc, char* argv[]) {
 
   const std::unique_ptr<TOP_NAME> top{new TOP_NAME{contextp.get(), "TOP"}};
   trace::ptop = top.get();
-  trace::FstTracer<options::wave_enable> tfp(options::wave_file);
+  trace::FstTracer tfp(options::wave_file);
   pwave = &tfp;
   if constexpr (options::wave_enable) {
     Verilated::traceEverOn(true);
@@ -130,18 +129,21 @@ main(int argc, char* argv[]) {
   nvboard_init();
 #endif
 
-  single_reset(top, contextp, tfp);
-
   const size_t MaxCyc{options::max_cycles};
   size_t currCyc{0U};
   std::string retCause = "??";
   int retBad = 0;
 
-  trace::DiffTester<options::diff_enable> diff(mrom->dataVec());
+  trace::DiffTester diff(mrom->dataVec());
   // Force RESET_VECTOR of NEMU = current PC
   diff.copy();
-  trace::GuestTracer<options::gdbg_enable> ccdb(options::elf_file);
+  trace::GuestTracer ccdb(options::elf_file);
   pccdb = &ccdb;
+
+  const std::unique_ptr<trace::SoftPerfUnit> spmu{new trace::SoftPerfUnit};
+  ppmu = spmu.get();
+
+  single_reset(top, contextp, tfp);
 
   while (currCyc < MaxCyc) {
     if (options::runtime_dump_opt.cycle_no)

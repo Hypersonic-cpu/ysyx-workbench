@@ -1,12 +1,15 @@
 #pragma once
 
+#include "options.hh"
+
 #include <cassert>
 #include <memory>
 #include <string>
 #include <verilated_fst_c.h>
+
 namespace trace {
 
-template <bool E> class FstTracer {
+class FstTracer {
 private:
   const std::unique_ptr<VerilatedFstC> tfp;
   const std::string path;
@@ -22,7 +25,7 @@ public:
 
   void
   open() {
-    if constexpr (E) {
+    if constexpr (options::wave_enable) {
       tfp->open(path.c_str());
       assert(tfp->isOpen());
     }
@@ -30,7 +33,7 @@ public:
 
   void
   dump(uint64_t t) const {
-    if constexpr (E) {
+    if constexpr (options::wave_enable) {
       tfp->dump(t);
     }
   }
