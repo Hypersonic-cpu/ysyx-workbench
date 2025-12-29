@@ -40,8 +40,8 @@ dump_handler() {
 
 void
 dump_stats() {
-  pccdb->dump_stats();
-  ppmu->dump_stats();
+  pccdb->dump_stats(std::cerr);
+  ppmu ->dump_stats(std::cerr);
 }
 
 handler_t dumpHandler = dump_handler;
