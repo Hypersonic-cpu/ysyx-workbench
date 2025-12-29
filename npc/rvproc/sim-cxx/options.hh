@@ -1,5 +1,6 @@
 #pragma once
 
+#include "probe.hh"
 #include <cassert>
 #include <cstdlib>
 #include <ctime>
@@ -26,6 +27,8 @@ extern std::string wave_file;
 extern std::string elf_file;
 extern bool fast;
 extern size_t max_cycles;
+
+constexpr addr_t ResetVector{ 0x3000'0000 };
 
 void parse_args(int argc, char* argv[]);
 

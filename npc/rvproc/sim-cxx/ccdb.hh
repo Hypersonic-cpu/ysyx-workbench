@@ -11,8 +11,11 @@
 // #include <ostream>
 // #include <regex>
 // #include <stack>
+#include <cstdio>
 #include <elf.h>
 #include <fcntl.h>
+#include <format>
+#include <limits>
 #include <list>
 #include <stdexcept>
 #include <capstone/capstone.h>
@@ -22,6 +25,7 @@
 #include <string>
 #include <sys/mman.h>
 #include <sys/stat.h>
+#include <vector>
 // #include <string>
 // #include <utility>
 // #include <vector>
@@ -94,17 +98,35 @@ namespace trace {
     "mtvec", "mepc", "mstatus", "mcause"
   };
 
+  enum CsrSel { 
+    MTvec = 0, MEpc, MStatus, MCause, 
+    MCycle, MCycleh, MInstret, MInstreth,
+    Num_CsrSel
+  };
+
   inline ureg_t
-  read_csr(uint8_t fakeid) {
+  read_csr(CsrSel fakeid) {
     auto r = ptop->rootp;
     ureg_t ret = 0;
     switch (fakeid) {
-      case 0x0: ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__csr__DOT__mtvec    ; break;
-      case 0x1: ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__csr__DOT__mepc     ; break;
-      case 0x2: ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__csr__DOT__mstatus  ; break;
-      case 0x3: ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__csr__DOT__mcause   ; break;
+      case MTvec:    ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__csr__DOT__mtvec    ; break;
+      case MEpc:     ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__csr__DOT__mepc     ; break;
+      case MStatus:  ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__csr__DOT__mstatus  ; break;
+      case MCause:   ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__csr__DOT__mcause   ; break;
+      case MCycle:   ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__csr__DOT__mcycle   ; break;
+      case MCycleh:  ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__csr__DOT__mcycleh  ; break;
+      case MInstret: ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__csr__DOT__minstret ; break;
+      case MInstreth:ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__csr__DOT__minstreth; break;
       default: throw std::runtime_error("Out-of-range CSR read"); break;
     }
+    return ret;
+  }
+
+  inline size_t
+  read_double_csr(CsrSel hi, CsrSel lo) {
+    size_t ret = read_csr(hi);
+    ret <<= 32;
+    ret |= read_csr(lo);
     return ret;
   }
 
@@ -137,6 +159,8 @@ namespace trace {
     ureg_t instLatch;
     ureg_t pcLatch;
 
+    size_t instCnt;
+
 // void mem_acc_log(uint32_t addr, bool is_write, uint32_t data,
 //                  uint8_t byte_mask);
   // memBuf.append(MemEnt{addr, is_write, data, byte_mask}).printent(std::cerr);
@@ -149,6 +173,10 @@ namespace trace {
       , frameStk{}
       , instLatch{ 0U }
       , pcLatch{ 0U }
+      , instCnt{ 0U }
+      // , pcjmp(-4096, +4096, 64, options::ResetVector)
+      , ifcyc(0, 30, 2, 150)
+      , lscyc(0, 30, 2, std::numeric_limits<uint64_t>::max())
     {
       if constexpr (!E) {
         return;
@@ -165,6 +193,35 @@ namespace trace {
       if (opt.inst_buf)   inst_dump   (instBuf );
       if (opt.mem_buf)    membuf_dump (memBuf  );
       if (opt.frame_stk)  frame_dump  (frameStk);
+    }
+
+    void
+    dump_stats() const {
+      if constexpr (!E) return;
+      auto mcycles = read_double_csr(MCycleh, MCycle);
+      size_t minstret = read_double_csr(MInstreth, MInstret);
+      std::cerr << std::format("mcycles  {:d}", mcycles ) << std::endl;
+      std::cerr << std::format("minstret {:d}", minstret) << std::endl;
+      
+      // auto const pcdelta_name = pcjmp.get_indices();
+      // auto const pcdelta_data = pcjmp.get_stats();
+      // for (size_t i = 0; i < pcdelta_name.size(); i++) {
+      //   std::cerr << std::format("{}\t: {:16d}", pcdelta_name[i], pcdelta_data[i]) << std::endl;
+      // }
+      auto const iftime_name  = ifcyc.get_indices();
+      auto const iftime_data  = ifcyc.get_stats();
+      std::cout << "Inst Fetch Distri (Cyc) : " << std::dec 
+        << ifcyc.get_total() << " total" << std::endl;
+      for (size_t i = 0; i < iftime_name.size(); i++) {
+        std::cout << std::format("{}\t: {:16d}", iftime_name[i], iftime_data[i]) << std::endl;
+      }
+      auto const lstime_name  = lscyc.get_indices();
+      auto const lstime_data  = lscyc.get_stats();
+      std::cout << "Load Store Distri (Cyc) : " << std::dec 
+        << lscyc.get_total() << " total" << std::endl;
+      for (size_t i = 0; i < lstime_name.size(); i++) {
+        std::cout << std::format("{}\t: {:16d}", lstime_name[i], lstime_data[i]) << std::endl;
+      }
     }
 
   private:
@@ -341,6 +398,7 @@ namespace trace {
         return;
       }
       if (!npc_inst_commit()) return;
+      instCnt++;
       auto pc = pcLatch;
       auto inst = instLatch;
 
@@ -372,15 +430,107 @@ namespace trace {
         frame_trace(pc + 4, dst, rd == 0);
       }
     }
-  };
 
-  // std::pair<bool, uint32_t> read_mem(uint32_t addr);
-  //
-  // void inst_trace();
-  //
-  // extern std::list<FrameEnt> frameStk;
-  //
-  // void frame_trace(uint32_t snpc, uint32_t dst, bool is_ret);
-  //
-  // void dump_print(const DumpPrint& opt);
+    size_t
+    get_inst_count() const { return instCnt; }
+
+    /* PMU */
+  private:
+
+    template<typename T>
+    class Distri {
+      protected:
+        T min;
+        T max;
+        T delta;
+        T maxidx;
+        std::vector<size_t> arr;
+        size_t total;
+      public:
+        Distri(T min, T max, T delta)
+          : min{ min }
+          , max{ max }
+          , delta{ delta }
+          , maxidx{ (max-min) / delta }
+          , arr( maxidx + 5, 0U)
+          , total{ 0 }
+          {}
+
+        virtual void sample(T v) {
+          total++;
+          if (v > max) { arr.at(maxidx + 1) += 1; }
+          else if (v < min) { arr.at(maxidx + 2) += 1; }
+          else { 
+            auto idx = (v - min) / delta;
+            arr.at(idx) += 1;
+          }
+          arr.at(maxidx + 3) = std::max<T>(v, arr[maxidx + 3]);
+          arr.at(maxidx + 4) = std::min<T>(v, arr[maxidx + 4]);
+        }
+
+        const std::vector<size_t>&
+        get_stats() const {
+          return arr;
+        }
+
+        std::vector<std::string>
+        get_indices() const {
+          std::vector<std::string> ret(maxidx+5);
+          for (auto i = 0U; i <= maxidx; i++) {
+            ret.at(i) = std::to_string(min + delta * i);
+          }
+          ret.at(maxidx + 1) = "overflow";
+          ret.at(maxidx + 2) = "underflow";
+          ret.at(maxidx + 3) = "maximum";
+          ret.at(maxidx + 4) = "minimum";
+          return std::move(ret);
+        }
+        
+        size_t
+        get_total() const { return total; }
+    };
+
+    template<typename T>
+    class DeltaDistri : public Distri<T> {
+      private:
+        T last;
+      public:
+        DeltaDistri(T min, T max, T delta, T init)
+          : Distri<T>(min, max, delta)
+          , last{ init } {}
+
+        void sample(T v) override {
+          auto dpc = v - last;
+          // fprintf(stderr, "sample  from %8x to %8x\n", last, v);
+          Distri<T>::sample(dpc);
+          last = v;
+        }
+
+        void updlast(T v) {
+          // fprintf(stderr, "updlast from %8x to %8x\n", last, v);
+          last = v;
+        }
+    };
+
+    // DeltaDistri<int64_t> pcjmp;
+    DeltaDistri<uint64_t> ifcyc;
+    DeltaDistri<uint64_t> lscyc;
+
+  public:
+    void notifyIFIssue(addr_t pc) {
+      ifcyc.sample(read_double_csr(MCycleh, MCycle));
+      // pcjmp.sample(static_cast<int64_t>(pc));
+    }
+    void notifyIFFetch(addr_t pc) {
+      ifcyc.updlast(read_double_csr(MCycleh, MCycle));
+    }
+    void notifyLSReq(addr_t a) {
+      // fprintf(stderr, "req at %x\n", read_double_csr(MCycleh, MCycle));
+      lscyc.updlast(read_double_csr(MCycleh, MCycle));
+    }
+    void notifyLSResp(addr_t a) {
+      // fprintf(stderr, "resp at %x\n", read_double_csr(MCycleh, MCycle));
+      lscyc.sample(read_double_csr(MCycleh, MCycle));
+    }
+  };
 }

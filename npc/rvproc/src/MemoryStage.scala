@@ -9,6 +9,7 @@ import rvproc.axi4._
 import rvproc.MemLen._
 import rvproc.axi4.AXI.BurstOpts._
 import rvproc.axi4.AXI.RespStatus._
+import rvproc.pmu.LoadStorePMU
 
 // State:
 // idle -(reqReady)-> macc -(respValid)-> hold
@@ -65,7 +66,7 @@ class MemoryStage extends Module {
   dMem.aw.bits.size  := ioex.memOp.len.asUInt
   dMem.ar.bits.id    := 1.U
   dMem.aw.bits.id    := 1.U
-  dMem.ar.bits.len   := 0.U // NOTE: 传输的次数. 大小是 size
+  dMem.ar.bits.len   := 0.U  // NOTE: 传输的次数. 大小是 size
   dMem.aw.bits.len   := 0.U
   dMem.w.bits.last   := true.B
 
@@ -106,7 +107,7 @@ class MemoryStage extends Module {
   //       || ((addr >= 0x1001_1000L.U) && (addr <= 0x1001_1007L.U))   // PS/2
   //       || ((addr >= 0x8000_0000L.U)) // PSRAM and CHIPLINK
   //   ),
-    // cf"Address ${addr}%x out of bound!"
+  // cf"Address ${addr}%x out of bound!"
   // )
   // TODO: Fix difftest back
 
@@ -161,4 +162,11 @@ class MemoryStage extends Module {
       cf"[ ${ioex.foward.pc}%x LS ] Resp ${dMem.r.bits.data}%x\n"
     )
   }
+
+  val pmu = Module(new LoadStorePMU)
+  pmu.io.clock    := clock
+  pmu.io.reset    := reset
+  pmu.io.trigReq  := state === idle && trigIss && reqReady
+  pmu.io.trigResp := state === serve && respValid
+  pmu.io.addr     := addr
 }
