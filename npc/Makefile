@@ -82,7 +82,6 @@ $(SIM_BIN): $(CSRCS) $(DPIC_SRCS) $(NVB_ARCHIVE)
 
 test:
 	# $(call git_commit, "test RTL") 
-	# WARN: Removed this line. 会导致分支混乱且无法恢复.
 	mill -i $(PRJ).test.testOnly $(PRJ).test.$(TOPNAME)Spec
 
 runam:
@@ -99,7 +98,7 @@ runonly: verilate $(SIM_BIN)
 	$(SIM_BIN) $(mrombin) $(simccargs)
 
 verilog: $(SCALA_SOURCES)
-	# $(call git_commit, "generate verilog") # WARN: Only allow tracking here
+	$(call git_commit, "generate verilog") # WARN: Only allow tracking here
 	mkdir -p $(BUILD_SV_DIR)
 	mill -i $(PRJ).runMain Elaborate --target-dir $(BUILD_SV_DIR)
 	@echo "Verilog written to " $(BUILD_SV_DIR)

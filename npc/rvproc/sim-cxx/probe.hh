@@ -2,14 +2,15 @@
 
 #include <array>
 #include <cstdint>
-#include <exception>
-#include <format>
 #include <iomanip>
 #include <iostream>
 #include <list>
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
+
+#include "VysyxSoCFull.h"
+#include "VysyxSoCFull___024root.h"
 
 #define ANSI_NONE "\033[0m"
 #define ANSI_RED "\033[31m"
@@ -22,6 +23,9 @@ using addr_t = uint32_t;
 using ureg_t = uint32_t;
 using handler_t = void (*)();
 extern handler_t dumpHandler;
+
+template<typename Derived, typename Base>
+concept IsDerived = std::derived_from<Derived, Base>;
 
 template <typename... Args>
 inline void
@@ -227,4 +231,99 @@ using ibuf_t = RingBuffer<InstEnt, 16>;
 using mbuf_t = RingBuffer<MemEnt, 16>;
 using ebuf_t = std::unordered_map<uint32_t, ElfSymEnt>;
 using fbuf_t = std::list<FrameEnt>;
+
+using ptop_t = const TOP_NAME*;
+extern ptop_t ptop;
+
+// 0x10 for PC
+inline ureg_t
+read_reg(uint8_t regid) {
+  auto r = ptop->rootp;
+  ureg_t ret = 0;
+  switch (regid) {
+    case 0x0: ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__gpr__DOT__gprs_0; break;
+    case 0x1: ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__gpr__DOT__gprs_1; break;
+    case 0x2: ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__gpr__DOT__gprs_2; break;
+    case 0x3: ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__gpr__DOT__gprs_3; break;
+    case 0x4: ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__gpr__DOT__gprs_4; break;
+    case 0x5: ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__gpr__DOT__gprs_5; break;
+    case 0x6: ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__gpr__DOT__gprs_6; break;
+    case 0x7: ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__gpr__DOT__gprs_7; break;
+    case 0x8: ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__gpr__DOT__gprs_8; break;
+    case 0x9: ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__gpr__DOT__gprs_9; break;
+    case 0xa: ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__gpr__DOT__gprs_10; break;
+    case 0xb: ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__gpr__DOT__gprs_11; break;
+    case 0xc: ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__gpr__DOT__gprs_12; break;
+    case 0xd: ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__gpr__DOT__gprs_13; break;
+    case 0xe: ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__gpr__DOT__gprs_14; break;
+    case 0xf: ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__gpr__DOT__gprs_15; break;
+    case 0x10:ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__ifs__DOT__pc; break;
+    default: throw std::runtime_error(
+                 "Invalid GPR read @ regid = " + std::to_string(regid));
+             break;
+  }
+  return ret;
+}
+
+inline ureg_t
+read_inst_latch() {
+  return ptop->rootp->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__ifs__DOT__instLatch;
+}
+
+enum IFState { Idle = 0, Serve, Hold, Start };
+
+inline IFState
+read_ifs_state() {
+  auto r = ptop->rootp;
+  uint8_t val = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__ifs__DOT__state & 0b11;
+  return IFState(val);
+}
+
+extern IFState last_state;
+inline bool
+npc_inst_commit() {
+  return read_ifs_state() == Serve && last_state == Idle;
+}
+
+inline void
+upd_ifs_mcstate() { last_state = read_ifs_state(); }
+
+constexpr std::array<const char*, 4> csr_list {
+  "mtvec", "mepc", "mstatus", "mcause"
+};
+
+enum CsrSel {
+  MTvec = 0, MEpc, MStatus, MCause,
+  MCycle, MCycleh, MInstret, MInstreth,
+  Num_CsrSel
+};
+
+inline ureg_t
+read_csr(CsrSel fakeid) {
+  auto r = ptop->rootp;
+  ureg_t ret = 0;
+  switch (fakeid) {
+    case MTvec:    ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__csr__DOT__mtvec    ; break;
+    case MEpc:     ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__csr__DOT__mepc     ; break;
+    case MStatus:  ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__csr__DOT__mstatus  ; break;
+    case MCause:   ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__csr__DOT__mcause   ; break;
+    case MCycle:   ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__csr__DOT__mcycle   ; break;
+    case MCycleh:  ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__csr__DOT__mcycleh  ; break;
+    case MInstret: ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__csr__DOT__minstret ; break;
+    case MInstreth:ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__csr__DOT__minstreth; break;
+    default: throw std::runtime_error("Out-of-range CSR read"); break;
+  }
+  return ret;
+}
+
+inline size_t
+read_double_csr(CsrSel hi, CsrSel lo) {
+  size_t ret = read_csr(hi);
+  ret <<= 32;
+  ret |= read_csr(lo);
+  return ret;
+}
+
+inline size_t
+curr_tick() { return read_double_csr(MCycleh, MCycle); }
 } // namespace trace

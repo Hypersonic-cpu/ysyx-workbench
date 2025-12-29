@@ -4,6 +4,7 @@ import chisel3._
 import chisel3.util._
 import chisel3.assert.Assert
 import rvproc.BitMath._
+import rvproc.pmu.DecodePMU
 
 object InstOp extends ChiselEnum {
   val Load   = Value(0b00000.U)
@@ -54,6 +55,7 @@ class Comparator extends Module {
 class IDU extends Module {
   val io = IO(new Bundle {
     val valid  = Input(Bool())
+    val ready  = Input(Bool()) // for PMU
     val inst   = Input(Tp.InstType())
     val pc     = Input(Tp.RegType())
     val rd     = Output(Tp.RegIdxType())
@@ -251,7 +253,14 @@ class IDU extends Module {
     */
   io.csrWE := instCsr
 
-
+  /** PMU related */
+  val pmu = Module(new DecodePMU)
+  pmu.io.clock := clock
+  pmu.io.reset := reset
+  pmu.io.isNewInst := io.valid && io.ready
+  pmu.io.instType  := instTp
+  pmu.io.instOp    := opName
+  pmu.io.pc        := io.pc
 }
 
 
@@ -280,6 +289,7 @@ class DecodeStage extends Module {
 
   val iDec = Module(new IDU)
   iDec.io.valid := io.in.valid
+  iDec.io.ready := io.out.ready
 
   /** NOTE: Reg Read */
   io.toReg.valid := io.in.valid

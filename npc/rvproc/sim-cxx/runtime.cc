@@ -1,4 +1,5 @@
 #include "runtime.hh"
+#include "pmu.hh"
 #include <cassert>
 #include <cstdint>
 #include <memory>
@@ -8,7 +9,8 @@ const RuntimeBin* flash = nullptr;
 RuntimeBin* psram = nullptr;
 RuntimeBin* sdram = nullptr;
 RuntimeBin* vmem = nullptr;
-trace::GuestTracer<options::gdbg_enable>* pccdb = nullptr;
+trace::GuestTracer* pccdb = nullptr;
+trace::SoftPerfUnit* ppmu = nullptr;
 
 void
 mrom_read(int32_t addr, int32_t* data) {
@@ -77,18 +79,32 @@ vga_read(uint32_t addr) {
   return vmem->readWord(addr);
 }
 
-void notify_issue(uint32_t pc) {
-  pccdb->notifyIFIssue(pc);
+void
+notify_issue(uint32_t pc) {
+  ppmu->notifyIFIssue(pc);
 }
 
-void notify_fetch(uint32_t pc) {
-  pccdb->notifyIFFetch(pc);
+void
+notify_fetch(uint32_t pc) {
+  ppmu->notifyIFFetch(pc);
 }
 
-void notify_ls_req(uint32_t a) {
-  pccdb->notifyLSReq(a);
+void
+notify_ls_req(uint32_t a) {
+  ppmu->notifyLSReq(a);
 }
 
-void notify_ls_resp(uint32_t a) {
-  pccdb->notifyLSResp(a);
+void
+notify_ls_resp(uint32_t a) {
+  ppmu->notifyLSResp(a);
+}
+
+void
+notify_decode(uint32_t pc, unsigned char itype, unsigned char iop) {
+  ppmu->notifyDecode(pc, iop);
+}
+
+void
+notify_commit(uint32_t pc) {
+  ppmu->notifyCommit(pc);
 }
