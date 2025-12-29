@@ -83,12 +83,12 @@ namespace trace {
     }
 
     void
-    dump_stats() const {
+    dump_stats(std::ostream& os=std::cout) const {
       if constexpr (!options::gdbg_enable) return;
       auto mcycles = read_double_csr(MCycleh, MCycle);
       size_t minstret = read_double_csr(MInstreth, MInstret);
-      std::cerr << std::format("mcycles  {:d}", mcycles ) << std::endl;
-      std::cerr << std::format("minstret {:d}", minstret) << std::endl;
+      os << std::format("mcycles  {:d}", mcycles ) << std::endl;
+      os << std::format("minstret {:d}", minstret) << std::endl;
     }
 
   private:
