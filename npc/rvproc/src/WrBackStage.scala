@@ -3,6 +3,7 @@ package rvproc
 import chisel3._
 import chisel3.util._
 import chisel3.assert.Assert
+import rvproc.pmu.WrBackPMU
 
 // MUX, Write data selection
 class WBU extends Module {
@@ -58,4 +59,11 @@ class WrBackStage extends Module {
   ioreg.gprRd   := iofw.gprRd
   // FIXME: 可能有问题. 目前按照Valid & ready->完成传输来算一次.
   ioreg.instRet := io.in.valid && io.toFetch.ready
+
+  /** PMU */
+  val pmu = Module(new WrBackPMU)
+  pmu.io.clock     := clock
+  pmu.io.reset     := reset
+  pmu.io.pc        := iofw.pc
+  pmu.io.isNewInst := ioreg.instRet
 }

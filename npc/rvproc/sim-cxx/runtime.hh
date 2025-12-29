@@ -7,22 +7,19 @@
 #include <vector>
 
 #include "ccdb.hh"
+#include "pmu.hh"
 #include "probe.hh"
 
 extern "C" void flash_read(int32_t addr, int32_t* data);
-
 extern "C" void mrom_read(int32_t addr, int32_t* data);
 
 extern "C" uint8_t psram_read(uint32_t addr);
-
 extern "C" void psram_write(uint32_t addr, unsigned char data);
 
 extern "C" uint16_t sdram_read(uint32_t addr);
-
 extern "C" void sdram_write(uint32_t addr, uint16_t data, unsigned char mask);
 
 extern "C" void vga_write(uint32_t addr, uint32_t data, unsigned char strb);
-
 extern "C" uint32_t vga_read(uint32_t addr);
 
 extern "C" void notify_issue(uint32_t pc);
@@ -31,13 +28,17 @@ extern "C" void notify_fetch(uint32_t pc);
 extern "C" void notify_ls_req(uint32_t addr);
 extern "C" void notify_ls_resp(uint32_t addr);
 
+extern "C" void notify_decode(uint32_t pc, unsigned char itype, unsigned char iop);
+extern "C" void notify_commit(uint32_t pc);
+
 class RuntimeBin;
 extern const RuntimeBin* mrom;
 extern const RuntimeBin* flash;
 extern RuntimeBin* psram;
 extern RuntimeBin* sdram;
 extern RuntimeBin* vmem;
-extern trace::GuestTracer<options::gdbg_enable>* pccdb;
+extern trace::GuestTracer* pccdb;
+extern trace::SoftPerfUnit* ppmu;
 
 class RuntimeBin {
 private:

@@ -1,23 +1,13 @@
-#pragma once 
+#pragma once
 
 #include <array>
+#include <cstddef>
 #include <cstdint>
-// #include <algorithm>
-// #include <format>
-// #include <iomanip>
-// #include <iostream>
-// #include <iterator>
-// #include <list>
-// #include <ostream>
-// #include <regex>
-// #include <stack>
 #include <cstdio>
 #include <elf.h>
 #include <fcntl.h>
 #include <format>
-#include <limits>
 #include <list>
-#include <stdexcept>
 #include <capstone/capstone.h>
 #include <cassert>
 #include <cstdlib>
@@ -25,110 +15,12 @@
 #include <string>
 #include <sys/mman.h>
 #include <sys/stat.h>
-#include <vector>
-// #include <string>
-// #include <utility>
-// #include <vector>
+#include <unordered_map>
 
-#include "VysyxSoCFull.h"
-#include "VysyxSoCFull___024root.h"
-
-// #include "disasm.hh"
 #include "probe.hh"
 #include "options.hh"
 
 namespace trace {
-  using ptop_t = const TOP_NAME*;
-  extern ptop_t ptop;
-
-  // 0x10 for PC
-  inline ureg_t
-  read_reg(uint8_t regid) {
-    auto r = ptop->rootp;
-    ureg_t ret = 0;
-    switch (regid) {
-      case 0x0: ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__gpr__DOT__gprs_0; break;
-      case 0x1: ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__gpr__DOT__gprs_1; break;
-      case 0x2: ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__gpr__DOT__gprs_2; break;
-      case 0x3: ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__gpr__DOT__gprs_3; break;
-      case 0x4: ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__gpr__DOT__gprs_4; break;
-      case 0x5: ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__gpr__DOT__gprs_5; break;
-      case 0x6: ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__gpr__DOT__gprs_6; break;
-      case 0x7: ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__gpr__DOT__gprs_7; break;
-      case 0x8: ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__gpr__DOT__gprs_8; break;
-      case 0x9: ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__gpr__DOT__gprs_9; break;
-      case 0xa: ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__gpr__DOT__gprs_10; break;
-      case 0xb: ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__gpr__DOT__gprs_11; break;
-      case 0xc: ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__gpr__DOT__gprs_12; break;
-      case 0xd: ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__gpr__DOT__gprs_13; break;
-      case 0xe: ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__gpr__DOT__gprs_14; break;
-      case 0xf: ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__gpr__DOT__gprs_15; break;
-      case 0x10:ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__ifs__DOT__pc; break;
-      default: throw std::runtime_error(
-                   "Invalid GPR read @ regid = " + std::to_string(regid)); 
-               break;
-    }
-    return ret;
-  }
-
-  inline ureg_t
-  read_inst_latch() {
-    return ptop->rootp->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__ifs__DOT__instLatch;
-  }
-
-  enum IFState { Idle = 0, Serve, Hold, Start };
-
-  inline IFState 
-  read_ifs_state() {
-    auto r = ptop->rootp;
-    uint8_t val = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__ifs__DOT__state & 0b11;
-    return IFState(val);
-  }
-
-  extern IFState last_state;
-  inline bool
-  npc_inst_commit() {
-    return read_ifs_state() == Serve && last_state == Idle;
-  }
-
-  inline void 
-  upd_ifs_mcstate() { last_state = read_ifs_state(); }
-
-  constexpr std::array<const char*, 4> csr_list {
-    "mtvec", "mepc", "mstatus", "mcause"
-  };
-
-  enum CsrSel { 
-    MTvec = 0, MEpc, MStatus, MCause, 
-    MCycle, MCycleh, MInstret, MInstreth,
-    Num_CsrSel
-  };
-
-  inline ureg_t
-  read_csr(CsrSel fakeid) {
-    auto r = ptop->rootp;
-    ureg_t ret = 0;
-    switch (fakeid) {
-      case MTvec:    ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__csr__DOT__mtvec    ; break;
-      case MEpc:     ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__csr__DOT__mepc     ; break;
-      case MStatus:  ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__csr__DOT__mstatus  ; break;
-      case MCause:   ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__csr__DOT__mcause   ; break;
-      case MCycle:   ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__csr__DOT__mcycle   ; break;
-      case MCycleh:  ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__csr__DOT__mcycleh  ; break;
-      case MInstret: ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__csr__DOT__minstret ; break;
-      case MInstreth:ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__csr__DOT__minstreth; break;
-      default: throw std::runtime_error("Out-of-range CSR read"); break;
-    }
-    return ret;
-  }
-
-  inline size_t
-  read_double_csr(CsrSel hi, CsrSel lo) {
-    size_t ret = read_csr(hi);
-    ret <<= 32;
-    ret |= read_csr(lo);
-    return ret;
-  }
 
   void elftable_dump(const ebuf_t& elfSyms, std::ostream& os=std::cerr);
   void inst_dump(const ibuf_t& instBuf, std::ostream& os = std::cerr);
@@ -136,7 +28,6 @@ namespace trace {
   void membuf_dump(const mbuf_t& memBuf, std::ostream& os = std::cerr);
   void regfile_dump(std::ostream& os = std::cerr);
 
-  template <bool E>
   class GuestTracer {
   private:
     using cs_disasm_dl_t = size_t (*)(csh handle, const uint8_t *code,
@@ -161,10 +52,8 @@ namespace trace {
 
     size_t instCnt;
 
-// void mem_acc_log(uint32_t addr, bool is_write, uint32_t data,
-//                  uint8_t byte_mask);
-  // memBuf.append(MemEnt{addr, is_write, data, byte_mask}).printent(std::cerr);
   public:
+
     GuestTracer(const std::string& elf_path)
       : elf_ena{ !elf_path.empty() }
       , instBuf{}
@@ -175,10 +64,8 @@ namespace trace {
       , pcLatch{ 0U }
       , instCnt{ 0U }
       // , pcjmp(-4096, +4096, 64, options::ResetVector)
-      , ifcyc(0, 30, 2, 150)
-      , lscyc(0, 30, 2, std::numeric_limits<uint64_t>::max())
     {
-      if constexpr (!E) {
+      if constexpr (!options::gdbg_enable) {
         return;
       }
       init_disasm();
@@ -187,7 +74,7 @@ namespace trace {
 
     void
     dump_print() const {
-      if constexpr (!E) return;
+      if constexpr (!options::gdbg_enable) return;
       const options::DumpPrintOpt& opt = options::error_dump_opt;
       if (opt.reg_file)   regfile_dump();
       if (opt.inst_buf)   inst_dump   (instBuf );
@@ -197,31 +84,11 @@ namespace trace {
 
     void
     dump_stats() const {
-      if constexpr (!E) return;
+      if constexpr (!options::gdbg_enable) return;
       auto mcycles = read_double_csr(MCycleh, MCycle);
       size_t minstret = read_double_csr(MInstreth, MInstret);
       std::cerr << std::format("mcycles  {:d}", mcycles ) << std::endl;
       std::cerr << std::format("minstret {:d}", minstret) << std::endl;
-      
-      // auto const pcdelta_name = pcjmp.get_indices();
-      // auto const pcdelta_data = pcjmp.get_stats();
-      // for (size_t i = 0; i < pcdelta_name.size(); i++) {
-      //   std::cerr << std::format("{}\t: {:16d}", pcdelta_name[i], pcdelta_data[i]) << std::endl;
-      // }
-      auto const iftime_name  = ifcyc.get_indices();
-      auto const iftime_data  = ifcyc.get_stats();
-      std::cout << "Inst Fetch Distri (Cyc) : " << std::dec 
-        << ifcyc.get_total() << " total" << std::endl;
-      for (size_t i = 0; i < iftime_name.size(); i++) {
-        std::cout << std::format("{}\t: {:16d}", iftime_name[i], iftime_data[i]) << std::endl;
-      }
-      auto const lstime_name  = lscyc.get_indices();
-      auto const lstime_data  = lscyc.get_stats();
-      std::cout << "Load Store Distri (Cyc) : " << std::dec 
-        << lscyc.get_total() << " total" << std::endl;
-      for (size_t i = 0; i < lstime_name.size(); i++) {
-        std::cout << std::format("{}\t: {:16d}", lstime_name[i], lstime_data[i]) << std::endl;
-      }
     }
 
   private:
@@ -248,7 +115,7 @@ namespace trace {
 
     void
     disassemble(char *str, int size, uint64_t pc, uint8_t *code, int nbyte) {
-      if constexpr (!E) {
+      if constexpr (!options::gdbg_enable) {
         return;
       }
       cs_insn *insn;
@@ -267,12 +134,12 @@ namespace trace {
         std::cerr << "Elf file " << elf_file;
       int fd = open(elf_file.c_str(), O_RDONLY);
       assert(fd >= 0 && "Elf file open failed");
-    
+
       struct stat st;
       int fs_status = fstat(fd, &st);
       if (options::runtime_dump_opt.elf_symbol)
         std::cerr << ", size = " << st.st_size << std::endl;
-    
+
       uint8_t *map =
         (uint8_t *)mmap(NULL, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
       assert(map != MAP_FAILED && "Elf mmap failed");
@@ -287,7 +154,7 @@ namespace trace {
       Elf32_Sym *sym_table = NULL;
       uint8_t *str_table = NULL;
       unsigned sym_count = 0;
-    
+
       for (unsigned i = 0; i < ehdr->e_shnum; ++i) {
         if (shdr[i].sh_type != SHT_SYMTAB) {
           continue;
@@ -298,18 +165,18 @@ namespace trace {
         str_table = map + shdr[shdr[i].sh_link].sh_offset;
         break;
       }
-    
+
       assert(sym_table && "Elf symbol table not found");
       assert(str_table && "Elf string table not found");
-    
+
       elfSyms.reserve(sym_count);
       for (unsigned i = 0; i < sym_count; ++i) {
         [[maybe_unused]] int bind = ELF32_ST_BIND(sym_table[i].st_info);
         [[maybe_unused]] int type = ELF32_ST_TYPE(sym_table[i].st_info);
         const char *sym_name = (const char *)(str_table + sym_table[i].st_name);
-    
+
         uint32_t addr = sym_table[i].st_value;
-    
+
         if (type == STT_FUNC) {
           v_warn(elfSyms.find(addr) == elfSyms.end(),
                        "Multiple symbols at the same addr ", addr, " name ",
@@ -321,10 +188,10 @@ namespace trace {
           );
         }
       }
-    
+
       if (options::runtime_dump_opt.elf_symbol)
         elftable_dump(elfSyms);
-    
+
       munmap(map, st.st_size);
       close(fd);
     }
@@ -391,7 +258,7 @@ namespace trace {
   public:
     void
     inst_trace() {
-      if constexpr (!E) return;
+      if constexpr (!options::gdbg_enable) return;
       if (read_ifs_state() == IFState::Hold) {
         pcLatch = read_reg(RegNum);
         instLatch = read_inst_latch();
@@ -433,104 +300,6 @@ namespace trace {
 
     size_t
     get_inst_count() const { return instCnt; }
+};
 
-    /* PMU */
-  private:
-
-    template<typename T>
-    class Distri {
-      protected:
-        T min;
-        T max;
-        T delta;
-        T maxidx;
-        std::vector<size_t> arr;
-        size_t total;
-      public:
-        Distri(T min, T max, T delta)
-          : min{ min }
-          , max{ max }
-          , delta{ delta }
-          , maxidx{ (max-min) / delta }
-          , arr( maxidx + 5, 0U)
-          , total{ 0 }
-          {}
-
-        virtual void sample(T v) {
-          total++;
-          if (v > max) { arr.at(maxidx + 1) += 1; }
-          else if (v < min) { arr.at(maxidx + 2) += 1; }
-          else { 
-            auto idx = (v - min) / delta;
-            arr.at(idx) += 1;
-          }
-          arr.at(maxidx + 3) = std::max<T>(v, arr[maxidx + 3]);
-          arr.at(maxidx + 4) = std::min<T>(v, arr[maxidx + 4]);
-        }
-
-        const std::vector<size_t>&
-        get_stats() const {
-          return arr;
-        }
-
-        std::vector<std::string>
-        get_indices() const {
-          std::vector<std::string> ret(maxidx+5);
-          for (auto i = 0U; i <= maxidx; i++) {
-            ret.at(i) = std::to_string(min + delta * i);
-          }
-          ret.at(maxidx + 1) = "overflow";
-          ret.at(maxidx + 2) = "underflow";
-          ret.at(maxidx + 3) = "maximum";
-          ret.at(maxidx + 4) = "minimum";
-          return std::move(ret);
-        }
-        
-        size_t
-        get_total() const { return total; }
-    };
-
-    template<typename T>
-    class DeltaDistri : public Distri<T> {
-      private:
-        T last;
-      public:
-        DeltaDistri(T min, T max, T delta, T init)
-          : Distri<T>(min, max, delta)
-          , last{ init } {}
-
-        void sample(T v) override {
-          auto dpc = v - last;
-          // fprintf(stderr, "sample  from %8x to %8x\n", last, v);
-          Distri<T>::sample(dpc);
-          last = v;
-        }
-
-        void updlast(T v) {
-          // fprintf(stderr, "updlast from %8x to %8x\n", last, v);
-          last = v;
-        }
-    };
-
-    // DeltaDistri<int64_t> pcjmp;
-    DeltaDistri<uint64_t> ifcyc;
-    DeltaDistri<uint64_t> lscyc;
-
-  public:
-    void notifyIFIssue(addr_t pc) {
-      ifcyc.sample(read_double_csr(MCycleh, MCycle));
-      // pcjmp.sample(static_cast<int64_t>(pc));
-    }
-    void notifyIFFetch(addr_t pc) {
-      ifcyc.updlast(read_double_csr(MCycleh, MCycle));
-    }
-    void notifyLSReq(addr_t a) {
-      // fprintf(stderr, "req at %x\n", read_double_csr(MCycleh, MCycle));
-      lscyc.updlast(read_double_csr(MCycleh, MCycle));
-    }
-    void notifyLSResp(addr_t a) {
-      // fprintf(stderr, "resp at %x\n", read_double_csr(MCycleh, MCycle));
-      lscyc.sample(read_double_csr(MCycleh, MCycle));
-    }
-  };
 }
