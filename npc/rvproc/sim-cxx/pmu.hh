@@ -249,9 +249,9 @@ class SoftPerfUnit {
   public:
   SoftPerfUnit()
   : instboard{}
-  , ifcyc(0, 30, 2, std::numeric_limits<int64_t>::max(), "Inst Fetch Cycles")
-  , lscyc(0, 30, 2, std::numeric_limits<int64_t>::max(), "Load Store Cycles")
-  , instcyc(InstOpName.size(), 0, 30, 2,
+  , ifcyc(0, 200, 20, std::numeric_limits<int64_t>::max(), "Inst Fetch Cycles")
+  , lscyc(0, 200, 20, std::numeric_limits<int64_t>::max(), "Load Store Cycles")
+  , instcyc(InstOpName.size(), 0, 200, 20,
       std::numeric_limits<int64_t>::max(),
       "Inst Cats",
       InstOpName)
