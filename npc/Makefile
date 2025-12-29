@@ -11,16 +11,16 @@ SRC_DPIC_DIR = $(PRJ)/dpic
 # simulation elf or nvboard elf
 SIM_BIN = $(BUILD_SIM_DIR)/$(PRJ).elf
 
-# if this build involve NV Board 
+# if this build involve NV Board
 NVBENA ?= 0
 SIM_CXX_DIR = $(PRJ)/sim-cxx
 
-## NV Board related 
+## NV Board related
 NXDC_FILES = $(PRJ)/constr/$(TOPNAME).nxdc
 INC_PATH ?= $(abspath $(PRJ))/dpic $(abspath $(PRJ))/sim-cxx
 VINC_PATH += $(SOC_HOME)/perip/uart16550/rtl $(SOC_HOME)/perip/spi/rtl $(SOC_HOME)/perip/psram
 
-## Parallism 
+## Parallism
 NTHREADS?=1
 
 ## Verilator related
@@ -41,8 +41,8 @@ INCFLAGS = $(addprefix -I, $(INC_PATH))
 VINCFLAGS = $(addprefix -I, $(VINC_PATH))
 CXXFLAGS += $(INCFLAGS) -DTOP_NAME="\"V$(TOPNAME)\"" -std=c++23 -g
 CXXFLAGS += -DLOGENA=$(LOGENA) -DDIFFENA=$(DIFFENA) -DDBGENA=$(DBGENA) -DNVBENA=$(NVBENA)
-simccargs ?= 
-mrombin ?= 
+simccargs ?=
+mrombin ?=
 
 # capstone
 LIBCAPSTONE = $(NEMU_HOME)/tools/capstone/repo/libcapstone.so.5
@@ -81,12 +81,12 @@ $(SIM_BIN): $(CSRCS) $(DPIC_SRCS) $(NVB_ARCHIVE)
 		--Mdir $(BUILD_OBJ_DIR) --exe -o $(abspath $(SIM_BIN))
 
 test:
-	# $(call git_commit, "test RTL") 
+	# $(call git_commit, "test RTL")
 	mill -i $(PRJ).test.testOnly $(PRJ).test.$(TOPNAME)Spec
 
 runam:
 	# $(call git_commit, "run with AM")
-	mill -i $(PRJ).test.testOnly $(PRJ).test.$(TOPNAME)Am 
+	mill -i $(PRJ).test.testOnly $(PRJ).test.$(TOPNAME)Am
 
 run: verilate verilog $(LIBCAPSTONE) $(SIM_BIN)
 	# $(call git_commit, "run with AM via verilator cc")
@@ -107,6 +107,10 @@ verilog: $(SCALA_SOURCES)
 	# @cp $(SRC_DPIC_DIR)/PMemBox.sv $(BUILD_SV_DIR)/PMemBox.sv
 	@echo "Memory port renaming done"
 
+rtlsta: $(SCALA_SOURCES)
+	$(call git_commit, "generate verilog") # WARN: Only allow tracking here
+	mkdir -p $(BUILD_SV_DIR)
+	mill -i $(PRJ).runMain ElaborSta
 
 help:
 	mill -i $(PRJ).runMain Elaborate --help
