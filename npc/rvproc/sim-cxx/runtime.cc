@@ -4,13 +4,13 @@
 #include <cstdint>
 #include <memory>
 
+#if SOCMODE
+
 const RuntimeBin* mrom = nullptr;
 const RuntimeBin* flash = nullptr;
 RuntimeBin* psram = nullptr;
 RuntimeBin* sdram = nullptr;
 RuntimeBin* vmem = nullptr;
-trace::GuestTracer* pccdb = nullptr;
-trace::SoftPerfUnit* ppmu = nullptr;
 
 void
 mrom_read(int32_t addr, int32_t* data) {
@@ -78,6 +78,36 @@ vga_read(uint32_t addr) {
   // assert(vmem && "De-ref nullptr");
   return vmem->readWord(addr);
 }
+
+#else
+
+RuntimeBin* unifiedMem = nullptr;
+
+uint32_t axi_read(uint32_t araddr, uint32_t* prdata) {
+  // std::cerr << std::hex;
+  // std::cerr << "DPI-C axi read @ " << araddr
+  //           << " data = " << unifiedMem->readWord(araddr) << std::endl;
+  assert(unifiedMem);
+  *prdata = unifiedMem->readWord(araddr & ~3U);
+  return 1;
+}
+
+uint32_t
+axi_write(uint32_t awaddr, uint32_t wdata, unsigned char wstrb) {
+  assert(unifiedMem);
+  if (awaddr == 0x1000'0000) [[unlikely]] {
+    putchar(wdata);
+    goto rettime;
+  }
+  unifiedMem->writeWord(awaddr & ~3U, wdata, wstrb);
+rettime:
+  return 1;
+}
+
+#endif
+
+trace::GuestTracer* pccdb = nullptr;
+trace::SoftPerfUnit* ppmu = nullptr;
 
 void
 notify_issue(uint32_t pc) {

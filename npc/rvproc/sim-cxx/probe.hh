@@ -10,8 +10,13 @@
 #include <string>
 #include <unordered_map>
 
+#if SOCMODE
 #include "VysyxSoCFull.h"
 #include "VysyxSoCFull___024root.h"
+#else 
+#include "VrvCoreSimEnv.h"
+#include "VrvCoreSimEnv___024root.h"
+#endif
 
 #define ANSI_NONE "\033[0m"
 #define ANSI_RED "\033[31m"
@@ -242,6 +247,7 @@ read_reg(uint8_t regid) {
   auto r = ptop->rootp;
   ureg_t ret = 0;
   switch (regid) {
+#if SOCMODE
     case 0x0: ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__gpr__DOT__gprs_0; break;
     case 0x1: ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__gpr__DOT__gprs_1; break;
     case 0x2: ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__gpr__DOT__gprs_2; break;
@@ -259,6 +265,25 @@ read_reg(uint8_t regid) {
     case 0xe: ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__gpr__DOT__gprs_14; break;
     case 0xf: ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__gpr__DOT__gprs_15; break;
     case 0x10:ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__ifs__DOT__pc; break;
+#else
+    case 0x0: ret = r->rvCoreSimEnv__DOT__core__DOT__reg_0__DOT__gpr__DOT__gprs_0; break;
+    case 0x1: ret = r->rvCoreSimEnv__DOT__core__DOT__reg_0__DOT__gpr__DOT__gprs_1; break;
+    case 0x2: ret = r->rvCoreSimEnv__DOT__core__DOT__reg_0__DOT__gpr__DOT__gprs_2; break;
+    case 0x3: ret = r->rvCoreSimEnv__DOT__core__DOT__reg_0__DOT__gpr__DOT__gprs_3; break;
+    case 0x4: ret = r->rvCoreSimEnv__DOT__core__DOT__reg_0__DOT__gpr__DOT__gprs_4; break;
+    case 0x5: ret = r->rvCoreSimEnv__DOT__core__DOT__reg_0__DOT__gpr__DOT__gprs_5; break;
+    case 0x6: ret = r->rvCoreSimEnv__DOT__core__DOT__reg_0__DOT__gpr__DOT__gprs_6; break;
+    case 0x7: ret = r->rvCoreSimEnv__DOT__core__DOT__reg_0__DOT__gpr__DOT__gprs_7; break;
+    case 0x8: ret = r->rvCoreSimEnv__DOT__core__DOT__reg_0__DOT__gpr__DOT__gprs_8; break;
+    case 0x9: ret = r->rvCoreSimEnv__DOT__core__DOT__reg_0__DOT__gpr__DOT__gprs_9; break;
+    case 0xa: ret = r->rvCoreSimEnv__DOT__core__DOT__reg_0__DOT__gpr__DOT__gprs_10; break;
+    case 0xb: ret = r->rvCoreSimEnv__DOT__core__DOT__reg_0__DOT__gpr__DOT__gprs_11; break;
+    case 0xc: ret = r->rvCoreSimEnv__DOT__core__DOT__reg_0__DOT__gpr__DOT__gprs_12; break;
+    case 0xd: ret = r->rvCoreSimEnv__DOT__core__DOT__reg_0__DOT__gpr__DOT__gprs_13; break;
+    case 0xe: ret = r->rvCoreSimEnv__DOT__core__DOT__reg_0__DOT__gpr__DOT__gprs_14; break;
+    case 0xf: ret = r->rvCoreSimEnv__DOT__core__DOT__reg_0__DOT__gpr__DOT__gprs_15; break;
+    case 0x10:ret = r->rvCoreSimEnv__DOT__core__DOT__ifs__DOT__pc; break;
+#endif
     default: throw std::runtime_error(
                  "Invalid GPR read @ regid = " + std::to_string(regid));
              break;
@@ -268,7 +293,11 @@ read_reg(uint8_t regid) {
 
 inline ureg_t
 read_inst_latch() {
+#if SOCMODE
   return ptop->rootp->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__ifs__DOT__instLatch;
+#else
+  return ptop->rootp->rvCoreSimEnv__DOT__core__DOT__ifs__DOT__instLatch;
+#endif
 }
 
 enum IFState { Idle = 0, Serve, Hold, Start };
@@ -276,7 +305,11 @@ enum IFState { Idle = 0, Serve, Hold, Start };
 inline IFState
 read_ifs_state() {
   auto r = ptop->rootp;
+#if SOCMODE
   uint8_t val = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__ifs__DOT__state & 0b11;
+#else
+  uint8_t val = r->rvCoreSimEnv__DOT__core__DOT__ifs__DOT__state & 0b11;
+#endif
   return IFState(val);
 }
 
@@ -304,6 +337,7 @@ read_csr(CsrSel fakeid) {
   auto r = ptop->rootp;
   ureg_t ret = 0;
   switch (fakeid) {
+#if SOCMODE
     case MTvec:    ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__csr__DOT__mtvec    ; break;
     case MEpc:     ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__csr__DOT__mepc     ; break;
     case MStatus:  ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__csr__DOT__mstatus  ; break;
@@ -312,6 +346,16 @@ read_csr(CsrSel fakeid) {
     case MCycleh:  ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__csr__DOT__mcycleh  ; break;
     case MInstret: ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__csr__DOT__minstret ; break;
     case MInstreth:ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__csr__DOT__minstreth; break;
+#else
+    case MTvec:    ret = r->rvCoreSimEnv__DOT__core__DOT__reg_0__DOT__csr__DOT__mtvec    ; break;
+    case MEpc:     ret = r->rvCoreSimEnv__DOT__core__DOT__reg_0__DOT__csr__DOT__mepc     ; break;
+    case MStatus:  ret = r->rvCoreSimEnv__DOT__core__DOT__reg_0__DOT__csr__DOT__mstatus  ; break;
+    case MCause:   ret = r->rvCoreSimEnv__DOT__core__DOT__reg_0__DOT__csr__DOT__mcause   ; break;
+    case MCycle:   ret = r->rvCoreSimEnv__DOT__core__DOT__reg_0__DOT__csr__DOT__mcycle   ; break;
+    case MCycleh:  ret = r->rvCoreSimEnv__DOT__core__DOT__reg_0__DOT__csr__DOT__mcycleh  ; break;
+    case MInstret: ret = r->rvCoreSimEnv__DOT__core__DOT__reg_0__DOT__csr__DOT__minstret ; break;
+    case MInstreth:ret = r->rvCoreSimEnv__DOT__core__DOT__reg_0__DOT__csr__DOT__minstreth; break;
+#endif
     default: throw std::runtime_error("Out-of-range CSR read"); break;
   }
   return ret;

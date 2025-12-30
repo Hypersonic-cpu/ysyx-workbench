@@ -30,10 +30,10 @@ image: image-dep
 	
 
 run: insert-arg cleancc
-	@$(MAKE) -C $(NPC_HOME) run mrombin=$(abspath $(IMAGE).bin)
+	@$(MAKE) -C $(NPC_HOME) run SOCMODE=1 mrombin=$(abspath $(IMAGE).bin)
 
 runonly: insert-arg
-	@$(MAKE) -C $(NPC_HOME) runonly mrombin=$(abspath $(IMAGE).bin)
+	@$(MAKE) -C $(NPC_HOME) runonly SOCMODE=1 mrombin=$(abspath $(IMAGE).bin)
 
 buildsv: 
 	@$(MAKE) -C $(NPC_HOME) verilog

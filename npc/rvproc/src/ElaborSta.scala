@@ -15,5 +15,5 @@ val outputPath = "/home/kong/ysyx-workbench/npc/build-sv/rvproc/mcRvCore.sv"
     ).reduce(_ + "," + _)
   )
 
-  circt.stage.ChiselStage.emitSystemVerilogFile(new rvproc.rvCore(), args, firtoolOptions)
+  circt.stage.ChiselStage.emitSystemVerilogFile(new rvproc.rvCore(0x3000_0000L), args, firtoolOptions)
 }
