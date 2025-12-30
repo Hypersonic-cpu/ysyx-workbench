@@ -9,7 +9,13 @@
 #include <verilated.h>
 #include <verilated_fst_c.h>
 
+#if SOCMODE
 #include "VysyxSoCFull.h"
+#include "VysyxSoCFull___024root.h"
+#else 
+#include "VrvCoreSimEnv.h"
+#include "VrvCoreSimEnv___024root.h"
+#endif
 
 #include "ccdb.hh"
 #include "difftest.hh"
@@ -41,7 +47,7 @@ dump_handler() {
 void
 dump_stats() {
   pccdb->dump_stats(std::cerr);
-  ppmu ->dump_stats(std::cerr);
+  ppmu->dump_stats(std::cerr);
 }
 
 handler_t dumpHandler = dump_handler;
@@ -86,6 +92,7 @@ int
 main(int argc, char* argv[]) {
   assert(argc >= 2);
 
+#if SOCMODE
   auto mromBin = std::make_shared<RuntimeBin>(
     std::vector<ureg_t>(10U, 0xbadc0de), 0x2000'0000U, "MROM");
   mrom = mromBin.get();
@@ -105,6 +112,11 @@ main(int argc, char* argv[]) {
   auto vmemBin = std::make_shared<RuntimeBin>(
     "/mnt/hgfs/Arch-PA/JiaoTongUniversity.bin", 0x0000'0000U, "VMem");
   vmem = vmemBin.get();
+#else
+  auto uMem = std::make_shared<RuntimeBin>(
+    argv[1], (4U << 20) / 4, 0x8000'0000LLU, "UnifiedMem");
+  unifiedMem = uMem.get();
+#endif
 
   options::parse_args(argc, argv);
   if (options::wave_enable) {
@@ -134,7 +146,11 @@ main(int argc, char* argv[]) {
   std::string retCause = "??";
   int retBad = 0;
 
+#if SOCMODE
   trace::DiffTester diff(mrom->dataVec());
+#else
+  trace::DiffTester diff(unifiedMem->dataVec());
+#endif
   // Force RESET_VECTOR of NEMU = current PC
   diff.copy();
   trace::GuestTracer ccdb(options::elf_file);
@@ -188,10 +204,6 @@ main(int argc, char* argv[]) {
   }
 
 final:
-  // for (auto i = 0U; i < 8; i++) {
-  //   std::cerr << std::hex << sdramBin->dataVec().at(i) << " ";
-  // }
-  // std::cerr << std::endl;
 
   auto const lastPC{trace::read_reg(trace::RegNum)};
   top->final();

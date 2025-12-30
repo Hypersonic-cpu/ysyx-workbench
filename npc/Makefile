@@ -1,4 +1,27 @@
-include MakeAmRun.mk
+# soc or npc mode
+SOCMODE?=1
+SOC_SCALA_ARG=
+ifeq ($(SOCMODE),1)
+SOC_SCALA_ARG= --soc-mode
+endif
+# if this build involve NV Board
+NVBENA ?= 0
+DPRINTF?=0
+LOGENA?=0
+DIFFENA?=1
+DBGENA?=1
+NTHREADS?=1
+
+simccargs ?=
+mrombin ?=
+
+PRJ=rvproc
+TOPNAME=INVALID_NAME
+ifeq ($(SOCMODE),1)
+TOPNAME=ysyxSoCFull
+else
+TOPNAME=rvCoreSimEnv
+endif
 
 ## Directories
 # project name (also source dir)
@@ -11,8 +34,6 @@ SRC_DPIC_DIR = $(PRJ)/dpic
 # simulation elf or nvboard elf
 SIM_BIN = $(BUILD_SIM_DIR)/$(PRJ).elf
 
-# if this build involve NV Board
-NVBENA ?= 0
 SIM_CXX_DIR = $(PRJ)/sim-cxx
 
 ## NV Board related
@@ -20,17 +41,10 @@ NXDC_FILES = $(PRJ)/constr/$(TOPNAME).nxdc
 INC_PATH ?= $(abspath $(PRJ))/dpic $(abspath $(PRJ))/sim-cxx
 VINC_PATH += $(SOC_HOME)/perip/uart16550/rtl $(SOC_HOME)/perip/spi/rtl $(SOC_HOME)/perip/psram
 
-## Parallism
-NTHREADS?=1
-
 ## Verilator related
 VERILATOR = verilator
 VERILATOR_COVERAGE = verilator_coverage
 VERILATOR_TRACE ?= --trace --trace-fst --trace-depth 99
-DPRINTF?=0
-LOGENA?=0
-DIFFENA?=1
-DBGENA?=1
 VERILATOR_CFLAGS += $(VERILATOR_TRACE) -DPRINTF_COND=$(DPRINTF)
 VERILATOR_CFLAGS += -MMD --build -cc  --threads $(NTHREADS) --threads-dpi none \
 										-O3 --x-assign fast --x-initial fast
@@ -41,8 +55,7 @@ INCFLAGS = $(addprefix -I, $(INC_PATH))
 VINCFLAGS = $(addprefix -I, $(VINC_PATH))
 CXXFLAGS += $(INCFLAGS) -DTOP_NAME="\"V$(TOPNAME)\"" -std=c++23 -g
 CXXFLAGS += -DLOGENA=$(LOGENA) -DDIFFENA=$(DIFFENA) -DDBGENA=$(DBGENA) -DNVBENA=$(NVBENA)
-simccargs ?=
-mrombin ?=
+CXXFLAGS += -DSOCMODE=$(SOCMODE)
 
 # capstone
 LIBCAPSTONE = $(NEMU_HOME)/tools/capstone/repo/libcapstone.so.5
@@ -57,6 +70,11 @@ $(SRC_AUTO_BIND): $(NXDC_FILES)
 
 VSRCS = $(shell find $(abspath $(BUILD_SV_DIR)) -name "*.sv" -or -name "*.v")
 VSOC = $(shell find "$(SOC_HOME)/perip" -name "*.sv" -or -name "*.v") $(SOC_HOME)/build/ysyxSoCFull.v
+
+ifeq ($(SOCMODE),1)
+VSRCS += $(VSOC)
+endif
+	
 # FILELIST := $(shell find $(abspath $(BUILD_SV_DIR)/filelist.f))
 CSRCS = $(shell find $(abspath $(SIM_CXX_DIR)) -name "*.cc" -or -name "*.cpp")
 DPIC_SRCS = $(shell find $(abspath $(SRC_DPIC_DIR)) -name "*.cc" -or -name "*.cpp")
@@ -74,7 +92,7 @@ endif
 $(SIM_BIN): $(CSRCS) $(DPIC_SRCS) $(NVB_ARCHIVE)
 	@rm -rf $(BUILD_OBJ_DIR)
 	$(VERILATOR) $(VERILATOR_CFLAGS) \
-		$(VSRCS) $(VSOC) \
+		$(VSRCS) \
 		--top-module $(TOPNAME) \
 		$^ $(VINCFLAGS) \
 		$(addprefix -CFLAGS , $(CXXFLAGS)) $(addprefix -LDFLAGS , $(LDFLAGS)) \
@@ -100,11 +118,11 @@ runonly: verilate $(SIM_BIN)
 verilog: $(SCALA_SOURCES)
 	$(call git_commit, "generate verilog") # WARN: Only allow tracking here
 	mkdir -p $(BUILD_SV_DIR)
-	mill -i $(PRJ).runMain Elaborate --target-dir $(BUILD_SV_DIR)
+	mill -i $(PRJ).runMain Elaborate --target-dir $(BUILD_SV_DIR) $(SOC_SCALA_ARG)
 	@echo "Verilog written to " $(BUILD_SV_DIR)
 	@echo "Apply memory port changes for SoC"
 	@find $(BUILD_SV_DIR) -type f -name "*.v" -o -name "*.sv" -print0 | xargs -0 sed -i -e 's/_\(aw\|ar\|w\|r\|b\)_\(\|bits_\)/_\1/g'
-	# @cp $(SRC_DPIC_DIR)/PMemBox.sv $(BUILD_SV_DIR)/PMemBox.sv
+	@cp $(SRC_DPIC_DIR)/PMemBox.sv $(BUILD_SV_DIR)/PMemBox.sv
 	@echo "Memory port renaming done"
 
 rtlsta: $(SCALA_SOURCES)
