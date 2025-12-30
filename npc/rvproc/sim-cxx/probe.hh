@@ -1,5 +1,6 @@
 #pragma once
 
+// clang-format off
 #include <array>
 #include <cstdint>
 #include <iomanip>
