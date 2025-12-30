@@ -2,8 +2,9 @@ import scala.util.Properties
 import java.nio.file.Paths
 
 object Elaborate extends App {
-  val isSocMode = args.contains("--soc-mode")
-  val resetVector = if (isSocMode) 0x30000000L else 0x80000000L
+  val isSocMode    = args.contains("--soc-mode")
+  val filteredArgs = args.filter(_ != "--soc-mode")
+  val resetVector  = if (isSocMode) 0x30000000L else 0x80000000L
 
   val outputPath = "/home/kong/ysyx-workbench/npc/build-sv/rvproc/"
 
@@ -26,7 +27,7 @@ object Elaborate extends App {
 
   circt.stage.ChiselStage.emitSystemVerilogFile(
     new rvproc.rvCoreWrapper(resetVector),
-    args,
+    filteredArgs,
     firtoolOptions
   )
 }
