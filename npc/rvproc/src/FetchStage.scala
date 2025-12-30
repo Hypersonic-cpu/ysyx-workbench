@@ -12,7 +12,7 @@ import rvproc.axi4.AXI.RespStatus._
 import rvproc.axi4.AXI.BurstOpts._
 import rvproc.pmu.FetchPMU
 
-class FetchStage extends Module {
+class FetchStage(resetVector: BigInt) extends Module {
   val io   = IO(new Bundle {
     val out    = Decoupled(new FetchToDecode)
     val fromId = Flipped(Decoupled(new DecodeBackward))
@@ -48,9 +48,9 @@ class FetchStage extends Module {
   )
 
   // val ResetVector = 0x80000000L.U(ISA.RegBits.W)
-  val ResetVector = 0x3000_0000L.U(ISA.RegBits.W)
-  val pc          = RegInit(ResetVector)
-  val nextPC      = RegInit(ResetVector)
+  // val ResetVector = 0x3000_0000L.U(ISA.RegBits.W)
+  val pc          = RegInit(resetVector.U(ISA.RegBits.W))
+  val nextPC      = RegInit(resetVector.U(ISA.RegBits.W))
 
   iMem.ar.bits.addr  := nextPC // NOTE:
   iMem.ar.bits.size  := 0x2.U  // log2(4)

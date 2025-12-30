@@ -1,4 +1,5 @@
 #pragma once
+#include <cassert>
 #include <cstdint>
 #include <fstream>
 #include <ios>
@@ -10,6 +11,8 @@
 #include "pmu.hh"
 #include "probe.hh"
 
+#if SOCMODE
+
 extern "C" void flash_read(int32_t addr, int32_t* data);
 extern "C" void mrom_read(int32_t addr, int32_t* data);
 
@@ -17,10 +20,23 @@ extern "C" uint8_t psram_read(uint32_t addr);
 extern "C" void psram_write(uint32_t addr, unsigned char data);
 
 extern "C" uint16_t sdram_read(uint32_t addr);
-extern "C" void sdram_write(uint32_t addr, uint16_t data, unsigned char mask);
+extern "C" void sdram_write(uint32_t addr, uint16_t data,
+                            unsigned char mask);
 
 extern "C" void vga_write(uint32_t addr, uint32_t data, unsigned char strb);
 extern "C" uint32_t vga_read(uint32_t addr);
+
+#else
+/* NOTE:
+ * Called by hardware handler
+ * rvCore xbar -> CLINT
+ *             -> HW Handler <-> DPI-C
+ */
+extern "C" uint32_t axi_read(uint32_t araddr, uint32_t* prdata);
+extern "C" uint32_t axi_write(uint32_t awaddr, uint32_t wdata,
+                              unsigned char wstrb);
+
+#endif
 
 extern "C" void notify_issue(uint32_t pc);
 extern "C" void notify_fetch(uint32_t pc);
@@ -28,15 +44,22 @@ extern "C" void notify_fetch(uint32_t pc);
 extern "C" void notify_ls_req(uint32_t addr);
 extern "C" void notify_ls_resp(uint32_t addr);
 
-extern "C" void notify_decode(uint32_t pc, unsigned char itype, unsigned char iop);
+extern "C" void notify_decode(uint32_t pc, unsigned char itype,
+                              unsigned char iop);
 extern "C" void notify_commit(uint32_t pc);
 
 class RuntimeBin;
+
+#if SOCMODE
 extern const RuntimeBin* mrom;
 extern const RuntimeBin* flash;
 extern RuntimeBin* psram;
 extern RuntimeBin* sdram;
 extern RuntimeBin* vmem;
+#else
+extern RuntimeBin* unifiedMem;
+#endif
+
 extern trace::GuestTracer* pccdb;
 extern trace::SoftPerfUnit* ppmu;
 
@@ -51,26 +74,33 @@ private:
     return (addr & 0b11) == 0;
   }
 
-  ureg_t readAny(addr_t addr, uint8_t len) const {
+  ureg_t
+  readAny(addr_t addr, uint8_t len) const {
     auto idx = (addr - baseAddr) >> 2;
     if (idx == data.size()) [[unlikely]] {
       return 0b11000011U;
     }
     v_assert(idx < data.size(), "Out of bound read of", name, " @ ", addr);
-    v_assert(addr % len == 0, "Unaligned read @", addr, "len", (uint16_t) len);
+    v_assert(addr % len == 0, "Unaligned read @", addr, "len",
+             (uint16_t)len);
     auto shamt = (addr % 4) * 8;
     return data[idx] >> shamt;
   }
 
-  void writeAny(addr_t addr, ureg_t wdata, uint8_t strb) {
+  void
+  writeAny(addr_t addr, ureg_t wdata, uint8_t strb) {
     uint32_t idx = (addr - baseAddr) >> 2;
     v_assert(idx < data.size(), "Out of bound write of", name, " @ ", addr);
     v_assert(addr % 2 == 0, "Unaligned write @", addr, "len 2");
     uint32_t mask32 = 0;
-    if (strb & 1) mask32 |= 0x0000'00ffLLU;
-    if (strb & 2) mask32 |= 0x0000'ff00LLU;
-    if (strb & 4) mask32 |= 0x00ff'0000LLU;
-    if (strb & 8) mask32 |= 0xff00'0000LLU;
+    if (strb & 1)
+      mask32 |= 0x0000'00ffLLU;
+    if (strb & 2)
+      mask32 |= 0x0000'ff00LLU;
+    if (strb & 4)
+      mask32 |= 0x00ff'0000LLU;
+    if (strb & 8)
+      mask32 |= 0xff00'0000LLU;
     data[idx] &= ~mask32;
     data[idx] |= wdata;
   }
@@ -92,9 +122,17 @@ public:
 
     data.resize((fileSize + 3) / 4);
     fileStream.read(reinterpret_cast<char*>(data.data()), fileSize);
-    v_assert(!!fileStream, "Binary of MROM read failed");
+    v_assert(!!fileStream, "Binary read failed");
     fileStream.close();
   }
+
+  RuntimeBin(const std::string& bin, size_t veclen, addr_t base,
+             const std::string& name)
+      : RuntimeBin(bin, base, name) {
+    assert(veclen >= data.size());
+    data.resize(veclen);
+  }
+
   RuntimeBin(const std::vector<ureg_t>& vec, addr_t base,
              const std::string& name)
       : data(vec), baseAddr{base}, name{name} {}
@@ -132,8 +170,10 @@ public:
     v_assert(addr % 2 == 0, "Unaligned write @", addr, "len 2");
     auto shamt = (addr % 4) * 8;
     uint32_t mask32 = 0;
-    if (bena & 1) mask32 |= 0xffU;
-    if (bena & 2) mask32 |= 0xff00U;
+    if (bena & 1)
+      mask32 |= 0xffU;
+    if (bena & 2)
+      mask32 |= 0xff00U;
     mask32 <<= shamt;
     data[idx] &= ~mask32;
     data[idx] |= static_cast<uint32_t>(wdata) << shamt;

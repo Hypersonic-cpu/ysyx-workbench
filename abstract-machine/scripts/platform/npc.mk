@@ -25,21 +25,17 @@ image: image-dep
 	@echo + OBJCOPY "->" $(IMAGE_REL).bin
 	@$(OBJCOPY) -S --set-section-flags .bss=alloc,contents -O binary $(IMAGE).elf $(IMAGE).bin
 
--include $(NPC_HOME)/MakeAmRun.mk
 runam: insert-arg
-	@ln -sfn $(IMAGE).bin $(CHISEL_DPIC_MEMPATH)
 	@$(MAKE) -C $(NPC_HOME) runam
 
 run: insert-arg cleancc
-	@ln -sfn $(IMAGE).bin $(CHISEL_DPIC_MEMPATH)
-	@$(MAKE) -C $(NPC_HOME) run
+	@$(MAKE) -C $(NPC_HOME) run SOCMODE=0 mrombin=$(abspath $(IMAGE).bin)
+
+runonly: insert-arg
+	@$(MAKE) -C $(NPC_HOME) runonly SOCMODE=0 mrombin=$(abspath $(IMAGE).bin)
 
 buildsv: 
 	@$(MAKE) -C $(NPC_HOME) verilog
-
-runonly: insert-arg
-	@ln -sfn $(IMAGE).bin $(CHISEL_DPIC_MEMPATH)
-	@$(MAKE) -C $(NPC_HOME) runonly
 
 cleancc: 
 	@$(MAKE) -C $(NPC_HOME) clean

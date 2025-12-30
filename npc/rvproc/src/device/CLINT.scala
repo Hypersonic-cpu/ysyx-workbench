@@ -47,7 +47,7 @@ class CLINT extends Module {
   io.port.r.bits.id   := io.port.ar.bits.id // FIXME:
   assert(io.port.ar.valid Implies (io.port.ar.bits.addr(1, 0) === 0.U))
 
-  val mtime = RegInit(Tp.TimeType(), 0xff000000L.U)
+  val mtime = RegInit(Tp.TimeType(), 0x0L.U)
   mtime := mtime + 1.U
 
   when(io.port.ar.valid) {
