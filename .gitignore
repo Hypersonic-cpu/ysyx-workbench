@@ -13,7 +13,6 @@
 /fceux-am
 /am-kernels
 /ysyxSoC
-/npsim
 logs/
 log/
 *.log
