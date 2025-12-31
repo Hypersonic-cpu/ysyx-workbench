@@ -123,6 +123,9 @@ axi_read(uint32_t araddr, uint32_t* prdata, uint16_t id) {
 uint32_t
 axi_write(uint32_t awaddr, uint32_t wdata, unsigned char wstrb,
           uint16_t id) {
+  std::cerr << std::hex;
+  std::cerr << "DPI-C axi write [" << id << "] @ " << awaddr
+            << " data = " << wdata << std::endl;
   assert(unifiedMem);
   if (awaddr == 0x1000'0000) [[unlikely]] {
     putchar(wdata);
@@ -133,6 +136,16 @@ axi_write(uint32_t awaddr, uint32_t wdata, unsigned char wstrb,
   }
   unifiedMem->writeWord(awaddr & ~3U, wdata, wstrb);
   return MemLatency;
+}
+
+void
+axi_cache_flush(uint16_t id) {
+  std::cerr << std::hex;
+  std::cerr << "DPI-C cache flush [" << id << "]" << std::endl;
+  if (iCache && id == 0) {
+    // TODO: 记得清空流水线
+    iCache->flush_all();
+  }
 }
 
 #endif
