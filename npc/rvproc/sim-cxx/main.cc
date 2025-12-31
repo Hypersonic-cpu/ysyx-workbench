@@ -47,8 +47,15 @@ dump_handler() {
 
 void
 dump_stats() {
-  pccdb->dump_stats(std::cerr);
+  // pccdb->dump_stats(std::cerr);
   ppmu->dump_stats(std::cerr);
+  {
+    auto const stat = iCache->stats();
+    std::cerr << std::format(
+                   "iCache: Hit {:d} Miss {:d} Total {:d} MissRate {:f}\n",
+                   stat.hits, stat.misses, stat.accesses, stat.missRate())
+              << std::endl;
+  }
 }
 
 handler_t dumpHandler = dump_handler;
@@ -121,6 +128,7 @@ main(int argc, char* argv[]) {
   auto instCache = std::make_unique<cacheSim::CacheSimulator>(
     /* size */ 1024, /* lineSize */ 16, /* assoc */ 1);
   iCache = instCache.get();
+  iCache = nullptr;
 #endif
 
   options::parse_args(argc, argv);
