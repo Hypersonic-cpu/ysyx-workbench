@@ -3,6 +3,8 @@ SOCMODE?=1
 SOC_SCALA_ARG=
 ifeq ($(SOCMODE),1)
 SOC_SCALA_ARG= --soc-mode
+else
+include ../npsim/Makefile
 endif
 # if this build involve NV Board
 NVBENA ?= 0
@@ -20,7 +22,7 @@ TOPNAME=INVALID_NAME
 ifeq ($(SOCMODE),1)
 TOPNAME=ysyxSoCFull
 else
-TOPNAME=rvCoreSimEnv
+TOPNAME=rvCore
 endif
 
 ## Directories
@@ -38,7 +40,7 @@ SIM_CXX_DIR = $(PRJ)/sim-cxx
 
 ## NV Board related
 NXDC_FILES = $(PRJ)/constr/$(TOPNAME).nxdc
-INC_PATH ?= $(abspath $(PRJ))/dpic $(abspath $(PRJ))/sim-cxx
+INC_PATH  += $(abspath $(PRJ))/dpic $(abspath $(PRJ))/sim-cxx
 VINC_PATH += $(SOC_HOME)/perip/uart16550/rtl $(SOC_HOME)/perip/spi/rtl $(SOC_HOME)/perip/psram
 
 ## Verilator related
@@ -74,16 +76,16 @@ VSOC = $(shell find "$(SOC_HOME)/perip" -name "*.sv" -or -name "*.v") $(SOC_HOME
 ifeq ($(SOCMODE),1)
 VSRCS += $(VSOC)
 endif
-	
+
 # FILELIST := $(shell find $(abspath $(BUILD_SV_DIR)/filelist.f))
-CSRCS = $(shell find $(abspath $(SIM_CXX_DIR)) -name "*.cc" -or -name "*.cpp")
+CSRCS += $(shell find $(abspath $(SIM_CXX_DIR)) -name "*.cc" -or -name "*.cpp")
 DPIC_SRCS = $(shell find $(abspath $(SRC_DPIC_DIR)) -name "*.cc" -or -name "*.cpp")
 
 ifeq ($(NVBENA),0)
 NVB_ARCHIVE=
 LDFLAGS=
 else
-CXXFLAGS += $(NVBOARD_HOME)/include
+CXXFLAGS += -I$(NVBOARD_HOME)/include
 include $(NVBOARD_HOME)/scripts/nvboard.mk
 NVB_ARCHIVE=$(NVBOARD_ARCHIVE)
 CSRCS += $(SRC_AUTO_BIND)
@@ -98,6 +100,14 @@ $(SIM_BIN): $(CSRCS) $(DPIC_SRCS) $(NVB_ARCHIVE)
 		$(addprefix -CFLAGS , $(CXXFLAGS)) $(addprefix -LDFLAGS , $(LDFLAGS)) \
 		--Mdir $(BUILD_OBJ_DIR) --exe -o $(abspath $(SIM_BIN))
 
+printhook:
+	@echo
+	@echo "INCFLAGS" $(INC_PATH)
+	@echo "CXXFLAGS" $(CXXFLAGS)
+	@echo "CSRCS" $(CSRCS)
+	@echo "COMMON" $(SRCS_COMMON)
+	@echo
+
 test:
 	# $(call git_commit, "test RTL")
 	mill -i $(PRJ).test.testOnly $(PRJ).test.$(TOPNAME)Spec
@@ -106,7 +116,7 @@ runam:
 	# $(call git_commit, "run with AM")
 	mill -i $(PRJ).test.testOnly $(PRJ).test.$(TOPNAME)Am
 
-run: verilate verilog $(LIBCAPSTONE) $(SIM_BIN)
+run: verilate verilog $(LIBCAPSTONE) printhook $(SIM_BIN)
 	# $(call git_commit, "run with AM via verilator cc")
 	@echo "MROMBIN = $(mrombin)"
 	$(SIM_BIN) $(mrombin) $(simccargs)
@@ -148,7 +158,7 @@ idea:
 clean:
 	-rm -rf $(BUILD_SV_DIR) $(BUILD_SIM_DIR)
 
-.PHONY: test runam verilog help reformat checkformat clean verilate sim
+.PHONY: test runam verilog help reformat checkformat clean verilate sim printhook
 
 verilate:
 	@mkdir -p $(BUILD_OBJ_DIR)
@@ -167,5 +177,3 @@ tracer:
 	$(call git_commit, "manual trace") # WARN: Only allow tracking here
 
 -include ../Makefile
-
--include $(PRJ)/MakeTest.mk
