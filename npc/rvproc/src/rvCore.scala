@@ -87,12 +87,15 @@ class rvCore(resetVector: BigInt) extends Module {
     val iMemBox = Module(new PMemBox)
     iMemBox.io.master <> ifs.io.iMem
     iMemBox.io.simid := 0.U // inst cache
+    iMemBox.io.flush := ids.io.fenceI.valid && ids.io.fenceI.bits
+    ids.io.fenceI.ready := true.B
 
     val dMemBox = Module(new PMemBox)
     locxbar.io.host <> lss.io.dMem
     locxbar.io.devices(1) <> clint.io.port
     locxbar.io.devices(0) <> dMemBox.io.master
     dMemBox.io.simid := 1.U // data port
+    dMemBox.io.flush := false.B
     io.master := DontCare
   }
 

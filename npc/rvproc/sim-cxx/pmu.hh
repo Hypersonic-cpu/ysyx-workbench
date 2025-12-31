@@ -211,13 +211,13 @@ public:
 class SoftPerfUnit {
 public:
   inline static const std::unordered_map<unsigned char, size_t> InstOpToIdx{
-    {0b00000U, 0}, {0b00100U, 1}, {0b00101U, 2}, {0b01000U, 3},
-    {0b01100U, 4}, {0b10100U, 5}, {0b01101U, 6}, {0b11000U, 7},
-    {0b11001U, 8}, {0b11011U, 9}, {0b11100U, 10}};
+    {0b00000U, 0}, {0b00011U, 1}, {0b00100U, 2},  {0b00101U, 3},
+    {0b01000U, 4}, {0b01100U, 5}, {0b10100U, 6},  {0b01101U, 7},
+    {0b11000U, 8}, {0b11001U, 9}, {0b11011U, 10}, {0b11100U, 11}};
 
   inline static const std::vector<std::string> InstOpName = {
-    "Load", "OpImm",  "Auipc", "Store", "OpReg", "OpFP",
-    "Lui",  "Branch", "Jalr",  "Jal",   "System"};
+    "Load", "Misc-Mem", "OpImm",  "Auipc", "Store", "OpReg",
+    "OpFP", "Lui",      "Branch", "Jalr",  "Jal",   "System"};
 
 private:
   // DeltaDistri<int64_t> pcjmp;

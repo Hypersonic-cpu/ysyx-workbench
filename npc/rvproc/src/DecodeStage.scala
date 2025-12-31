@@ -8,6 +8,7 @@ import rvproc.pmu.DecodePMU
 
 object InstOp extends ChiselEnum {
   val Load   = Value(0b00000.U)
+  val MiscM  = Value(0b00011.U)
   val OpImm  = Value(0b00100.U)
   val Auipc  = Value(0b00101.U)
   val Store  = Value(0b01000.U)
@@ -67,7 +68,7 @@ class IDU extends Module {
     val aluEn  = Output(Bool())
     val aluOp  = Output(AluOp())
     val aluSel = Output(new AluSel)
-    // val brJmp  = Output(new BrJmp)
+    val fenceI = Output(Bool())
 
     // br dest = imm
     val brRel  = Output(Bool())
@@ -107,9 +108,11 @@ class IDU extends Module {
   val isEbreak = sysRel && csrid12 === 1.U
   val isEcall  = sysRel && csrid12 === 0.U
   val isMret   = sysRel && csrid12 === 0b_0011000_00010.U
+  val isFenceI = opName === InstOp.MiscM && funct3 === 0b001.U
 
   io.ebreak := isEbreak
   io.ecall  := isEcall
+  io.fenceI := isFenceI
 
   // On Ebreak we prepare reg a0 (x10)
   // On Ecall  we prepare reg a5 (x15)
@@ -161,7 +164,8 @@ class IDU extends Module {
   val instCsr = instSys && (sysOp =/= CsrOp.None)
 
   /** NOTE: ALU commands -> EXU */
-  val aluEn = (instTp =/= ITYPE.tB) && (opName =/= InstOp.Jalr)
+  val aluEn = 
+    (instTp =/= ITYPE.tB) && (opName =/= InstOp.Jalr) && (!isFenceI)
   val aluOp = MuxCase (AluOp.Add, Seq(
     instArith -> AluOp(funct3),
     // instBr    -> Mux(funct3(1), AluOp.Sltu, AluOp.Slt),
@@ -175,7 +179,6 @@ class IDU extends Module {
 
   io.aluOp := aluOp
   io.aluEn := aluEn
-  // io.aluSel.cmpImm    := instSlt && instTp === ITYPE.tI
   io.aluSel.rs1SelPC  :=
     opName === InstOp.Auipc || 
     opName === InstOp.Jal ||
@@ -241,7 +244,8 @@ class IDU extends Module {
   io.gprWE  := ~(
     instTp === ITYPE.tN ||
     instTp === ITYPE.tB ||
-    instTp === ITYPE.tS
+    instTp === ITYPE.tS ||
+    isFenceI
   ) || instCsr
 
   /**
@@ -273,6 +277,7 @@ class DecodeStage extends Module {
     val toReg   = Decoupled(new RegFromIDU())
 
     val toFetch = Decoupled(new DecodeBackward)
+    val fenceI = Decoupled(Bool())
   })
 
   // wait for NEXT stage
@@ -281,6 +286,7 @@ class DecodeStage extends Module {
   io.in.ready  := io.out.ready
   io.out.valid := io.in.valid
   io.toFetch.valid := io.in.valid
+  io.fenceI.valid := io.in.valid
   // val state = RegInit(wait)
   // state := MuxLookup(state, wait) (Seq(
   //   idle   -> Mux(io.out.valid, ),
@@ -290,6 +296,9 @@ class DecodeStage extends Module {
   val iDec = Module(new IDU)
   iDec.io.valid := io.in.valid
   iDec.io.ready := io.out.ready
+
+  /** NOTE: fence.i */
+  io.fenceI.bits := iDec.io.fenceI
 
   /** NOTE: Reg Read */
   io.toReg.valid := io.in.valid
