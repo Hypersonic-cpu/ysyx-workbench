@@ -12,9 +12,10 @@
 #if SOCMODE
 #include "VysyxSoCFull.h"
 #include "VysyxSoCFull___024root.h"
-#else 
-#include "VrvCoreSimEnv.h"
-#include "VrvCoreSimEnv___024root.h"
+#else
+#include "VrvCore.h"
+#include "VrvCore___024root.h"
+#include "cacheSim/CacheSimulator.hh"
 #endif
 
 #include "ccdb.hh"
@@ -113,9 +114,13 @@ main(int argc, char* argv[]) {
     "/mnt/hgfs/Arch-PA/JiaoTongUniversity.bin", 0x0000'0000U, "VMem");
   vmem = vmemBin.get();
 #else
-  auto uMem = std::make_shared<RuntimeBin>(
-    argv[1], (4U << 20) / 4, 0x8000'0000LLU, "UnifiedMem");
+  auto uMem = std::make_shared<RuntimeBin>(argv[1], (4U << 20) / 4,
+                                           0x8000'0000LLU, "UnifiedMem");
   unifiedMem = uMem.get();
+
+  auto instCache = std::make_unique<cacheSim::CacheSimulator>(
+    /* size */ 1024, /* lineSize */ 16, /* assoc */ 1);
+  iCache = instCache.get();
 #endif
 
   options::parse_args(argc, argv);
