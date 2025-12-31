@@ -27,14 +27,23 @@ extern "C" void vga_write(uint32_t addr, uint32_t data, unsigned char strb);
 extern "C" uint32_t vga_read(uint32_t addr);
 
 #else
+
+#include "cacheSim/CacheSimulator.hh"
+
 /* NOTE:
  * Called by hardware handler
  * rvCore xbar -> CLINT
  *             -> HW Handler <-> DPI-C
  */
-extern "C" uint32_t axi_read(uint32_t araddr, uint32_t* prdata);
+
+constexpr uint32_t MemLatency{30U};
+extern "C" uint32_t axi_read(uint32_t araddr, uint32_t* prdata, uint16_t id);
 extern "C" uint32_t axi_write(uint32_t awaddr, uint32_t wdata,
-                              unsigned char wstrb);
+                              unsigned char wstrb, uint16_t id);
+
+uint32_t pmem_read(uint32_t araddr, uint32_t* prdata, bool bfirst);
+uint32_t pmem_write(uint32_t awaddr, uint32_t wdata, unsigned char wstrb,
+                    bool bfirst);
 
 #endif
 
@@ -58,6 +67,7 @@ extern RuntimeBin* sdram;
 extern RuntimeBin* vmem;
 #else
 extern RuntimeBin* unifiedMem;
+extern cacheSim::CacheSimulator* iCache;
 #endif
 
 extern trace::GuestTracer* pccdb;

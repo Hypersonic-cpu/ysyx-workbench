@@ -82,18 +82,21 @@ vga_read(uint32_t addr) {
 #else
 
 RuntimeBin* unifiedMem = nullptr;
+cacheSim::CacheSimulator* iCache = nullptr;
 
-uint32_t axi_read(uint32_t araddr, uint32_t* prdata) {
+uint32_t
+pmem_read(uint32_t araddr, uint32_t* prdata, bool bfirst) {
   // std::cerr << std::hex;
   // std::cerr << "DPI-C axi read @ " << araddr
   //           << " data = " << unifiedMem->readWord(araddr) << std::endl;
   assert(unifiedMem);
   *prdata = unifiedMem->readWord(araddr & ~3U);
-  return 1;
+  return MemLatency;
 }
 
 uint32_t
-axi_write(uint32_t awaddr, uint32_t wdata, unsigned char wstrb) {
+pmem_write(uint32_t awaddr, uint32_t wdata, unsigned char wstrb,
+           bool bfirst) {
   assert(unifiedMem);
   if (awaddr == 0x1000'0000) [[unlikely]] {
     putchar(wdata);
@@ -101,7 +104,35 @@ axi_write(uint32_t awaddr, uint32_t wdata, unsigned char wstrb) {
   }
   unifiedMem->writeWord(awaddr & ~3U, wdata, wstrb);
 rettime:
-  return 1;
+  return MemLatency;
+}
+
+uint32_t
+axi_read(uint32_t araddr, uint32_t* prdata, uint16_t id) {
+  // std::cerr << std::hex;
+  // std::cerr << "DPI-C axi read @ " << araddr
+  //           << " data = " << unifiedMem->readWord(araddr) << std::endl;
+  assert(unifiedMem);
+  if (iCache && id == 0) {
+    return iCache->read_req(araddr, prdata);
+  }
+  *prdata = unifiedMem->readWord(araddr & ~3U);
+  return MemLatency;
+}
+
+uint32_t
+axi_write(uint32_t awaddr, uint32_t wdata, unsigned char wstrb,
+          uint16_t id) {
+  assert(unifiedMem);
+  if (awaddr == 0x1000'0000) [[unlikely]] {
+    putchar(wdata);
+    return MemLatency;
+  }
+  if (iCache && id == 0) {
+    return iCache->write_req(awaddr, wdata, wstrb);
+  }
+  unifiedMem->writeWord(awaddr & ~3U, wdata, wstrb);
+  return MemLatency;
 }
 
 #endif

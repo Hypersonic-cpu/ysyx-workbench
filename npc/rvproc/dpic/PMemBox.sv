@@ -29,7 +29,8 @@ module PMemBox (
     output [ 1:0] io_master_rresp,
     output [31:0] io_master_rdata,
     output        io_master_rlast,
-    output [ 3:0] io_master_rid
+    output [ 3:0] io_master_rid,
+    input  [15:0] io_simid
 );
 
   // import "DPI-C" function void pmem_init();
@@ -52,7 +53,8 @@ module PMemBox (
       .io_master_rresp  (io_master_rresp),
       .io_master_rdata  (io_master_rdata),
       .io_master_rlast  (io_master_rlast),
-      .io_master_rid    (io_master_rid)
+      .io_master_rid    (io_master_rid),
+      .io_simid            (io_simid)
   );
 
   PMemWriter mwrite (
@@ -73,7 +75,8 @@ module PMemBox (
       .io_master_bready (io_master_bready),
       .io_master_bvalid (io_master_bvalid),
       .io_master_bresp  (io_master_bresp),
-      .io_master_bid    (io_master_bid)
+      .io_master_bid    (io_master_bid),
+      .io_simid            (io_simid)
   );
 endmodule
 
@@ -93,12 +96,13 @@ module PMemReader (
     output [ 1:0] io_master_rresp,
     output [31:0] io_master_rdata,
     output        io_master_rlast,
-    output [ 3:0] io_master_rid
-
+    output [ 3:0] io_master_rid,
+    input  [15:0] io_simid
 );
   import "DPI-C" function int unsigned axi_read(
     input  int unsigned raddr,
-    output int unsigned rdata
+    output int unsigned rdata,
+    input  shortint unsigned id
   );
 
   // wire [4:0] curr_delay = 10;
@@ -139,7 +143,7 @@ module PMemReader (
       if (state == RECV) begin
         rid_latch <= io_master_arid;
         // delay_remain <= {{27{1'b0}}, curr_delay};
-        delay_remain <= axi_read(io_master_araddr, rdata);
+        delay_remain <= axi_read(io_master_araddr, rdata, io_simid);
       end else begin
         if (state == SERVE) delay_remain <= delay_remain - 1;
       end
@@ -180,12 +184,14 @@ module PMemWriter (
     input         io_master_bready,
     output        io_master_bvalid,
     output [ 1:0] io_master_bresp,
-    output [ 3:0] io_master_bid
+    output [ 3:0] io_master_bid,
+    input  [15:0] io_simid
 );
   import "DPI-C" function int unsigned axi_write(
-    input int unsigned  waddr,
-    input int unsigned  wdata,
-    input byte unsigned wmask
+    input int unsigned waddr,
+    input int unsigned wdata,
+    input byte unsigned wmask,
+    input shortint unsigned id
   );
 
 
@@ -229,7 +235,9 @@ module PMemWriter (
       if (state == RECV) begin
         bid_latch <= io_master_awid;
         // delay_remain <= {{27{1'b0}}, curr_delay};
-        delay_remain <= axi_write(io_master_awaddr, io_master_wdata, {{4'h0}, io_master_wstrb});
+        delay_remain <= axi_write(
+            io_master_awaddr, io_master_wdata, {{4'h0}, io_master_wstrb}, io_simid
+        );
       end else begin
         if (state == SERVE) delay_remain <= delay_remain - 1;
       end

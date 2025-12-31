@@ -43,12 +43,12 @@ class rvCore(resetVector: BigInt) extends Module {
     val slave     = Flipped(new AXIBus)
   })
 
-  val ifs = Module(new FetchStage(resetVector))
-  val ids = Module(new DecodeStage)
-  val exs = Module(new ExecuteStage)
-  val lss = Module(new MemoryStage)
-  val wbs = Module(new WrBackStage)
-  val reg = Module(new RegFile)
+  val ifs   = Module(new FetchStage(resetVector))
+  val ids   = Module(new DecodeStage)
+  val exs   = Module(new ExecuteStage)
+  val lss   = Module(new MemoryStage)
+  val wbs   = Module(new WrBackStage)
+  val reg   = Module(new RegFile)
   val clint = Module(new CLINT)
 
   val arbiter = Module(new AXIArbiter(2))
@@ -74,12 +74,27 @@ class rvCore(resetVector: BigInt) extends Module {
   ids.io.toReg <> reg.io.fromId
   reg.io.toId <> ids.io.fromReg
 
-  // AXIPortPassing(io.master, arbiter.io.device)
-  arbiter.io.hosts(0) <> ifs.io.iMem
-  arbiter.io.hosts(1) <> lss.io.dMem
-  arbiter.io.device <> locxbar.io.host
-  locxbar.io.devices(1) <> clint.io.port
-  AXIPortPassing(io.master, locxbar.io.devices(0))
+  if (resetVector == 0x3000_0000L) {
+    // AXIPortPassing(io.master, arbiter.io.device)
+    arbiter.io.hosts(0) <> ifs.io.iMem
+    arbiter.io.hosts(1) <> lss.io.dMem
+    arbiter.io.device <> locxbar.io.host
+    locxbar.io.devices(1) <> clint.io.port
+    AXIPortPassing(io.master, locxbar.io.devices(0))
+  } else {
+    arbiter.io := DontCare
+
+    val iMemBox = Module(new PMemBox)
+    iMemBox.io.master <> ifs.io.iMem
+    iMemBox.io.simid := 0.U // inst cache
+
+    val dMemBox = Module(new PMemBox)
+    locxbar.io.host <> lss.io.dMem
+    locxbar.io.devices(1) <> clint.io.port
+    locxbar.io.devices(0) <> dMemBox.io.master
+    dMemBox.io.simid := 1.U // data port
+    io.master := DontCare
+  }
 
   dontTouch(ifs.io)
   dontTouch(ids.io)
@@ -87,6 +102,8 @@ class rvCore(resetVector: BigInt) extends Module {
   dontTouch(lss.io)
   dontTouch(wbs.io)
   dontTouch(reg.io)
+  dontTouch(io.master)
+  dontTouch(io)
 
   io.slave := DontCare
 }
@@ -106,17 +123,17 @@ class rvCore(resetVector: BigInt) extends Module {
 // SDRAM	0xa000_0000~0xbfff_ffff
 // ChipLink MEM	0xc000_0000~0xffff_ffff
 // Reverse	其他
-
-class rvCoreSimEnv(resetVector: BigInt) extends Module {
-  val io   = IO(new Bundle {
-    val interrupt   = Input(Bool())
-  })
-  val pmem = Module(new PMemBox)
-  val core = Module(new rvCore(resetVector))
-  pmem.io.master <> core.io.master
-  core.io.interrupt := io.interrupt
-  core.io.slave := DontCare
-}
+//
+// class rvCoreSimEnv(resetVector: BigInt) extends Module {
+//   val io   = IO(new Bundle {
+//     val interrupt = Input(Bool())
+//   })
+//   val pmem = Module(new PMemBox)
+//   val core = Module(new rvCore(resetVector))
+//   pmem.io.master <> core.io.master
+//   core.io.interrupt := io.interrupt
+//   core.io.slave     := DontCare
+// }
 
 class rvCoreWrapper(resetVector: BigInt) extends Module {
   val io   = IO(new Bundle {
@@ -124,20 +141,9 @@ class rvCoreWrapper(resetVector: BigInt) extends Module {
     val managerPort = new AXIBus
     val subordiPort = Flipped(new AXIBus)
   })
-  if (resetVector == 0x8000_0000L) {
-    // Core-only mode
-    val simEnv = Module(new rvCoreSimEnv(resetVector))
-    simEnv.io.interrupt := io.interrupt
-    io.managerPort := DontCare
-    io.subordiPort := DontCare
-    dontTouch(simEnv.io)
-  } else {
-    val core = Module(new rvCore(resetVector))
-    core.io.interrupt := io.interrupt
-    AXIPortPassing(io.managerPort, core.io.master)
-    AXIPortPassing(core.io.slave, io.subordiPort)
-    dontTouch(core.io)
-  }
-  // val socSim = Module(new rvCoreSocSim)
-  // dontTouch(socSim.io)
+  val core = Module(new rvCore(resetVector))
+  core.io.interrupt := io.interrupt
+  AXIPortPassing(io.managerPort, core.io.master)
+  AXIPortPassing(core.io.slave, io.subordiPort)
+  dontTouch(core.io)
 }
