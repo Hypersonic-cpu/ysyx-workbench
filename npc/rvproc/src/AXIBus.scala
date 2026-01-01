@@ -99,11 +99,12 @@ class AXIArbiter(N: Int) extends Module {
   val state   = RegInit(idle)
   val serveId = Reg(IdxType())
 
-  val validReads = Cat(VecInit(io.hosts map (_.ar.valid)).reverse)
-  val validWrite = Cat(VecInit(io.hosts map (_.aw.valid)).reverse)
-  val validReqs  = validReads | validWrite
-  val validIdx   = PriorityEncoder(validReqs)
-  val usingIdx   = Mux(state === idle, validIdx, serveId)
+  val vReadsRev = Cat(VecInit(io.hosts map (_.ar.valid)))
+  val vWriteRev = Cat(VecInit(io.hosts map (_.aw.valid)))
+  val validReqs = vReadsRev | vWriteRev
+  val validIdx  = (N - 1).U - PriorityEncoder(validReqs)
+  val hasReq    = validReqs.orR
+  val usingIdx  = Mux(state === idle, validIdx, serveId)
 
   val pivot = io.hosts(usingIdx)
   pivot <> io.device
@@ -121,13 +122,13 @@ class AXIArbiter(N: Int) extends Module {
     io.hosts(i).w.ready  := selectThis && io.device.w.ready
   }
 
-  when(state === idle && validReqs.orR) {
+  when(state === idle && hasReq) {
     serveId := validIdx
   }
 
   val nextState = MuxLookup(state, idle)(
     Seq(
-      idle  -> Mux(validReqs.orR, serve, idle),
+      idle  -> Mux(hasReq, serve, idle),
       serve -> Mux(
         (io.device.r.valid && pivot.r.ready)
           || (io.device.b.valid && pivot.b.ready),

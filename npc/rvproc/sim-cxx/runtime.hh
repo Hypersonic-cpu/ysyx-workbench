@@ -36,7 +36,7 @@ extern "C" uint32_t vga_read(uint32_t addr);
  *             -> HW Handler <-> DPI-C
  */
 
-constexpr uint32_t MemLatency{30U};
+constexpr uint32_t MemLatency{1}; // {30U};
 extern "C" uint32_t axi_read(uint32_t araddr, uint32_t* prdata, uint16_t id);
 extern "C" uint32_t axi_write(uint32_t awaddr, uint32_t wdata,
                               unsigned char wstrb, uint16_t id);

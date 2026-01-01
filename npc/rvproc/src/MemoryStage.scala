@@ -27,36 +27,26 @@ class MemoryStage extends Module {
   val wrdt = ioex.rs2Val
   val dMem = io.dMem
 
-  val idle :: serve :: hold :: Nil = Enum(3)
+  // val idle :: serve :: hold :: Nil = Enum(3)
+  val idle :: serve :: Nil = Enum(2)
 
   val state     = RegInit(idle)
   val trigIss   = state === idle && io.in.valid && ioex.memOp.isEn
-  val delayedSt = RegInit(false.B)
-  when(io.in.valid) {
-    delayedSt := ioex.memOp.isSt
-  }
-  val reqReady  = Mux(ioex.memOp.isSt, dMem.aw.ready, dMem.ar.ready)
-  val respValid = Mux(~delayedSt, dMem.r.valid, dMem.b.valid)
+  val reqReady  = Mux(!ioex.memOp.isSt, dMem.aw.ready, dMem.ar.ready)
+  val respValid = Mux(!ioex.memOp.isSt, dMem.r.valid, dMem.b.valid)
 
+  // FIXME: awValid 和 bValid 同时高的时候 (1周期延迟), 会有问题吗?
   state := MuxLookup(state, idle)(
     Seq(
-      // 没有LS操作的时候不需要等到内存空闲, 避免等待
-      idle  -> MuxCase(
-        idle,
-        Seq(
-          (io.in.valid && ioex.memOp.isEn)  ->
-            Mux(trigIss && reqReady, serve, idle),
-          (io.in.valid && ~ioex.memOp.isEn) -> hold
-        )
-      ),
-      serve -> Mux(respValid, hold, serve),
-      hold  -> Mux(io.out.ready, idle, hold)
+      idle  -> Mux(trigIss && reqReady, serve, idle),
+      serve -> Mux(respValid, idle, serve)
     )
   )
 
-  io.out.valid := state === hold
-  // TODO: 内存没有就绪就让 Exu 等待是有问题的
-  io.in.ready  := state === idle // trigIss || ~ioex.memOp.isEn
+  // WARN: WBU如果需要等待, 则这里会出问题(respValid仅有1cyc高)
+  // val delay1Trig = RegNext(trigIss)
+  io.out.valid := io.in.valid && (!ioex.memOp.isEn || respValid)
+  io.in.ready  := io.out.ready && ((!trigIss && state === idle) || io.out.valid)
 
   dMem.ar.bits.addr  := addr // & Tp.AddrAligner()
   dMem.aw.bits.addr  := addr // & Tp.AddrAligner()
@@ -114,65 +104,37 @@ class MemoryStage extends Module {
   dMem.ar.valid := ~ioex.memOp.isSt && trigIss
   dMem.aw.valid := ioex.memOp.isSt && trigIss
   dMem.w.valid  := ioex.memOp.isSt && trigIss
-  dMem.r.ready  := ~ioex.memOp.isSt && state === serve
-  dMem.b.ready  := ioex.memOp.isSt && state === serve
-  // TODO: 新建一个foward逻辑, 进行锁存
-  val delayedLenOp = RegInit(MemLen.None)
-  val delayedSext  = RegInit(false.B)
-  val delayedShamt = RegInit(0.U(2.W))
-  val aluReg       = Reg(Tp.RegType())
-  val forwardReg   = Reg(new DecodeFoward)
+  dMem.r.ready  := ~ioex.memOp.isSt && io.out.ready //  && state === serve
+  dMem.b.ready  := ioex.memOp.isSt && io.out.ready  //  && state === serve
 
   val sext      = ioex.memOp.sExt
-  val lraw      = dMem.r.bits.data >> (delayedShamt << 3)
-  val loadLatch = Reg(Tp.RegType())
-  // iowb.lsuOut := loadLatch
+  val loadValue = dMem.r.bits.data >> (shamt << 3)
 
-  // FIXME: 
   // TODO: memory test
-  iowb.lsuOut := 
-    MuxLookup(delayedLenOp, 0.U)(
+  iowb.lsuOut :=
+    MuxLookup(ioex.memOp.len, 0.U)(
       Seq(
-        MemLen.Byte -> Mux(delayedSext, loadLatch(7, 0).SExt(), loadLatch(7, 0)),
-        MemLen.Half -> Mux(
-          delayedSext,
-          loadLatch(15, 0).SExt(),
-          loadLatch(15, 0)
+        MemLen.Byte -> Mux(
+          sext,
+          loadValue(7, 0).SExt(),
+          loadValue(7, 0)
         ),
-        MemLen.Word -> loadLatch
+        MemLen.Half -> Mux(
+          sext,
+          loadValue(15, 0).SExt(),
+          loadValue(15, 0)
+        ),
+        MemLen.Word -> loadValue
       )
     )
 
-  when(respValid) {
-    loadLatch := lraw
-  }
-
-  iowb.aluOut := aluReg
-  iowb.foward := forwardReg
-
-  when(io.in.valid) {
-    forwardReg   := ioex.foward
-    aluReg       := ioex.aluOut
-    delayedSext  := sext
-    delayedLenOp := ioex.memOp.len
-    delayedShamt := shamt
-  }
-
-  when(trigIss) {
-    printf(
-      cf"[ ${ioex.foward.pc}%x LS ] Req W[${ioex.memOp.isSt}%d]"
-        + cf" addr ${addr}%x, wrdt ${wrdt}%x, strb ${dMem.w.bits.strb}%x\n"
-    )
-  }.elsewhen(state === hold) {
-    printf(
-      cf"[ ${ioex.foward.pc}%x LS ] Resp ${dMem.r.bits.data}%x\n"
-    )
-  }
+  iowb.aluOut := io.in.bits.aluOut
+  iowb.foward := io.in.bits.foward
 
   val pmu = Module(new LoadStorePMU)
   pmu.io.clock    := clock
   pmu.io.reset    := reset
-  pmu.io.trigReq  := state === idle && trigIss && reqReady
-  pmu.io.trigResp := state === serve && respValid
+  pmu.io.trigReq  := false.B // state === idle && trigIss && reqReady
+  pmu.io.trigResp := false.B // state === serve && respValid
   pmu.io.addr     := addr
 }

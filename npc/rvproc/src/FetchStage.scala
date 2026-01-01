@@ -3,62 +3,65 @@ package rvproc
 import chisel3._
 import chisel3.util._
 import chisel3.assert.Assert
-// import chisel3.util.experimental.loadMemoryFromFileInline
-// import firrtl.annotations.MemoryLoadFileType
-
-import BitMath._
 import rvproc.axi4._
 import rvproc.axi4.AXI.RespStatus._
 import rvproc.axi4.AXI.BurstOpts._
 import rvproc.pmu.FetchPMU
+import BitMath._
 
 class FetchStage(resetVector: BigInt) extends Module {
-  val io   = IO(new Bundle {
+  val io = IO(new Bundle {
     val out    = Decoupled(new FetchToDecode)
     val fromId = Flipped(Decoupled(new DecodeBackward))
     val fromEx = Flipped(Decoupled(new ExecuteBackward))
     val fromWb = Flipped(Decoupled(new InstCommit))
     val iMem   = new AXIBus
   })
-  // val iMem = Module(new PMemBox)
-  val iMem = io.iMem
 
-  val idle :: serve :: hold :: start :: Nil = Enum(4)
+  val idle :: serve :: Nil = Enum(2)
 
-  val state   = RegInit(start)
-  val trigIss = (!reset.asBool) && 
-    ((state === start) || (io.fromWb.valid && state === idle))
-  assert((io.fromEx.valid || io.fromId.valid) Implies (state === hold))
-  state := MuxLookup(state, start)(
+  val iMem  = io.iMem
+  val state = RegInit(idle)
+
+  val trigIss   = (!reset.asBool) && state === idle && io.out.ready
+  val nextState = MuxLookup(state, idle)(
     Seq(
       idle  -> Mux(trigIss && iMem.ar.ready, serve, idle),
-      serve -> Mux(iMem.r.valid, hold, serve),
-      hold  -> Mux(io.out.ready, idle, hold),
-      start -> Mux(trigIss && iMem.ar.ready, serve, start)
+      serve -> Mux(iMem.r.valid, idle, serve)
     )
   )
+  state := nextState
 
-  io.out.valid    := state === hold
+  val pipeShift = io.out.ready && nextState =/= serve
+  val brid      = io.fromId.bits
+  val brex      = io.fromEx.bits
+  val brPending = RegInit(false.B)
+  val brIdWire = io.fromId.valid && brid.brRel
+  val brExWire = io.fromEx.valid && brex.brAbs
+  val flushWire = brIdWire || brExWire
+  brPending := (brPending || flushWire) && !pipeShift
+
+  val instValid = iMem.r.valid
+  val flushThis = brPending || flushWire
+
+  io.out.valid    := instValid && !flushThis
   io.fromEx.ready := true.B
   io.fromId.ready := true.B
-  io.fromWb.ready := state === idle && iMem.ar.ready
-  assert(
-    io.fromWb.valid Implies (state === idle),
-    cf"Write back to IFU of state ${state}"
-  )
+  io.fromWb.ready := true.B
 
-  // val ResetVector = 0x80000000L.U(ISA.RegBits.W)
-  // val ResetVector = 0x3000_0000L.U(ISA.RegBits.W)
-  val pc          = RegInit(resetVector.U(ISA.RegBits.W))
-  val nextPC      = RegInit(resetVector.U(ISA.RegBits.W))
+  val pc     = RegInit(resetVector.U(ISA.RegBits.W))
+  val nextPC = RegInit(resetVector.U(ISA.RegBits.W))
+  val pastPCs = Reg(Vec(5, Tp.AddrType()))
 
-  iMem.ar.bits.addr  := nextPC // NOTE:
-  iMem.ar.bits.size  := 0x2.U  // log2(4)
+  // TODO: iCache改成流水
+  iMem.ar.bits.addr  := pc
+  iMem.ar.bits.size  := 0x2.U        // log2(4)
   iMem.ar.bits.len   := 0.U
   iMem.ar.bits.burst := INCR
-  iMem.ar.bits.id    := 0.U    // TODO: ID=0
+  iMem.ar.bits.id    := 0.U          // TODO: ID=0
   iMem.ar.valid      := trigIss
-  iMem.r.ready       := state === serve
+  // NOTE: 让iCache等到直到IDU以后清空
+  iMem.r.ready       := io.out.ready // state === serve
   iMem.aw.valid      := false.B
   iMem.aw.bits.addr  := 0.U
   iMem.aw.bits.size  := 0.U
@@ -80,53 +83,41 @@ class FetchStage(resetVector: BigInt) extends Module {
     cf"Inst Fetch Failed, rresp = ${iMem.r.bits.resp}"
   )
 
-  val brid = io.fromId.bits
-  val brex = io.fromEx.bits
-  when(io.fromEx.valid || io.fromId.valid) {
+  when(flushWire) {
     val brTarget = MuxCase(
-      pc + 4.U,
+      nextPC,
       Seq(
-        brid.brRel -> (pc + brid.brDel),
-        brex.brAbs -> brex.brVal
+        // WARN: 必须优先处理 EX. 此时 IDU 的指令作废
+        brExWire -> brex.brVal,
+        brIdWire -> (pastPCs(0) + brid.brDel)
       )
     )
     nextPC := brTarget
-
-    printf(
-      cf"[ ${pc}%x BR ] Rel|AbsJ ${brid.brRel}|${brex.brAbs}"
-        + cf" nextPC ${brTarget}%x\n"
-    )
-  }
-  assert(
-    brid.brRel Excludes (brex.brAbs),
-    cf"Rel|Abs Jmp ${brid.brRel}|${brex.brAbs}"
-  )
-
-  when(io.fromWb.valid) {
-    pc := nextPC
+    when(pipeShift) {
+      pc := brTarget
+    }
+  }.otherwise {
+    when(pipeShift) {
+      pc     := nextPC
+      nextPC := nextPC + 4.U
+    }
   }
 
-  /** NOTE: To DecodeStage */
-  val instLatch = Reg(Tp.InstType())
-  when(iMem.r.valid) {
-    instLatch := iMem.r.bits.data
+  when (pipeShift) {
+    for (i <- 1 until 5) {
+      pastPCs(i) := pastPCs(i-1)
+    }
+    pastPCs(0) := pc
   }
 
   val ioid = io.out.bits
   ioid.pc   := pc
-  ioid.inst := instLatch
-
-  // when(state === hold) {
-  //   printf(cf"[ ${pc}%x IF ] Holding iMem Resp inst ${ioid.inst}%x\n")
-  // }.elsewhen(state === serve) {
-  //   printf(cf"[ ${pc}%x IF ] Waiting iMem Req of addr ${pc}%x\n")
-  // }
-  // printf(cf"< IF > curr state ${state}\n")
+  ioid.inst := iMem.r.bits.data
 
   val pmu = Module(new FetchPMU)
-  pmu.io.clock := clock
-  pmu.io.reset := reset
-  pmu.io.trigFetch := (state === idle && trigIss && iMem.ar.ready) || state === start
-  pmu.io.trigIssue := state === serve && iMem.r.valid
+  pmu.io.clock     := clock
+  pmu.io.reset     := reset
+  pmu.io.trigFetch := false.B // (state === idle && trigIss && iMem.ar.ready) || state === start
+  pmu.io.trigIssue := false.B // state === serve && iMem.r.valid
   pmu.io.pcChange  := pc
 }

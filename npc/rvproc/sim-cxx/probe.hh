@@ -297,7 +297,8 @@ read_inst_latch() {
 #if SOCMODE
   return ptop->rootp->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__ifs__DOT__instLatch;
 #else
-  return ptop->rootp->rvCore__DOT__ifs__DOT__instLatch;
+  // return ptop->rootp->rvCore__DOT__ifs__DOT__instLatch;
+  return 0;
 #endif
 }
 
@@ -309,7 +310,8 @@ read_ifs_state() {
 #if SOCMODE
   uint8_t val = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__ifs__DOT__state & 0b11;
 #else
-  uint8_t val = r->rvCore__DOT__ifs__DOT__state & 0b11;
+  // uint8_t val = r->rvCore__DOT__ifs__DOT__state & 0b11;
+  uint8_t val = 0;
 #endif
   return IFState(val);
 }
