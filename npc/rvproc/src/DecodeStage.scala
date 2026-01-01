@@ -104,7 +104,10 @@ class IDU extends Module {
       opValid,
       cf"Invalid opcode encountered: pc ${io.pc}%x : inst ${io.inst}%x"
     )
-    assert(io.valid Implies rvBase, cf"Inst[1:0] is not 0b11: opcode=${opcode}%x")
+    assert(
+      io.valid Implies rvBase,
+      cf"Inst[1:0] is not 0b11: opcode=${opcode}%x"
+    )
   }
 
   val sysRel   =
@@ -295,15 +298,22 @@ class DecodeStage extends Module {
     val toFetch = Decoupled(new DecodeBackward)
     val fenceI  = Decoupled(Bool())
     val isFlush = Flipped(Decoupled(Bool()))
+    val rawSrc  = Decoupled(new DecodeHazard)
+    val rawRes  = Input(Bool())
   })
 
-  val iDec = Module(new IDU)
+  val iDec      = Module(new IDU)
   val flushThis = io.isFlush.valid && io.isFlush.bits
   io.isFlush.ready := true.B
 
-  io.in.ready      := io.out.ready
+  val waitRAW = io.rawRes
+  io.rawSrc.valid    := io.in.valid
+  io.rawSrc.bits.rs1 := iDec.io.rs1
+  io.rawSrc.bits.rs2 := iDec.io.rs2
+
+  io.in.ready      := io.out.ready && !waitRAW
   // Flush IF and ID when brAbs (result on )
-  io.out.valid     := io.in.valid && !flushThis
+  io.out.valid     := io.in.valid && !flushThis && !waitRAW
   io.toFetch.valid := io.in.valid
   io.fenceI.valid  := io.in.valid
 
