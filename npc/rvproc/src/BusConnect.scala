@@ -33,6 +33,18 @@ object BusConnect {
   }
 }
 
+object RdPacket {
+  def apply[T <: Data](
+    in:     DecoupledIO[T],
+    signal: UInt,
+    pack:   DecoupledIO[UInt]
+  ): Unit = {
+    pack.valid := in.valid
+    pack.bits  := signal
+    pack.ready := DontCare
+  }
+}
+
 object PortPassing {
   object DriveDir extends Enumeration {
     val LeftDrivesRight, RightDrivesLeft = Value

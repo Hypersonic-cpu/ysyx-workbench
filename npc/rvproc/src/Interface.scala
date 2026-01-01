@@ -4,9 +4,11 @@ import chisel3._
 import chisel3.util._
 import chisel3.assert.Assert
 
+import chisel3._
+
 class FetchToDecode extends Bundle {
-  val pc     = Tp.RegType()
-  val inst   = Tp.RegType()
+  val pc   = Tp.RegType()
+  val inst = Tp.RegType()
 }
 
 class RegFromIDU extends Bundle {
@@ -34,14 +36,14 @@ class RegFromWBU extends Bundle {
 }
 
 object AluOp extends ChiselEnum {
-  val Add  = Value(0b000.U)
-  val Sll  = Value(0b001.U) // Shift left
-  val Slt  = Value(0b010.U)
-  val Sltu = Value(0b011.U)
-  val Xor  = Value(0b100.U)
-  val Srr  = Value(0b101.U) // Shift right
-  val Or   = Value(0b110.U)
-  val And  = Value(0b111.U)
+  val Add  = Value("b000".U)
+  val Sll  = Value("b001".U) // Shift left
+  val Slt  = Value("b010".U)
+  val Sltu = Value("b011".U)
+  val Xor  = Value("b100".U)
+  val Srr  = Value("b101".U) // Shift right
+  val Or   = Value("b110".U)
+  val And  = Value("b111".U)
 }
 
 class AluSel extends Bundle {
@@ -50,7 +52,7 @@ class AluSel extends Bundle {
   // NOTE: This field also represents SRA
   val rs2Invert = Bool()
   val rs1Invert = Bool()
-  val brSelCsr = Bool()
+  val brSelCsr  = Bool()
   // val saveCmp   = Bool()
   // val cmpImm    = Bool()
 }
@@ -72,17 +74,17 @@ class BrJmp extends Bundle {
 }
 
 object MemLen extends ChiselEnum {
-  val Byte = Value(0b00.U)
-  val Half = Value(0b01.U)
-  val Word = Value(0b10.U)
-  val None = Value(0b11.U)
+  val Byte = Value("b00".U)
+  val Half = Value("b01".U)
+  val Word = Value("b10".U)
+  val None = Value("b11".U)
 }
 
 class MemOp extends Bundle {
-  val len = MemLen()
-  val sExt  = Bool()
-  val isSt  = Bool()
-  def isEn  = { len =/= MemLen.None }
+  val len  = MemLen()
+  val sExt = Bool()
+  val isSt = Bool()
+  def isEn = { len =/= MemLen.None }
 }
 
 object WbSel extends ChiselEnum {
@@ -97,14 +99,19 @@ object WbSel extends ChiselEnum {
 //   val fromAlu, fromCsr = Value
 // }
 
+class DecodeHazard extends Bundle {
+  val rs1 = Tp.RegIdxType()
+  val rs2 = Tp.RegIdxType()
+}
+
 class DecodeBackward extends Bundle {
-  val brRel  = Bool()
-  val brDel  = Tp.RegType()
+  val brRel = Bool()
+  val brDel = Tp.RegType()
 }
 
 class ExecuteBackward extends Bundle {
-  val brAbs  = Bool()
-  val brVal  = Tp.RegType()
+  val brAbs = Bool()
+  val brVal = Tp.RegType()
 }
 
 class DecodeFoward extends Bundle {
@@ -128,8 +135,8 @@ class DecodeToExecute extends Bundle {
   val aluSel = new AluSel()
   val brAbs  = Bool()
 
-  val memOp  = new MemOp()
-  val aluEn  = Bool()
+  val memOp = new MemOp()
+  val aluEn = Bool()
   // val memEn  = Bool()
 
   val foward = new DecodeFoward()
@@ -151,6 +158,4 @@ class MemoryToWrBack extends Bundle {
   val foward = new DecodeFoward()
 }
 
-class InstCommit extends Bundle {
-
-}
+class InstCommit extends Bundle {}

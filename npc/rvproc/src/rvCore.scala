@@ -49,6 +49,7 @@ class rvCore(resetVector: BigInt) extends Module {
   val wbs   = Module(new WrBackStage)
   val reg   = Module(new RegFile)
   val clint = Module(new CLINT)
+  val raw   = Module(new RAWDet)
 
   val arbiter = Module(new AXIArbiter(2))
   val locxbar = Module(
@@ -74,6 +75,13 @@ class rvCore(resetVector: BigInt) extends Module {
   ids.io.toReg <> reg.io.fromId
   ids.io.fenceI.ready := true.B
   reg.io.toId <> ids.io.fromReg
+
+  // TODO: CSRRD
+  raw.io.decode <> ids.io.rawSrc
+  raw.io.raw <> ids.io.rawRes
+  RdPacket(exs.io.in, exs.io.in.bits.foward.gprRd, raw.io.exsrd)
+  RdPacket(lss.io.in, lss.io.in.bits.foward.gprRd, raw.io.lssrd)
+  RdPacket(wbs.io.in, wbs.io.in.bits.foward.gprRd, raw.io.wbsrd)
 
   if (resetVector == 0x3000_0000L) {
     // AXIPortPassing(io.master, arbiter.io.device)
