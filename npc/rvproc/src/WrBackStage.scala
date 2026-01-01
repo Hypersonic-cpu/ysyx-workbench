@@ -33,7 +33,8 @@ class WrBackStage extends Module {
     val toReg   = Decoupled(new RegFromWBU)
     val toFetch = Decoupled(new InstCommit)
   })
-  io.in.ready := io.toFetch.ready
+
+  io.in.ready      := true.B // io.toFetch.ready
   io.toReg.valid   := io.in.valid
   io.toFetch.valid := io.in.valid
 
@@ -46,9 +47,9 @@ class WrBackStage extends Module {
   iWbu.io.pc    := iofw.pc
   iWbu.io.wbSel := iofw.wbSel
 
-  when(io.in.valid) {
-    printf(cf"[ ${iofw.pc}%x WB ] Data = ${iWbu.io.gprdt}%x\n")
-  }
+  // when(io.in.valid) {
+  //   printf(cf"[ ${iofw.pc}%x WB ] Data = ${iWbu.io.gprdt}%x\n")
+  // }
 
   val ioreg = io.toReg.bits
   ioreg.csrWE   := iofw.csrWE

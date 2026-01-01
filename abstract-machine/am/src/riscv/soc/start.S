@@ -1,3 +1,5 @@
+// TODO: fence.i
+
 // FIRST STAGE
 .section boot1st, "ax"
 .globl _start
