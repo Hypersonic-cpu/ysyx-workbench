@@ -8,8 +8,7 @@ import rvproc.PortPassing.DriveDir
 import rvproc.device.UART
 import rvproc.device.CLINT
 import rvproc.device.CLINTAddr
-// import chisel3.util.experimental.loadMemoryFromFileInline
-// import firrtl.annotations.MemoryLoadFileType
+import rvproc.BusType._
 
 object BitMath {
   implicit class UIntSignExtender(val i: UInt) extends AnyVal {
@@ -62,16 +61,18 @@ class rvCore(resetVector: BigInt) extends Module {
     )
   )
 
-  BusConnect(ids.io.toFetch, ifs.io.fromId)
-  BusConnect(exs.io.toFetch, ifs.io.fromEx)
-  BusConnect(ifs.io.out, ids.io.in)
-  BusConnect(ids.io.out, exs.io.in)
-  BusConnect(exs.io.out, lss.io.in)
-  BusConnect(lss.io.out, wbs.io.in)
-  BusConnect(wbs.io.toReg, reg.io.fromWb)
-  BusConnect(wbs.io.toFetch, ifs.io.fromWb)
+  ids.io.toFetch <> ifs.io.fromId
+  exs.io.toFetch <> ifs.io.fromEx
+  exs.io.toDec <> ids.io.isFlush
+  BusConnect(ifs.io.out, ids.io.in, Pipeline)
+  BusConnect(ids.io.out, exs.io.in, Pipeline)
+  BusConnect(exs.io.out, lss.io.in, Pipeline)
+  BusConnect(lss.io.out, wbs.io.in, Pipeline)
+  wbs.io.toReg <> reg.io.fromWb
+  wbs.io.toFetch <> ifs.io.fromWb
 
   ids.io.toReg <> reg.io.fromId
+  ids.io.fenceI.ready := true.B
   reg.io.toId <> ids.io.fromReg
 
   if (resetVector == 0x3000_0000L) {
@@ -88,7 +89,6 @@ class rvCore(resetVector: BigInt) extends Module {
     iMemBox.io.master <> ifs.io.iMem
     iMemBox.io.simid := 0.U // inst cache
     iMemBox.io.flush := ids.io.fenceI.valid && ids.io.fenceI.bits
-    ids.io.fenceI.ready := true.B
 
     val dMemBox = Module(new PMemBox)
     locxbar.io.host <> lss.io.dMem
@@ -96,7 +96,7 @@ class rvCore(resetVector: BigInt) extends Module {
     locxbar.io.devices(0) <> dMemBox.io.master
     dMemBox.io.simid := 1.U // data port
     dMemBox.io.flush := false.B
-    io.master := DontCare
+    io.master        := DontCare
   }
 
   dontTouch(ifs.io)

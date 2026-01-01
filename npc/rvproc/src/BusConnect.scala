@@ -19,11 +19,15 @@ object BusConnect {
     rhs:   DecoupledIO[T],
     busTp: BusType = SingleCyc
   ) = {
-    // val arch: BusType = SingleCyc
     busTp match {
       case SingleCyc  => { rhs <> lhs }
       case MultiCyc   => { rhs <> lhs }
-      case Pipeline   => { rhs <> RegEnable(lhs, lhs.fire) }
+      case Pipeline   => {
+        val transmit = lhs.valid && rhs.ready
+        lhs.ready := rhs.ready
+        rhs.valid := RegEnable(lhs.valid, rhs.ready)
+        rhs.bits  := RegEnable(lhs.bits, transmit)
+      }
       case OutOfOrder => { rhs <> Queue(lhs, 16) }
     }
   }

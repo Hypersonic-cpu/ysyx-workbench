@@ -274,6 +274,7 @@ public:
   }
   void
   notifyCommit(addr_t pc) {
+    return;
     auto it = std::find_if(
       instboard.begin(), instboard.end(),
       [&pc](const iboard_t& ib) { return std::get<0>(ib) == pc; });

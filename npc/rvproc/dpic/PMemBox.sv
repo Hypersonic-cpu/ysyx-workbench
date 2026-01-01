@@ -161,7 +161,8 @@ module PMemReader (
   end
 
   req_not_conflict :
-  assert property (@(posedge clock) (io_master_arvalid) |-> (state == IDLE));
+  assert property (@(posedge clock) (io_master_arvalid) |->
+    (state == IDLE || (state == HOLD && io_master_rready)));
   no_count_at_idle :
   assert property (@(posedge clock) (delay_remain != 0) |-> (state == SERVE));
 
@@ -255,7 +256,8 @@ module PMemWriter (
   end
 
   req_not_conflict :
-  assert property (@(posedge clock) (io_master_awvalid) |-> (state == IDLE));
+  assert property (@(posedge clock) (io_master_awvalid) |->
+    (state == IDLE || (state == HOLD && io_master_bready)));
 
   no_count_at_idle :
   assert property (@(posedge clock) (delay_remain != 0) |-> (state == SERVE));

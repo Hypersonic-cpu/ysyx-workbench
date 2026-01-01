@@ -110,7 +110,7 @@ rettime:
 uint32_t
 axi_read(uint32_t araddr, uint32_t* prdata, uint16_t id) {
   // std::cerr << std::hex;
-  // std::cerr << "DPI-C axi read @ " << araddr
+  // std::cerr << "DPI-C axi read [" << id << "]@ " << araddr
   //           << " data = " << unifiedMem->readWord(araddr) << std::endl;
   assert(unifiedMem);
   if (iCache && id == 0) {
@@ -123,9 +123,9 @@ axi_read(uint32_t araddr, uint32_t* prdata, uint16_t id) {
 uint32_t
 axi_write(uint32_t awaddr, uint32_t wdata, unsigned char wstrb,
           uint16_t id) {
-  std::cerr << std::hex;
-  std::cerr << "DPI-C axi write [" << id << "] @ " << awaddr
-            << " data = " << wdata << std::endl;
+  // std::cerr << std::hex;
+  // std::cerr << "DPI-C axi write [" << id << "] @ " << awaddr
+  //           << " data = " << wdata << std::endl;
   assert(unifiedMem);
   if (awaddr == 0x1000'0000) [[unlikely]] {
     putchar(wdata);
