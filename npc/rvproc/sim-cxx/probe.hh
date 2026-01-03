@@ -283,7 +283,7 @@ read_reg(uint8_t regid) {
     case 0xd: ret = r->rvCore__DOT__reg_0__DOT__gpr__DOT__gprs_13; break;
     case 0xe: ret = r->rvCore__DOT__reg_0__DOT__gpr__DOT__gprs_14; break;
     case 0xf: ret = r->rvCore__DOT__reg_0__DOT__gpr__DOT__gprs_15; break;
-    case 0x10:ret = r->rvCore__DOT__ifs__DOT__pc; break;
+    case 0x10:ret = r->rvCore__DOT__wbs_io_in_bits_rfoward_pc ; break;
 #endif
     default: throw std::runtime_error(
                  "Invalid GPR read @ regid = " + std::to_string(regid));
@@ -292,38 +292,38 @@ read_reg(uint8_t regid) {
   return ret;
 }
 
-inline ureg_t
-read_inst_latch() {
-#if SOCMODE
-  return ptop->rootp->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__ifs__DOT__instLatch;
-#else
-  // return ptop->rootp->rvCore__DOT__ifs__DOT__instLatch;
-  return 0;
-#endif
-}
+// inline ureg_t
+// read_inst_latch() {
+// #if SOCMODE
+//   return ptop->rootp->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__ifs__DOT__instLatch;
+// #else
+//   // return ptop->rootp->rvCore__DOT__ifs__DOT__instLatch;
+//   return 0;
+// #endif
+// }
 
-enum IFState { Idle = 0, Serve, Hold, Start };
+// enum IFState { Idle = 0, Serve, Hold, Start };
 
-inline IFState
-read_ifs_state() {
-  auto r = ptop->rootp;
-#if SOCMODE
-  uint8_t val = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__ifs__DOT__state & 0b11;
-#else
-  // uint8_t val = r->rvCore__DOT__ifs__DOT__state & 0b11;
-  uint8_t val = 0;
-#endif
-  return IFState(val);
-}
+// inline IFState
+// read_ifs_state() {
+//   auto r = ptop->rootp;
+// #if SOCMODE
+//   uint8_t val = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__ifs__DOT__state & 0b11;
+// #else
+//   // uint8_t val = r->rvCore__DOT__ifs__DOT__state & 0b11;
+//   uint8_t val = 0;
+// #endif
+//   return IFState(val);
+// }
 
-extern IFState last_state;
-inline bool
-npc_inst_commit() {
-  return read_ifs_state() == Serve && last_state == Idle;
-}
+// extern IFState last_state;
+// inline bool
+// npc_inst_commit() {
+  // return read_ifs_state() == Serve && last_state == Idle;
+// }
 
-inline void
-upd_ifs_mcstate() { last_state = read_ifs_state(); }
+// inline void
+// upd_ifs_mcstate() { last_state = read_ifs_state(); }
 
 constexpr std::array<const char*, 4> csr_list {
   "mtvec", "mepc", "mstatus", "mcause"

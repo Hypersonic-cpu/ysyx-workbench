@@ -96,9 +96,9 @@ class IDU extends Module {
 
   val (opName, opValid) = InstOp.safe(opcode(6, 2))
   when(io.valid) {
-    printf(
-      cf"[ ${io.pc}%x ID ] inst ${io.inst}%x ${opName} rs1 ${io.rs1} rs2 ${io.rs2} rd ${io.rd}\n"
-    )
+    // printf(
+    //   cf"[ ${io.pc}%x ID ] inst ${io.inst}%x ${opName} rs1 ${io.rs1} rs2 ${io.rs2} rd ${io.rd}\n"
+    // )
 
     assert(
       opValid,
@@ -314,8 +314,8 @@ class DecodeStage extends Module {
   io.in.ready      := io.out.ready && !waitRAW
   // Flush IF and ID when brAbs (result on )
   io.out.valid     := io.in.valid && !flushThis && !waitRAW
-  io.toFetch.valid := io.in.valid
-  io.fenceI.valid  := io.in.valid
+  io.toFetch.valid := io.in.valid && !flushThis && !waitRAW
+  io.fenceI.valid  := io.in.valid && !flushThis && !waitRAW
 
   iDec.io.valid := io.in.valid
   iDec.io.ready := io.out.ready

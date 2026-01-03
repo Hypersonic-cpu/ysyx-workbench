@@ -34,7 +34,6 @@ void nvboard_bind_all_pins(TOP_NAME* top);
 
 trace::FstTracer* pwave = nullptr;
 const TOP_NAME* trace::ptop = nullptr;
-trace::IFState trace::last_state = trace::IFState::Start;
 
 void
 dump_handler() {
@@ -162,10 +161,9 @@ main(int argc, char* argv[]) {
 #if SOCMODE
   trace::DiffTester diff(mrom->dataVec());
 #else
-  trace::DiffTester diff(unifiedMem->dataVec());
+  auto const diff = std::make_unique<trace::DiffTester>(unifiedMem->dataVec());
+  pdiff = diff.get();
 #endif
-  // Force RESET_VECTOR of NEMU = current PC
-  diff.copy();
   trace::GuestTracer ccdb(options::elf_file);
   pccdb = &ccdb;
 
@@ -173,6 +171,8 @@ main(int argc, char* argv[]) {
   ppmu = spmu.get();
 
   single_reset(top, contextp, tfp);
+  // Force RESET_VECTOR of NEMU = current PC
+  diff->copy();
 
   while (currCyc < MaxCyc) {
     if (options::runtime_dump_opt.cycle_no)
@@ -184,16 +184,19 @@ main(int argc, char* argv[]) {
 #if NVBENA
     nvboard_update();
 #endif
+    // for (int i = 0 ; i < 4; i++) {
+    //   printf("%08x ", unifiedMem->dataVec().at(i));
+    // }
+    // printf("\n");
 
-    trace::upd_ifs_mcstate();
     single_cycle(top, contextp, tfp);
 
     ccdb.inst_trace();
 
-    if (auto mismatch = diff.test_on_commit(); !mismatch.empty()) {
+    if (auto mismatch = diff->test_on_commit(); !mismatch.empty()) {
       for (auto const& [id, golden, real] : mismatch) {
         std::cerr << std::format(
-                       "Reg {:>2d} mismatch: golden {:>8x} real ${:>8x}", id,
+                       "Reg {:>2d} mismatch: golden {:>8x} real {:>8x}", id,
                        golden, real)
                   << std::endl;
       }

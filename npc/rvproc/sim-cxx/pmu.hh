@@ -274,15 +274,15 @@ public:
   }
   void
   notifyCommit(addr_t pc) {
-    return;
-    auto it = std::find_if(
-      instboard.begin(), instboard.end(),
-      [&pc](const iboard_t& ib) { return std::get<0>(ib) == pc; });
-    v_assert(it != instboard.end(), "Cannot find pc", pc, "in inst board");
-    auto const [pc_, tp, t0] = *it;
-    auto const deltat = curr_tick() - t0;
-    instcyc.sample(tp, deltat);
-    instboard.erase(it);
+    // return;
+    // auto it = std::find_if(
+    //   instboard.begin(), instboard.end(),
+    //   [&pc](const iboard_t& ib) { return std::get<0>(ib) == pc; });
+    // v_assert(it != instboard.end(), "Cannot find pc", pc, "in inst board");
+    // auto const [pc_, tp, t0] = *it;
+    // auto const deltat = curr_tick() - t0;
+    // instcyc.sample(tp, deltat);
+    // instboard.erase(it);
   }
 };
 
