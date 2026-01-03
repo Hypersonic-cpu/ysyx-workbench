@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "ccdb.hh"
+#include "difftest.hh"
 #include "pmu.hh"
 #include "probe.hh"
 
@@ -73,6 +74,7 @@ extern cacheSim::CacheSimulator* iCache;
 
 extern trace::GuestTracer* pccdb;
 extern trace::SoftPerfUnit* ppmu;
+extern trace::DiffTester* pdiff;
 
 class RuntimeBin {
 private:

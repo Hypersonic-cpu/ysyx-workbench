@@ -258,44 +258,44 @@ namespace trace {
   public:
     void
     inst_trace() {
-      if constexpr (!options::gdbg_enable) return;
-      if (read_ifs_state() == IFState::Hold) {
-        pcLatch = read_reg(RegNum);
-        instLatch = read_inst_latch();
-        return;
-      }
-      if (!npc_inst_commit()) return;
-      instCnt++;
-      auto pc = pcLatch;
-      auto inst = instLatch;
-
-      constexpr size_t BufferLen{256U};
-      char buf[BufferLen] = {0};
-      disassemble(buf, BufferLen, pc, (uint8_t *)(&inst), 4);
-
-      auto ent = InstEnt{pc, inst, buf};
-      instBuf.append(ent);
-      if (options::runtime_dump_opt.inst_buf) {
-        ent.printent(std::cerr);
-      }
-
-      using util::bits, util::sext;
-      bool is_jalr = bits(inst, 6, 2) == 0b11001;
-      bool is_jal  = bits(inst, 6, 2) == 0b11011;
-      if (is_jalr || is_jal) {
-        uint8_t rd = bits(inst, 11, 7);
-        uint8_t rs1 = bits(inst, 19, 15);
-        uint32_t immI = sext(bits(inst, 31, 20), 12);
-        uint32_t immJ = sext(
-          (bits(inst, 31, 31) << 20) | (bits(inst, 19, 12) << 12) |
-            (bits(inst, 20, 20) << 11) | (bits(inst, 30, 21) << 1),
-          21);
-
-        auto src1 = is_jalr ? read_reg(rs1) : 0;
-        auto dst = is_jalr ? ((immI + src1) & (~1U)) : (immJ + pc);
-        // Check ELF symbol for pc / dst
-        frame_trace(pc + 4, dst, rd == 0);
-      }
+      // if constexpr (!options::gdbg_enable) return;
+      // if (read_ifs_state() == IFState::Hold) {
+      //   pcLatch = read_reg(RegNum);
+      //   instLatch = read_inst_latch();
+      //   return;
+      // }
+      // if (!npc_inst_commit()) return;
+      // instCnt++;
+      // auto pc = pcLatch;
+      // auto inst = instLatch;
+      //
+      // constexpr size_t BufferLen{256U};
+      // char buf[BufferLen] = {0};
+      // disassemble(buf, BufferLen, pc, (uint8_t *)(&inst), 4);
+      //
+      // auto ent = InstEnt{pc, inst, buf};
+      // instBuf.append(ent);
+      // if (options::runtime_dump_opt.inst_buf) {
+      //   ent.printent(std::cerr);
+      // }
+      //
+      // using util::bits, util::sext;
+      // bool is_jalr = bits(inst, 6, 2) == 0b11001;
+      // bool is_jal  = bits(inst, 6, 2) == 0b11011;
+      // if (is_jalr || is_jal) {
+      //   uint8_t rd = bits(inst, 11, 7);
+      //   uint8_t rs1 = bits(inst, 19, 15);
+      //   uint32_t immI = sext(bits(inst, 31, 20), 12);
+      //   uint32_t immJ = sext(
+      //     (bits(inst, 31, 31) << 20) | (bits(inst, 19, 12) << 12) |
+      //       (bits(inst, 20, 20) << 11) | (bits(inst, 30, 21) << 1),
+      //     21);
+      //
+      //   auto src1 = is_jalr ? read_reg(rs1) : 0;
+      //   auto dst = is_jalr ? ((immI + src1) & (~1U)) : (immJ + pc);
+      //   // Check ELF symbol for pc / dst
+      //   frame_trace(pc + 4, dst, rd == 0);
+      // }
     }
 
     size_t

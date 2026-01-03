@@ -131,6 +131,10 @@ class MemoryStage extends Module {
   iowb.aluOut := io.in.bits.aluOut
   iowb.foward := io.in.bits.foward
 
+  when (io.out.valid) {
+    printf(cf"WR?${ioex.memOp.isSt} Addr ${ioex.aluOut}%x LoadData ${iowb.lsuOut}%x WrData ${wrdt}%x\n")
+  }
+
   val pmu = Module(new LoadStorePMU)
   pmu.io.clock    := clock
   pmu.io.reset    := reset

@@ -14,6 +14,7 @@ class HazardDet extends Module {
 }
 
 class RAWDet extends Module {
+  // TODO: CSR
   val io = IO(new Bundle {
     val raw    = Output(Bool())
     val decode = Flipped(Decoupled(new DecodeHazard))
