@@ -67,10 +67,10 @@ class CsrFile extends Module {
     }
   }
 
-  printf(
-    cf"[ CSR ] C[${io.idxr}%x] = ${io.out}%x"
-      + cf" C[${io.idxw}%x] <${io.wrEn} ${io.data}%x\n"
-  )
+  // printf(
+  //   cf"[ CSR ] C[${io.idxr}%x] = ${io.out}%x"
+  //     + cf" C[${io.idxw}%x] <${io.wrEn} ${io.data}%x\n"
+  // )
 
   // when (io.ecall) {
   //   mcause := 11.U
@@ -108,11 +108,11 @@ class GprFile extends Module {
 
   io.rs1V := gpr1V
   io.rs2V := gpr2V
-  printf(
-    cf"[ GPR ] R[${io.rs1}] = ${io.rs1V}%x"
-      + cf" R[${io.rs2}] = ${io.rs2V}%x"
-      + cf" R[${io.rd}] <${io.wrEn} ${io.data}%x\n"
-  )
+  // printf(
+  //   cf"[ GPR ] R[${io.rs1}] = ${io.rs1V}%x"
+  //     + cf" R[${io.rs2}] = ${io.rs2V}%x"
+  //     + cf" R[${io.rd}] <${io.wrEn} ${io.data}%x\n"
+  // )
 }
 
 class RegFile extends Module {

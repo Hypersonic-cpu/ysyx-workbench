@@ -23,6 +23,7 @@
 #include <cpu/cpu.h>
 #include <cpu/ifetch.h>
 #include <cpu/decode.h>
+#include <stdlib.h>
 #include <sys/cdefs.h>
 
 #define R(i) gpr(i)

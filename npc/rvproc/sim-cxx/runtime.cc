@@ -1,4 +1,6 @@
 #include "runtime.hh"
+#include "difftest.hh"
+#include "options.hh"
 #include "pmu.hh"
 #include <cassert>
 #include <cstdint>
@@ -152,6 +154,7 @@ axi_cache_flush(uint16_t id) {
 
 trace::GuestTracer* pccdb = nullptr;
 trace::SoftPerfUnit* ppmu = nullptr;
+trace::DiffTester* pdiff = nullptr;
 
 void
 notify_issue(uint32_t pc) {
@@ -180,5 +183,8 @@ notify_decode(uint32_t pc, unsigned char itype, unsigned char iop) {
 
 void
 notify_commit(uint32_t pc) {
-  ppmu->notifyCommit(pc);
+  // ppmu->notifyCommit(pc);
+  if constexpr (options::diff_enable) {
+    pdiff->setFire();
+  }
 }

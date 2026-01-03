@@ -50,7 +50,7 @@ class FetchStage(resetVector: BigInt) extends Module {
   io.fromWb.ready := true.B
 
   val pc     = RegInit(resetVector.U(ISA.RegBits.W))
-  val nextPC = RegInit(resetVector.U(ISA.RegBits.W))
+  val nextPC = RegInit((resetVector+4).U(ISA.RegBits.W))
   val pastPCs = Reg(Vec(5, Tp.AddrType()))
 
   // TODO: iCache改成流水
