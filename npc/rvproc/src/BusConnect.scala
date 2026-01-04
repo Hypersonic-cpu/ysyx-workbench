@@ -35,13 +35,16 @@ object BusConnect {
 
 object RdPacket {
   def apply[T <: Data](
-    in:     DecoupledIO[T],
-    signal: UInt,
-    pack:   DecoupledIO[UInt]
+    stage:  DecoupledIO[T],
+    signal: DecodeFoward,
+    output: DecoupledIO[RdPair]
   ): Unit = {
-    pack.valid := in.valid
-    pack.bits  := signal
-    pack.ready := DontCare
+    output.valid      := stage.valid
+    output.bits.csrRd := signal.csrRd
+    output.bits.csrWE := signal.csrWE
+    output.bits.gprRd := signal.gprRd
+    output.bits.gprWE := signal.gprWE
+    output.ready      := DontCare
   }
 }
 

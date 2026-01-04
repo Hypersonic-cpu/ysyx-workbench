@@ -307,9 +307,13 @@ class DecodeStage extends Module {
   io.isFlush.ready := true.B
 
   val waitRAW = io.rawRes
-  io.rawSrc.valid    := io.in.valid
-  io.rawSrc.bits.rs1 := iDec.io.rs1
-  io.rawSrc.bits.rs2 := iDec.io.rs2
+  io.rawSrc.valid     := io.in.valid
+  io.rawSrc.bits.rs1  := iDec.io.rs1
+  io.rawSrc.bits.rs2  := iDec.io.rs2
+  io.rawSrc.bits.csr  := iDec.io.csrir
+  io.rawSrc.bits.use1 := true.B // !iDec.io.aluSel.rs1SelPC
+  io.rawSrc.bits.use2 := true.B // !iDec.io.aluSel.rs2SelImm || iDec.io.memAcc.isSt
+  io.rawSrc.bits.useC := iDec.io.wbSel === WbSel.fromCsr || iDec.io.aluSel.brSelCsr
 
   io.in.ready      := io.out.ready && !waitRAW
   // Flush IF and ID when brAbs (result on )
