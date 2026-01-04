@@ -35,12 +35,14 @@ object BitMath {
 }
 import BitMath._
 
-class rvCore(resetVector: BigInt) extends Module {
+class rvCore(isSoc: Boolean) extends Module {
   val io = IO(new Bundle {
     val interrupt = Input(Bool())
     val master    = new AXIBus
     val slave     = Flipped(new AXIBus)
   })
+
+  val resetVector = if (isSoc) 0x3000_0000L else 0x8000_0000L
 
   val ifs   = Module(new FetchStage(resetVector))
   val ids   = Module(new DecodeStage)
@@ -76,14 +78,13 @@ class rvCore(resetVector: BigInt) extends Module {
   ids.io.fenceI.ready := true.B
   reg.io.toId <> ids.io.fromReg
 
-  // TODO: CSRRD
   raw.io.decode <> ids.io.rawSrc
   raw.io.raw <> ids.io.rawRes
-  RdPacket(exs.io.in, exs.io.in.bits.foward.gprRd, raw.io.exsrd)
-  RdPacket(lss.io.in, lss.io.in.bits.foward.gprRd, raw.io.lssrd)
-  RdPacket(wbs.io.in, wbs.io.in.bits.foward.gprRd, raw.io.wbsrd)
+  RdPacket(exs.io.in, exs.io.in.bits.foward, raw.io.exsrd)
+  RdPacket(lss.io.in, lss.io.in.bits.foward, raw.io.lssrd)
+  RdPacket(wbs.io.in, wbs.io.in.bits.foward, raw.io.wbsrd)
 
-  if (resetVector == 0x3000_0000L) {
+  if (isSoc) {
     // AXIPortPassing(io.master, arbiter.io.device)
     arbiter.io.hosts(0) <> ifs.io.iMem
     arbiter.io.hosts(1) <> lss.io.dMem
@@ -146,13 +147,13 @@ class rvCore(resetVector: BigInt) extends Module {
 //   core.io.slave     := DontCare
 // }
 
-class rvCoreWrapper(resetVector: BigInt) extends Module {
+class rvCoreWrapper(isSoc: Boolean) extends Module {
   val io   = IO(new Bundle {
     val interrupt   = Input(Bool())
     val managerPort = new AXIBus
     val subordiPort = Flipped(new AXIBus)
   })
-  val core = Module(new rvCore(resetVector))
+  val core = Module(new rvCore(isSoc))
   core.io.interrupt := io.interrupt
   AXIPortPassing(io.managerPort, core.io.master)
   AXIPortPassing(core.io.slave, io.subordiPort)

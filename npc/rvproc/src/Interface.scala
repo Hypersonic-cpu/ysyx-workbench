@@ -99,11 +99,6 @@ object WbSel extends ChiselEnum {
 //   val fromAlu, fromCsr = Value
 // }
 
-class DecodeHazard extends Bundle {
-  val rs1 = Tp.RegIdxType()
-  val rs2 = Tp.RegIdxType()
-}
-
 class DecodeBackward extends Bundle {
   val brRel = Bool()
   val brDel = Tp.RegType()
