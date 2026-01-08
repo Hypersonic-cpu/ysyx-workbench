@@ -1,6 +1,8 @@
 #pragma once
 
 // clang-format off
+#include "nlohmann/json.hpp"
+#include "nlohmann/json_fwd.hpp"
 #include <array>
 #include <cstdint>
 #include <iomanip>
@@ -14,7 +16,7 @@
 #if SOCMODE
 #include "VysyxSoCFull.h"
 #include "VysyxSoCFull___024root.h"
-#else 
+#else
 #include "VrvCore.h"
 #include "VrvCore___024root.h"
 #endif
@@ -26,10 +28,12 @@
 #define ANSI_B_RED "\033[1;31m"
 #define ANSI_B_GREEN "\033[1;32m"
 
+using json = nlohmann::json;
+
 using addr_t = uint32_t;
 using ureg_t = uint32_t;
 using handler_t = void (*)();
-extern handler_t dumpHandler;
+extern handler_t abortHandler;
 
 template<typename Derived, typename Base>
 concept IsDerived = std::derived_from<Derived, Base>;
@@ -44,7 +48,7 @@ v_assert(bool cond, const Args&... args) {
     std::cerr << std::endl;
     // vl_fatal(__FILE__, __LINE__, "v_assert", "FAIL");
     // throw std::runtime_error("Assertion failed");
-    dumpHandler();
+    abortHandler();
   }
 }
 
@@ -76,19 +80,6 @@ sext(uint32_t num, unsigned bitnum) {
   const unsigned shift = 32 - bitnum;
   return static_cast<uint32_t>(static_cast<int32_t>(num << shift) >> shift);
 }
-
-// template<unsigned N>
-// class SgnExtHelper {
-//   signed int val : N;
-// };
-//
-// template<unsigned N>
-// inline uint32_t
-// sext(uint32_t num) {
-//   SgnExtHelper<N> tmp;
-//   tmp.val = num;
-//   return static_cast<uint32_t> (tmp.val);
-// }
 
 inline std::ostream&
 sout32(std::ostream& os, char fill = '0', std::string prefix = "0x") {
@@ -291,39 +282,6 @@ read_reg(uint8_t regid) {
   }
   return ret;
 }
-
-// inline ureg_t
-// read_inst_latch() {
-// #if SOCMODE
-//   return ptop->rootp->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__ifs__DOT__instLatch;
-// #else
-//   // return ptop->rootp->rvCore__DOT__ifs__DOT__instLatch;
-//   return 0;
-// #endif
-// }
-
-// enum IFState { Idle = 0, Serve, Hold, Start };
-
-// inline IFState
-// read_ifs_state() {
-//   auto r = ptop->rootp;
-// #if SOCMODE
-//   uint8_t val = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__ifs__DOT__state & 0b11;
-// #else
-//   // uint8_t val = r->rvCore__DOT__ifs__DOT__state & 0b11;
-//   uint8_t val = 0;
-// #endif
-//   return IFState(val);
-// }
-
-// extern IFState last_state;
-// inline bool
-// npc_inst_commit() {
-  // return read_ifs_state() == Serve && last_state == Idle;
-// }
-
-// inline void
-// upd_ifs_mcstate() { last_state = read_ifs_state(); }
 
 constexpr std::array<const char*, 4> csr_list {
   "mtvec", "mepc", "mstatus", "mcause"
