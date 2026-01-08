@@ -59,6 +59,9 @@ CXXFLAGS += $(INCFLAGS) -DTOP_NAME="\"V$(TOPNAME)\"" -std=c++23 -g
 CXXFLAGS += -DLOGENA=$(LOGENA) -DDIFFENA=$(DIFFENA) -DDBGENA=$(DBGENA) -DNVBENA=$(NVBENA)
 CXXFLAGS += -DSOCMODE=$(SOCMODE)
 
+#json
+CXXFLAGS += -I$(NPC_HOME)/libs/json/include
+
 # capstone
 LIBCAPSTONE = $(NEMU_HOME)/tools/capstone/repo/libcapstone.so.5
 CXXFLAGS += -I$(NEMU_HOME)/tools/capstone/repo/include

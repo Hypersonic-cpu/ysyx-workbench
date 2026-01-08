@@ -2,6 +2,7 @@
 
 #include "probe.hh"
 
+#include <algorithm>
 #include <capstone/capstone.h>
 #include <cassert>
 #include <cstddef>
@@ -17,11 +18,30 @@
 #include <string>
 #include <sys/mman.h>
 #include <sys/stat.h>
+#include <unordered_map>
+#include <utility>
 #include <vector>
 
 namespace trace {
 
-template <typename T> class DistriBase {
+class StatsBase {
+protected:
+  const std::string name_;
+
+public:
+  StatsBase(const std::string& name)
+      : name_{name} {}
+
+  std::string
+  name() const {
+    return name_;
+  }
+
+  virtual json gen_json() const = 0;
+  virtual void dump_stats(std::ostream& os = std::cout) const = 0;
+};
+
+template <typename T> class DistriBase : public StatsBase {
 protected:
   enum MetaIdx { Overflow = 0, Underflow, Min, Max, Num_MetaIdx };
   inline static const std::vector<std::string> MetaName{
@@ -36,18 +56,23 @@ protected:
   std::vector<size_t> arr;
   std::vector<size_t> meta;
   std::vector<double> stat;
-  size_t total;
-  const std::string name;
+  size_t samples;
 
 public:
   DistriBase(T min, T max, T delta, const std::string& name)
-      : min{min}, max{max}, delta{delta}, maxidx{(max - min) / delta},
-        arr(maxidx, 0U), meta(Num_MetaIdx, 0U), stat(Num_StatIdx, 0.0),
-        total{0}, name{name} {}
+      : StatsBase(name)
+      , min{min}
+      , max{max}
+      , delta{delta}
+      , maxidx{(max - min) / delta}
+      , arr(maxidx, 0U)
+      , meta(Num_MetaIdx, 0U)
+      , stat(Num_StatIdx, 0.0)
+      , samples{0} {}
 
   virtual void
   sample(T v, size_t n = 1) {
-    total += n;
+    samples += n;
     if (v >= max) {
       meta.at(Overflow) += n;
     } else if (v < min) {
@@ -59,40 +84,40 @@ public:
     meta.at(Max) = std::max<T>(v, meta.at(Max));
     meta.at(Min) = std::min<T>(v, meta.at(Min));
     stat.at(Sum) += static_cast<double>(v);
-    auto frac = static_cast<double>(total - n) / total;
+    auto frac = static_cast<double>(samples - n) / samples;
     stat.at(Avg) = frac * stat.at(Avg) + (1.0 - frac) * v;
   }
 
-  std::vector<size_t>
-  get_stats() const {
-    auto ret = arr;
-    for (auto const& elem : meta) {
-      ret.emplace_back(elem);
+protected:
+  template <typename R>
+  static auto
+  gen_zip(const std::vector<std::string>& nm, const std::vector<R>& val) {
+    assert(nm.size() == val.size() && "Inconsist length in zip");
+    std::vector<std::pair<std::string, R>> ret{};
+    for (size_t i = 0; i < nm.size(); i++) {
+      ret.emplace_back(nm.at(i), val.at(i));
     }
-    for (auto const& elem : stat) {
-      ret.emplace_back(elem);
-    }
-    return std::move(ret);
+    return std::unordered_map<std::string, R>(ret.begin(), ret.end());
   }
 
-  std::vector<std::string>
-  get_indices() const {
-    std::vector<std::string> ret(maxidx);
+public:
+  json
+  gen_json() const override {
+    std::vector<std::string> buckets{};
     for (auto i = 0U; i < maxidx; i++) {
-      ret.at(i) = std::to_string(min + delta * i);
+      buckets.emplace_back(std::to_string(min + delta * i));
     }
-    for (auto const& elem : MetaName) {
-      ret.emplace_back(elem);
-    }
-    for (auto const& elem : StatName) {
-      ret.emplace_back(elem);
-    }
-    return std::move(ret);
+    json ret = gen_zip(buckets, arr);
+    ret.update(json(gen_zip(StatName, stat)));
+    ret.update(json(gen_zip(MetaName, meta)));
+    ret["samples"] = samples;
+    return ret;
   }
 
+public:
   size_t
-  get_total() const {
-    return total;
+  get_samples() const {
+    return samples;
   }
 
   double
@@ -106,29 +131,9 @@ public:
   }
 
   void
-  dump_stats(std::ostream& os = std::cout) const {
-    os << this->name << std::endl;
-    os << std::format("{:8s} : {}", "samples", get_total()) << std::endl;
-    for (auto i = 0U; i < maxidx; i++) {
-      os << std::format("{:8s} : {}", std::to_string(min + delta * i),
-                        arr.at(i))
-         << std::endl;
-    }
-    for (auto i = 0U; i < MetaName.size(); i++) {
-      os << std::format("{:8s} : {}", MetaName.at(i), meta.at(i))
-         << std::endl;
-    }
-    for (auto i = 0U; i < StatName.size(); i++) {
-      os << std::format("{:8s} : {:f}", StatName.at(i), stat.at(i))
-         << std::endl;
-    }
-    os << std::endl;
-  }
-
-  void
-  dump_brief(std::ostream& os) const {
-    os << std::format("{:10s} : samples {:12d} , avg {:f}", this->name,
-                      get_total(), get_avg())
+  dump_stats(std::ostream& os) const override {
+    os << std::format("{:10s} : samples {:10d} , avg {:f}", this->name_,
+                      get_samples(), get_avg())
        << std::endl;
   }
 };
@@ -139,7 +144,8 @@ private:
 
 public:
   DistriDelta(T min, T max, T delta, T init, const std::string& name)
-      : DistriBase<T>(min, max, delta, name), last{init} {}
+      : DistriBase<T>(min, max, delta, name)
+      , last{init} {}
 
   void
   sample(T v, size_t n = 1) override {
@@ -156,16 +162,17 @@ public:
 
 template <typename U, typename T>
   requires IsDerived<U, DistriBase<T>>
-class DistriVec {
+class DistriVec : public StatsBase {
 protected:
   std::vector<U> cats;
-  size_t sumtotal;
-  const std::string name;
+  size_t sumsamples;
 
 public:
   DistriVec(size_t n, T min, T max, T delta, T init, const std::string& name,
             const std::vector<std::string>& names)
-      : sumtotal{0}, name{name}, cats{} {
+      : StatsBase(name)
+      , sumsamples{0}
+      , cats{} {
     assert(n == names.size());
     for (auto i = 0U; i < n; i++) {
       auto const nm =
@@ -180,7 +187,7 @@ public:
 
   void
   sample(size_t cat, T value) {
-    sumtotal++;
+    sumsamples++;
     cats.at(cat).sample(value);
   }
 
@@ -188,21 +195,33 @@ public:
   size() const {
     return cats.size();
   }
+
   size_t
-  total() const {
-    return sumtotal;
+  samples() const {
+    return sumsamples;
   }
+
   const U&
   operator[](size_t idx) const {
     return cats[idx];
   }
 
+  json
+  gen_json() const override{
+    json ret{};
+    for (auto const& c : cats) {
+      ret[c.name()] = c.gen_json();
+    }
+    ret["samples"] = samples();
+    return ret;
+  }
+
   void
-  dump_stats(std::ostream& os) const {
-    os << std::format("{} total samples {:d}", this->name, sumtotal)
+  dump_stats(std::ostream& os) const override{
+    os << std::format("{} samples {:d}", this->name(), sumsamples)
        << std::endl;
     for (const auto& c : cats) {
-      c.dump_brief(os);
+      c.dump_stats(os);
     }
     os << std::endl;
   }
@@ -225,6 +244,12 @@ private:
   DistriDelta<uint64_t> lscyc;
   DistriVec<DistriBase<uint64_t>, uint64_t> instcyc;
 
+  std::vector<StatsBase*> statslist{
+    &ifcyc,
+    &lscyc,
+    &instcyc,
+  };
+
   // FIXME: FIFO 在 pipeline 的情况下是对的
   // 不需要分inst类型统计含IF 的周期...
   using iboard_t = std::tuple<addr_t, size_t, uint64_t>;
@@ -232,19 +257,29 @@ private:
 
 public:
   SoftPerfUnit()
-      : instboard{}, ifcyc(0, 200, 20, std::numeric_limits<int64_t>::max(),
-                           "Inst Fetch Cycles"),
-        lscyc(0, 200, 20, std::numeric_limits<int64_t>::max(),
-              "Load Store Cycles"),
-        instcyc(InstOpName.size(), 0, 200, 20,
+      : instboard{}
+      , ifcyc(0, 200, 20, std::numeric_limits<int64_t>::max(),
+              "Inst Fetch Cycles")
+      , lscyc(0, 200, 20, std::numeric_limits<int64_t>::max(),
+              "Load Store Cycles")
+      , instcyc(InstOpName.size(), 0, 200, 20,
                 std::numeric_limits<int64_t>::max(), "Inst Cats",
                 InstOpName) {}
 
   void
   dump_stats(std::ostream& os = std::cout) const {
-    ifcyc.dump_stats(os);
-    lscyc.dump_stats(os);
-    instcyc.dump_stats(os);
+    for (auto const& ptr : statslist) {
+      ptr->dump_stats(os);
+    }
+  }
+
+  json
+  stats_json() const {
+    json ret{};
+    for (auto const& ptr : statslist) {
+      ret[ptr->name()] = ptr->gen_json();
+    }
+    return ret;
   }
 
   void
@@ -278,11 +313,9 @@ public:
     // auto it = std::find_if(
     //   instboard.begin(), instboard.end(),
     //   [&pc](const iboard_t& ib) { return std::get<0>(ib) == pc; });
-    // v_assert(it != instboard.end(), "Cannot find pc", pc, "in inst board");
-    // auto const [pc_, tp, t0] = *it;
-    // auto const deltat = curr_tick() - t0;
-    // instcyc.sample(tp, deltat);
-    // instboard.erase(it);
+    // v_assert(it != instboard.end(), "Cannot find pc", pc, "in inst
+    // board"); auto const [pc_, tp, t0] = *it; auto const deltat =
+    // curr_tick() - t0; instcyc.sample(tp, deltat); instboard.erase(it);
   }
 };
 
