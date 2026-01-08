@@ -1,10 +1,17 @@
+#include "nlohmann/json.hpp"
+#include "nlohmann/json_fwd.hpp"
+
 #include <algorithm>
 #include <cassert>
+#include <cstdio>
+#include <filesystem>
 #include <format>
+#include <fstream>
 #include <getopt.h>
 #include <iostream>
 #include <memory>
 #include <ostream>
+#include <tuple>
 #include <vector>
 #include <verilated.h>
 #include <verilated_fst_c.h>
@@ -36,7 +43,7 @@ trace::FstTracer* pwave = nullptr;
 const TOP_NAME* trace::ptop = nullptr;
 
 void
-dump_handler() {
+abort_handler() {
   if (pccdb)
     pccdb->dump_print();
   if (pwave)
@@ -45,19 +52,44 @@ dump_handler() {
 }
 
 void
-dump_stats() {
+print_stats() {
   // pccdb->dump_stats(std::cerr);
-  // ppmu->dump_stats(std::cerr);
+  ppmu->dump_stats(std::cerr);
   if (iCache) {
     auto const stat = iCache->stats();
     std::cerr << std::format(
-                   "iCache: Hit {:d} Miss {:d} Total {:d} MissRate {:f}\n",
+                   ">> iCache:\n"
+                   "   Hit {:d} Miss {:d} Total {:d} MissRate {:f}\n",
                    stat.hits, stat.misses, stat.accesses, stat.missRate())
               << std::endl;
   }
+  if (!options::record_perf)
+    return;
 }
 
-handler_t dumpHandler = dump_handler;
+inline json
+dump_stats() {
+  json obj{};
+  obj["l1icache"] = json({});
+  obj["pmu"] = ppmu->stats_json();
+  return obj;
+}
+
+inline json
+dump_config() {
+  json conf{};
+  json obj{};
+  if (iCache) {
+    obj["size"] = iCache->size();
+    obj["assoc"] = iCache->assoc();
+    obj["blkSize"] = iCache->blksize();
+    obj["latency"] = iCache->latency();
+  }
+  conf["l1icache"] = obj;
+  return conf;
+}
+
+handler_t abortHandler = abort_handler;
 
 inline void
 single_cycle(const std::unique_ptr<TOP_NAME>& top,
@@ -98,6 +130,7 @@ single_reset(const std::unique_ptr<TOP_NAME>& top,
 int
 main(int argc, char* argv[]) {
   assert(argc >= 2);
+  options::parse_args(argc, argv);
 
 #if SOCMODE
   auto mromBin = std::make_shared<RuntimeBin>(
@@ -125,12 +158,12 @@ main(int argc, char* argv[]) {
   unifiedMem = uMem.get();
 
   auto instCache = std::make_unique<cacheSim::CacheSimulator>(
-    /* size */ 1024, /* lineSize */ 16, /* assoc */ 1);
+    /* size */ options::arch_config_val.at(options::ICacheSize),
+    /* lineSize */ options::arch_config_val.at(options::ICacheBlock),
+    /* assoc */ options::arch_config_val.at(options::ICacheAssoc));
   iCache = instCache.get();
-  // iCache = nullptr;
 #endif
 
-  options::parse_args(argc, argv);
   if (options::wave_enable) {
     assert(!options::wave_file.empty());
   }
@@ -153,15 +186,13 @@ main(int argc, char* argv[]) {
   nvboard_init();
 #endif
 
-  const size_t MaxCyc{options::max_cycles};
-  size_t currCyc{0U};
-  std::string retCause = "??";
-  int retBad = 0;
-
+  /** CONFIG BEGIN */
 #if SOCMODE
   trace::DiffTester diff(mrom->dataVec());
+  pdiff = &diff;
 #else
-  auto const diff = std::make_unique<trace::DiffTester>(unifiedMem->dataVec());
+  auto const diff =
+    std::make_unique<trace::DiffTester>(unifiedMem->dataVec());
   pdiff = diff.get();
 #endif
   trace::GuestTracer ccdb(options::elf_file);
@@ -170,25 +201,41 @@ main(int argc, char* argv[]) {
   const std::unique_ptr<trace::SoftPerfUnit> spmu{new trace::SoftPerfUnit};
   ppmu = spmu.get();
 
+  std::ofstream statFile;
+  std::ofstream confFile;
+  if (options::record_perf) {
+    try {
+      std::filesystem::create_directories(options::outdir);
+    } catch (const std::filesystem::filesystem_error& e) {
+      std::cerr << "File create failed: " << e.what() << std::endl;
+    }
+    statFile.open(options::outdir + "/stats.json");
+    confFile.open(options::outdir + "/config.json");
+    assert(statFile.is_open() && confFile.is_open());
+    confFile << std::setw(2) << dump_config() << std::endl;
+    confFile.close();
+  }
+  /* ^^^ CONFIG END ^^^ */
+
+  const size_t MaxCyc{options::max_cycles};
+  size_t currCyc{0U};
+  std::string retCause = "??";
+  int retBad = 0;
+
+  /** RESET SIMULATOR */
   single_reset(top, contextp, tfp);
-  // Force RESET_VECTOR of NEMU = current PC
   diff->copy();
 
+  /** SIMULATION LOOP */
   while (currCyc < MaxCyc) {
     if (options::runtime_dump_opt.cycle_no)
       std::cerr << std::format("\r== @posedge of Cycle #{} ==", currCyc)
                 << std::endl;
-
     currCyc++;
 
 #if NVBENA
     nvboard_update();
 #endif
-    // for (int i = 0 ; i < 4; i++) {
-    //   printf("%08x ", unifiedMem->dataVec().at(i));
-    // }
-    // printf("\n");
-
     single_cycle(top, contextp, tfp);
 
     ccdb.inst_trace();
@@ -235,7 +282,13 @@ final:
                            currCyc, instNum, ipc)
             << std::endl;
 
-  dump_stats();
+  print_stats();
+
+  if (options::record_perf) {
+    statFile << std::setw(2) << dump_stats() << std::endl;
+    statFile.close();
+  }
+
 #if NVBENA
   nvboard_quit();
 #endif
