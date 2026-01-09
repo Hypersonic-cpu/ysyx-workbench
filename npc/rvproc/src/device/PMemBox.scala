@@ -18,3 +18,4 @@ class PMemBox extends Module {
   dontTouch(clock)
   dontTouch(reset)
 }
+

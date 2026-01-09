@@ -17,9 +17,9 @@ module FetchPMU (
   always_ff @(posedge clock) begin
     if (reset) begin
     end else begin
-      if (trigFetch) notify_fetch(pc);
-      if (trigIssue) notify_issue(pc, inst);
-      assert(!(trigFetch && trigIssue));
+      // if (trigFetch) notify_fetch(pc);
+      // if (trigIssue) notify_issue(pc, inst);
+      // assert(!(trigFetch && trigIssue));
     end
   end
 

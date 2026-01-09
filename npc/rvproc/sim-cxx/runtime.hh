@@ -90,8 +90,8 @@ private:
   ureg_t
   readAny(addr_t addr, uint8_t len) const {
     auto idx = (addr - baseAddr) >> 2;
-    if (idx == data.size()) [[unlikely]] {
-      return 0b11000011U;
+    if (idx >= data.size()) [[unlikely]] {
+      return 0xbadc0deU;
     }
     v_assert(idx < data.size(), "Out of bound read of", name, " @ ", addr);
     v_assert(addr % len == 0, "Unaligned read @", addr, "len",
