@@ -6,6 +6,10 @@ import chisel3.assert.Assert
 
 import chisel3._
 
+object GlbCtrl {
+  val debug = true
+}
+
 class FetchToDecode extends Bundle {
   val pc   = Tp.RegType()
   val inst = Tp.RegType()
@@ -49,10 +53,11 @@ object AluOp extends ChiselEnum {
 class AluSel extends Bundle {
   val rs1SelPC  = Bool()
   val rs2SelImm = Bool()
-  // NOTE: This field also represents SRA
   val rs2Invert = Bool()
   val rs1Invert = Bool()
   val brSelCsr  = Bool()
+  val shArith   = Bool()
+  val cmpUsgn   = Bool()
   // val saveCmp   = Bool()
   // val cmpImm    = Bool()
 }
@@ -63,14 +68,15 @@ class BrCmp extends Bundle {
   val blts = Bool()
 }
 
-class BrJmp extends Bundle {
+class BrInst extends Bundle {
   val bIfeq = Bool()
   val bIfne = Bool()
   val bIflt = Bool()
   val bIfge = Bool()
-  // def isBr = bIfeq && bIfne && bIflt && bIfge
-  // val bEnable = Bool()
-  // val jUncond = Bool()
+  // val bUsgn = Bool()
+  val isAbs = Bool()
+  val isBr  = Bool()
+  // def isBr = bIfeq || bIfne || bIflt || bIfge
 }
 
 object MemLen extends ChiselEnum {
@@ -99,14 +105,15 @@ object WbSel extends ChiselEnum {
 //   val fromAlu, fromCsr = Value
 // }
 
-class DecodeBackward extends Bundle {
-  val brRel = Bool()
-  val brDel = Tp.RegType()
-}
+// class DecodeBackward extends Bundle {
+// }
 
 class ExecuteBackward extends Bundle {
+  val brRel = Bool()
+  val brDel = Tp.RegType()
   val brAbs = Bool()
   val brVal = Tp.RegType()
+  def take = brRel || brAbs
 }
 
 class DecodeFoward extends Bundle {
@@ -119,6 +126,7 @@ class DecodeFoward extends Bundle {
   val ecall  = Bool()
   // PC is debug only...
   val pc     = Tp.RegType()
+  val inst   = UInt((if (GlbCtrl.debug) 32 else 0).W)
   val csrVal = Tp.RegType()
 }
 
@@ -127,14 +135,12 @@ class DecodeToExecute extends Bundle {
   val rs2V   = Tp.RegType()
   val imm    = Tp.RegType()
   val aluOp  = AluOp()
-  val aluSel = new AluSel()
-  val brAbs  = Bool()
+  val aluSel = new AluSel
+  val brInst = new BrInst
 
-  val memOp = new MemOp()
+  val memOp = new MemOp
   val aluEn = Bool()
-  // val memEn  = Bool()
-
-  val foward = new DecodeFoward()
+  val foward = new DecodeFoward
 }
 
 class ExecuteToMemory extends Bundle {

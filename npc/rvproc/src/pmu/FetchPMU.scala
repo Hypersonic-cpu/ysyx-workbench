@@ -17,10 +17,10 @@ class FetchPMU extends BlackBox with HasBlackBoxPath {
     val reset     = Input(Reset())
     val trigFetch = Input(Bool())
     val trigIssue = Input(Bool())
-    val pcChange  = Input(Tp.AddrType())
+    val pc        = Input(Tp.AddrType())
+    val inst      = Input(Tp.RegType())
     // val isIdle    = Input(Bool())
     // val idleCause = Input(IFIdleCause())
   })
   addPath(PATH.dpic("FetchPMU.sv"))
 }
-
