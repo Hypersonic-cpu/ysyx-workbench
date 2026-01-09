@@ -29,30 +29,6 @@ object CsrOp extends ChiselEnum {
   val CsrRC = Value("b11".U)
 }
 
-class Comparator extends Module {
-  val io     = IO(new Bundle {
-    val in1 = Input(Tp.RegType())
-    val in2 = Input(Tp.RegType())
-    val out = Output(new BrCmp)
-  })
-  val cmp1s  = io.in1
-  val cmp2s  = ~io.in2
-  val cmpSum = 1.U + cmp1s.UExt() + cmp2s.UExt()
-  val cmpOF  = (~(cmp1s.MSB() ^ cmp2s.MSB())) &
-    (cmp1s.MSB() ^ cmpSum.MSB())
-  val cmpLTU = ~cmpSum.MSB(-1).asBool
-  val cmpLTS = (cmpSum.MSB() ^ cmpOF).asBool
-  val cmpEQ  = ~cmpSum(ISA.RegBits - 1, 0).orR.asBool
-  io.out.bltu := cmpLTU
-  io.out.blts := cmpLTS
-  io.out.beq  := cmpEQ
-
-  // io.takeBr :=
-  //   (cmpLT && b.bIflt) || (~cmpLT && b.bIfge) ||
-  //   (cmpEQ && b.bIfeq) || (~cmpEQ && b.bIfne)
-  //
-}
-
 class IDU extends Module {
   val io = IO(new Bundle {
     val valid  = Input(Bool())
@@ -70,9 +46,7 @@ class IDU extends Module {
     val aluSel = Output(new AluSel)
     val fenceI = Output(Bool())
 
-    // br dest = imm
-    val brRel = Output(Bool())
-    val brAbs = Output(Bool())
+    val brInst = Output(new BrInst)
 
     val wbSel  = Output(WbSel())
     val ebreak = Output(Bool())
@@ -85,7 +59,6 @@ class IDU extends Module {
 
     val rs1Val = Input(Tp.RegType())
     val rs2Val = Input(Tp.RegType())
-    // val csrVal = Input(Tp.RegType())
   })
 
   val opcode  = io.inst(6, 0)
@@ -96,10 +69,6 @@ class IDU extends Module {
 
   val (opName, opValid) = InstOp.safe(opcode(6, 2))
   when(io.valid) {
-    // printf(
-    //   cf"[ ${io.pc}%x ID ] inst ${io.inst}%x ${opName} rs1 ${io.rs1} rs2 ${io.rs2} rd ${io.rd}\n"
-    // )
-
     assert(
       opValid,
       cf"Invalid opcode encountered: pc ${io.pc}%x : inst ${io.inst}%x"
@@ -172,14 +141,13 @@ class IDU extends Module {
   val instArith =
     opName === InstOp.OpReg || opName === InstOp.OpImm
   val instBr    = opName === InstOp.Branch
-  val cmpUsgn   = funct3(1).asBool
   val instSys   = opName === InstOp.System
   val sysOp     = Mux(isEcall, CsrOp.CsrRW, CsrOp(funct3(1, 0)))
   val instCsr   = instSys && (sysOp =/= CsrOp.None)
 
-  /** NOTE: ALU commands -> EXU */
-  val aluEn =
-    (instTp =/= ITYPE.tB) && (opName =/= InstOp.Jalr) && (!isFenceI)
+  /** ALU commands -> EXU */
+  val aluEn = !isFenceI
+  // (instTp =/= ITYPE.tB) && (opName =/= InstOp.Jalr) && (!isFenceI)
   val aluOp = MuxCase(
     AluOp.Add,
     Seq(
@@ -196,18 +164,26 @@ class IDU extends Module {
     opName === InstOp.Auipc ||
       opName === InstOp.Jal ||
       isEcall
-  // opName === InstOp.Jalr ||
-  // || instBr
-  io.aluSel.rs2SelImm := instTp =/= ITYPE.tR
+  io.aluSel.rs2SelImm := instTp =/= ITYPE.tR && instTp =/= ITYPE.tB
   io.aluSel.brSelCsr  := isEcall || isMret
 
   io.aluSel.rs1Invert := instCsr && sysOp === CsrOp.CsrRC
   io.aluSel.rs2Invert :=
-    (opName === InstOp.OpReg && funct7(5).asBool) ||
-      (instArith && io.aluOp === AluOp.Srr && funct7(5).asBool)
+    (
+      // Op-Reg : SUB, not SRA
+      opName === InstOp.OpReg &&
+        aluOp === AluOp.Add && funct7(5).asBool
+    ) || (
+      // SLT(I)(U)
+      instArith && (aluOp === AluOp.Sltu || aluOp === AluOp.Slt)
+    ) || instBr
+  io.aluSel.shArith   := instArith && aluOp === AluOp.Srr && funct7(5)
+  io.aluSel.cmpUsgn   :=
+    (instArith && aluOp === AluOp.Sltu) ||
+      (instBr && funct3(1).asBool)
 
   // imm is always sign-extended
-  io.imm   := MuxLookup(instTp, 0.U)(
+  io.imm := MuxLookup(instTp, 0.U)(
     Seq(
       ITYPE.tI -> immI,
       ITYPE.tU -> immU,
@@ -216,9 +192,8 @@ class IDU extends Module {
       ITYPE.tB -> immB
     )
   )
-  io.brAbs := (opName === InstOp.Jalr) || isEcall || isMret
 
-  /** NOTE: Memory options -> EXU -> LSU */
+  // Memory options -> EXU -> LSU
   io.memAcc.len  := MemLen(
     Mux(
       opName === InstOp.Load || opName === InstOp.Store,
@@ -229,30 +204,15 @@ class IDU extends Module {
   io.memAcc.isSt := instTp === ITYPE.tS
   io.memAcc.sExt := ~funct3(2)
 
-  /** NOTE: Compare and relative branch -> IFU */
   val isJal = opName === InstOp.Jal
-  val bIfeq = (instBr && funct3 === "b000".U) || isJal
-  val bIfne = (instBr && funct3 === "b001".U) || isJal
-  val bIflt = instBr && ((funct3 & "b101".U) === "b100".U)
-  val bIfge = instBr && ((funct3 & "b101".U) === "b101".U)
+  io.brInst.isAbs := opName === InstOp.Jalr || isEcall || isMret
+  io.brInst.bIfeq := (instBr && funct3 === "b000".U) || isJal
+  io.brInst.bIfne := (instBr && funct3 === "b001".U) || isJal
+  io.brInst.bIflt := instBr && ((funct3 & "b101".U) === "b100".U)
+  io.brInst.bIfge := instBr && ((funct3 & "b101".U) === "b101".U)
+  io.brInst.isBr  := instBr
+  // io.brInst.bUsgn := funct3(1).asBool
 
-  val iCmp = Module(new Comparator)
-  iCmp.io.in1 := io.rs1Val
-  iCmp.io.in2 := io.rs2Val
-  val brCmp = iCmp.io.out
-  val brEq  = brCmp.beq
-  val brLt  = Mux(instBr && cmpUsgn, brCmp.bltu, brCmp.blts)
-  io.brRel :=
-    (bIfeq && brEq) || (bIfne && ~brEq) ||
-      (bIflt && brLt) || (bIfge && ~brLt)
-
-  // when(io.valid) {
-  //   printf(
-  //     cf"[ ${io.pc}%x CP ] cmp(<,=) (${brLt},${brEq}), jmp(<,>=,=,!=) (${bIflt},${bIfge},${bIfeq},${bIfne}) take${io.brRel}\n"
-  //   )
-  // }
-
-  /** NOTE: Foward -> WBU */
   io.wbSel := MuxCase(
     WbSel.fromAlu,
     Seq(
@@ -295,19 +255,29 @@ class DecodeStage extends Module {
     val fromReg = Flipped(Decoupled(new RegToIDU()))
     val toReg   = Decoupled(new RegFromIDU())
 
-    val toFetch = Decoupled(new DecodeBackward)
-    val fenceI  = Decoupled(Bool())
-    val isFlush = Flipped(Decoupled(Bool()))
-    val rawSrc  = Decoupled(new DecodeHazard)
-    val rawRes  = Input(Bool())
+    val fenceI = Decoupled(Bool())
+    val flush  = Flipped(Decoupled(Bool()))
+    val rawSrc = Decoupled(new DecodeHazard)
+    val rawRes = Input(Bool())
   })
 
-  val iDec      = Module(new IDU)
-  val flushThis = io.isFlush.valid && io.isFlush.bits
-  io.isFlush.ready := true.B
+  val flushed = io.flush.bits
+  // val flushed = RegInit(false.B)
+  // flushed := MuxCase(
+  //   flushed,
+  //   Seq(
+  //     io.flush.valid -> io.flush.bits,
+  //     io.in.valid    -> false.B
+  //   )
+  // )
+
+  io.flush.ready := io.out.ready
+  val validCtrl = io.in.valid && !flushed
+
+  val iDec = Module(new IDU)
 
   val waitRAW = io.rawRes
-  io.rawSrc.valid     := io.in.valid
+  io.rawSrc.valid     := validCtrl
   io.rawSrc.bits.rs1  := iDec.io.rs1
   io.rawSrc.bits.rs2  := iDec.io.rs2
   io.rawSrc.bits.csr  := iDec.io.csrir
@@ -315,19 +285,18 @@ class DecodeStage extends Module {
   io.rawSrc.bits.use2 := true.B // !iDec.io.aluSel.rs2SelImm || iDec.io.memAcc.isSt
   io.rawSrc.bits.useC := iDec.io.wbSel === WbSel.fromCsr || iDec.io.aluSel.brSelCsr
 
-  io.in.ready      := io.out.ready && !waitRAW
+  io.in.ready     := io.out.ready && !waitRAW
   // Flush IF and ID when brAbs (result on )
-  io.out.valid     := io.in.valid && !flushThis && !waitRAW
-  io.toFetch.valid := io.in.valid && !flushThis && !waitRAW
-  io.fenceI.valid  := io.in.valid && !flushThis && !waitRAW
+  io.out.valid    := validCtrl && !waitRAW
+  io.fenceI.valid := validCtrl && !waitRAW
 
-  iDec.io.valid := io.in.valid
+  iDec.io.valid := validCtrl
   iDec.io.ready := io.out.ready
 
-  /** NOTE: fence.i */
+  /** fence.i */
   io.fenceI.bits := iDec.io.fenceI
 
-  /** NOTE: Reg Read */
+  /** Reg Read */
   io.toReg.valid     := io.in.valid
   io.toReg.bits.rs1  := iDec.io.rs1
   io.toReg.bits.rs2  := iDec.io.rs2
@@ -339,12 +308,12 @@ class DecodeStage extends Module {
   iDec.io.rs1Val := rs1Val
   iDec.io.rs2Val := rs2Val
 
-  /** NOTE: Input from FetchStage */
+  /** Input from FetchStage */
   val ioif = io.in.bits
   iDec.io.inst := ioif.inst
   iDec.io.pc   := ioif.pc
 
-  /** NOTE: To ExecuteStage */
+  /** To ExecuteStage */
   val ioex = io.out.bits
   ioex.imm    := iDec.io.imm
   ioex.rs1V   := rs1Val
@@ -352,8 +321,11 @@ class DecodeStage extends Module {
   ioex.aluOp  := iDec.io.aluOp
   ioex.aluSel := iDec.io.aluSel
   ioex.memOp  := iDec.io.memAcc
-  ioex.brAbs  := iDec.io.brAbs
   ioex.aluEn  := iDec.io.aluEn
+  ioex.brInst := iDec.io.brInst
+
+  /** STA: Get inst -> get rs1V: T=623
+    */
 
   val iofw = ioex.foward
   iofw.gprRd  := iDec.io.rd
@@ -364,10 +336,25 @@ class DecodeStage extends Module {
   iofw.ebreak := iDec.io.ebreak
   iofw.ecall  := iDec.io.ecall
   iofw.pc     := ioif.pc
+  iofw.inst   := io.in.bits.inst
   iofw.csrVal := csrVal
-
-  /** NOTE: To WriteBack */
-  val iobk = io.toFetch.bits
-  iobk.brDel := iDec.io.imm
-  iobk.brRel := iDec.io.brRel
 }
+
+// class Comparator extends Module {
+//   val io     = IO(new Bundle {
+//     val in1 = Input(Tp.RegType())
+//     val in2 = Input(Tp.RegType())
+//     val out = Output(new BrCmp)
+//   })
+//   val cmp1s  = io.in1
+//   val cmp2s  = ~io.in2
+//   val cmpSum = 1.U + cmp1s.UExt() + cmp2s.UExt()
+//   val cmpOF  = (~(cmp1s.MSB() ^ cmp2s.MSB())) &
+//     (cmp1s.MSB() ^ cmpSum.MSB())
+//   val cmpLTU = ~cmpSum.MSB(-1).asBool
+//   val cmpLTS = (cmpSum.MSB() ^ cmpOF).asBool
+//   val cmpEQ  = ~cmpSum(ISA.RegBits - 1, 0).orR.asBool
+//   io.out.bltu := cmpLTU
+//   io.out.blts := cmpLTS
+//   io.out.beq  := cmpEQ
+// }

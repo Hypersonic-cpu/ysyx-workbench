@@ -1,10 +1,9 @@
-#include "runtime.hh"
 #include "difftest.hh"
 #include "options.hh"
 #include "pmu.hh"
+#include "runtime.hh"
 #include <cassert>
 #include <cstdint>
-#include <memory>
 
 #if SOCMODE
 
@@ -157,7 +156,7 @@ trace::SoftPerfUnit* ppmu = nullptr;
 trace::DiffTester* pdiff = nullptr;
 
 void
-notify_issue(uint32_t pc) {
+notify_issue(uint32_t pc, uint32_t inst) {
   ppmu->notifyIFIssue(pc);
 }
 
@@ -182,8 +181,10 @@ notify_decode(uint32_t pc, unsigned char itype, unsigned char iop) {
 }
 
 void
-notify_commit(uint32_t pc) {
+notify_commit(uint32_t pc, uint32_t inst) {
   // ppmu->notifyCommit(pc);
+  pccdb->inst_trace(pc, inst);
+  pdiff->upd_dut_pc(pc);
   if constexpr (options::diff_enable) {
     pdiff->setFire();
   }

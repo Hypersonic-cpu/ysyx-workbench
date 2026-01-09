@@ -65,5 +65,6 @@ class WrBackStage extends Module {
   pmu.io.clock     := clock
   pmu.io.reset     := reset
   pmu.io.pc        := iofw.pc
-  pmu.io.isNewInst := RegNext(ioreg.instRet)
+  pmu.io.inst      := iofw.inst
+  pmu.io.isNewInst := ioreg.instRet
 }
