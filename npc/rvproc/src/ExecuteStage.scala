@@ -149,6 +149,7 @@ class ExecuteStage extends Module {
   iobk.brDel := iExe.io.brDel
   iobk.brAbs := iExe.io.brAbs
   iobk.brVal := iExe.io.brVal
+  iobk.brLPC := ioid.foward.pc
 
   /** Back to Decoder */
   io.brDet.valid := validCtrl

@@ -68,23 +68,12 @@ class IDU extends Module {
   val csrid12 = io.inst(31, 20)
 
   val (opName, opValid) = InstOp.safe(opcode(6, 2))
-  when(io.valid) {
-    assert(
-      opValid,
-      cf"Invalid opcode encountered: pc ${io.pc}%x : inst ${io.inst}%x"
-    )
-    assert(
-      io.valid Implies rvBase,
-      cf"Inst[1:0] is not 0b11: opcode=${opcode}%x"
-    )
-  }
-
-  val sysRel   =
+  val sysRel            =
     (opName === InstOp.System) && ~io.inst(19, 7).orR
-  val isEbreak = sysRel && csrid12 === 1.U
-  val isEcall  = sysRel && csrid12 === 0.U
-  val isMret   = sysRel && csrid12 === "b_0011000_00010".U
-  val isFenceI = opName === InstOp.MiscM && funct3 === "b001".U
+  val isEbreak          = sysRel && csrid12 === 1.U
+  val isEcall           = sysRel && csrid12 === 0.U
+  val isMret            = sysRel && csrid12 === "b_0011000_00010".U
+  val isFenceI          = opName === InstOp.MiscM && funct3 === "b001".U
 
   io.ebreak := isEbreak
   io.ecall  := isEcall
@@ -204,13 +193,14 @@ class IDU extends Module {
   io.memAcc.isSt := instTp === ITYPE.tS
   io.memAcc.sExt := ~funct3(2)
 
-  val isJal = opName === InstOp.Jal
-  io.brInst.isAbs := opName === InstOp.Jalr || isEcall || isMret
+  val isJal  = opName === InstOp.Jal
+  val isJalr = opName === InstOp.Jalr
+  io.brInst.isAbs := isJalr || isEcall || isMret
   io.brInst.bIfeq := (instBr && funct3 === "b000".U) || isJal
   io.brInst.bIfne := (instBr && funct3 === "b001".U) || isJal
   io.brInst.bIflt := instBr && ((funct3 & "b101".U) === "b100".U)
   io.brInst.bIfge := instBr && ((funct3 & "b101".U) === "b101".U)
-  io.brInst.isBr  := instBr
+  io.brInst.isBr  := instBr || io.brInst.isAbs || isJal
   // io.brInst.bUsgn := funct3(1).asBool
 
   io.wbSel := MuxCase(
@@ -237,11 +227,25 @@ class IDU extends Module {
     */
   io.csrWE := instCsr
 
+  if (GlbCtrl.debug) {
+    val lastBr = RegNext(io.brInst.isBr)
+    when(io.valid) {
+      assert(
+        !opValid Implies lastBr,
+        cf"Invalid opcode encountered: pc ${io.pc}%x : inst ${io.inst}%x"
+      )
+      assert(
+        io.valid Implies (lastBr || rvBase),
+        cf"Inst[1:0] is not 0b11: opcode=${opcode}%x"
+      )
+    }
+  }
+
   /** PMU related */
   val pmu = Module(new DecodePMU)
   pmu.io.clock     := clock
   pmu.io.reset     := reset
-  pmu.io.isNewInst := io.valid && io.ready
+  pmu.io.isNewInst := io.valid && io.ready && opValid
   pmu.io.instType  := instTp
   pmu.io.instOp    := opName
   pmu.io.pc        := io.pc
