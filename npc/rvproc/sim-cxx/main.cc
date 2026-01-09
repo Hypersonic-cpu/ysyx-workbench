@@ -238,8 +238,6 @@ main(int argc, char* argv[]) {
 #endif
     single_cycle(top, contextp, tfp);
 
-    ccdb.inst_trace();
-
     if (auto mismatch = diff->test_on_commit(); !mismatch.empty()) {
       for (auto const& [id, golden, real] : mismatch) {
         std::cerr << std::format(

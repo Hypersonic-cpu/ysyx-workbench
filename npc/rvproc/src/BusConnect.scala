@@ -15,20 +15,19 @@ object BusType {
 
 object BusConnect {
   def apply[T <: Data](
-    lhs:   DecoupledIO[T],
-    rhs:   DecoupledIO[T],
+    src:   DecoupledIO[T],
+    dst:   DecoupledIO[T],
     busTp: BusType = SingleCyc
   ) = {
     busTp match {
-      case SingleCyc  => { rhs <> lhs }
-      case MultiCyc   => { rhs <> lhs }
+      case SingleCyc  => { dst <> src }
+      case MultiCyc   => { dst <> src }
       case Pipeline   => {
-        val transmit = lhs.valid && rhs.ready
-        lhs.ready := rhs.ready
-        rhs.valid := RegEnable(lhs.valid, rhs.ready)
-        rhs.bits  := RegEnable(lhs.bits, transmit)
+        src.ready := dst.ready
+        dst.valid := RegEnable(src.valid, dst.ready)
+        dst.bits  := RegEnable(src.bits, dst.ready)
       }
-      case OutOfOrder => { rhs <> Queue(lhs, 16) }
+      case OutOfOrder => { dst <> Queue(src, 16) }
     }
   }
 }

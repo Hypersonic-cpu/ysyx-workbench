@@ -1,14 +1,14 @@
 #pragma once
-#include "ccdb.hh"
+#include "options.hh"
 #include "probe.hh"
 
-#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <dlfcn.h>
 #include <format>
 #include <string>
 #include <unistd.h>
+#include <utility>
 #include <vector>
 
 namespace trace {
@@ -32,6 +32,8 @@ private:
 
   bool device_access;
   bool fire;
+  ureg_t delayed_ref_pc;
+  ureg_t delayed_dut_pc;
 
 private:
   void
@@ -71,7 +73,10 @@ private:
 
 public:
   DiffTester(const std::vector<ureg_t>& image)
-      : device_access{false}, fire{false} {
+      : device_access{false}
+      , fire{false}
+      , delayed_dut_pc{0xffff'ffffU}
+      , delayed_ref_pc{ResetVector} {
     init(image);
   }
 
@@ -97,23 +102,24 @@ public:
   //   device_access = true;
   // }
 
-  std::vector<std::tuple<uint16_t, uint32_t, uint32_t>>
-  match() {
+  auto
+  match() -> std::vector<std::tuple<uint16_t, uint32_t, uint32_t>> {
     if constexpr (!options::diff_enable) {
       return {};
     }
-    if (device_access)
+    if (device_access) [[unlikely]]
       return {};
-    // FIXME: Skip PC check now
     std::vector<std::tuple<uint16_t, uint32_t, uint32_t>> ret{};
     uint32_t regbuf[RegNum + 1];
     ref_regcpy(regbuf, CpyDir::ToDut);
+    std::swap(regbuf[RegNum], delayed_ref_pc);
 
-    // printf("Matching : REF PC %08x DUT PC %08x\n", regbuf[RegNum], read_reg(RegNum));
+    // printf("Matching : REF PC %08x DUT PC %08x\n", regbuf[RegNum],
+    //        read_reg(RegNum));
 
     size_t i = 0;
-    for (i = 0; i < RegNum; ++i) {
-      auto dut = trace::read_reg(i);
+    for (i = 0; i < RegNum + 1; ++i) {
+      auto dut = (i == RegNum) ? delayed_dut_pc : trace::read_reg(i);
       if (regbuf[i] != dut) {
         ret.emplace_back(i, regbuf[i], dut);
       }
@@ -154,57 +160,13 @@ public:
   }
 
   void
+  upd_dut_pc(ureg_t pc) {
+    delayed_dut_pc = pc;
+  }
+
+  void
   setFire() {
     fire = true;
   }
 };
 } // namespace trace
-
-// class StateMatcher {
-//   using McState = ccdb::McState;
-//
-// private:
-//   McState state;
-//
-// public:
-//   StateMatcher() : state{McState::Strt} {}
-//   void
-//   iota() {
-//     switch (state) {
-//     case McState::Fire:
-//       state = McState::Hold;
-//       break;
-//     case McState::Hold:
-//       state = McState::Idle;
-//       break;
-//     case McState::Idle:
-//       state = McState::Fire;
-//       break;
-//     case McState::Strt:
-//       state = McState::Fire;
-//       break;
-//     default:
-//       comm::v_assert(false, "No such state", (int)state);
-//     }
-//   }
-//
-//   std::pair<bool, McState>
-//   match_golden(uint32_t state_in) const {
-//     return match_golden(McState(state_in));
-//   }
-//
-//   std::pair<bool, McState>
-//   match_golden(McState in) const {
-//     return std::make_pair(in == state, state);
-//   }
-//
-//   void
-//   force_state(uint32_t state_in) {
-//     force_state(McState(state_in));
-//   }
-//   void
-//   force_state(McState in) {
-//     state = in;
-//   }
-// };
-//

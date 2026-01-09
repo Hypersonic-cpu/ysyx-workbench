@@ -64,9 +64,11 @@ class rvCore(isSoc: Boolean) extends Module {
     )
   )
 
-  ids.io.toFetch <> ifs.io.fromId
-  exs.io.toFetch <> ifs.io.fromEx
-  exs.io.toDec <> ids.io.isFlush
+  // exs.io.toFetch <> ifs.io.fromEx
+  // exs.io.toDec <> ids.io.isFlush
+  BusConnect(exs.io.brDet, exs.io.flush, Pipeline)
+  BusConnect(exs.io.brDet, ids.io.flush, Pipeline)
+  BusConnect(exs.io.toFetch, ifs.io.fromEx, Pipeline)
   BusConnect(ifs.io.out, ids.io.in, Pipeline)
   BusConnect(ids.io.out, exs.io.in, Pipeline)
   BusConnect(exs.io.out, lss.io.in, Pipeline)
@@ -120,21 +122,6 @@ class rvCore(isSoc: Boolean) extends Module {
   io.slave := DontCare
 }
 
-// 设备	地址空间
-// CLINT	0x0200_0000~0x0200_ffff
-// SRAM	0x0f00_0000~0x0fff_ffff
-// UART16550	0x1000_0000~0x1000_0fff
-// SPI master	0x1000_1000~0x1000_1fff
-// GPIO	0x1000_2000~0x1000_200f
-// PS2	0x1001_1000~0x1001_1007
-// MROM	0x2000_0000~0x2000_0fff
-// VGA	0x2100_0000~0x211f_ffff
-// Flash	0x3000_0000~0x3fff_ffff
-// ChipLink MMIO	0x4000_0000~0x7fff_ffff
-// PSRAM	0x8000_0000~0x9fff_ffff
-// SDRAM	0xa000_0000~0xbfff_ffff
-// ChipLink MEM	0xc000_0000~0xffff_ffff
-// Reverse	其他
 //
 // class rvCoreSimEnv(resetVector: BigInt) extends Module {
 //   val io   = IO(new Bundle {
@@ -159,3 +146,19 @@ class rvCoreWrapper(isSoc: Boolean) extends Module {
   AXIPortPassing(core.io.slave, io.subordiPort)
   dontTouch(core.io)
 }
+
+// 设备	地址空间
+// CLINT	0x0200_0000~0x0200_ffff
+// SRAM	0x0f00_0000~0x0fff_ffff
+// UART16550	0x1000_0000~0x1000_0fff
+// SPI master	0x1000_1000~0x1000_1fff
+// GPIO	0x1000_2000~0x1000_200f
+// PS2	0x1001_1000~0x1001_1007
+// MROM	0x2000_0000~0x2000_0fff
+// VGA	0x2100_0000~0x211f_ffff
+// Flash	0x3000_0000~0x3fff_ffff
+// ChipLink MMIO	0x4000_0000~0x7fff_ffff
+// PSRAM	0x8000_0000~0x9fff_ffff
+// SDRAM	0xa000_0000~0xbfff_ffff
+// ChipLink MEM	0xc000_0000~0xffff_ffff
+// Reverse	其他

@@ -49,7 +49,7 @@ uint32_t pmem_write(uint32_t awaddr, uint32_t wdata, unsigned char wstrb,
 
 #endif
 
-extern "C" void notify_issue(uint32_t pc);
+extern "C" void notify_issue(uint32_t pc, uint32_t inst);
 extern "C" void notify_fetch(uint32_t pc);
 
 extern "C" void notify_ls_req(uint32_t addr);
@@ -57,7 +57,7 @@ extern "C" void notify_ls_resp(uint32_t addr);
 
 extern "C" void notify_decode(uint32_t pc, unsigned char itype,
                               unsigned char iop);
-extern "C" void notify_commit(uint32_t pc);
+extern "C" void notify_commit(uint32_t pc, uint32_t inst);
 
 class RuntimeBin;
 
