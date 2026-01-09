@@ -23,7 +23,7 @@ class FetchStage(resetVector: BigInt) extends Module {
   val iMem  = io.iMem
   val state = RegInit(idle)
 
-  val trigIss   = (!reset.asBool) && state === idle && io.out.ready
+  val trigIss   = (!reset.asBool) && state === idle
   val nextState = MuxLookup(state, idle)(
     Seq(
       idle  -> Mux(trigIss && iMem.ar.ready, serve, idle),

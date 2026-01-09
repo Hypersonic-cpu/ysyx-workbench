@@ -207,7 +207,7 @@ public:
   }
 
   json
-  gen_json() const override{
+  gen_json() const override {
     json ret{};
     for (auto const& c : cats) {
       ret[c.name()] = c.gen_json();
@@ -217,7 +217,7 @@ public:
   }
 
   void
-  dump_stats(std::ostream& os) const override{
+  dump_stats(std::ostream& os) const override {
     os << std::format("{} samples {:d}", this->name(), sumsamples)
        << std::endl;
     for (const auto& c : cats) {
@@ -309,13 +309,15 @@ public:
   }
   void
   notifyCommit(addr_t pc) {
-    // return;
-    // auto it = std::find_if(
-    //   instboard.begin(), instboard.end(),
-    //   [&pc](const iboard_t& ib) { return std::get<0>(ib) == pc; });
-    // v_assert(it != instboard.end(), "Cannot find pc", pc, "in inst
-    // board"); auto const [pc_, tp, t0] = *it; auto const deltat =
-    // curr_tick() - t0; instcyc.sample(tp, deltat); instboard.erase(it);
+    return;
+    auto it = std::find_if(
+      instboard.begin(), instboard.end(),
+      [&pc](const iboard_t& ib) { return std::get<0>(ib) == pc; });
+    v_assert(it != instboard.end(), "Cannot find pc", pc, "in instboard");
+    auto const [pc_, tp, t0] = *it;
+    auto const deltat = curr_tick() - t0;
+    instcyc.sample(tp, deltat);
+    instboard.erase(it);
   }
 };
 
