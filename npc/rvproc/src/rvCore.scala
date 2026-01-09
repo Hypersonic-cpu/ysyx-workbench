@@ -96,7 +96,8 @@ class rvCore(isSoc: Boolean) extends Module {
   } else {
     arbiter.io := DontCare
 
-    val iMemBox = Module(new PMemBox)
+    // val iMemBox = Module(new PMemBox)
+    val iMemBox = Module(new iCache(3))
     iMemBox.io.master <> ifs.io.iMem
     iMemBox.io.simid := 0.U // inst cache
     iMemBox.io.flush := ids.io.fenceI.valid && ids.io.fenceI.bits

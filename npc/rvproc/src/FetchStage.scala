@@ -9,7 +9,8 @@ import rvproc.axi4.AXI.BurstOpts._
 import rvproc.pmu.FetchPMU
 import BitMath._
 
-class FetchStage(resetVector: BigInt) extends Module {
+class FetchStage(resetVector: BigInt, PipeDepth: Int = 6)
+    extends Module {
   val io = IO(new Bundle {
     val out    = Decoupled(new FetchToDecode)
     val fromEx = Flipped(Decoupled(new ExecuteBackward))
@@ -19,70 +20,63 @@ class FetchStage(resetVector: BigInt) extends Module {
 
   val idle :: serve :: Nil = Enum(2)
 
-  val iMem  = io.iMem
-  val state = RegInit(idle)
+  val iMem = io.iMem
+  // val state = RegInit(idle)
+  //
+  // val trigFetch = (!reset.asBool) && state === idle
+  // val nextState = MuxLookup(state, idle)(
+  //   Seq(
+  //     idle  -> Mux(trigFetch && iMem.ar.ready, serve, idle),
+  //     serve -> Mux(iMem.r.valid, idle, serve)
+  //   )
+  // )
+  // state := nextState
 
-  val trigFetch = (!reset.asBool) && state === idle
-  val nextState = MuxLookup(state, idle)(
-    Seq(
-      idle  -> Mux(trigFetch && iMem.ar.ready, serve, idle),
-      serve -> Mux(iMem.r.valid, idle, serve)
-    )
-  )
-  state := nextState
-
-  val pipeShift = io.out.ready && nextState =/= serve
+  // val pipeShift = io.out.ready && nextState =/= serve
   val brex      = io.fromEx.bits
   val brPending = RegInit(false.B)
   val flushWire = io.fromEx.valid && brex.take
   val instValid = iMem.r.valid
-  val flushThis = brPending || flushWire
-  brPending := (brPending || flushWire) && !instValid
+  // val flushThis = brPending || flushWire
+  // brPending := (brPending || flushWire) && !instValid
 
-  io.out.valid    := instValid && !flushThis
+  val pc     = RegInit(resetVector.U(ISA.RegBits.W))
+  val nextPC = RegInit((resetVector + 4).U(ISA.RegBits.W))
+
+  val vRing   = Reg(Vec(PipeDepth + 1, Bool()))
+  val pcRing  = Reg(Vec(PipeDepth + 1, Tp.AddrType()))
+  val headPtr = RegInit(0.U(log2Ceil(PipeDepth + 1).W))
+  val tailPtr = RegInit(0.U(log2Ceil(PipeDepth + 1).W))
+  def iotaMod(a: UInt) = Mux(a === PipeDepth.U, 0.U, a + 1.U)
+  val bufFull = iotaMod(headPtr) === tailPtr
+
+  when(iMem.r.fire) {
+    vRing(tailPtr) := false.B
+    tailPtr        := iotaMod(tailPtr)
+  }
+  when(iMem.ar.fire) {
+    vRing(headPtr)  := true.B
+    pcRing(headPtr) := pc
+    headPtr         := iotaMod(headPtr)
+  }
+  assert(!bufFull, "IFU buffer should not full")
+
+  // io.out.valid    := instValid && !flushThis && vRing(tailPtr)
+  io.out.valid    := instValid && vRing(tailPtr) && !flushWire
   io.fromEx.ready := true.B
   io.fromWb.ready := true.B
 
-  val pc     = RegInit(resetVector.U(ISA.RegBits.W))
-  val nextPC = RegInit((resetVector+4).U(ISA.RegBits.W))
-  val pastPCs = Reg(Vec(5, Tp.AddrType()))
-
-  val fetchPipeLen = 1
-  val flyPCs = Reg(Vec(fetchPipeLen, Tp.AddrType()))
-  val flyPCv = Reg(Vec(fetchPipeLen, Bool()))
-
-  when (pipeShift) {
-    for (i <- 1 until 5) {
-      pastPCs(i) := pastPCs(i-1)
-    }
-    pastPCs(0) := pc
-
-    // for (i <- 1 until fetchPipeLen) {
-    //   flyPCs(i) := flyPCs(i+1)
-    //   flyPCv(i) := flyPCv(i+1)
-    // }
-    // flyPCs(0) := pc
-  }
-
-  // TODO: iCache改成流水
   iMem.ar.bits.addr  := pc
-  iMem.ar.bits.size  := 0x2.U        // log2(4)
+  iMem.ar.bits.size  := 0x2.U                         // log2(4)
   iMem.ar.bits.len   := 0.U
   iMem.ar.bits.burst := INCR
-  iMem.ar.bits.id    := 0.U          // TODO: ID=0
-  iMem.ar.valid      := trigFetch
-  // NOTE: 让iCache等到直到IDU以后清空
-  iMem.r.ready       := io.out.ready // state === serve
+  iMem.ar.bits.id    := 0.U
+  iMem.ar.valid      := io.out.ready && !reset.asBool // TODO: 如果有空位才进行 // trigFetch
+  iMem.r.ready       := io.out.ready                  // state === serve
   iMem.aw.valid      := false.B
-  iMem.aw.bits.addr  := 0.U
-  iMem.aw.bits.size  := 0.U
-  iMem.aw.bits.len   := 0.U
-  iMem.aw.bits.burst := INCR
-  iMem.aw.bits.id    := 0.U
+  iMem.aw.bits       := DontCare
   iMem.w.valid       := false.B
-  iMem.w.bits.data   := 0.U
-  iMem.w.bits.strb   := 0.U
-  iMem.w.bits.last   := false.B
+  iMem.w.bits        := DontCare
   iMem.b.ready       := false.B
   assert(~(iMem.b.valid), "Read only port")
   assert(
@@ -95,32 +89,38 @@ class FetchStage(resetVector: BigInt) extends Module {
   )
 
   when(flushWire) {
+    for (i <- 0 to PipeDepth) {
+      // override. 需要覆盖head, 因为有效的PC至少
+      // 等到下一个周期.
+      vRing(i) := false.B
+    }
     val brTarget = MuxCase(
       nextPC,
       Seq(
         brex.brAbs -> brex.brVal,
-        brex.brRel -> (pastPCs(0) + brex.brDel)
+        brex.brRel -> (brex.brLPC + brex.brDel)
       )
     )
-    when(pipeShift) {
-      pc := brTarget
+    // Use fire of REQ. Full 阻塞应该由缓存发起
+    // when(iMem.ar.fire) {
+      pc     := brTarget
       nextPC := brTarget + 4.U
-    }.otherwise{
-      nextPC := brTarget
-    }
+    // }.otherwise {
+    //   nextPC := brTarget
+    // }
   }.otherwise {
-    when(pipeShift) {
+    when(iMem.ar.fire) {
       pc     := nextPC
       nextPC := nextPC + 4.U
     }
   }
 
   val ioid = io.out.bits
-  ioid.pc   := pc
+  ioid.pc   := Mux(io.out.valid, pcRing(tailPtr), 0.U)
   ioid.inst := iMem.r.bits.data
 
-  val pmu = Module(new FetchPMU)
-  val delayedPipe = RegNext(pipeShift)
+  val pmu         = Module(new FetchPMU)
+  val delayedPipe = RegNext(iMem.r.fire)
   pmu.io.clock     := clock
   pmu.io.reset     := reset
   pmu.io.trigFetch := delayedPipe

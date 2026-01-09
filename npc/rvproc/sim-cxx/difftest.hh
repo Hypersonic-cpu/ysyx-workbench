@@ -115,7 +115,7 @@ public:
     std::swap(regbuf[RegNum], delayed_ref_pc);
 
     // printf("Matching : REF PC %08x DUT PC %08x\n", regbuf[RegNum],
-    //        read_reg(RegNum));
+    //        delayed_dut_pc);
 
     size_t i = 0;
     for (i = 0; i < RegNum + 1; ++i) {

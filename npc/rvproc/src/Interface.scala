@@ -113,6 +113,7 @@ class ExecuteBackward extends Bundle {
   val brDel = Tp.RegType()
   val brAbs = Bool()
   val brVal = Tp.RegType()
+  val brLPC = Tp.AddrType()
   def take = brRel || brAbs
 }
 
