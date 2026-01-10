@@ -39,6 +39,7 @@ public:
 
   virtual json gen_json() const = 0;
   virtual void dump_stats(std::ostream& os = std::cout) const = 0;
+  virtual void reset_stats() = 0;
 };
 
 template <typename T> class DistriBase : public StatsBase {
@@ -88,6 +89,14 @@ public:
     stat.at(Avg) = frac * stat.at(Avg) + (1.0 - frac) * v;
   }
 
+  virtual void
+  reset_stats() override {
+    arr.assign(maxidx, 0U);
+    meta.assign(Num_MetaIdx, 0U);
+    stat.assign(Num_StatIdx, 0.0);
+    samples = 0;
+  }
+
 protected:
   template <typename R>
   static auto
@@ -114,7 +123,6 @@ public:
     return ret;
   }
 
-public:
   size_t
   get_samples() const {
     return samples;
@@ -186,6 +194,14 @@ public:
   }
 
   void
+  reset_stats() override {
+    for (auto& c : cats) {
+      c.reset_stats();
+    }
+    sumsamples = 0;
+  }
+
+  void
   sample(size_t cat, T value) {
     sumsamples++;
     cats.at(cat).sample(value);
@@ -244,6 +260,9 @@ private:
   DistriDelta<uint64_t> lscyc;
   DistriVec<DistriBase<uint64_t>, uint64_t> instcyc;
 
+  size_t commitCnt;
+  size_t cycleCnt;
+
   std::vector<StatsBase*> statslist{
     &ifcyc,
     &lscyc,
@@ -263,11 +282,15 @@ public:
       , lscyc(0, 200, 20, std::numeric_limits<int64_t>::max(),
               "Load Store Cycles")
       , instcyc(InstOpName.size(), 0, 200, 20,
-                std::numeric_limits<int64_t>::max(), "Inst Cats",
-                InstOpName) {}
+                std::numeric_limits<int64_t>::max(), "Inst Cats", InstOpName)
+      , commitCnt(0)
+      , cycleCnt(0) {}
 
   void
   dump_stats(std::ostream& os = std::cout) const {
+    os << std::format("Cycles {:d} InstRet {:d} IPC {:.6f}", cycleCnt,
+                      commitCnt, get_ipc())
+       << std::endl;
     for (auto const& ptr : statslist) {
       ptr->dump_stats(os);
     }
@@ -279,6 +302,9 @@ public:
     for (auto const& ptr : statslist) {
       ret[ptr->name()] = ptr->gen_json();
     }
+    ret["instRet"] = commitCnt;
+    ret["cycles"] = cycleCnt;
+    ret["ipc"] = get_ipc();
     return ret;
   }
 
@@ -309,15 +335,47 @@ public:
   }
   void
   notifyCommit(addr_t pc) {
+    commitCnt++;
     return;
-    auto it = std::find_if(
-      instboard.begin(), instboard.end(),
-      [&pc](const iboard_t& ib) { return std::get<0>(ib) == pc; });
-    v_assert(it != instboard.end(), "Cannot find pc", pc, "in instboard");
-    auto const [pc_, tp, t0] = *it;
-    auto const deltat = curr_tick() - t0;
-    instcyc.sample(tp, deltat);
-    instboard.erase(it);
+    // auto it = std::find_if(
+    //   instboard.begin(), instboard.end(),
+    //   [&pc](const iboard_t& ib) { return std::get<0>(ib) == pc; });
+    // v_assert(it != instboard.end(), "Cannot find pc", pc, "in instboard");
+    // auto const [pc_, tp, t0] = *it;
+    // auto const deltat = curr_tick() - t0;
+    // instcyc.sample(tp, deltat);
+    // instboard.erase(it);
+  }
+
+  void
+  iotaCycle() {
+    cycleCnt++;
+  }
+
+  void
+  reset_stats() {
+    commitCnt = 0;
+    cycleCnt = 0;
+    for (auto const& ptr : statslist) {
+      ptr->reset_stats();
+    }
+  }
+
+  size_t
+  get_cycles() const {
+    return cycleCnt;
+  }
+
+  size_t
+  get_instret() const {
+    return commitCnt;
+  }
+
+  double
+  get_ipc() const {
+    return cycleCnt
+             ? static_cast<double>(commitCnt) / static_cast<double>(cycleCnt)
+             : 0.0;
   }
 };
 

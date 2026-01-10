@@ -34,6 +34,7 @@ using addr_t = uint32_t;
 using ureg_t = uint32_t;
 using handler_t = void (*)();
 extern handler_t abortHandler;
+extern handler_t resetAllStats;
 
 template<typename Derived, typename Base>
 concept IsDerived = std::derived_from<Derived, Base>;
