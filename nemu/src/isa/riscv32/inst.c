@@ -298,8 +298,10 @@ static int decode_exec(Decode *s) {
   INSTPAT("0000000 ????? ????? 111 ????? 01100 11", 
           and    , R, R(rd) = src1 & src2);
   INSTPAT("0000000 00001 00000 000 00000 11100 11", 
-          ebreak , N, NEMUTRAP(s->pc, R(10))); // R(10) is $a0
-  
+          ebreak , N, { if (R(15)) NEMUTRAP(s->pc, R(10)); }); // R(10) is $a0
+  INSTPAT("0000000 00000 00000 001 00000 00011 11",
+          fencei,  I, {});
+
   /** RV32M Extension */
   INSTPAT("0000001 ????? ????? 000 ????? 01100 11", 
           mul    , R, R(rd) = src1 * src2);
@@ -309,11 +311,11 @@ static int decode_exec(Decode *s) {
               ((int64_t)((sword_t)src1) * (int64_t)((sword_t)src2))
               >> 32
           ));
-  // INSTPAT("0000001 ????? ????? 010 ????? 01100 11", 
-  //         mulhsu , R,
-  //         R(rd) = (word_t) (
-  //             ((int64_t)((sword_t)src1) * (uint64_t)src2) >> 32
-  //         ));
+  INSTPAT("0000001 ????? ????? 010 ????? 01100 11", 
+          mulhsu , R,
+          R(rd) = (word_t) (
+              ((int64_t)((sword_t)src1) * (uint64_t)src2) >> 32
+          ));
   INSTPAT("0000001 ????? ????? 011 ????? 01100 11", 
           mulhu  , R,
               R(rd) = (word_t) (

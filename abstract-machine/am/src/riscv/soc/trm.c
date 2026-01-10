@@ -32,16 +32,17 @@ void uart_init() {
 
 void putch(char ch) {
   // If (not empty) then wait
-  // uint8_t 
+  // uint8_t
   register unsigned ls = *(volatile uint8_t *)(RV32_SOC_UART_L + UART_OFF_LS);
   while (!(ls & 0x40)) {
     ls = *(volatile uint8_t *)(RV32_SOC_UART_L + UART_OFF_LS);
-    asm volatile ("addi x5, %0, 0" ::"r"(ls) : "x5");
+    asm volatile("addi x5, %0, 0" ::"r"(ls) : "x5");
   }
   *(volatile uint8_t *)(RV32_SOC_UART_L + UART_OFF_THR) = ch;
 }
 
 void halt(int code) {
+  asm volatile("li x15, 0xaa" ::: "x15", "memory");
   asm volatile("ebreak");
   while (1)
     ;
@@ -49,8 +50,6 @@ void halt(int code) {
 
 void _trm_init() {
   uart_init();
-  // printf("Heap %x : %x\n", heap.start, heap.end);
-
   int ret = main(mainargs);
   halt(ret);
 }

@@ -91,7 +91,7 @@ class IDU extends Module {
   )
 
   // (isEbreak, 10.U, io.inst(19, 15))
-  io.rs2 := io.inst(24, 20)
+  io.rs2 := Mux(isEbreak, 15.U, io.inst(24, 20))
   io.rd  := io.inst(11, 7)
   val immI = io.inst(31, 20).SExt()
   io.csrir := MuxCase(

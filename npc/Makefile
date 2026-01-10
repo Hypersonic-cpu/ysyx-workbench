@@ -64,6 +64,7 @@ CXXFLAGS += -I$(NPC_HOME)/libs/json/include
 
 # capstone
 LIBCAPSTONE = $(NEMU_HOME)/tools/capstone/repo/libcapstone.so.5
+# LIBNEMU = $(NEMU_HOME)/build/build/riscv32-nemu-interpreter-so
 CXXFLAGS += -I$(NEMU_HOME)/tools/capstone/repo/include
 $(LIBCAPSTONE):
 	$(MAKE) -C tools/capstone
@@ -104,12 +105,13 @@ $(SIM_BIN): $(CSRCS) $(DPIC_SRCS) $(NVB_ARCHIVE)
 		--Mdir $(BUILD_OBJ_DIR) --exe -o $(abspath $(SIM_BIN))
 
 printhook:
-	@echo
-	@echo "INCFLAGS" $(INC_PATH)
-	@echo "CXXFLAGS" $(CXXFLAGS)
-	@echo "CSRCS" $(CSRCS)
-	@echo "COMMON" $(SRCS_COMMON)
-	@echo
+
+	# @echo
+	# @echo "INCFLAGS" $(INC_PATH)
+	# @echo "CXXFLAGS" $(CXXFLAGS)
+	# @echo "CSRCS" $(CSRCS)
+	# @echo "COMMON" $(SRCS_COMMON)
+	# @echo
 
 test:
 	# $(call git_commit, "test RTL")
@@ -129,7 +131,7 @@ runonly: verilate $(SIM_BIN)
 	$(SIM_BIN) $(mrombin) $(simccargs)
 
 verilog: $(SCALA_SOURCES)
-	$(call git_commit, "generate verilog") # WARN: Only allow tracking here
+	$(call git_commit, "generate verilog")
 	mkdir -p $(BUILD_SV_DIR)
 	mill -i $(PRJ).runMain Elaborate --target-dir $(BUILD_SV_DIR) $(SOC_SCALA_ARG)
 	@echo "Verilog written to " $(BUILD_SV_DIR)
