@@ -11,6 +11,7 @@
 #include <iostream>
 #include <memory>
 #include <ostream>
+#include <string>
 #include <tuple>
 #include <vector>
 #include <verilated.h>
@@ -52,6 +53,18 @@ abort_handler() {
 }
 
 void
+reset_all_stats() {
+  // std::cout << std::format("Before : \n iCache {:d}\n", iCache->stats().accesses);
+  // ppmu->dump_stats();
+  if (ppmu)
+    ppmu->reset_stats();
+  if (iCache)
+    iCache->reset_stats();
+  // std::cout << std::format("After: \n iCache {:d}\n", iCache->stats().accesses);
+  // ppmu->dump_stats();
+}
+
+void
 print_stats() {
   // pccdb->dump_stats(std::cerr);
   ppmu->dump_stats(std::cerr);
@@ -63,33 +76,29 @@ print_stats() {
                    stat.hits, stat.misses, stat.accesses, stat.missRate())
               << std::endl;
   }
-  if (!options::record_perf)
-    return;
 }
 
 inline json
 dump_stats() {
   json obj{};
-  obj["l1icache"] = json({});
+  obj["l1icache"] = json(iCache->stats_map());
   obj["pmu"] = ppmu->stats_json();
+  obj["image"] = options::binary_img;
   return obj;
 }
 
 inline json
 dump_config() {
   json conf{};
-  json obj{};
   if (iCache) {
-    obj["size"] = iCache->size();
-    obj["assoc"] = iCache->assoc();
-    obj["blkSize"] = iCache->blksize();
-    obj["latency"] = iCache->latency();
+    conf["l1icache"] = json(iCache->config_map());
   }
-  conf["l1icache"] = obj;
+  conf["image"] = options::binary_img;
   return conf;
 }
 
 handler_t abortHandler = abort_handler;
+handler_t resetAllStats = reset_all_stats;
 
 inline void
 single_cycle(const std::unique_ptr<TOP_NAME>& top,
@@ -130,6 +139,7 @@ single_reset(const std::unique_ptr<TOP_NAME>& top,
 int
 main(int argc, char* argv[]) {
   assert(argc >= 2);
+  options::binary_img = std::string(argv[1]);
   options::parse_args(argc, argv);
 
 #if SOCMODE
@@ -138,7 +148,7 @@ main(int argc, char* argv[]) {
   mrom = mromBin.get();
 
   auto flashBin =
-    std::make_shared<RuntimeBin>(argv[1], 0x0000'0000U, "Flash");
+    std::make_shared<RuntimeBin>(options::binary_img, 0x0000'0000U, "Flash");
   flash = flashBin.get();
 
   auto psramBin = std::make_shared<RuntimeBin>(
@@ -153,7 +163,7 @@ main(int argc, char* argv[]) {
     "/mnt/hgfs/Arch-PA/JiaoTongUniversity.bin", 0x0000'0000U, "VMem");
   vmem = vmemBin.get();
 #else
-  auto uMem = std::make_shared<RuntimeBin>(argv[1], (4U << 20) / 4,
+  auto uMem = std::make_unique<RuntimeBin>(options::binary_img, (4U << 20) / 4,
                                            0x8000'0000LLU, "UnifiedMem");
   unifiedMem = uMem.get();
 
@@ -232,6 +242,7 @@ main(int argc, char* argv[]) {
       std::cerr << std::format("\r== @posedge of Cycle #{} ==", currCyc)
                 << std::endl;
     currCyc++;
+    spmu->iotaCycle();
 
 #if NVBENA
     nvboard_update();
@@ -266,18 +277,19 @@ main(int argc, char* argv[]) {
 
 final:
 
-  auto const lastPC{trace::read_reg(trace::RegNum)};
+  // auto const lastPC{trace::read_reg(trace::RegNum)};
   top->final();
 
   std::cerr << std::format(ANSI_YELLOW
-                           "== Exit @ pc {:>08x} : {:s} ==" ANSI_NONE,
-                           lastPC, retCause)
+                           "== Exit @ cyc #{:>12d} : {:s} ==" ANSI_NONE,
+                           currCyc, retCause)
             << std::endl;
-  auto instNum = ccdb.get_inst_count();
-  auto ipc = static_cast<double>(instNum) / currCyc;
+  auto instNum = spmu->get_instret();
+  auto cycleNum = spmu->get_cycles();
+  auto ipc = static_cast<double>(instNum) / static_cast<double>(cycleNum);
   std::cout << std::format(ANSI_YELLOW
                            "== #cyc {:d} #inst {:d} IPC {:6f}" ANSI_NONE,
-                           currCyc, instNum, ipc)
+                           cycleNum, instNum, ipc)
             << std::endl;
 
   print_stats();

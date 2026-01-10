@@ -36,6 +36,7 @@ enum ArchConfig {
 // extern std::unordered_map<ArchConfig, std::string> arch_config_name;
 extern std::unordered_map<ArchConfig, size_t> arch_config_val;
 
+extern std::string binary_img;
 extern DumpPrintOpt runtime_dump_opt;
 extern DumpPrintOpt error_dump_opt;
 extern std::string wave_file;

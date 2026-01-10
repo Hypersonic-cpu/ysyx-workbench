@@ -17,6 +17,7 @@ namespace options {
 
 std::string outdir = "";
 bool record_perf = false;
+std::string binary_img = "";
 DumpPrintOpt runtime_dump_opt{false, false, false, false, false};
 DumpPrintOpt error_dump_opt{false, true, true, true, false, false};
 std::string wave_file = "";
@@ -74,6 +75,7 @@ parse_args(int argc, char* argv[]) {
     {"help", no_argument, NULL, 'h'},
     /** Arch related */
     {"l1i-size", required_argument, NULL, ArchConfig::ICacheSize},
+    {"l1i-blksize", required_argument, NULL, ArchConfig::ICacheBlock},
     {"l1i-assoc", required_argument, NULL, ArchConfig::ICacheAssoc},
     {0, 0, NULL, 0},
   };
@@ -119,7 +121,7 @@ parse_args(int argc, char* argv[]) {
       record_perf = true;
       break;
     case 'O':
-      custom_dir = std::string(optarg);
+      custom_dir += "-" + std::string(optarg);
       break;
     case 'c':
       runtime_dump_opt.cycle_no = true;

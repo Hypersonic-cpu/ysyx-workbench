@@ -12,7 +12,8 @@ class EcallBox extends BlackBox with HasBlackBoxPath {
     val isEbreak = Input(Bool())
     val pcin  = Input(Tp.RegType())
     val a0in = Input(Tp.RegType())
+    val a5in = Input(Tp.RegType())
   })
-  
+
   addPath(PATH.dpic("EcallBox.sv"))
 }
