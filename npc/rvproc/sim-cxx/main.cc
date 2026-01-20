@@ -43,6 +43,9 @@ void nvboard_bind_all_pins(TOP_NAME* top);
 trace::FstTracer* pwave = nullptr;
 const TOP_NAME* trace::ptop = nullptr;
 
+static std::ofstream statFile;
+static std::ofstream confFile;
+
 void
 abort_handler() {
   if (pccdb)
@@ -54,14 +57,14 @@ abort_handler() {
 
 void
 reset_all_stats() {
-  // std::cout << std::format("Before : \n iCache {:d}\n", iCache->stats().accesses);
-  // ppmu->dump_stats();
+  // std::cout << std::format("Before : \n iCache {:d}\n",
+  // iCache->stats().accesses); ppmu->dump_stats();
   if (ppmu)
     ppmu->reset_stats();
   if (iCache)
     iCache->reset_stats();
-  // std::cout << std::format("After: \n iCache {:d}\n", iCache->stats().accesses);
-  // ppmu->dump_stats();
+  // std::cout << std::format("After: \n iCache {:d}\n",
+  // iCache->stats().accesses); ppmu->dump_stats();
 }
 
 void
@@ -97,8 +100,16 @@ dump_config() {
   return conf;
 }
 
+void
+dump_all_stats() {
+  if (options::record_perf) {
+    statFile << std::setw(2) << dump_stats() << std::endl;
+  }
+}
+
 handler_t abortHandler = abort_handler;
 handler_t resetAllStats = reset_all_stats;
+handler_t dumpAllStats = dump_all_stats;
 
 inline void
 single_cycle(const std::unique_ptr<TOP_NAME>& top,
@@ -163,8 +174,8 @@ main(int argc, char* argv[]) {
     "/mnt/hgfs/Arch-PA/JiaoTongUniversity.bin", 0x0000'0000U, "VMem");
   vmem = vmemBin.get();
 #else
-  auto uMem = std::make_unique<RuntimeBin>(options::binary_img, (4U << 20) / 4,
-                                           0x8000'0000LLU, "UnifiedMem");
+  auto uMem = std::make_unique<RuntimeBin>(
+    options::binary_img, (4U << 20) / 4, 0x8000'0000LLU, "UnifiedMem");
   unifiedMem = uMem.get();
 
   auto instCache = std::make_unique<cacheSim::CacheSimulator>(
@@ -211,8 +222,6 @@ main(int argc, char* argv[]) {
   const std::unique_ptr<trace::SoftPerfUnit> spmu{new trace::SoftPerfUnit};
   ppmu = spmu.get();
 
-  std::ofstream statFile;
-  std::ofstream confFile;
   if (options::record_perf) {
     try {
       std::filesystem::create_directories(options::outdir);
@@ -295,7 +304,6 @@ final:
   print_stats();
 
   if (options::record_perf) {
-    statFile << std::setw(2) << dump_stats() << std::endl;
     statFile.close();
   }
 

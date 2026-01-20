@@ -29,6 +29,11 @@ void cc_reset_stats() {
   asm volatile("ebreak");
 }
 
+void cc_dump_stats() {
+  asm volatile("li x15, 0x1" ::: "x15", "memory");
+  asm volatile("ebreak");
+}
+
 void _trm_init() {
   cc_reset_stats();
   int ret = main(mainargs);

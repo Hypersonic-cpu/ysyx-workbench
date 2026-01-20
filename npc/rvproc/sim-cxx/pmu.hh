@@ -1,5 +1,6 @@
 #pragma once
 
+#include "capstone/sh.h"
 #include "probe.hh"
 
 #include <algorithm>
@@ -255,13 +256,15 @@ public:
     "OpFP", "Lui",      "Branch", "Jalr",  "Jal",   "System"};
 
 private:
-  // DeltaDistri<int64_t> pcjmp;
+  DistriDelta<int64_t> pcjmp;
   DistriDelta<uint64_t> ifcyc;
   DistriDelta<uint64_t> lscyc;
   DistriVec<DistriBase<uint64_t>, uint64_t> instcyc;
 
   size_t commitCnt;
   size_t cycleCnt;
+  size_t flushedCnt;
+  size_t rawCnt;
 
   std::vector<StatsBase*> statslist{
     &ifcyc,
@@ -283,7 +286,10 @@ public:
               "Load Store Cycles")
       , instcyc(InstOpName.size(), 0, 200, 20,
                 std::numeric_limits<int64_t>::max(), "Inst Cats", InstOpName)
+      , pcjmp(0, 1024, 64, ResetVector, "PC Jump Distance")
       , commitCnt(0)
+      , flushedCnt(0)
+      , rawCnt(0)
       , cycleCnt(0) {}
 
   void
@@ -303,7 +309,9 @@ public:
       ret[ptr->name()] = ptr->gen_json();
     }
     ret["instRet"] = commitCnt;
+    ret["instFlush"] = flushedCnt;
     ret["cycles"] = cycleCnt;
+    ret["rawStall"] = rawCnt;
     ret["ipc"] = get_ipc();
     return ret;
   }
@@ -311,7 +319,7 @@ public:
   void
   notifyIFIssue(addr_t pc) {
     ifcyc.sample(curr_tick());
-    // pcjmp.sample(static_cast<int64_t>(pc));
+    pcjmp.sample(static_cast<int64_t>(pc));
     // fprintf(stderr, "sample at %x\n", read_double_csr(MCycleh, MCycle));
   }
   void
@@ -336,19 +344,25 @@ public:
   void
   notifyCommit(addr_t pc) {
     commitCnt++;
-    return;
-    // auto it = std::find_if(
-    //   instboard.begin(), instboard.end(),
-    //   [&pc](const iboard_t& ib) { return std::get<0>(ib) == pc; });
-    // v_assert(it != instboard.end(), "Cannot find pc", pc, "in instboard");
-    // auto const [pc_, tp, t0] = *it;
-    // auto const deltat = curr_tick() - t0;
-    // instcyc.sample(tp, deltat);
-    // instboard.erase(it);
+    auto it = std::find_if(
+      instboard.begin(), instboard.end(),
+      [&pc](const iboard_t& ib) { return std::get<0>(ib) == pc; });
+    v_assert(it != instboard.end(), "Cannot find pc", pc, "in instboard");
+    auto const [pc_, tp, t0] = *it;
+    auto const deltat = curr_tick() - t0;
+    instcyc.sample(tp, deltat);
+    instboard.erase(it);
+
+    // The pipeline is in order, so we can remove insstructions
+    // that was issued before the matched one.
+    auto const remove_cnt = std::erase_if(
+      instboard, [&t0](const iboard_t& ib) { return std::get<2>(ib) < t0; });
+    flushedCnt += remove_cnt;
   }
 
   void
   iotaCycle() {
+    rawCnt += read_raw_stall();
     cycleCnt++;
   }
 
@@ -356,6 +370,8 @@ public:
   reset_stats() {
     commitCnt = 0;
     cycleCnt = 0;
+    flushedCnt = 0;
+    rawCnt = 0;
     for (auto const& ptr : statslist) {
       ptr->reset_stats();
     }

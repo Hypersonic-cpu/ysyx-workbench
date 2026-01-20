@@ -12,10 +12,15 @@
 extern "C" void
 call_ebreak(uint32_t pc, uint32_t a0, uint32_t a5) {
   if (a5 == 0) {
-    std::cout << std::format(ANSI_YELLOW "Reset Stats @ pc {:>8x}" ANSI_NONE,
+    std::cout << std::format(ANSI_YELLOW "reset stats @ pc {:8x}" ANSI_NONE,
                              pc)
               << std::endl;
     resetAllStats();
+  } else if (a5 == 1) {
+    std::cout << std::format(ANSI_YELLOW "dump Stats @ pc {:>8x}" ANSI_NONE,
+                             pc)
+              << std::endl;
+    dumpAllStats();
   } else {
     std::cout << (a0 ? (ANSI_B_RED "Hit BAD trap" ANSI_NONE)
                      : (ANSI_B_GREEN "Hit GOOD trap" ANSI_NONE))
