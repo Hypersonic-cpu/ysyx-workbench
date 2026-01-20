@@ -87,7 +87,6 @@ public:
 
   static constexpr char NEMU_SO[] = "build/riscv32-nemu-interpreter-so";
   static constexpr int NEMUPort{1234};
-  static constexpr addr_t ResetVector{0x8000'0000};
 
   // TODO: CSR support
   //
