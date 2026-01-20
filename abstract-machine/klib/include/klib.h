@@ -40,6 +40,7 @@ int    vsnprintf (char *str, size_t size, const char *format, va_list ap);
 
 // simulation env
 void cc_reset_stats();
+void cc_dump_stats();
 
 // assert.h
 #ifdef NDEBUG

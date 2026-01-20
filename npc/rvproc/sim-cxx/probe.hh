@@ -19,6 +19,7 @@
 #else
 #include "VrvCore.h"
 #include "VrvCore___024root.h"
+constexpr uint32_t ResetVector{0x8000'0000U};
 #endif
 
 #define ANSI_NONE "\033[0m"
@@ -35,6 +36,7 @@ using ureg_t = uint32_t;
 using handler_t = void (*)();
 extern handler_t abortHandler;
 extern handler_t resetAllStats;
+extern handler_t dumpAllStats;
 
 template<typename Derived, typename Base>
 concept IsDerived = std::derived_from<Derived, Base>;
@@ -330,6 +332,13 @@ read_double_csr(CsrSel hi, CsrSel lo) {
   ret |= read_csr(lo);
   return ret;
 }
+
+inline bool
+read_raw_stall() {
+  auto r = ptop->rootp;
+  return r->rvCore__DOT__ids__DOT__io_rawRes;
+}
+
 } // namespace trace
 
 __attribute_noinline__
