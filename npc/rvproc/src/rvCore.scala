@@ -68,6 +68,7 @@ class rvCore(isSoc: Boolean) extends Module {
   // exs.io.toDec <> ids.io.isFlush
   BusConnect(exs.io.brDet, exs.io.flush, Pipeline)
   BusConnect(exs.io.brDet, ids.io.flush, Pipeline)
+  BusConnect(ids.io.fenceI, ifs.io.fromId, Pipeline)
   BusConnect(exs.io.toFetch, ifs.io.fromEx, Pipeline)
   BusConnect(ifs.io.out, ids.io.in, Pipeline)
   BusConnect(ids.io.out, exs.io.in, Pipeline)
