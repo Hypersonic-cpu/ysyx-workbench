@@ -150,29 +150,18 @@ public:
     samples = 0;
   }
 
-protected:
-  template <typename R>
-  static auto
-  gen_zip(const std::vector<std::string>& nm, const std::vector<R>& val) {
-    assert(nm.size() == val.size() && "Inconsist length in zip");
-    std::vector<std::pair<std::string, R>> ret{};
-    for (size_t i = 0; i < nm.size(); i++) {
-      ret.emplace_back(nm.at(i), val.at(i));
-    }
-    return std::unordered_map<std::string, R>(ret.begin(), ret.end());
-  }
-
 public:
   json
   gen_json() const override {
     std::vector<std::string> buckets{};
-    for (auto i = 0U; i < maxidx; i++) {
-      buckets.emplace_back(std::to_string(min + delta * i));
-    }
-    json ret = gen_zip(buckets, arr);
-    ret.update(json(gen_zip(StatName, stat)));
-    ret.update(json(gen_zip(MetaName, meta)));
+    json ret = {};
     ret["samples"] = samples;
+    for (auto i = 0U; i < maxidx; ++i)
+      ret[std::to_string(min + delta * i)] = arr.at(i);
+    for (auto i = 0U; i < StatName.size(); ++i)
+      ret[StatName.at(i)] = stat.at(i);
+    for (auto i = 0U; i < MetaName.size(); ++i)
+      ret[MetaName.at(i)] = meta.at(i);
     return ret;
   }
 

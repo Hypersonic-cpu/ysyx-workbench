@@ -60,12 +60,14 @@ class WrBackStage extends Module {
   ioreg.gprRd   := iofw.gprRd
   ioreg.instRet := io.in.valid
 
-  /** PMU */
-  val pmu = Module(new WrBackPMU)
-  pmu.io.clock     := clock
-  pmu.io.reset     := reset
-  pmu.io.pc        := iofw.pc
-  pmu.io.inst      := iofw.inst
-  pmu.io.isNewInst := io.in.valid
-  pmu.io.stallTp   := iofw.stallT.asUInt.pad(8)
+  if (GlbCtrl.debug) {
+    /** PMU */
+    val pmu = Module(new WrBackPMU)
+    pmu.io.clock     := clock
+    pmu.io.reset     := reset
+    pmu.io.pc        := iofw.pc
+    pmu.io.inst      := iofw.inst
+    pmu.io.isNewInst := io.in.valid
+    pmu.io.stallTp   := iofw.stallT.asUInt.pad(8)
+  }
 }

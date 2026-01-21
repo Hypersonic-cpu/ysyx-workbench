@@ -28,7 +28,7 @@ constexpr uint32_t ResetVector{0x8000'0000U};
 #define ANSI_B_RED "\033[1;31m"
 #define ANSI_B_GREEN "\033[1;32m"
 
-using json = nlohmann::json;
+using json = nlohmann::ordered_json;
 
 using addr_t = uint32_t;
 using ureg_t = uint32_t;

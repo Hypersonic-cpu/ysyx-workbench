@@ -1,9 +1,12 @@
 #include "difftest.hh"
 #include "options.hh"
 #include "pmu.hh"
+#include "probe.hh"
 #include "runtime.hh"
 #include <cassert>
 #include <cstdint>
+#include <future>
+#include <unistd.h>
 
 #if SOCMODE
 
@@ -85,27 +88,42 @@ vga_read(uint32_t addr) {
 RuntimeBin* unifiedMem = nullptr;
 cacheSim::CacheSimulator* iCache = nullptr;
 
+// mt-unsafe
 uint32_t
 pmem_read(uint32_t araddr, uint32_t* prdata, bool bfirst) {
-  // std::cerr << std::hex;
-  // std::cerr << "DPI-C axi read @ " << araddr
-  //           << " data = " << unifiedMem->readWord(araddr) << std::endl;
+  static uint64_t ready_time = 0;
+  // TODO: Exact number
+  auto curr_lat = bfirst ? MemLatency : MemBstLat;
+  auto finish_time = std::max(ready_time, curr_tick()) + curr_lat;
+  if (ppmu) {
+    ppmu->notifyMemXBar(false, ready_time, curr_lat);
+  }
+  ready_time = finish_time;
   assert(unifiedMem);
   *prdata = unifiedMem->readWord(araddr & ~3U);
-  return MemLatency;
+  return finish_time - curr_tick();
 }
 
 uint32_t
 pmem_write(uint32_t awaddr, uint32_t wdata, unsigned char wstrb,
            bool bfirst) {
-  assert(unifiedMem);
+  static uint64_t ready_time = 0;
+  // TODO: Exact number
+  auto curr_lat = bfirst ? MemLatency : MemBstLat;
+  auto finish_time = std::max(ready_time, curr_tick()) + curr_lat;
+  if (ppmu) {
+    ppmu->notifyMemXBar(true, ready_time, curr_lat);
+  }
+  ready_time = finish_time;
+  // TODO: upd ready time
   if (awaddr == 0x1000'0000) [[unlikely]] {
     putchar(wdata);
     goto rettime;
   }
+  assert(unifiedMem);
   unifiedMem->writeWord(awaddr & ~3U, wdata, wstrb);
 rettime:
-  return MemLatency;
+  return finish_time - curr_tick();
 }
 
 uint32_t
@@ -117,26 +135,17 @@ axi_read(uint32_t araddr, uint32_t* prdata, uint16_t id) {
   if (iCache && id == 0) {
     return iCache->read_req(araddr, prdata);
   }
-  *prdata = unifiedMem->readWord(araddr & ~3U);
-  return MemLatency;
+  return pmem_read(araddr, prdata, true);
 }
 
 uint32_t
 axi_write(uint32_t awaddr, uint32_t wdata, unsigned char wstrb,
           uint16_t id) {
-  // std::cerr << std::hex;
-  // std::cerr << "DPI-C axi write [" << id << "] @ " << awaddr
-  //           << " data = " << wdata << std::endl;
   assert(unifiedMem);
-  if (awaddr == 0x1000'0000) [[unlikely]] {
-    putchar(wdata);
-    return MemLatency;
-  }
   if (iCache && id == 0) {
     return iCache->write_req(awaddr, wdata, wstrb);
   }
-  unifiedMem->writeWord(awaddr & ~3U, wdata, wstrb);
-  return MemLatency;
+  return pmem_write(awaddr, wdata, wstrb, true);
 }
 
 void
@@ -176,14 +185,20 @@ notify_ls_resp(uint32_t a) {
 }
 
 void
-notify_decode(uint32_t pc, unsigned char itype, unsigned char iop) {
+notify_decode(uint32_t pc, unsigned char iop) {
   ppmu->notifyDecode(pc, iop);
+}
+
+void
+notify_flush() {
+  ppmu->notifyFlush();
 }
 
 void
 notify_commit(uint32_t pc, uint32_t inst, unsigned char stalltp) {
   ppmu->notifyCommit(pc, stalltp);
-  if (stalltp == 0) pccdb->inst_trace(pc, inst);
+  if (stalltp == 0)
+    pccdb->inst_trace(pc, inst);
   pdiff->upd_dut_pc(pc);
   if constexpr (options::diff_enable) {
     pdiff->setFire();

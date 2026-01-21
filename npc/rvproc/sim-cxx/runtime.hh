@@ -38,6 +38,7 @@ extern "C" uint32_t vga_read(uint32_t addr);
  */
 
 constexpr uint32_t MemLatency{30U};
+constexpr uint32_t MemBstLat{5U};
 extern "C" uint32_t axi_read(uint32_t araddr, uint32_t* prdata, uint16_t id);
 extern "C" uint32_t axi_write(uint32_t awaddr, uint32_t wdata,
                               unsigned char wstrb, uint16_t id);
@@ -55,9 +56,12 @@ extern "C" void notify_fetch(uint32_t pc);
 extern "C" void notify_ls_req(uint32_t addr);
 extern "C" void notify_ls_resp(uint32_t addr);
 
-extern "C" void notify_decode(uint32_t pc, unsigned char itype,
-                              unsigned char iop);
-extern "C" void notify_commit(uint32_t pc, uint32_t inst, unsigned char stalltp);
+extern "C" void notify_decode(uint32_t pc, unsigned char iop);
+
+extern "C" void notify_commit(uint32_t pc, uint32_t inst,
+                              unsigned char stalltp);
+
+extern "C" void notify_flush();
 
 class RuntimeBin;
 
@@ -123,7 +127,9 @@ public:
   RuntimeBin(const RuntimeBin&) = delete;
   RuntimeBin& operator=(const RuntimeBin&) = delete;
   RuntimeBin(const std::string& bin, addr_t base, const std::string& name)
-      : data{}, baseAddr{base}, name{name} {
+      : data{}
+      , baseAddr{base}
+      , name{name} {
     std::ifstream fileStream;
     v_assert(isAligned(base), "Unaligned base addr", base);
     fileStream.open(bin, std::ios::binary | std::ios::in | std::ios::ate);
@@ -148,7 +154,9 @@ public:
 
   RuntimeBin(const std::vector<ureg_t>& vec, addr_t base,
              const std::string& name)
-      : data(vec), baseAddr{base}, name{name} {}
+      : data(vec)
+      , baseAddr{base}
+      , name{name} {}
 
   ureg_t
   readWord(addr_t addr) const {

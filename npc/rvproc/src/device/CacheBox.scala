@@ -19,7 +19,11 @@ class CacheDPICBox extends BlackBox with HasBlackBoxPath {
     val resp    = Output(Tp.InstType())
     val latency = Output(SInt(32.W))
   })
-  addPath(PATH.dpic("CacheDPICBox.sv"))
+  if (GlbCtrl.debug) {
+    addPath(PATH.dpic("CacheDPICBox.sv"))
+  } else {
+    addPath(PATH.dpic("FakeCacheBox.sv"))
+  }
 }
 
 class iCache(PipeDepth: Int) extends CacheBox(PipeDepth) {

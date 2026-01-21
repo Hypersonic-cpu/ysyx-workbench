@@ -9,7 +9,7 @@ import rvproc.axi4.AXI.BurstOpts._
 import rvproc.pmu.FetchPMU
 import BitMath._
 
-class FetchStage(resetVector: BigInt, PipeDepth: Int = 6)
+class FetchStage(resetVector: BigInt, PipeDepth: Int = 4)
     extends Module {
   val io = IO(new Bundle {
     val out    = Decoupled(new FetchToDecode)
@@ -26,7 +26,8 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 6)
   // val pipeShift = io.out.ready && nextState =/= serve
   val brex      = io.fromEx.bits
   val brPending = RegInit(false.B)
-  val flushWire = (io.fromEx.valid && brex.take) || (io.fromId.valid && io.fromId.bits)
+  val flushWire =
+    (io.fromEx.valid && brex.take) || (io.fromId.valid && io.fromId.bits)
 
   val pc     = RegInit(resetVector.U(ISA.RegBits.W))
   val nextPC = RegInit((resetVector + 4).U(ISA.RegBits.W))
@@ -41,7 +42,7 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 6)
   val toidPtr  = RegInit(0.U(log2Ceil(PipeDepth + 1).W))
   def iotaMod(a: UInt) = Mux(a === PipeDepth.U, 0.U, a + 1.U)
 
-  val bufFull = iotaMod(headPtr) === toidPtr
+  val bufFull   = iotaMod(headPtr) === toidPtr
   val instEmpty = toidPtr === tailPtr
 
   // Recv inst from iCache
@@ -57,9 +58,9 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 6)
     headPtr           := iotaMod(headPtr)
   }
   // Issue to IDU
-  when (io.out.ready && !instEmpty) {
+  when(io.out.ready && !instEmpty) {
     validBuf(toidPtr) := false.B
-    toidPtr := iotaMod(toidPtr)
+    toidPtr           := iotaMod(toidPtr)
   }
 
   io.out.valid    := !instEmpty && !flushWire && validBuf(toidPtr)
@@ -68,7 +69,7 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 6)
   io.fromId.ready := true.B
 
   iMem.ar.bits.addr  := pc
-  iMem.ar.bits.size  := 0x2.U // log2(4)
+  iMem.ar.bits.size  := 0x2.U  // log2(4)
   iMem.ar.bits.len   := 0.U
   iMem.ar.bits.burst := INCR
   iMem.ar.bits.id    := 0.U
@@ -122,12 +123,14 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 6)
     printf(cf"[  IF  ] Recvd PC = ${pcBuf(tailPtr)}%x\n")
   }
 
-  val pmu = Module(new FetchPMU)
-  pmu.io.clock     := clock
-  pmu.io.reset     := reset
-  pmu.io.trigFetch := iMem.ar.fire
-  pmu.io.trigRecvd := iMem.r.fire
-  pmu.io.pcFetch   := pc
-  pmu.io.pcRecvd   := pcBuf(tailPtr)
-  pmu.io.inst      := io.out.bits.inst
+  if (GlbCtrl.debug) {
+    val pmu = Module(new FetchPMU)
+    pmu.io.clock     := clock
+    pmu.io.reset     := reset
+    pmu.io.trigFetch := iMem.ar.fire
+    pmu.io.trigRecvd := iMem.r.fire
+    pmu.io.pcFetch   := pc
+    pmu.io.pcRecvd   := pcBuf(tailPtr)
+    pmu.io.inst      := io.out.bits.inst
+  }
 }
