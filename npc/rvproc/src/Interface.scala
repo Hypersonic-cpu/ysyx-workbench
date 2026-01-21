@@ -7,7 +7,7 @@ import chisel3.assert.Assert
 import chisel3._
 
 object GlbCtrl {
-  val debug = false
+  val debug = true
 }
 
 class FetchToDecode extends Bundle {
