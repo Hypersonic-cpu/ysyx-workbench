@@ -8,7 +8,6 @@
 #include <iomanip>
 #include <iostream>
 #include <list>
-#include <stdexcept>
 #include <string>
 #include <sys/cdefs.h>
 #include <unordered_map>
@@ -238,7 +237,7 @@ extern ptop_t ptop;
 
 // 0x10 for PC
 inline ureg_t
-read_reg(uint8_t regid) {
+read_reg(uint8_t regid) noexcept {
   auto r = ptop->rootp;
   ureg_t ret = 0;
   switch (regid) {
@@ -259,7 +258,8 @@ read_reg(uint8_t regid) {
     case 0xd: ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__gpr__DOT__gprs_13; break;
     case 0xe: ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__gpr__DOT__gprs_14; break;
     case 0xf: ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__gpr__DOT__gprs_15; break;
-    case 0x10:ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__ifs__DOT__pc; break;
+    // TODO:
+    // case 0x10:ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__ifs__DOT__pc; break;
 #else
     case 0x0: ret = r->rvCore__DOT__reg_0__DOT__gpr__DOT__gprs_0; break;
     case 0x1: ret = r->rvCore__DOT__reg_0__DOT__gpr__DOT__gprs_1; break;
@@ -279,9 +279,8 @@ read_reg(uint8_t regid) {
     case 0xf: ret = r->rvCore__DOT__reg_0__DOT__gpr__DOT__gprs_15; break;
     case 0x10:ret = r->rvCore__DOT__wbs_io_in_bits_rfoward_pc ; break;
 #endif
-    default: throw std::runtime_error(
-                 "Invalid GPR read @ regid = " + std::to_string(regid));
-             break;
+    default: v_assert(false, "Invalid GPR read @ regid =", std::to_string(regid));
+      break;
   }
   return ret;
 }
@@ -297,7 +296,7 @@ enum CsrSel {
 };
 
 inline ureg_t
-read_csr(CsrSel fakeid) {
+read_csr(CsrSel fakeid) noexcept {
   auto r = ptop->rootp;
   ureg_t ret = 0;
   switch (fakeid) {
@@ -320,26 +319,40 @@ read_csr(CsrSel fakeid) {
     case MInstret: ret = r->rvCore__DOT__reg_0__DOT__csr__DOT__minstret ; break;
     case MInstreth:ret = r->rvCore__DOT__reg_0__DOT__csr__DOT__minstreth; break;
 #endif
-    default: throw std::runtime_error("Out-of-range CSR read"); break;
+    default: v_assert(false, "Out-of-range CSR read, sim fakeid =", std::to_string(fakeid)); break;
   }
   return ret;
 }
 
 inline size_t
-read_double_csr(CsrSel hi, CsrSel lo) {
+read_double_csr(CsrSel hi, CsrSel lo) noexcept {
   size_t ret = read_csr(hi);
   ret <<= 32;
   ret |= read_csr(lo);
   return ret;
 }
 
-inline bool
-read_raw_stall() {
-  auto r = ptop->rootp;
-  return r->rvCore__DOT__ids__DOT__io_rawRes;
-}
+// WARN: This is not at WB stage.
+// inline bool
+// read_raw_stall() noexcept {
+//   auto r = ptop->rootp;
+//   return r->rvCore__DOT__ids__DOT__io_rawRes;
+// }
+
+// inline bool
+// read_lsu_stall() noexcept {
+//   auto r = ptop->rootp;
+//   return r->rvCore__DOT__lss__DOT__state;
+// }
+
+// No inst commit is regarded as a stall.
+// inline bool
+// read_stall() noexcept {
+//   auto r = ptop->rootp;
+//   return !r->rvCore__DOT__wbs_io_in_valid_r;
+// }
 
 } // namespace trace
 
 __attribute_noinline__
-size_t curr_tick();
+size_t curr_tick() noexcept;

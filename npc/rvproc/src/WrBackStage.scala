@@ -34,7 +34,7 @@ class WrBackStage extends Module {
     val toFetch = Decoupled(new InstCommit)
   })
 
-  io.in.ready      := true.B // io.toFetch.ready
+  io.in.ready      := true.B
   io.toReg.valid   := io.in.valid
   io.toFetch.valid := io.in.valid
 
@@ -58,7 +58,7 @@ class WrBackStage extends Module {
   ioreg.gprWE   := iofw.gprWE
   ioreg.gprIn   := iWbu.io.gprdt
   ioreg.gprRd   := iofw.gprRd
-  ioreg.instRet := io.in.valid // && io.toFetch.ready
+  ioreg.instRet := io.in.valid
 
   /** PMU */
   val pmu = Module(new WrBackPMU)
@@ -66,5 +66,6 @@ class WrBackStage extends Module {
   pmu.io.reset     := reset
   pmu.io.pc        := iofw.pc
   pmu.io.inst      := iofw.inst
-  pmu.io.isNewInst := ioreg.instRet
+  pmu.io.isNewInst := io.in.valid
+  pmu.io.stallTp   := iofw.stallT.asUInt.pad(8)
 }

@@ -88,9 +88,7 @@ public:
   static constexpr char NEMU_SO[] = "build/riscv32-nemu-interpreter-so";
   static constexpr int NEMUPort{1234};
 
-  // TODO: CSR support
-  //
-  //
+  // TODO: Add Device Check back
   // bool is_csr =
   //   bits(inst, 6, 2) == 0b11100 && bits(inst, 14, 12) != 0b000;
   // uint16_t csrid = bits(inst, 31, 20);
@@ -102,7 +100,7 @@ public:
   // }
 
   auto
-  match() -> std::vector<std::tuple<uint16_t, uint32_t, uint32_t>> {
+  match() noexcept -> std::vector<std::tuple<uint16_t, uint32_t, uint32_t>> {
     if constexpr (!options::diff_enable) {
       return {};
     }
@@ -127,7 +125,7 @@ public:
   }
 
   void
-  copy() {
+  copy() noexcept {
     if constexpr (!options::diff_enable)
       return;
     device_access = false;
@@ -139,14 +137,15 @@ public:
   }
 
   void
-  iota(uint64_t n = 1) {
+  iota(uint64_t n = 1) noexcept {
     if constexpr (!options::diff_enable)
       return;
     ref_exec(n);
   }
 
-  std::vector<std::tuple<uint16_t, uint32_t, uint32_t>>
-  test_on_commit() {
+  auto
+  test_on_commit() noexcept
+    -> std::vector<std::tuple<uint16_t, uint32_t, uint32_t>> {
     if (!fire) {
       return {};
     }
