@@ -3,18 +3,24 @@
 #include "probe.hh"
 #include "stats.hh"
 
+#include <format>
+#include <iostream>
+#include <limits>
+#include <utility>
+
 namespace trace {
 
 class SoftPerfUnit {
 public:
   inline static const std::unordered_map<unsigned char, size_t> InstOpToIdx{
     {0b00000U, 0}, {0b00011U, 1}, {0b00100U, 2},  {0b00101U, 3},
-    {0b01000U, 4}, {0b01100U, 5}, {0b10100U, 6},  {0b01101U, 7},
-    {0b11000U, 8}, {0b11001U, 9}, {0b11011U, 10}, {0b11100U, 11}};
+    {0b01000U, 4}, {0b01100U, 5}, {0b01101U, 6},  {0b10100U, 7},
+    {0b11000U, 8}, {0b11001U, 9}, {0b11010U, 10}, {0b11011U, 11},
+    {0b11100U, 12}};
 
   inline static const std::vector<std::string> InstOpName = {
-    "Load", "Misc-Mem", "OpImm",  "Auipc", "Store", "OpReg",
-    "OpFP", "Lui",      "Branch", "Jalr",  "Jal",   "System"};
+    "Load", "MiscM",  "OpImm", "Auipc",   "Store", "OpReg", "Lui",
+    "OpFP", "Branch", "Jalr",  "Reserve", "Jal",   "System"};
 
   // Total count = sim cycles. Exclusive
   enum CycBreakdown {
@@ -45,24 +51,37 @@ public:
     ArbiterDRead,
     ArbiterDWrite
   };
+
   inline static const std::unordered_map<ArbiterBreakdown, std::string>
     ArbiterBreakdownName{{ArbiterBreakdown::ArbiterIdle, "None"},
                          {ArbiterBreakdown::ArbiterIRead, "IRead"},
                          {ArbiterBreakdown::ArbiterDRead, "DRead"},
                          {ArbiterBreakdown::ArbiterDWrite, "DWrite"}};
 
+  enum XBarBreakdown { XBarIdle = 0, XBarBlocking, XBarServing };
+
+  inline static const std::unordered_map<XBarBreakdown, std::string>
+    XBarBreakdownName{{XBarBreakdown::XBarIdle, "Idle"},
+                      {XBarBreakdown::XBarBlocking, "Blocking"},
+                      {XBarBreakdown::XBarServing, "Serving"}};
+
 private:
-  DistriDelta<int64_t> pcjmp;
+  // DistriDelta<int64_t> pcjmp;
   DistriBase<uint64_t> ifcyc;
   DistriDelta<uint64_t> lscyc;
   DistriVec<DistriBase<uint64_t>, uint64_t> instcyc;
 
+  std::pair<bool, uint64_t> flushedRec;
+  DistriBase<uint64_t> recoverTime;
+
   ClassifiedStats<CycBreakdown> cycStatus;
   ClassifiedStats<InstBreakdown> instStatus;
-  ClassifiedStats<ArbiterBreakdown> memStatus;
+  ClassifiedStats<XBarBreakdown> memRdStatus;
+  ClassifiedStats<XBarBreakdown> memWrStatus;
 
-  std::vector<StatsBase*> statslist{&ifcyc, &lscyc, &instcyc, &cycStatus,
-                                    &instStatus};
+  std::vector<StatsBase*> statslist{&ifcyc,       &lscyc,      &instcyc,
+                                    &cycStatus,   &instStatus, &memRdStatus,
+                                    &memWrStatus, &recoverTime};
 
   using iboard_t = std::tuple<addr_t, size_t, uint64_t>;
   std::list<iboard_t> instboard;
@@ -73,15 +92,18 @@ public:
   SoftPerfUnit()
       : instboard{}
       , ifetchboard{}
+      , flushedRec{false, 0}
       , ifcyc(0, 100, 10, "Inst Fetch Cycles")
       , lscyc(0, 100, 10, std::numeric_limits<int64_t>::max(),
               "Load Store Cycles")
-      , instcyc(InstOpName.size(), 0, 200, 20,
+      , instcyc(InstOpName.size(), 0, 100, 10,
                 std::numeric_limits<int64_t>::max(), "Inst Cats", InstOpName)
-      , pcjmp(0, 1024, 64, ResetVector, "PC Jump Distance")
+      , recoverTime(0, 60, 3, "BrRecover Time")
+      // , pcjmp(0, 1024, 64, ResetVector, "PC Jump Distance")
       , instStatus("InstBreakdown", InstBreakdownName)
       , cycStatus("BlockedCause", CycBreakdownName)
-      , memStatus("BusUsage", ArbiterBreakdownName) {}
+      , memRdStatus("XBarReadUsage", XBarBreakdownName)
+      , memWrStatus("XBarWriteUsage", XBarBreakdownName) {}
 
   void
   dump_stats(std::ostream& os = std::cout) const {
@@ -107,24 +129,13 @@ public:
 
   void
   notifyIFRecvd(addr_t pc) {
-    // using namespace std;
-    // cout << format("IF Recv {:x}", pc) << endl;
     while (std::get<0>(ifetchboard.front()) != pc) {
-      // cout << format("Front is {:x}", std::get<0>(ifetchboard.front())) <<
-      // endl;
       ifetchboard.pop_front();
       v_assert(!ifetchboard.empty(), "Cannot find pc @", pc,
                "in IF Pipeline");
     }
     ifcyc.sample(curr_tick() - std::get<1>(ifetchboard.front()));
     ifetchboard.pop_front();
-
-    // cout << "==> IF Queue ";
-    // for (auto const& [pcs , time]: ifetchboard) {
-    //   cout << format("[{:08x} @ {}] ", pcs, time);
-    // }
-    // cout << endl;
-    // pcjmp.sample(static_cast<int64_t>(pc));
   }
 
   void
@@ -135,6 +146,10 @@ public:
   void
   notifyDecode(addr_t pc, unsigned char op) {
     instboard.emplace_back(pc, InstOpToIdx.at(op), curr_tick());
+    if (flushedRec.first) {
+      recoverTime.sample(curr_tick() - flushedRec.second);
+      flushedRec.first = false;
+    }
   }
 
   void
@@ -145,6 +160,23 @@ public:
   void
   notifyLSResp(addr_t a) {
     lscyc.sample(curr_tick());
+  }
+
+  void
+  notifyFlush() {
+    flushedRec = {true, curr_tick()};
+  }
+
+  void
+  notifyMemXBar(bool is_write, uint64_t last_time, uint32_t time_usage) {
+    auto curr_time = curr_tick();
+    auto& sel = is_write ? memWrStatus : memRdStatus;
+    if (last_time < curr_time) {
+      sel.sample(XBarBreakdown::XBarIdle, curr_time - last_time);
+    } else if (last_time >= curr_time) {
+      sel.sample(XBarBreakdown::XBarBlocking, last_time - curr_time);
+    }
+    sel.sample(XBarBreakdown::XBarServing, time_usage);
   }
 
   /**

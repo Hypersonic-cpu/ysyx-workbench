@@ -144,6 +144,7 @@ rtlsta: $(SCALA_SOURCES)
 	$(call git_commit, "generate verilog") # WARN: Only allow tracking here
 	mkdir -p $(BUILD_SV_DIR)
 	mill -i $(PRJ).runMain ElaborSta
+	@find $(BUILD_SV_DIR) -type f -name "*.v" -o -name "*.sv" -print0 | xargs -0 sed -i 's/^\.\/.*\.sv//'
 
 help:
 	mill -i $(PRJ).runMain Elaborate --help
