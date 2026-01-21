@@ -181,9 +181,9 @@ notify_decode(uint32_t pc, unsigned char itype, unsigned char iop) {
 }
 
 void
-notify_commit(uint32_t pc, uint32_t inst) {
-  ppmu->notifyCommit(pc);
-  pccdb->inst_trace(pc, inst);
+notify_commit(uint32_t pc, uint32_t inst, unsigned char stalltp) {
+  ppmu->notifyCommit(pc, stalltp);
+  if (stalltp == 0) pccdb->inst_trace(pc, inst);
   pdiff->upd_dut_pc(pc);
   if constexpr (options::diff_enable) {
     pdiff->setFire();

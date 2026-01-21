@@ -163,6 +163,11 @@ class ExecuteStage extends Module {
 
   /** Foward */
   ioid.foward <> iols.foward
+  if (GlbCtrl.debug) {
+    iols.foward.stallT := Mux(flushed, StallCause.Branch, ioid.foward.stallT)
+  } else {
+    iols.foward.stallT := DontCare
+  }
 
   /** Interrupt */
   val iInt = Module(new EcallBox)

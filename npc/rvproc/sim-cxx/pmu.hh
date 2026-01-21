@@ -1,6 +1,6 @@
 #pragma once
 
-#include "capstone/sh.h"
+#include "options.hh"
 #include "probe.hh"
 
 #include <algorithm>
@@ -32,6 +32,7 @@ protected:
 public:
   StatsBase(const std::string& name)
       : name_{name} {}
+  StatsBase() = delete;
 
   std::string
   name() const {
@@ -41,6 +42,62 @@ public:
   virtual json gen_json() const = 0;
   virtual void dump_stats(std::ostream& os = std::cout) const = 0;
   virtual void reset_stats() = 0;
+};
+
+template <typename U> class ClassifiedStats : public StatsBase {
+protected:
+  std::unordered_map<std::string, size_t> arr;
+  const std::unordered_map<U, std::string> idToNames;
+  size_t samples;
+
+public:
+  ClassifiedStats(const std::string& name,
+                  const std::unordered_map<U, std::string>& nameMap)
+      : StatsBase(name)
+      , arr{}
+      , idToNames(nameMap)
+      , samples{0} {
+    reset_stats();
+  }
+
+  auto
+  sample(U bucket, size_t num = 1) -> void {
+    samples += num;
+    auto const& nm = idToNames.at(bucket);
+    arr[nm] += num;
+  }
+
+  json
+  gen_json() const override {
+    return json(arr);
+  }
+
+  void
+  dump_stats(std::ostream& os) const override {
+    os << std::format("{:10s} : samples {:d} ", this->name_, samples);
+    for (auto const& [id, nm] : idToNames) {
+      os << std::format(", {:s} {:d} ", nm, arr.at(nm));
+    }
+    os << std::endl;
+  }
+
+  void
+  reset_stats() override {
+    samples = 0;
+    for (auto const& [id, nm] : idToNames) {
+      arr[nm] = 0;
+    }
+  }
+
+  size_t
+  get_samples() const {
+    return samples;
+  }
+
+  size_t
+  at(U key) const {
+    return arr.at(idToNames.at(key));
+  }
 };
 
 template <typename T> class DistriBase : public StatsBase {
@@ -237,6 +294,7 @@ public:
   dump_stats(std::ostream& os) const override {
     os << std::format("{} samples {:d}", this->name(), sumsamples)
        << std::endl;
+    return;
     for (const auto& c : cats) {
       c.dump_stats(os);
     }
@@ -255,47 +313,65 @@ public:
     "Load", "Misc-Mem", "OpImm",  "Auipc", "Store", "OpReg",
     "OpFP", "Lui",      "Branch", "Jalr",  "Jal",   "System"};
 
+  // Total count = sim cycles. Exclusive
+  enum CycBreakdown {
+    NoStall = 0,
+    IfuStall,
+    LsuStall,
+    BranchMispred,
+    ReadAfterWrite
+  };
+
+  inline static const std::unordered_map<CycBreakdown, std::string>
+    CycBreakdownName{{CycBreakdown::NoStall, "NoStall"},
+                     {CycBreakdown::IfuStall, "NoInst"},
+                     {CycBreakdown::LsuStall, "LsuStall"},
+                     {CycBreakdown::BranchMispred, "BranchMispred"},
+                     {CycBreakdown::ReadAfterWrite, "RAW"}};
+
+  // Total count = Fetched. Exclusive
+  enum InstBreakdown { Commit = 0, NotUsed };
+
+  inline static const std::unordered_map<InstBreakdown, std::string>
+    InstBreakdownName{{InstBreakdown::Commit, "Commit"},
+                      {InstBreakdown::NotUsed, "NotUsed"}};
+
 private:
   DistriDelta<int64_t> pcjmp;
-  DistriDelta<uint64_t> ifcyc;
+  DistriBase<uint64_t> ifcyc;
   DistriDelta<uint64_t> lscyc;
   DistriVec<DistriBase<uint64_t>, uint64_t> instcyc;
 
-  size_t commitCnt;
-  size_t cycleCnt;
-  size_t flushedCnt;
-  size_t rawCnt;
+  ClassifiedStats<CycBreakdown> cycStatus;
+  ClassifiedStats<InstBreakdown> instStatus;
 
-  std::vector<StatsBase*> statslist{
-    &ifcyc,
-    &lscyc,
-    &instcyc,
-  };
+  std::vector<StatsBase*> statslist{&ifcyc, &lscyc, &instcyc, &cycStatus,
+                                    &instStatus};
 
-  // FIXME: FIFO 在 pipeline 的情况下是对的
-  // 不需要分inst类型统计含IF 的周期...
   using iboard_t = std::tuple<addr_t, size_t, uint64_t>;
   std::list<iboard_t> instboard;
+  using ifetch_t = std::tuple<addr_t, uint64_t>;
+  std::list<ifetch_t> ifetchboard;
 
 public:
   SoftPerfUnit()
       : instboard{}
-      , ifcyc(0, 200, 20, std::numeric_limits<int64_t>::max(),
-              "Inst Fetch Cycles")
-      , lscyc(0, 200, 20, std::numeric_limits<int64_t>::max(),
+      , ifetchboard{}
+      , ifcyc(0, 100, 10, "Inst Fetch Cycles")
+      , lscyc(0, 100, 10, std::numeric_limits<int64_t>::max(),
               "Load Store Cycles")
       , instcyc(InstOpName.size(), 0, 200, 20,
                 std::numeric_limits<int64_t>::max(), "Inst Cats", InstOpName)
       , pcjmp(0, 1024, 64, ResetVector, "PC Jump Distance")
-      , commitCnt(0)
-      , flushedCnt(0)
-      , rawCnt(0)
-      , cycleCnt(0) {}
+      , instStatus("InstBreakdown", InstBreakdownName)
+      , cycStatus("BlockedCause", CycBreakdownName) {}
 
   void
   dump_stats(std::ostream& os = std::cout) const {
-    os << std::format("Cycles {:d} InstRet {:d} IPC {:.6f}", cycleCnt,
-                      commitCnt, get_ipc())
+    // Should commit 1 inst per cycle
+    os << std::format("Cycles {:d}\n  InstRet {:d} IPC {:.6f} StallCyc {:d}",
+                      get_cycles(), get_instret(), get_ipc(),
+                      get_cycles() - get_instret())
        << std::endl;
     for (auto const& ptr : statslist) {
       ptr->dump_stats(os);
@@ -308,42 +384,60 @@ public:
     for (auto const& ptr : statslist) {
       ret[ptr->name()] = ptr->gen_json();
     }
-    ret["instRet"] = commitCnt;
-    ret["instFlush"] = flushedCnt;
-    ret["cycles"] = cycleCnt;
-    ret["rawStall"] = rawCnt;
     ret["ipc"] = get_ipc();
     return ret;
   }
 
   void
   notifyIFIssue(addr_t pc) {
-    ifcyc.sample(curr_tick());
-    pcjmp.sample(static_cast<int64_t>(pc));
-    // fprintf(stderr, "sample at %x\n", read_double_csr(MCycleh, MCycle));
+    auto head = ifetchboard.front();
+    v_assert(std::get<0>(head) == pc, "IF pipeline trace fail, expect",
+             std::get<0>(head), "got", pc);
+    ifcyc.sample(curr_tick() - std::get<1>(head));
+    ifetchboard.pop_front();
+
+    // using namespace std;
+    // cout << "==> IF Queue ";
+    // for (auto const& [pcs , time]: ifetchboard) {
+    //   cout << format("[{:08x} @ {}] ", pcs, time);
+    // }
+    // cout << endl;
+    // pcjmp.sample(static_cast<int64_t>(pc));
   }
+
   void
   notifyIFFetch(addr_t pc) {
-    ifcyc.updlast(curr_tick());
-    // fprintf(stderr, "updlast at %x\n", read_double_csr(MCycleh, MCycle));
+    ifetchboard.emplace_back(pc, curr_tick());
   }
-  void
-  notifyLSReq(addr_t a) {
-    // fprintf(stderr, "req at %x\n", read_double_csr(MCycleh, MCycle));
-    lscyc.updlast(curr_tick());
-  }
-  void
-  notifyLSResp(addr_t a) {
-    // fprintf(stderr, "resp at %x\n", read_double_csr(MCycleh, MCycle));
-    lscyc.sample(curr_tick());
-  }
+
   void
   notifyDecode(addr_t pc, unsigned char op) {
     instboard.emplace_back(pc, InstOpToIdx.at(op), curr_tick());
   }
+
   void
-  notifyCommit(addr_t pc) {
-    commitCnt++;
+  notifyLSReq(addr_t a) {
+    lscyc.updlast(curr_tick());
+  }
+
+  void
+  notifyLSResp(addr_t a) {
+    lscyc.sample(curr_tick());
+  }
+
+  /**
+   * Receive notify signal from WBU in EACH CYCLE.
+   * @param pc The committed instruction PC
+   * @stalltp Stall type, =0 when WBU is valid this cycle.
+   *   Note that valid === fire for WBU.
+   */
+  void
+  notifyCommit(addr_t pc, unsigned char stalltp) {
+    auto cause = static_cast<CycBreakdown>(stalltp);
+    cycStatus.sample(cause);
+    if (cause != CycBreakdown::NoStall)
+      return;
+
     auto it = std::find_if(
       instboard.begin(), instboard.end(),
       [&pc](const iboard_t& ib) { return std::get<0>(ib) == pc; });
@@ -353,45 +447,38 @@ public:
     instcyc.sample(tp, deltat);
     instboard.erase(it);
 
-    // The pipeline is in order, so we can remove insstructions
-    // that was issued before the matched one.
+    // The pipeline is in order, so we can remove instructions
+    // that was ISSUED before the matched one.
     auto const remove_cnt = std::erase_if(
       instboard, [&t0](const iboard_t& ib) { return std::get<2>(ib) < t0; });
-    flushedCnt += remove_cnt;
-  }
 
-  void
-  iotaCycle() {
-    rawCnt += read_raw_stall();
-    cycleCnt++;
+    // Since not break, must commit 1 insts.
+    instStatus.sample(Commit, 1);
+    instStatus.sample(NotUsed, remove_cnt);
   }
 
   void
   reset_stats() {
-    commitCnt = 0;
-    cycleCnt = 0;
-    flushedCnt = 0;
-    rawCnt = 0;
     for (auto const& ptr : statslist) {
       ptr->reset_stats();
     }
   }
 
   size_t
-  get_cycles() const {
-    return cycleCnt;
+  get_cycles() const noexcept {
+    return cycStatus.get_samples();
   }
 
   size_t
-  get_instret() const {
-    return commitCnt;
+  get_instret() const noexcept {
+    return instStatus.at(InstBreakdown::Commit);
   }
 
   double
-  get_ipc() const {
-    return cycleCnt
-             ? static_cast<double>(commitCnt) / static_cast<double>(cycleCnt)
-             : 0.0;
+  get_ipc() const noexcept {
+    return get_cycles() ? static_cast<double>(get_instret()) /
+                            static_cast<double>(get_cycles())
+                        : 0.0;
   }
 };
 

@@ -10,6 +10,7 @@ import rvproc.MemLen._
 import rvproc.axi4.AXI.BurstOpts._
 import rvproc.axi4.AXI.RespStatus._
 import rvproc.pmu.LoadStorePMU
+import rvproc.GlbCtrl.debug
 
 // State:
 // idle -(reqReady)-> macc -(respValid)-> hold
@@ -128,11 +129,22 @@ class MemoryStage extends Module {
       )
     )
 
-  iowb.aluOut := io.in.bits.aluOut
-  iowb.foward := io.in.bits.foward
+  iowb.aluOut <> io.in.bits.aluOut
+  iowb.foward <> io.in.bits.foward
+  if (GlbCtrl.debug) {
+    iowb.foward.stallT := Mux(
+      io.in.valid && !io.out.valid,
+      StallCause.LoadStore,
+      io.in.bits.foward.stallT
+    )
+  } else {
+    iowb.foward.stallT := DontCare
+  }
 
-  when (io.out.valid) {
-    printf(cf"WR?${ioex.memOp.isSt} Addr ${ioex.aluOut}%x LoadData ${iowb.lsuOut}%x WrData ${wrdt}%x\n")
+  when(io.out.valid) {
+    printf(
+      cf"WR?${ioex.memOp.isSt} Addr ${ioex.aluOut}%x LoadData ${iowb.lsuOut}%x WrData ${wrdt}%x\n"
+    )
   }
 
   val pmu = Module(new LoadStorePMU)
