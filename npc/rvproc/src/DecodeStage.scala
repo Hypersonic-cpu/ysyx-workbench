@@ -8,18 +8,19 @@ import rvproc.pmu.DecodePMU
 import os.isFile
 
 object InstOp extends ChiselEnum {
-  val Load   = Value("b00000".U)
-  val MiscM  = Value("b00011".U)
-  val OpImm  = Value("b00100".U)
-  val Auipc  = Value("b00101".U)
-  val Store  = Value("b01000".U)
-  val OpReg  = Value("b01100".U)
-  // val OpFP   = Val"e(0b10"100.U)
-  val Lui    = Value("b01101".U)
-  val Branch = Value("b11000".U)
-  val Jalr   = Value("b11001".U)
-  val Jal    = Value("b11011".U)
-  val System = Value("b11100".U)
+  val Load    = Value("b00000".U)
+  val MiscM   = Value("b00011".U)
+  val OpImm   = Value("b00100".U)
+  val Auipc   = Value("b00101".U)
+  val Store   = Value("b01000".U)
+  val OpReg   = Value("b01100".U)
+  val Lui     = Value("b01101".U)
+  val OpFP    = Value("b10100".U)
+  val Branch  = Value("b11000".U)
+  val Jalr    = Value("b11001".U)
+  val Reserve = Value("b11010".U)
+  val Jal     = Value("b11011".U)
+  val System  = Value("b11100".U)
 }
 
 object CsrOp extends ChiselEnum {
@@ -31,20 +32,19 @@ object CsrOp extends ChiselEnum {
 
 class IDU extends Module {
   val io = IO(new Bundle {
-    val valid   = Input(Bool())
-    val pmuRecv = Input(Bool()) // for PMU
-    val inst    = Input(Tp.InstType())
-    val pc      = Input(Tp.RegType())
-    val rd      = Output(Tp.RegIdxType())
-    val csriw   = Output(Tp.CsrIdxType())
-    val imm     = Output(Tp.RegType())
-    val gprWE   = Output(Bool())
-    val csrWE   = Output(Bool())
-    val memAcc  = Output(new MemOp)
-    val aluEn   = Output(Bool())
-    val aluOp   = Output(AluOp())
-    val aluSel  = Output(new AluSel)
-    val fenceI  = Output(Bool())
+    val valid  = Input(Bool())
+    val inst   = Input(Tp.InstType())
+    val pc     = Input(Tp.RegType())
+    val rd     = Output(Tp.RegIdxType())
+    val csriw  = Output(Tp.CsrIdxType())
+    val imm    = Output(Tp.RegType())
+    val gprWE  = Output(Bool())
+    val csrWE  = Output(Bool())
+    val memAcc = Output(new MemOp)
+    val aluEn  = Output(Bool())
+    val aluOp  = Output(AluOp())
+    val aluSel = Output(new AluSel)
+    val fenceI = Output(Bool())
 
     val brInst = Output(new BrInst)
 
@@ -59,6 +59,9 @@ class IDU extends Module {
 
     val rs1Val = Input(Tp.RegType())
     val rs2Val = Input(Tp.RegType())
+
+    // for PMU
+    val opname = Output(InstOp())
   })
 
   val opcode  = io.inst(6, 0)
@@ -68,12 +71,13 @@ class IDU extends Module {
   val csrid12 = io.inst(31, 20)
 
   val (opName, opValid) = InstOp.safe(opcode(6, 2))
-  val sysRel            =
+  io.opname := Mux(opValid, opName, InstOp.Reserve);
+  val sysRel   =
     (opName === InstOp.System) && ~io.inst(19, 7).orR
-  val isEbreak          = sysRel && csrid12 === 1.U
-  val isEcall           = sysRel && csrid12 === 0.U
-  val isMret            = sysRel && csrid12 === "b_0011000_00010".U
-  val isFenceI          = opName === InstOp.MiscM && funct3 === "b001".U
+  val isEbreak = sysRel && csrid12 === 1.U
+  val isEcall  = sysRel && csrid12 === 0.U
+  val isMret   = sysRel && csrid12 === "b_0011000_00010".U
+  val isFenceI = opName === InstOp.MiscM && funct3 === "b001".U
 
   io.ebreak := isEbreak
   io.ecall  := isEcall
@@ -241,14 +245,6 @@ class IDU extends Module {
     }
   }
 
-  /** PMU related */
-  val pmu = Module(new DecodePMU)
-  pmu.io.clock     := clock
-  pmu.io.reset     := reset
-  pmu.io.isNewInst := io.pmuRecv && opValid
-  pmu.io.instType  := instTp
-  pmu.io.instOp    := opName
-  pmu.io.pc        := io.pc
 }
 
 class DecodeStage extends Module {
@@ -294,8 +290,7 @@ class DecodeStage extends Module {
   io.out.valid    := validCtrl && !waitRAW
   io.fenceI.valid := validCtrl && !waitRAW
 
-  iDec.io.valid   := validCtrl
-  iDec.io.pmuRecv := io.in.fire
+  iDec.io.valid := validCtrl
 
   /** fence.i */
   io.fenceI.bits := iDec.io.fenceI
@@ -328,9 +323,6 @@ class DecodeStage extends Module {
   ioex.aluEn  := iDec.io.aluEn
   ioex.brInst := iDec.io.brInst
 
-  /** STA: Get inst -> get rs1V: T=623
-    */
-
   val iofw = ioex.foward
   iofw.gprRd  := iDec.io.rd
   iofw.csrRd  := iDec.io.csriw
@@ -351,6 +343,17 @@ class DecodeStage extends Module {
     )
   } else {
     iofw.stallT := DontCare
+  }
+
+  if (GlbCtrl.debug) {
+    /** PMU related */
+    val pmu = Module(new DecodePMU)
+    pmu.io.clock     := clock
+    pmu.io.reset     := reset
+    pmu.io.isNewInst := io.in.fire
+    pmu.io.instOp    := iDec.io.opname
+    pmu.io.isFlush   := flushed
+    pmu.io.pc        := io.in.bits.pc
   }
 }
 

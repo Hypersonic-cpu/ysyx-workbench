@@ -147,10 +147,12 @@ class MemoryStage extends Module {
     )
   }
 
-  val pmu = Module(new LoadStorePMU)
-  pmu.io.clock    := clock
-  pmu.io.reset    := reset
-  pmu.io.trigReq  := state === idle && trigIss && reqReady
-  pmu.io.trigResp := state === serve && respValid
-  pmu.io.addr     := addr
+  if (GlbCtrl.debug) {
+    val pmu = Module(new LoadStorePMU)
+    pmu.io.clock    := clock
+    pmu.io.reset    := reset
+    pmu.io.trigReq  := state === idle && trigIss && reqReady
+    pmu.io.trigResp := state === serve && respValid
+    pmu.io.addr     := addr
+  }
 }

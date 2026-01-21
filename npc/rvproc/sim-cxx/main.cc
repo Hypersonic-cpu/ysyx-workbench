@@ -10,6 +10,7 @@
 #include <memory>
 #include <ostream>
 #include <string>
+#include <unordered_map>
 #include <vector>
 #include <verilated.h>
 #include <verilated_fst_c.h>
@@ -93,6 +94,7 @@ dump_config() {
   if (iCache) {
     conf["l1icache"] = json(iCache->config_map());
   }
+  conf["sdram"] = json({{"latency", MemLatency}, {"burstlat", MemBstLat}});
   conf["image"] = options::binary_img;
   return conf;
 }
