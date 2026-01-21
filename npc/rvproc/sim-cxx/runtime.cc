@@ -156,8 +156,8 @@ trace::SoftPerfUnit* ppmu = nullptr;
 trace::DiffTester* pdiff = nullptr;
 
 void
-notify_issue(uint32_t pc, uint32_t inst) {
-  ppmu->notifyIFIssue(pc);
+notify_recvd(uint32_t pc, uint32_t inst) {
+  ppmu->notifyIFRecvd(pc);
 }
 
 void

@@ -332,6 +332,11 @@ read_double_csr(CsrSel hi, CsrSel lo) noexcept {
   return ret;
 }
 
+// inline bool
+// read_arbiter_rport() noexcept {
+//   auto r = ptop->rootp;
+  // return r->rvcore__DOT__ ???
+
 // WARN: This is not at WB stage.
 // inline bool
 // read_raw_stall() noexcept {
