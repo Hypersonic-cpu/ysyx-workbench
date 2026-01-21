@@ -21,16 +21,6 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 6)
   val idle :: serve :: Nil = Enum(2)
 
   val iMem = io.iMem
-  // val state = RegInit(idle)
-  //
-  // val trigFetch = (!reset.asBool) && state === idle
-  // val nextState = MuxLookup(state, idle)(
-  //   Seq(
-  //     idle  -> Mux(trigFetch && iMem.ar.ready, serve, idle),
-  //     serve -> Mux(iMem.r.valid, idle, serve)
-  //   )
-  // )
-  // state := nextState
 
   // val pipeShift = io.out.ready && nextState =/= serve
   val brex      = io.fromEx.bits
@@ -119,12 +109,21 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 6)
   ioid.pc   := Mux(io.out.valid, pcRing(tailPtr), 0.U)
   ioid.inst := iMem.r.bits.data
 
+  when(iMem.ar.fire) {
+    printf(cf"[  IF  ] Fetch PC = ${io.iMem.ar.bits.addr}%x\n")
+  }
+  when(iMem.r.fire) {
+    printf(cf"[  IF  ] Issue PC = ${pcRing(tailPtr)}%x\n")
+  }
+
   val pmu         = Module(new FetchPMU)
-  val delayedPipe = RegNext(iMem.r.fire)
+  val delayedReq = (iMem.ar.fire)
+  val delayedRsp = (iMem.r.fire)
   pmu.io.clock     := clock
   pmu.io.reset     := reset
-  pmu.io.trigFetch := delayedPipe
-  pmu.io.trigIssue := io.out.fire
-  pmu.io.pc        := pc
+  pmu.io.trigFetch := delayedReq
+  pmu.io.trigIssue := delayedRsp
+  pmu.io.pcFetch   := pc
+  pmu.io.pcIssue   := pcRing(tailPtr)
   pmu.io.inst      := io.out.bits.inst
 }

@@ -31,20 +31,20 @@ object CsrOp extends ChiselEnum {
 
 class IDU extends Module {
   val io = IO(new Bundle {
-    val valid  = Input(Bool())
-    val ready  = Input(Bool()) // for PMU
-    val inst   = Input(Tp.InstType())
-    val pc     = Input(Tp.RegType())
-    val rd     = Output(Tp.RegIdxType())
-    val csriw  = Output(Tp.CsrIdxType())
-    val imm    = Output(Tp.RegType())
-    val gprWE  = Output(Bool())
-    val csrWE  = Output(Bool())
-    val memAcc = Output(new MemOp)
-    val aluEn  = Output(Bool())
-    val aluOp  = Output(AluOp())
-    val aluSel = Output(new AluSel)
-    val fenceI = Output(Bool())
+    val valid   = Input(Bool())
+    val pmuRecv = Input(Bool()) // for PMU
+    val inst    = Input(Tp.InstType())
+    val pc      = Input(Tp.RegType())
+    val rd      = Output(Tp.RegIdxType())
+    val csriw   = Output(Tp.CsrIdxType())
+    val imm     = Output(Tp.RegType())
+    val gprWE   = Output(Bool())
+    val csrWE   = Output(Bool())
+    val memAcc  = Output(new MemOp)
+    val aluEn   = Output(Bool())
+    val aluOp   = Output(AluOp())
+    val aluSel  = Output(new AluSel)
+    val fenceI  = Output(Bool())
 
     val brInst = Output(new BrInst)
 
@@ -245,7 +245,7 @@ class IDU extends Module {
   val pmu = Module(new DecodePMU)
   pmu.io.clock     := clock
   pmu.io.reset     := reset
-  pmu.io.isNewInst := io.valid && io.ready && opValid
+  pmu.io.isNewInst := io.pmuRecv && opValid
   pmu.io.instType  := instTp
   pmu.io.instOp    := opName
   pmu.io.pc        := io.pc
@@ -294,8 +294,8 @@ class DecodeStage extends Module {
   io.out.valid    := validCtrl && !waitRAW
   io.fenceI.valid := validCtrl && !waitRAW
 
-  iDec.io.valid := validCtrl
-  iDec.io.ready := io.out.ready
+  iDec.io.valid   := validCtrl
+  iDec.io.pmuRecv := io.in.fire
 
   /** fence.i */
   io.fenceI.bits := iDec.io.fenceI
@@ -342,6 +342,16 @@ class DecodeStage extends Module {
   iofw.pc     := ioif.pc
   iofw.inst   := io.in.bits.inst
   iofw.csrVal := csrVal
+
+  if (GlbCtrl.debug) {
+    iofw.stallT := Mux(
+      waitRAW,
+      StallCause.RAW,
+      Mux(flushed, StallCause.Branch, StallCause.InstFetch)
+    )
+  } else {
+    iofw.stallT := DontCare
+  }
 }
 
 // class Comparator extends Module {

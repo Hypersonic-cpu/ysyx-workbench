@@ -1,18 +1,15 @@
 #include "nlohmann/json.hpp"
 #include "nlohmann/json_fwd.hpp"
 
-#include <algorithm>
 #include <cassert>
 #include <cstdio>
 #include <filesystem>
 #include <format>
 #include <fstream>
-#include <getopt.h>
 #include <iostream>
 #include <memory>
 #include <ostream>
 #include <string>
-#include <tuple>
 #include <vector>
 #include <verilated.h>
 #include <verilated_fst_c.h>
@@ -223,6 +220,7 @@ main(int argc, char* argv[]) {
   ppmu = spmu.get();
 
   if (options::record_perf) {
+    v_warn(false, "Record perf >>", options::outdir);
     try {
       std::filesystem::create_directories(options::outdir);
     } catch (const std::filesystem::filesystem_error& e) {
@@ -251,7 +249,6 @@ main(int argc, char* argv[]) {
       std::cerr << std::format("\r== @posedge of Cycle #{} ==", currCyc)
                 << std::endl;
     currCyc++;
-    spmu->iotaCycle();
 
 #if NVBENA
     nvboard_update();
@@ -297,8 +294,12 @@ final:
   auto cycleNum = spmu->get_cycles();
   auto ipc = static_cast<double>(instNum) / static_cast<double>(cycleNum);
   std::cout << std::format(ANSI_YELLOW
-                           "== #cyc {:d} #inst {:d} IPC {:6f}" ANSI_NONE,
+                           "== #cyc {:d} #inst {:d} IPC {:6f} ==" ANSI_NONE,
                            cycleNum, instNum, ipc)
+            << std::endl;
+  std::cout << std::format(ANSI_YELLOW "== CSR: InstRet {:d} ==" ANSI_NONE,
+                           trace::read_double_csr(trace::CsrSel::MInstreth,
+                                                  trace::CsrSel::MInstret))
             << std::endl;
 
   print_stats();

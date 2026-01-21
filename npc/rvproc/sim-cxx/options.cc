@@ -3,6 +3,7 @@
 
 #include <csignal>
 #include <cstddef>
+#include <cstdio>
 #include <cstdlib>
 #include <ctime>
 #include <filesystem>
@@ -106,7 +107,7 @@ parse_args(int argc, char* argv[]) {
       break;
     case 'l':
       wave_file = std::string(optarg);
-      // assert(wave_enable && "Fst wave not enabled. Recompile with LOGENA=1");
+      v_warn(options::wave_enable, "Fst wave not enabled. Recompile with LOGENA=1");
       break;
     case 'e':
       elf_file = optarg;

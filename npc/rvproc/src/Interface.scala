@@ -117,6 +117,10 @@ class ExecuteBackward extends Bundle {
   def take = brRel || brAbs
 }
 
+object StallCause extends ChiselEnum {
+  val NoStall, InstFetch, LoadStore, Branch, RAW = Value
+}
+
 class DecodeFoward extends Bundle {
   val wbSel  = WbSel()
   val gprRd  = Tp.RegIdxType()
@@ -129,6 +133,9 @@ class DecodeFoward extends Bundle {
   val pc     = Tp.RegType()
   val inst   = UInt((if (GlbCtrl.debug) 32 else 0).W)
   val csrVal = Tp.RegType()
+
+  // Removed by compiler when not debugging.
+  val stallT = StallCause()
 }
 
 class DecodeToExecute extends Bundle {

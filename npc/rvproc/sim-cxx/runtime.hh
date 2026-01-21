@@ -57,7 +57,7 @@ extern "C" void notify_ls_resp(uint32_t addr);
 
 extern "C" void notify_decode(uint32_t pc, unsigned char itype,
                               unsigned char iop);
-extern "C" void notify_commit(uint32_t pc, uint32_t inst);
+extern "C" void notify_commit(uint32_t pc, uint32_t inst, unsigned char stalltp);
 
 class RuntimeBin;
 
