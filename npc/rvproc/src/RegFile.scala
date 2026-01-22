@@ -146,6 +146,6 @@ class RegFile extends Module {
   csr.io.idxw    := iowb.csrRd
   csr.io.wrEn    := iowb.csrWE && wbValid
   csr.io.data    := iowb.csrIn
-  csr.io.instRet := iowb.instRet
+  csr.io.instRet := wbValid
   out.csrVal     := csr.io.out
 }
