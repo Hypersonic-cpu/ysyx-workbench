@@ -90,18 +90,18 @@ class EXU extends Module {
   io.brDel := io.imm
   io.brVal := Mux(io.sel.brSelCsr, io.csrV, io.aluOut)
 
-  when(io.aluEn) {
-    printf(
-      cf"[ EXU ] rs1 ${io.rs1V}%x rs2 ${io.rs2V}%x imm ${io.imm}%x Out ${io.aluOut}%x"
-    )
-    printf(cf" op ${io.op} sel ${io.sel}")
-    printf(
-      cf" (Br,Res) =!<G (${io.br.bIfeq}${io.br.bIfne}${io.br.bIflt}${io.br.bIfge},"
-    )
-    printf(
-      cf"${cmpEQ}${!cmpEQ}${cmpLT}${!cmpLT}) usgn ${io.sel.cmpUsgn} abs ${io.br.isAbs}\n"
-    )
-  }
+  // when(io.aluEn) {
+  //   printf(
+  //     cf"[ EXU ] rs1 ${io.rs1V}%x rs2 ${io.rs2V}%x imm ${io.imm}%x Out ${io.aluOut}%x"
+  //   )
+  //   printf(cf" op ${io.op} sel ${io.sel}")
+  //   printf(
+  //     cf" (Br,Res) =!<G (${io.br.bIfeq}${io.br.bIfne}${io.br.bIflt}${io.br.bIfge},"
+  //   )
+  //   printf(
+  //     cf"${cmpEQ}${!cmpEQ}${cmpLT}${!cmpLT}) usgn ${io.sel.cmpUsgn} abs ${io.br.isAbs}\n"
+  //   )
+  // }
 }
 
 class ExecuteStage extends Module {

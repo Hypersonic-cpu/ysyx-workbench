@@ -1,5 +1,5 @@
 # soc or npc mode
-SOCMODE?=1
+SOCMODE?=0
 SOC_SCALA_ARG=
 ifeq ($(SOCMODE),1)
 SOC_SCALA_ARG= --soc-mode
