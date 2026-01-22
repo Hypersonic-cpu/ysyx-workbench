@@ -66,6 +66,7 @@ class rvCore(isSoc: Boolean) extends Module {
 
   // exs.io.toFetch <> ifs.io.fromEx
   // exs.io.toDec <> ids.io.isFlush
+  // TODO: brDet 和 exs.toFetch 功能类似, 考虑合并
   BusConnect(exs.io.brDet, exs.io.flush, Pipeline)
   BusConnect(exs.io.brDet, ids.io.flush, Pipeline)
   BusConnect(ids.io.fenceI, ifs.io.fromId, Pipeline)
@@ -75,7 +76,7 @@ class rvCore(isSoc: Boolean) extends Module {
   BusConnect(exs.io.out, lss.io.in, Pipeline)
   BusConnect(lss.io.out, wbs.io.in, Pipeline)
   wbs.io.toReg <> reg.io.fromWb
-  wbs.io.toFetch <> ifs.io.fromWb
+  // wbs.io.toFetch <> ifs.io.fromWb
 
   ids.io.toReg <> reg.io.fromId
   ids.io.fenceI.ready := true.B
@@ -87,10 +88,16 @@ class rvCore(isSoc: Boolean) extends Module {
   RdPacket(lss.io.in, lss.io.in.bits.foward, raw.io.lssrd)
   RdPacket(wbs.io.in, wbs.io.in.bits.foward, raw.io.wbsrd)
 
+  val dStrBuf = Module(new StoreBuffer(2))
+  dStrBuf.io.empty <> ifs.io.fromLs
+  lss.io.dMem <> dStrBuf.io.in
+  locxbar.io.host <> dStrBuf.io.out
+
   if (isSoc) {
     // AXIPortPassing(io.master, arbiter.io.device)
     arbiter.io.hosts(0) <> ifs.io.iMem
-    arbiter.io.hosts(1) <> lss.io.dMem
+    arbiter.io.hosts(1) <> dStrBuf.io.out
+    // arbiter.io.hosts(1) <> lss.io.dMem
     arbiter.io.device <> locxbar.io.host
     locxbar.io.devices(1) <> clint.io.port
     AXIPortPassing(io.master, locxbar.io.devices(0))
@@ -107,7 +114,8 @@ class rvCore(isSoc: Boolean) extends Module {
     iMemBox.io.flush := ids.io.fenceI.valid && ids.io.fenceI.bits
 
     val dMemBox = Module(new PMemBox)
-    locxbar.io.host <> lss.io.dMem
+    // locxbar.io.host <> lss.io.dMem
+    locxbar.io.host <> dStrBuf.io.out
     locxbar.io.devices(1) <> clint.io.port
     locxbar.io.devices(0) <> dMemBox.io.master
     dMemBox.io.simid := 1.U // data port

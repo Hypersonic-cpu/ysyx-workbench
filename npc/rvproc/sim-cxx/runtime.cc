@@ -197,10 +197,11 @@ notify_flush() {
 void
 notify_commit(uint32_t pc, uint32_t inst, unsigned char stalltp) {
   ppmu->notifyCommit(pc, stalltp);
-  if (stalltp == 0)
-    pccdb->inst_trace(pc, inst);
-  pdiff->upd_dut_pc(pc);
+  if (stalltp != 0)
+    return;
+  pccdb->inst_trace(pc, inst);
   if constexpr (options::diff_enable) {
+    pdiff->upd_dut_pc(pc);
     pdiff->setFire();
   }
 }

@@ -32,10 +32,10 @@ class CacheDPICBox extends BlackBox with HasBlackBoxPath {
   }
 }
 
-class iCacheDummy(PipeDepth: Int) extends CacheBox(PipeDepth){
+class iCacheDummy(PipeDepth: Int) extends CacheBox(PipeDepth) {
   require(PipeDepth > 0)
-  val headPtr  = RegInit(0.U(log2Ceil(PipeDepth + 1).W))
-  val tailPtr  = RegInit(0.U(log2Ceil(PipeDepth + 1).W))
+  val headPtr = RegInit(0.U(log2Ceil(PipeDepth + 1).W))
+  val tailPtr = RegInit(0.U(log2Ceil(PipeDepth + 1).W))
   def iotaMod(a: UInt) = Mux(a === PipeDepth.U, 0.U, a + 1.U)
   io.master.ar.ready    := iotaMod(headPtr) =/= tailPtr
   io.master.r.bits.data := 0xbadc0de.U ^ headPtr
@@ -43,19 +43,22 @@ class iCacheDummy(PipeDepth: Int) extends CacheBox(PipeDepth){
   io.master.r.bits.last := true.B
   io.master.r.bits.id   := io.simid
   io.master.r.valid     := true.B
+  io.master.b           := DontCare
+  io.master.aw          := DontCare
+  io.master.w           := DontCare
 
   when(io.master.ar.fire) {
-    headPtr          := iotaMod(headPtr)
+    headPtr := iotaMod(headPtr)
   }
 
   when(io.master.r.fire) {
-    tailPtr           := iotaMod(tailPtr)
+    tailPtr := iotaMod(tailPtr)
   }
 }
 
 class iCache(PipeDepth: Int) extends CacheBox(PipeDepth) {
   require(PipeDepth > 0)
-  io.master.w := DontCare
+  io.master.w  := DontCare
   io.master.b  := DontCare
   assert(!io.master.aw.valid, "Readonly iCache")
   io.master.aw := DontCare

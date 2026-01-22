@@ -161,4 +161,4 @@ class MemoryToWrBack extends Bundle {
   val foward = new DecodeFoward()
 }
 
-class InstCommit extends Bundle {}
+// class InstCommit extends Bundle {}
