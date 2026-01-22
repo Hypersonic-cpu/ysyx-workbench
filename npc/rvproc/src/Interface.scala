@@ -6,11 +6,6 @@ import chisel3.assert.Assert
 
 import chisel3._
 
-object GlbCtrl {
-  val debug = true
-  val sta   = false
-}
-
 class FetchToDecode extends Bundle {
   val pc   = Tp.RegType()
   val inst = Tp.RegType()
@@ -131,7 +126,7 @@ class DecodeFoward extends Bundle {
   val ebreak = Bool()
   val ecall  = Bool()
   // PC is debug only...
-  val pc     = Tp.RegType()
+  val pc     = UInt((if (GlbCtrl.debug) 32 else 0).W)
   val inst   = UInt((if (GlbCtrl.debug) 32 else 0).W)
   val csrVal = Tp.RegType()
 
