@@ -31,8 +31,6 @@ class RegFromWBU extends Bundle {
   val csrRd = Tp.CsrIdxType()
   val csrWE = Bool()
   val csrIn = Tp.RegType()
-
-  val instRet = Bool()
 }
 
 object AluOp extends ChiselEnum {

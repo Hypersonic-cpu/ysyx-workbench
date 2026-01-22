@@ -140,7 +140,6 @@ class IDU extends Module {
 
   /** ALU commands -> EXU */
   val aluEn = !isFenceI
-  // (instTp =/= ITYPE.tB) && (opName =/= InstOp.Jalr) && (!isFenceI)
   val aluOp = MuxCase(
     AluOp.Add,
     Seq(
