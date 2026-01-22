@@ -9,7 +9,7 @@ import rvproc.axi4.AXI.BurstOpts._
 import rvproc.pmu.FetchPMU
 import BitMath._
 
-class FetchStage(resetVector: BigInt, PipeDepth: Int = 4)
+class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
     extends Module {
   val io = IO(new Bundle {
     val out    = Decoupled(new FetchToDecode)
