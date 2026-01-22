@@ -10,8 +10,10 @@ object PATH {
 }
 
 object GlbCtrl {
-  val debug = true
-  val sta   = false
+  val debug = false
+  val sta   = true
+  // val debug = true
+  // val sta   = false
 }
 
 object ISA {
@@ -35,5 +37,5 @@ object Tp {
 }
 
 object ITYPE extends ChiselEnum {
-  val tR, tI, tS, tB, tU, tJ, tN, tX = Value
+  val tR, tI, tS, tB, tU, tJ, tN = Value
 }

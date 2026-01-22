@@ -58,7 +58,6 @@ class WrBackStage extends Module {
   ioreg.gprWE   := iofw.gprWE
   ioreg.gprIn   := iWbu.io.gprdt
   ioreg.gprRd   := iofw.gprRd
-  ioreg.instRet := io.in.valid
 
   if (GlbCtrl.debug) {
     /** PMU */
