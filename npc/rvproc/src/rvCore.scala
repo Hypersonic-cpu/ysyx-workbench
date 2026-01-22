@@ -98,7 +98,10 @@ class rvCore(isSoc: Boolean) extends Module {
     arbiter.io := DontCare
 
     // val iMemBox = Module(new PMemBox)
-    val iMemBox = Module(new iCache(3))
+    val iMemBox =
+      if (GlbCtrl.sta) Module(new iCacheDummy(3))
+      else Module(new iCache(3))
+
     iMemBox.io.master <> ifs.io.iMem
     iMemBox.io.simid := 0.U // inst cache
     iMemBox.io.flush := ids.io.fenceI.valid && ids.io.fenceI.bits
@@ -112,14 +115,16 @@ class rvCore(isSoc: Boolean) extends Module {
     io.master        := DontCare
   }
 
-  dontTouch(ifs.io)
-  dontTouch(ids.io)
-  dontTouch(exs.io)
-  dontTouch(lss.io)
-  dontTouch(wbs.io)
-  dontTouch(reg.io)
-  dontTouch(io.master)
-  dontTouch(io)
+  if (GlbCtrl.debug) {
+    dontTouch(ifs.io)
+    dontTouch(ids.io)
+    dontTouch(exs.io)
+    dontTouch(lss.io)
+    dontTouch(wbs.io)
+    dontTouch(reg.io)
+    dontTouch(io.master)
+    dontTouch(io)
+  }
 
   io.slave := DontCare
 }

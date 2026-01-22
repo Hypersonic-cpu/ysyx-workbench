@@ -6,7 +6,13 @@ import chisel3.util.HasBlackBoxPath
 import rvproc.axi4.AXIBus
 import rvproc.axi4.AXI.RespStatus.OKAY
 
-class CacheBox(PipeDepth: Int) extends Module {}
+class CacheBox(PipeDepth: Int) extends Module {
+  val io = IO(new Bundle {
+    val master = Flipped(new AXIBus)
+    val simid  = Input(UInt(16.W))
+    val flush  = Input(Bool())
+  })
+}
 
 class CacheDPICBox extends BlackBox with HasBlackBoxPath {
   val io = IO(new Bundle {
@@ -26,13 +32,29 @@ class CacheDPICBox extends BlackBox with HasBlackBoxPath {
   }
 }
 
+class iCacheDummy(PipeDepth: Int) extends CacheBox(PipeDepth){
+  require(PipeDepth > 0)
+  val headPtr  = RegInit(0.U(log2Ceil(PipeDepth + 1).W))
+  val tailPtr  = RegInit(0.U(log2Ceil(PipeDepth + 1).W))
+  def iotaMod(a: UInt) = Mux(a === PipeDepth.U, 0.U, a + 1.U)
+  io.master.ar.ready    := iotaMod(headPtr) =/= tailPtr
+  io.master.r.bits.data := 0xbadc0de.U ^ headPtr
+  io.master.r.bits.resp := OKAY
+  io.master.r.bits.last := true.B
+  io.master.r.bits.id   := io.simid
+  io.master.r.valid     := true.B
+
+  when(io.master.ar.fire) {
+    headPtr          := iotaMod(headPtr)
+  }
+
+  when(io.master.r.fire) {
+    tailPtr           := iotaMod(tailPtr)
+  }
+}
+
 class iCache(PipeDepth: Int) extends CacheBox(PipeDepth) {
   require(PipeDepth > 0)
-  val io = IO(new Bundle {
-    val master = Flipped(new AXIBus)
-    val simid  = Input(UInt(16.W))
-    val flush  = Input(Bool())
-  })
   io.master.w := DontCare
   io.master.b  := DontCare
   assert(!io.master.aw.valid, "Readonly iCache")
