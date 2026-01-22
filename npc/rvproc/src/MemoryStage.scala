@@ -12,10 +12,6 @@ import rvproc.axi4.AXI.RespStatus._
 import rvproc.pmu.LoadStorePMU
 import rvproc.GlbCtrl.debug
 
-// State:
-// idle -(reqReady)-> macc -(respValid)-> hold
-//
-
 class MemoryStage extends Module {
   val io   = IO(new Bundle {
     val in   = Flipped(Decoupled(new ExecuteToMemory))
@@ -33,7 +29,7 @@ class MemoryStage extends Module {
 
   val state     = RegInit(idle)
   val trigIss   = state === idle && io.in.valid && ioex.memOp.isEn
-  val reqReady  = Mux(!ioex.memOp.isSt, dMem.aw.ready, dMem.ar.ready)
+  val reqReady  = Mux(!ioex.memOp.isSt, dMem.ar.ready, dMem.aw.ready)
   val respValid = Mux(!ioex.memOp.isSt, dMem.r.valid, dMem.b.valid)
 
   // FIXME: awValid 和 bValid 同时高的时候 (1周期延迟), 会有问题吗?
@@ -87,20 +83,6 @@ class MemoryStage extends Module {
       Implies (addr(0, 0) === 0.U),
     "Unaligned half access"
   )
-  // TODO: Remove this. (any better methods?)
-  // assert(
-  //   trigIss Implies (
-  //     ((addr >= 0x3000_0000L.U) && (addr <= 0x3fff_ffffL.U))        // FLASH
-  //       || ((addr >= 0x0f00_0000L.U) && (addr <= 0x0f00_1fffL.U))   // SRAM
-  //       || ((addr >= 0x1000_0000L.U) && (addr <= 0x1000_0fffL.U))   // SPI
-  //       || ((addr >= 0x0200_0000L.U) && (addr <= 0x0200_ffffL.U))   // CLINT
-  //       || ((addr >= 0x1000_2000L.U) && (addr <= 0x1000_200fL.U))   // GPIO
-  //       || ((addr >= 0x1001_1000L.U) && (addr <= 0x1001_1007L.U))   // PS/2
-  //       || ((addr >= 0x8000_0000L.U)) // PSRAM and CHIPLINK
-  //   ),
-  // cf"Address ${addr}%x out of bound!"
-  // )
-  // TODO: Fix difftest back
 
   dMem.ar.valid := ~ioex.memOp.isSt && trigIss
   dMem.aw.valid := ioex.memOp.isSt && trigIss
@@ -141,10 +123,13 @@ class MemoryStage extends Module {
     iowb.foward.stallT := DontCare
   }
 
-  when(io.out.valid) {
+  when(io.out.fire && ioex.memOp.isEn) {
     printf(
-      cf"WR?${ioex.memOp.isSt} Addr ${ioex.aluOut}%x LoadData ${iowb.lsuOut}%x WrData ${wrdt}%x\n"
+      cf"Rsp < WR?${ioex.memOp.isSt} Addr ${ioex.aluOut}%x LoadData ${iowb.lsuOut}%x\n"
     )
+  }
+  when (io.in.fire && ioex.memOp.isEn) {
+    printf(cf"Req > WR?${ioex.memOp.isSt} Addr ${ioex.aluOut}%x wrData ${wrdt}%x\n")
   }
 
   if (GlbCtrl.debug) {

@@ -15,7 +15,8 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
     val out    = Decoupled(new FetchToDecode)
     val fromId = Flipped(Decoupled(Bool())) // fence.i
     val fromEx = Flipped(Decoupled(new ExecuteBackward))
-    val fromWb = Flipped(Decoupled(new InstCommit))
+    val fromLs = Input(Bool())              // store buffer empty
+    // val fromWb = Flipped(Decoupled(new InstCommit))
     val iMem   = new AXIBus
   })
 
@@ -23,14 +24,18 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
 
   val iMem = io.iMem
 
-  // val pipeShift = io.out.ready && nextState =/= serve
-  val brex      = io.fromEx.bits
-  val brPending = RegInit(false.B)
+  val brex       = io.fromEx.bits
+  val brPending  = RegInit(false.B)
+  val stBufEmpty = io.fromLs
+  val fenceI     = io.fromId.valid && io.fromId.bits
+  val fenceState = RegInit(false.B)
+  fenceState := Mux(fenceState, io.fromLs, fenceI)
   val flushWire =
-    (io.fromEx.valid && brex.take) || (io.fromId.valid && io.fromId.bits)
+    (io.fromEx.valid && brex.take) || fenceI
 
   val pc     = RegInit(resetVector.U(ISA.RegBits.W))
   val nextPC = RegInit((resetVector + 4).U(ISA.RegBits.W))
+  val lastPC = RegEnable(io.out.bits.pc, io.out.fire)
 
   val validBuf = Reg(Vec(PipeDepth + 1, Bool()))
   val pcBuf    = Reg(Vec(PipeDepth + 1, Tp.AddrType()))
@@ -38,7 +43,6 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
   val headPtr  = RegInit(0.U(log2Ceil(PipeDepth + 1).W))
   val tailPtr  = RegInit(0.U(log2Ceil(PipeDepth + 1).W))
   // 能不能直接通过移动来 Handle 短途跳转?
-  // FIXME: fence.i 需要冲刷
   val toidPtr  = RegInit(0.U(log2Ceil(PipeDepth + 1).W))
   def iotaMod(a: UInt) = Mux(a === PipeDepth.U, 0.U, a + 1.U)
 
@@ -65,7 +69,6 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
 
   io.out.valid    := !instEmpty && !flushWire && validBuf(toidPtr)
   io.fromEx.ready := true.B
-  io.fromWb.ready := true.B
   io.fromId.ready := true.B
 
   iMem.ar.bits.addr  := pc
@@ -73,7 +76,7 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
   iMem.ar.bits.len   := 0.U
   iMem.ar.bits.burst := INCR
   iMem.ar.bits.id    := 0.U
-  iMem.ar.valid      := !reset.asBool && !bufFull
+  iMem.ar.valid      := !reset.asBool && !bufFull && !fenceState && !flushWire
   iMem.r.ready       := true.B // io.out.ready
   iMem.aw.valid      := false.B
   iMem.aw.bits       := DontCare
@@ -96,8 +99,10 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
       // 等到下一个周期.
       validBuf(i) := false.B
     }
+    // brTake in EXU should override fence from IDU
     val brTarget = MuxCase(
-      nextPC,
+      // nextPC,
+      lastPC, // fence.i
       Seq(
         brex.brAbs -> brex.brVal,
         brex.brRel -> (brex.brLPC + brex.brDel)
@@ -116,12 +121,12 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
   ioid.pc   := Mux(io.out.valid, pcBuf(toidPtr), 0.U)
   ioid.inst := Mux(io.out.valid, instBuf(toidPtr), 0.U)
 
-  when(iMem.ar.fire) {
-    printf(cf"[  IF  ] Fetch PC = ${io.iMem.ar.bits.addr}%x\n")
-  }
-  when(iMem.r.fire) {
-    printf(cf"[  IF  ] Recvd PC = ${pcBuf(tailPtr)}%x\n")
-  }
+  // when(iMem.ar.fire) {
+  //   printf(cf"[  IF  ] Fetch PC = ${io.iMem.ar.bits.addr}%x\n")
+  // }
+  // when(iMem.r.fire) {
+  //   printf(cf"[  IF  ] Recvd PC = ${pcBuf(tailPtr)}%x\n")
+  // }
 
   if (GlbCtrl.debug) {
     val pmu = Module(new FetchPMU)
