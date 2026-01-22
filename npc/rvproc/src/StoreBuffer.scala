@@ -13,18 +13,18 @@ import rvproc.GlbCtrl.debug
 
 class StoreBuffer(Entries: Int) extends Module {
   val io = IO(new Bundle {
-    val in  = Flipped(new AXIBus)
-    val out = new AXIBus
+    val in    = Flipped(new AXIBus)
+    val out   = new AXIBus
     val empty = Output(Bool())
   })
 
   /** NOTE: Write buffer */
   class Entry extends Bundle {
-    val addr  = Tp.AddrType()
-    val data  = Tp.RegType()
-    val strb  = UInt((ISA.RegBits / 8).W)
-    val size  = AXI.SizeType()
-    val valid = Bool()
+    val addr   = Tp.AddrType()
+    val data   = Tp.RegType()
+    val strb   = UInt((ISA.RegBits / 8).W)
+    val size   = AXI.SizeType()
+    val valid  = Bool()
     val issued = Bool()
   }
   val buffer = Reg(Vec(Entries, new Entry))
@@ -57,9 +57,9 @@ class StoreBuffer(Entries: Int) extends Module {
   io.in.b.bits.resp := OKAY
 
   when(io.out.b.fire) {
-    buffer(head).valid := false.B
+    buffer(head).valid  := false.B
     buffer(head).issued := false.B
-    head               := iotaMod(head)
+    head                := iotaMod(head)
   }.elsewhen(isskip) {
     head := iotaMod(head)
   }
@@ -81,9 +81,9 @@ class StoreBuffer(Entries: Int) extends Module {
     buffer(tail).valid := true.B
     tail               := iotaMod(tail)
   }
-  
+
   // Overwrite deque logic on `issue`
-  when (io.out.aw.fire) {
+  when(io.out.aw.fire) {
     buffer(head).issued := true.B
   }
 
@@ -138,7 +138,6 @@ class StoreBuffer(Entries: Int) extends Module {
   )
 
   val delayRetThisCyc = RegNext(readRetThisCyc)
-  // 如何处理 Mux1H ?
   val delayRetData    = RegNext(Mux1H(readHitReturn, buffer.map(_.data)))
   io.in.ar.ready    := readState === idle
   io.in.r.valid     := delayRetThisCyc || io.out.r.valid
