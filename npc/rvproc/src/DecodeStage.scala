@@ -117,7 +117,7 @@ class IDU extends Module {
     (io.inst(31, 31) ## io.inst(7, 7) ##
       io.inst(30, 25) ## io.inst(11, 8) ## 0.U(1.W)).SExt()
 
-  val instTp    = MuxLookup(opName, ITYPE.tX)(
+  val instTp    = MuxLookup(opName, ITYPE.tN)(
     Seq(
       InstOp.OpImm  -> ITYPE.tI,
       InstOp.OpReg  -> ITYPE.tR,
