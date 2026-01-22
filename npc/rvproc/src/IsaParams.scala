@@ -9,6 +9,11 @@ object PATH {
   def dpic(s: String) = java.nio.file.Paths.get(dpicPath, s).toString()
 }
 
+object GlbCtrl {
+  val debug = false
+  val sta   = true
+}
+
 object ISA {
   val InstBits   = 32
   val RegBits    = 32

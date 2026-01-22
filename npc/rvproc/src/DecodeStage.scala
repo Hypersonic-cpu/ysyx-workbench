@@ -205,7 +205,6 @@ class IDU extends Module {
   io.brInst.bIflt := instBr && ((funct3 & "b101".U) === "b100".U)
   io.brInst.bIfge := instBr && ((funct3 & "b101".U) === "b101".U)
   io.brInst.isBr  := instBr || io.brInst.isAbs || isJal
-  // io.brInst.bUsgn := funct3(1).asBool
 
   io.wbSel := MuxCase(
     WbSel.fromAlu,
@@ -262,14 +261,6 @@ class DecodeStage extends Module {
   })
 
   val flushed = io.flush.bits
-  // val flushed = RegInit(false.B)
-  // flushed := MuxCase(
-  //   flushed,
-  //   Seq(
-  //     io.flush.valid -> io.flush.bits,
-  //     io.in.valid    -> false.B
-  //   )
-  // )
 
   io.flush.ready := io.out.ready
   val validCtrl = io.in.valid && !flushed
