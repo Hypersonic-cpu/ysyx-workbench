@@ -8,6 +8,7 @@ import chisel3._
 
 object GlbCtrl {
   val debug = true
+  val sta   = false
 }
 
 class FetchToDecode extends Bundle {
