@@ -93,6 +93,8 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
     cf"Inst Fetch Failed, rresp = ${iMem.r.bits.resp}"
   )
 
+  val brAbs = io.fromEx.valid && brex.brAbs
+  val brRel = io.fromEx.valid && brex.brRel
   when(flushWire) {
     for (i <- 0 to PipeDepth) {
       // override. 需要覆盖head, 因为有效的PC至少
@@ -104,8 +106,8 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
       // nextPC,
       lastPC, // fence.i
       Seq(
-        brex.brAbs -> brex.brVal,
-        brex.brRel -> (brex.brLPC + brex.brDel)
+        brAbs -> brex.brVal,
+        brRel -> (brex.brLPC + brex.brDel)
       )
     )
     pc := brTarget
