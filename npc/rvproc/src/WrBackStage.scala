@@ -8,12 +8,12 @@ import rvproc.pmu.WrBackPMU
 // MUX, Write data selection
 class WBU extends Module {
   val io = IO(new Bundle {
-    val wbSel = Input(WbSel())
-    val pc    = Input(Tp.RegType())
-    val csrV  = Input(Tp.RegType())
-    val aluV  = Input(Tp.RegType())
-    val memV  = Input(Tp.RegType())
-    val gprdt = Output(Tp.RegType())
+    val wbSel  = Input(WbSel())
+    val pc     = Input(Tp.RegType())
+    val csrV   = Input(Tp.RegType())
+    val aluV   = Input(Tp.RegType())
+    val memV   = Input(Tp.RegType())
+    val gprdt  = Output(Tp.RegType())
   })
 
   val snpc = io.pc + 4.U
@@ -29,13 +29,14 @@ class WBU extends Module {
 
 class WrBackStage extends Module {
   val io = IO(new Bundle {
-    val in      = Flipped(Decoupled(new MemoryToWrBack))
-    val toReg   = Decoupled(new RegFromWBU)
+    val in    = Flipped(Decoupled(new MemoryToWrBack))
+    val toReg = Decoupled(new RegFromWBU)
     // val toFetch = Decoupled(new InstCommit)
+    val fwdDet = Output(new FwBundle)
   })
 
-  io.in.ready      := true.B
-  io.toReg.valid   := io.in.valid
+  io.in.ready    := true.B
+  io.toReg.valid := io.in.valid
   // io.toFetch.valid := io.in.valid
 
   val iWbu = Module(new WBU)
@@ -44,7 +45,7 @@ class WrBackStage extends Module {
   iWbu.io.aluV  := iols.aluOut
   iWbu.io.memV  := iols.lsuOut
   iWbu.io.csrV  := iofw.csrVal
-  iWbu.io.pc    := iofw.pc
+  iWbu.io.pc    := iols.aluOut // iofw.pc
   iWbu.io.wbSel := iofw.wbSel
 
   // when(io.in.valid) {
@@ -52,12 +53,17 @@ class WrBackStage extends Module {
   // }
 
   val ioreg = io.toReg.bits
-  ioreg.csrWE   := iofw.csrWE
-  ioreg.csrIn   := iols.aluOut
-  ioreg.csrRd   := iofw.csrRd
-  ioreg.gprWE   := iofw.gprWE
-  ioreg.gprIn   := iWbu.io.gprdt
-  ioreg.gprRd   := iofw.gprRd
+  ioreg.csrWE := iofw.csrWE
+  ioreg.csrIn := iols.aluOut
+  ioreg.csrRd := iofw.csrRd
+  ioreg.gprWE := iofw.gprWE
+  ioreg.gprIn := iWbu.io.gprdt
+  ioreg.gprRd := iofw.gprRd
+
+  /** Forward */
+  io.fwdDet.valid := io.in.valid
+  io.fwdDet.gprFw := true.B
+  io.fwdDet.gprDt := ioreg.gprIn
 
   if (GlbCtrl.debug) {
     /** PMU */

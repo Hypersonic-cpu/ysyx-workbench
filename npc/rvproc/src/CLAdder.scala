@@ -3,6 +3,25 @@ package rvproc
 import chisel3._
 import chisel3.util._
 
+// class Comparator extends Module {
+//   val io     = IO(new Bundle {
+//     val in1 = Input(Tp.RegType())
+//     val in2 = Input(Tp.RegType())
+//     val out = Output(new BrCmp)
+//   })
+//   val cmp1s  = io.in1
+//   val cmp2s  = ~io.in2
+//   val cmpSum = 1.U + cmp1s.UExt() + cmp2s.UExt()
+//   val cmpOF  = (~(cmp1s.MSB() ^ cmp2s.MSB())) &
+//     (cmp1s.MSB() ^ cmpSum.MSB())
+//   val cmpLTU = ~cmpSum.MSB(-1).asBool
+//   val cmpLTS = (cmpSum.MSB() ^ cmpOF).asBool
+//   val cmpEQ  = ~cmpSum(ISA.RegBits - 1, 0).orR.asBool
+//   io.out.bltu := cmpLTU
+//   io.out.blts := cmpLTS
+//   io.out.beq  := cmpEQ
+// }
+
 class CLABlock4 extends Module {
   val io = IO(new Bundle {
     val a    = Input(UInt(4.W))

@@ -14,9 +14,10 @@ import rvproc.GlbCtrl.debug
 
 class MemoryStage extends Module {
   val io   = IO(new Bundle {
-    val in   = Flipped(Decoupled(new ExecuteToMemory))
-    val out  = Decoupled(new MemoryToWrBack)
-    val dMem = new AXIBus
+    val in     = Flipped(Decoupled(new ExecuteToMemory))
+    val out    = Decoupled(new MemoryToWrBack)
+    val dMem   = new AXIBus
+    val fwdDet = Output(new FwBundle)
   })
   val iowb = io.out.bits
   val ioex = io.in.bits
@@ -113,6 +114,17 @@ class MemoryStage extends Module {
 
   iowb.aluOut <> io.in.bits.aluOut
   iowb.foward <> io.in.bits.foward
+
+  /** Forward */
+  io.fwdDet.valid := io.in.valid
+  io.fwdDet.gprFw := io.out.valid &&
+    io.in.bits.foward.wbSel =/= WbSel.fromCsr
+  io.fwdDet.gprDt := Mux(
+    ioex.memOp.isEn,
+    /* fromMem */ iowb.lsuOut,
+    /* fromAlu|PC */ ioex.aluOut
+  )
+
   if (GlbCtrl.debug) {
     iowb.foward.stallT := Mux(
       io.in.valid && !io.out.valid,
@@ -128,8 +140,10 @@ class MemoryStage extends Module {
       cf"Rsp < WR?${ioex.memOp.isSt} Addr ${ioex.aluOut}%x LoadData ${iowb.lsuOut}%x\n"
     )
   }
-  when (io.in.fire && ioex.memOp.isEn) {
-    printf(cf"Req > WR?${ioex.memOp.isSt} Addr ${ioex.aluOut}%x wrData ${wrdt}%x\n")
+  when(io.in.fire && ioex.memOp.isEn) {
+    printf(
+      cf"Req > WR?${ioex.memOp.isSt} Addr ${ioex.aluOut}%x wrData ${wrdt}%x\n"
+    )
   }
 
   if (GlbCtrl.debug) {

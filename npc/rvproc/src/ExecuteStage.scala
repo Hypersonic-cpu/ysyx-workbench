@@ -28,23 +28,14 @@ class EXU extends Module {
 
   val cmpSlt =
     io.op === AluOp.Sltu || io.op === AluOp.Slt
-  // val cmpEn  = cmpSlt || io.br.isBr
-  // val cmpU   = io.sel.cmpUsgn
-  // Mux(io.br.isBr, io.br.bUsgn, io.op === AluOp.Sltu)
 
   val flip1 = io.sel.rs1Invert
   val flip2 = io.sel.rs2Invert
-  // val flip2 = cmpEn || (io.sel.rs2Invert && (io.op =/= AluOp.Srr))
   val raw1  = Mux(io.sel.rs1SelPC, io.pc, io.rs1V)
   val raw2  = Mux(io.sel.rs2SelImm, io.imm, io.rs2V)
   val src1  = Mux(flip1, ~raw1, raw1)
   val src2  = Mux(flip2, ~raw2, raw2)
 
-  // val adder = Module(new CLAdder(32))
-  // adder.io.in1 := src1.UExt()
-  // adder.io.in2 := src2.UExt()
-  // adder.io.cin := flip2
-  // val esum = adder.io.out
   val esum = src1.UExt() + src2.UExt() + flip2.asUInt
 
   // Corner case: INT_MIN
@@ -86,7 +77,7 @@ class EXU extends Module {
   io.brRel :=
     (io.br.bIfeq && cmpEQ) || (io.br.bIfne && ~cmpEQ) ||
       (io.br.bIflt && cmpLT) || (io.br.bIfge && ~cmpLT)
-  io.brAbs := io.br.isAbs
+  io.brAbs := io.br.isAbs && io.br.isBr
   io.brDel := io.imm
   io.brVal := Mux(io.sel.brSelCsr, io.csrV, io.aluOut)
 
@@ -111,17 +102,10 @@ class ExecuteStage extends Module {
     val out     = Decoupled(new ExecuteToMemory)
     val toFetch = Decoupled(new ExecuteBackward)
     val brDet   = Decoupled(Bool())
+    val fwdDet  = Output(new FwBundle)
   })
 
-  val flushed = io.flush.bits
-  // val flushed = RegInit(false.B)
-  // flushed := MuxCase(
-  //   flushed,
-  //   Seq(
-  //     io.flush.valid -> io.flush.bits,
-  //     io.in.valid    -> false.B
-  //   )
-  // )
+  val flushed = io.flush.valid && io.flush.bits
   io.flush.ready := io.out.ready
 
   val validCtrl = io.in.valid && !flushed
@@ -142,6 +126,11 @@ class ExecuteStage extends Module {
   iExe.io.aluEn := ioid.aluEn && validCtrl
   iExe.io.br    := ioid.brInst
 
+  /** Forward */
+  io.fwdDet.valid := validCtrl
+  io.fwdDet.gprFw := !ioid.memOp.isEn
+  io.fwdDet.gprDt := iExe.io.aluOut
+
   /** Back to Fetch */
   io.toFetch.valid := validCtrl
   val iobk = io.toFetch.bits
@@ -154,17 +143,27 @@ class ExecuteStage extends Module {
   /** Back to Decoder */
   io.brDet.valid := validCtrl
   // Must add this validCtrl
-  io.brDet.bits  := validCtrl && (iExe.io.brRel || iExe.io.brAbs)
+  io.brDet.bits  := validCtrl && 
+    io.toFetch.valid && io.toFetch.bits.take 
+    // (iExe.io.brRel || iExe.io.brAbs)
 
   /** To LSU, AluOut = Addr */
-  iols.aluOut := iExe.io.aluOut
+  iols.aluOut := Mux(
+    ioid.foward.wbSel === WbSel.fromPC,
+    ioid.pc,
+    iExe.io.aluOut
+  )
   iols.memOp  := ioid.memOp
   iols.rs2Val := ioid.rs2V
 
   /** Foward */
   ioid.foward <> iols.foward
   if (GlbCtrl.debug) {
-    iols.foward.stallT := Mux(flushed, StallCause.Branch, ioid.foward.stallT)
+    iols.foward.stallT := Mux(
+      flushed,
+      StallCause.Branch,
+      ioid.foward.stallT
+    )
   } else {
     iols.foward.stallT := DontCare
   }
