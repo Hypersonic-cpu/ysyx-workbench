@@ -149,6 +149,10 @@ class StoreBuffer(Entries: Int) extends Module {
     delayRetData,
     io.out.r.bits.data
   )
+
+  // val arAddr = RegEnable(io.in.ar.bits.addr, io.in.ar.valid)
+  // val arSize = RegEnable(io.in.ar.bits.size, io.in.ar.valid)
+  //io.in.ar.fire
   io.out.ar <> io.in.ar
   io.out.ar.valid   := readState === blocked && !readHitBlocked.orR
   io.out.r.ready    := io.in.r.ready
