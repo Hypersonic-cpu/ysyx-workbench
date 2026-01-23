@@ -11,7 +11,7 @@ import rvproc.axi4.AXI.BurstOpts._
 import rvproc.axi4.AXI.RespStatus._
 import rvproc.GlbCtrl.debug
 
-class StoreBuffer(Entries: Int) extends Module {
+class StoreBuffer(Entries: Int, Id: Int = 1) extends Module {
   val io = IO(new Bundle {
     val in    = Flipped(new AXIBus)
     val out   = new AXIBus
@@ -53,7 +53,7 @@ class StoreBuffer(Entries: Int) extends Module {
   io.in.aw.ready    := !wbfull
   io.in.w.ready     := !wbfull
   io.in.b.valid     := RegNext(io.in.aw.fire)
-  io.in.b.bits.id   := io.in.aw.bits.id
+  io.in.b.bits.id   := Id.U
   io.in.b.bits.resp := OKAY
 
   when(io.out.b.fire) {
@@ -95,7 +95,7 @@ class StoreBuffer(Entries: Int) extends Module {
   io.out.aw.bits.addr  := buffer(head).addr
   io.out.aw.bits.size  := buffer(head).size
   io.out.aw.bits.burst := INCR
-  io.out.aw.bits.id    := 1.U
+  io.out.aw.bits.id    := Id.U
   io.out.aw.bits.len   := 0.U
   io.out.b.ready       := true.B
 
@@ -138,25 +138,34 @@ class StoreBuffer(Entries: Int) extends Module {
   )
 
   val delayRetThisCyc = RegNext(readRetThisCyc)
+  val delayReadBlock  = RegNext(readHitBlocked)
   val delayRetData    = RegNext(Mux1H(readHitReturn, buffer.map(_.data)))
+  val arAddr = RegEnable(io.in.ar.bits.addr, io.in.ar.fire)
+  val arSize = RegEnable(io.in.ar.bits.size, io.in.ar.fire)
+  val rResp = RegEnable(io.out.r.bits.resp, io.out.r.fire)
+  val rData = RegEnable(io.out.r.bits.data, io.out.r.fire)
+  val rValid = RegInit(false.B)
+  rValid := Mux(rValid, !io.in.r.fire, io.out.r.fire)
+
   io.in.ar.ready    := readState === idle
-  io.in.r.valid     := delayRetThisCyc || io.out.r.valid
-  io.in.r.bits.resp := Mux(delayRetThisCyc, OKAY, io.out.r.bits.resp)
-  io.in.r.bits.id   := io.in.ar.bits.id
+  io.in.r.valid     := delayRetThisCyc || rValid
+  io.in.r.bits.resp := Mux(delayRetThisCyc, OKAY, rResp)
+  io.in.r.bits.id   := Id.U
   io.in.r.bits.last := true.B
   io.in.r.bits.data := Mux(
     delayRetThisCyc,
     delayRetData,
-    io.out.r.bits.data
+    rData
   )
+  // io.out.ar <> io.in.ar
+  io.out.ar.bits.addr  := arAddr
+  io.out.ar.bits.size  := arSize
+  io.out.ar.bits.len   := 0.U
+  io.out.ar.bits.burst := INCR
+  io.out.ar.bits.id    := Id.U
 
-  // val arAddr = RegEnable(io.in.ar.bits.addr, io.in.ar.valid)
-  // val arSize = RegEnable(io.in.ar.bits.size, io.in.ar.valid)
-  //io.in.ar.fire
-  io.out.ar <> io.in.ar
-  io.out.ar.valid   := readState === blocked && !readHitBlocked.orR
-  io.out.r.ready    := io.in.r.ready
-  // TODO: 应当暂时存储 input read addr
+  io.out.ar.valid := readState === blocked && !delayReadBlock.orR // !readHitBlocked.orR
+  io.out.r.ready  := readState === busy // RegNext(io.in.r.ready) // WARN: 出现多余的一拍 ready ? 
 
   assert(
     io.in.ar.valid Implies io.in.r.ready,
@@ -169,91 +178,3 @@ class StoreBuffer(Entries: Int) extends Module {
   // }
   // printf("\n")
 }
-
-// class StoreeBuffer(
-//   val entries:   Int = 4,
-//   val addrWidth: Int = 32,
-//   val dataWidth: Int = 64)
-//     extends Module {
-//   val io = IO(new Bundle {
-//     // 来自 LSU 的接口
-//     val lsu_st = Flipped(Decoupled(new Bundle {
-//       val addr = UInt(addrWidth.W)
-//       val data = UInt(dataWidth.W)
-//       val strb = UInt((dataWidth / 8).W)
-//     }))
-//     val lsu_ld = new Bundle {
-//       val addr = Input(UInt(addrWidth.W))
-//       val hit  = Output(Bool())
-//       val data = Output(UInt(dataWidth.W))
-//     }
-//     // AXI4 Master 接口 (写通道)
-//     val axi    = new AxiLiteIO(addrWidth, dataWidth)
-//   })
-//
-//   // 1. 定义 Buffer Entry
-//   val regs = RegInit(
-//     VecInit(Seq.fill(entries)(0.U.asTypeOf(new Entry)))
-//   )
-//
-//   // 指针管理
-//   val head = RegInit(
-//     0.U(log2Ceil(entries).W)
-//   ) // 指向最早的 entry (用于 commit)
-//   val tail  = RegInit(0.U(log2Ceil(entries).W)) // 指向下一个空闲位置 (用于 alloc)
-//   val count = RegInit(0.U(log2Ceil(entries + 1).W))
-//
-//   val full  = count === entries.U
-//   val empty = count === 0.U
-//
-//   // 2. LSU Store 写入 (Allocation)
-//   io.lsu_st.ready := !full
-//   when(io.lsu_st.fire) {
-//     regs(tail).addr  := io.lsu_st.bits.addr
-//     regs(tail).data  := io.lsu_st.bits.data
-//     regs(tail).strb  := io.lsu_st.bits.strb
-//     regs(tail).valid := true.B
-//     tail             := Mux(tail === (entries - 1).U, 0.U, tail + 1.U)
-//     count            := count + 1.U
-//   }
-//
-//   // 3. LSU Load 查找 (Read-Through)
-//   // 采用 CAM 逻辑：从 tail 向 head 逆序查找最新的匹配项
-//   val hits = VecInit(
-//     regs.map(r => r.valid && r.addr === io.lsu_ld.addr)
-//   ).asUInt
-//   io.lsu_ld.hit  := hits.orR
-//   // 简化的选择逻辑：实际中应选择最新的(最靠近tail的)那一个
-//   io.lsu_ld.data := Mux1H(hits, regs.map(_.data))
-//
-//   // 4. 写回状态机 (AXI4 Commit)
-//   val s_idle :: s_aw :: s_w :: s_b :: Nil = Enum(4)
-//   val state                               = RegInit(s_idle)
-//
-//   io.axi.aw.valid     := (state === s_aw)
-//   io.axi.aw.bits.addr := regs(head).addr
-//   io.axi.w.valid      := (state === s_w)
-//   io.axi.w.bits.data  := regs(head).data
-//   io.axi.w.bits.strb  := regs(head).strb
-//   io.axi.b.ready      := (state === s_b)
-//
-//   switch(state) {
-//     is(s_idle) {
-//       if (!empty) state := s_aw
-//     }
-//     is(s_aw) {
-//       if (io.axi.aw.fire) state := s_w
-//     }
-//     is(s_w) {
-//       if (io.axi.w.fire) state := s_b
-//     }
-//     is(s_b) {
-//       if (io.axi.b.fire) {
-//         regs(head).valid := false.B
-//         head             := Mux(head === (entries - 1).U, 0.U, head + 1.U)
-//         count            := count - 1.U
-//         state            := s_idle
-//       }
-//     }
-//   }
-// }
