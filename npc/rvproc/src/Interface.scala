@@ -123,10 +123,10 @@ class DecodeFoward extends Bundle {
   val csrWE  = Bool()
   val ebreak = Bool()
   val ecall  = Bool()
+  val csrVal = Tp.RegType()
   // PC is debug only...
   val pc     = UInt((if (GlbCtrl.debug) 32 else 0).W)
   val inst   = UInt((if (GlbCtrl.debug) 32 else 0).W)
-  val csrVal = Tp.RegType()
 
   // Removed by compiler when not debugging.
   val stallT = StallCause()
@@ -136,6 +136,7 @@ class DecodeToExecute extends Bundle {
   val rs1V   = Tp.RegType()
   val rs2V   = Tp.RegType()
   val imm    = Tp.RegType()
+  val pc     = Tp.AddrType()
   val aluOp  = AluOp()
   val aluSel = new AluSel
   val brInst = new BrInst
@@ -151,14 +152,14 @@ class ExecuteToMemory extends Bundle {
   val aluOut = Tp.RegType()
   val rs2Val = Tp.RegType()
 
-  val foward = new DecodeFoward()
+  val foward = new DecodeFoward
 }
 
 class MemoryToWrBack extends Bundle {
   val aluOut = Tp.RegType()
   val lsuOut = Tp.RegType()
 
-  val foward = new DecodeFoward()
+  val foward = new DecodeFoward
 }
 
 // class InstCommit extends Bundle {}

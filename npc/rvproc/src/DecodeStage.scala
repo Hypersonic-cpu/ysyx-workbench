@@ -5,7 +5,6 @@ import chisel3.util._
 import chisel3.assert.Assert
 import rvproc.BitMath._
 import rvproc.pmu.DecodePMU
-import os.isFile
 
 object InstOp extends ChiselEnum {
   val Load    = Value("b00000".U)
@@ -56,9 +55,6 @@ class IDU extends Module {
     val rs1   = Output(Tp.RegIdxType())
     val rs2   = Output(Tp.RegIdxType())
     val csrir = Output(Tp.CsrIdxType())
-
-    val rs1Val = Input(Tp.RegType())
-    val rs2Val = Input(Tp.RegType())
 
     // for PMU
     val opname = Output(InstOp())
@@ -255,8 +251,9 @@ class DecodeStage extends Module {
 
     val fenceI = Decoupled(Bool())
     val flush  = Flipped(Decoupled(Bool()))
-    val rawSrc = Decoupled(new DecodeHazard)
-    val rawRes = Input(Bool())
+    val rawSrc = new DecodeHazard
+    // val rawRes = Input(Bool())
+    val fwdRes = Input(new SourceFoward)
   })
 
   val flushed = io.flush.bits
@@ -266,14 +263,14 @@ class DecodeStage extends Module {
 
   val iDec = Module(new IDU)
 
-  val waitRAW = io.rawRes
-  io.rawSrc.valid     := validCtrl
-  io.rawSrc.bits.rs1  := iDec.io.rs1
-  io.rawSrc.bits.rs2  := iDec.io.rs2
-  io.rawSrc.bits.csr  := iDec.io.csrir
-  io.rawSrc.bits.use1 := true.B // !iDec.io.aluSel.rs1SelPC
-  io.rawSrc.bits.use2 := true.B // !iDec.io.aluSel.rs2SelImm || iDec.io.memAcc.isSt
-  io.rawSrc.bits.useC := iDec.io.wbSel === WbSel.fromCsr || iDec.io.aluSel.brSelCsr
+  val waitRAW = io.fwdRes.block
+  io.rawSrc.rs1  := iDec.io.rs1
+  io.rawSrc.rs2  := iDec.io.rs2
+  io.rawSrc.csr  := iDec.io.csrir
+  io.rawSrc.use1 := validCtrl && true.B // !iDec.io.aluSel.rs1SelPC
+  io.rawSrc.use2 := validCtrl && true.B // !iDec.io.aluSel.rs2SelImm || iDec.io.memAcc.isSt
+  io.rawSrc.useC := validCtrl && 
+    (iDec.io.wbSel === WbSel.fromCsr || iDec.io.aluSel.brSelCsr)
 
   io.in.ready     := io.out.ready && !waitRAW
   // Flush IF and ID when brAbs (result on )
@@ -291,11 +288,9 @@ class DecodeStage extends Module {
   io.toReg.bits.rs2  := iDec.io.rs2
   io.toReg.bits.csrr := iDec.io.csrir
   io.fromReg.ready   := true.B
-  val rs1Val = io.fromReg.bits.rs1Val
-  val rs2Val = io.fromReg.bits.rs2Val
+  val rs1Val = Mux(io.fwdRes.rs1fw, io.fwdRes.rs1dt, io.fromReg.bits.rs1Val)
+  val rs2Val = Mux(io.fwdRes.rs2fw, io.fwdRes.rs2dt, io.fromReg.bits.rs2Val)
   val csrVal = io.fromReg.bits.csrVal
-  iDec.io.rs1Val := rs1Val
-  iDec.io.rs2Val := rs2Val
 
   /** Input from FetchStage */
   val ioif = io.in.bits
@@ -312,6 +307,7 @@ class DecodeStage extends Module {
   ioex.memOp  := iDec.io.memAcc
   ioex.aluEn  := iDec.io.aluEn
   ioex.brInst := iDec.io.brInst
+  ioex.pc     := ioif.pc
 
   val iofw = ioex.foward
   iofw.gprRd  := iDec.io.rd
@@ -346,22 +342,3 @@ class DecodeStage extends Module {
     pmu.io.pc        := io.in.bits.pc
   }
 }
-
-// class Comparator extends Module {
-//   val io     = IO(new Bundle {
-//     val in1 = Input(Tp.RegType())
-//     val in2 = Input(Tp.RegType())
-//     val out = Output(new BrCmp)
-//   })
-//   val cmp1s  = io.in1
-//   val cmp2s  = ~io.in2
-//   val cmpSum = 1.U + cmp1s.UExt() + cmp2s.UExt()
-//   val cmpOF  = (~(cmp1s.MSB() ^ cmp2s.MSB())) &
-//     (cmp1s.MSB() ^ cmpSum.MSB())
-//   val cmpLTU = ~cmpSum.MSB(-1).asBool
-//   val cmpLTS = (cmpSum.MSB() ^ cmpOF).asBool
-//   val cmpEQ  = ~cmpSum(ISA.RegBits - 1, 0).orR.asBool
-//   io.out.bltu := cmpLTU
-//   io.out.blts := cmpLTS
-//   io.out.beq  := cmpEQ
-// }

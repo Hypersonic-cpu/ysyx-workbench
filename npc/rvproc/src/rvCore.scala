@@ -82,11 +82,14 @@ class rvCore(isSoc: Boolean) extends Module {
   ids.io.fenceI.ready := true.B
   reg.io.toId <> ids.io.fromReg
 
+  // To ID
+  raw.io.srcfw <> ids.io.fwdRes
+  // Sources
   raw.io.decode <> ids.io.rawSrc
-  raw.io.raw <> ids.io.rawRes
-  RdPacket(exs.io.in, exs.io.in.bits.foward, raw.io.exsrd)
-  RdPacket(lss.io.in, lss.io.in.bits.foward, raw.io.lssrd)
-  RdPacket(wbs.io.in, wbs.io.in.bits.foward, raw.io.wbsrd)
+  // raw.io.raw <> ids.io.rawRes
+  RdPacket(exs.io.fwdDet, exs.io.in.bits.foward, raw.io.exsrd)
+  RdPacket(lss.io.fwdDet, lss.io.in.bits.foward, raw.io.lssrd)
+  RdPacket(wbs.io.fwdDet, wbs.io.in.bits.foward, raw.io.wbsrd)
 
   val dStrBuf = Module(new StoreBuffer(2))
   dStrBuf.io.empty <> ifs.io.fromLs
