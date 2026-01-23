@@ -82,6 +82,8 @@ class RAWForward extends Module {
   io.reqdt := fwdSrc(fwdIndex)
 
   if (GlbCtrl.debug) {
+    val fwdArrDbg = fwdArr.asUInt
+    dontTouch(fwdArrDbg)
     dontTouch(fwdArr)
     dontTouch(rawArr)
     dontTouch(fwdIndex)

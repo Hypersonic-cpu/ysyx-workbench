@@ -128,8 +128,8 @@ class ExecuteStage extends Module {
 
   /** Forward */
   io.fwdDet.valid := validCtrl
-  io.fwdDet.gprFw := !ioid.memOp.isEn
-  io.fwdDet.gprDt := iExe.io.aluOut
+  io.fwdDet.gprFw := false.B // !ioid.memOp.isEn
+  io.fwdDet.gprDt := 0.U // iExe.io.aluOut
 
   /** Back to Fetch */
   io.toFetch.valid := validCtrl

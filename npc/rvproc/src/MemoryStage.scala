@@ -88,8 +88,8 @@ class MemoryStage extends Module {
   dMem.ar.valid := ~ioex.memOp.isSt && trigIss
   dMem.aw.valid := ioex.memOp.isSt && trigIss
   dMem.w.valid  := ioex.memOp.isSt && trigIss
-  dMem.r.ready  := ~ioex.memOp.isSt && io.out.ready //  && state === serve
-  dMem.b.ready  := ioex.memOp.isSt && io.out.ready  //  && state === serve
+  dMem.r.ready  := ~ioex.memOp.isSt && io.out.ready
+  dMem.b.ready  := ioex.memOp.isSt && io.out.ready
 
   val sext      = ioex.memOp.sExt
   val loadValue = dMem.r.bits.data >> (shamt << 3)
@@ -117,13 +117,15 @@ class MemoryStage extends Module {
 
   /** Forward */
   io.fwdDet.valid := io.in.valid
-  io.fwdDet.gprFw := io.out.valid &&
-    io.in.bits.foward.wbSel =/= WbSel.fromCsr
-  io.fwdDet.gprDt := Mux(
-    ioex.memOp.isEn,
-    /* fromMem */ iowb.lsuOut,
-    /* fromAlu|PC */ ioex.aluOut
-  )
+  io.fwdDet.gprFw := !ioex.memOp.isEn
+  io.fwdDet.gprDt := ioex.aluOut
+  // io.fwdDet.gprFw := io.out.valid &&
+  //   io.in.bits.foward.wbSel =/= WbSel.fromCsr
+  // io.fwdDet.gprDt := Mux(
+  //   ioex.memOp.isEn,
+  //   /* fromMem */ iowb.lsuOut,
+  //   /* fromAlu|PC */ ioex.aluOut
+  // )
 
   if (GlbCtrl.debug) {
     iowb.foward.stallT := Mux(
