@@ -62,16 +62,14 @@ else
 include $(NEMU_HOME)/scripts/native.mk
 endif
 
-.PHONY: line-count line-nonempty
+.PHONY: line-count line-nonempty run
+
+run:
+	@echo Target run is forbidden in nemu/
 
 line-count: 
 	@find . -name "*.c" -o -name "*.h" | xargs cat | wc -l  
 
 line-nonempty:
 	@find . -name "*.c" -o -name "*.h" | xargs grep -E '\S' | wc -l
-
-.PHONY: nemuconfig
-
-nemuconfig:
-	@echo "WARN: USE menuconfig but not NEMUconfig"
 

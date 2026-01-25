@@ -6,7 +6,7 @@ import chisel3.assert.Assert
 
 class CsrFile extends Module {
   val io = IO(new Bundle {
-    // val ecall = Input(Bool())
+    val ecall   = Input(Bool())
     val idxr    = Input(Tp.CsrIdxType())
     val idxw    = Input(Tp.CsrIdxType())
     val wrEn    = Input(Bool())
@@ -72,18 +72,20 @@ class CsrFile extends Module {
   //     + cf" C[${io.idxw}%x] <${io.wrEn} ${io.data}%x\n"
   // )
 
-  // when (io.ecall) {
-  //   mcause := 11.U
-  // }
-  //
-  dontTouch(mcycle)
-  dontTouch(mcycleh)
-  dontTouch(mvendorid)
-  dontTouch(marchid)
-  dontTouch(mepc)
-  dontTouch(mtvec)
-  dontTouch(mstatus)
-  dontTouch(mcause)
+  when (io.ecall) {
+    mcause := 11.U
+  }
+
+  if (GlbCtrl.debug) {
+    dontTouch(mcycle)
+    dontTouch(mcycleh)
+    dontTouch(mvendorid)
+    dontTouch(marchid)
+    dontTouch(mepc)
+    dontTouch(mtvec)
+    dontTouch(mstatus)
+    dontTouch(mcause)
+  }
 }
 
 class GprFile extends Module {
@@ -146,6 +148,8 @@ class RegFile extends Module {
   csr.io.idxw    := iowb.csrRd
   csr.io.wrEn    := iowb.csrWE && wbValid
   csr.io.data    := iowb.csrIn
+  csr.io.ecall   := ioid.ecall && io.fromId.valid
+  // WBU would not stall, thus # of valid == # of inst
   csr.io.instRet := wbValid
   out.csrVal     := csr.io.out
 }

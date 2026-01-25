@@ -223,6 +223,19 @@ source "src/device/Kconfig"
 source "src/device/soc/Kconfig"
 endif
 
+menu "npSim Trace File"
+config NPSIM_TRACE
+  depends on TARGET_NATIVE_ELF && ENGINE_INTERPRETER
+  bool "Enable npSim trace file generation"
+  default n
+  help
+    When enabled, NEMU will generate a trace file compatible with npSim.
+config NPSIM_DEFAULT_PATH
+  depends on NPSIM_TRACE
+  string "Default path for npSim trace file"
+  default "build/npsim.nptr"
+endmenu
+
 menu "Miscellaneous"
 choice
   depends on !TARGET_AM
