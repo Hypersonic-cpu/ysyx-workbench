@@ -64,9 +64,6 @@ endif
 
 .PHONY: line-count line-nonempty run
 
-run:
-	@echo Target run is forbidden in nemu/
-
 line-count: 
 	@find . -name "*.c" -o -name "*.h" | xargs cat | wc -l  
 
