@@ -39,6 +39,7 @@ class IDU extends Module {
     val imm    = Output(Tp.RegType())
     val gprWE  = Output(Bool())
     val csrWE  = Output(Bool())
+    val csralu = Output(Bool())
     val memAcc = Output(new MemOp)
     val aluEn  = Output(Bool())
     val aluOp  = Output(AluOp())
@@ -97,8 +98,8 @@ class IDU extends Module {
   io.csrir := MuxCase(
     immI(11, 0),
     Seq(
-      isEcall -> 0x305.U,
-      isMret  -> 0x341.U
+      isEcall -> 0x305.U, // mtvec
+      isMret  -> 0x341.U // mepc
     )
   )
   io.csriw := Mux(isEcall, 0x341.U, csrid12)
@@ -133,6 +134,7 @@ class IDU extends Module {
   val instSys   = opName === InstOp.System
   val sysOp     = Mux(isEcall, CsrOp.CsrRW, CsrOp(funct3(1, 0)))
   val instCsr   = instSys && (sysOp =/= CsrOp.None)
+  io.csralu := instCsr && sysOp =/= CsrOp.CsrRW
 
   /** ALU commands -> EXU */
   val aluEn = !isFenceI
@@ -246,8 +248,8 @@ class DecodeStage extends Module {
     val in      = Flipped(Decoupled(new FetchToDecode))
     val out     = Decoupled(new DecodeToExecute)
     // always_comb
-    val fromReg = Flipped(Decoupled(new RegToIDU()))
-    val toReg   = Decoupled(new RegFromIDU())
+    val fromReg = Flipped(Decoupled(new RegToIDU))
+    val toReg   = Decoupled(new RegFromIDU)
 
     val fenceI = Decoupled(Bool())
     val flush  = Flipped(Decoupled(Bool()))
@@ -287,6 +289,7 @@ class DecodeStage extends Module {
   io.toReg.bits.rs1  := iDec.io.rs1
   io.toReg.bits.rs2  := iDec.io.rs2
   io.toReg.bits.csrr := iDec.io.csrir
+  io.toReg.bits.ecall := iDec.io.ecall
   io.fromReg.ready   := true.B
   val rs1Val = Mux(io.fwdRes.rs1fw, io.fwdRes.rs1dt, io.fromReg.bits.rs1Val)
   val rs2Val = Mux(io.fwdRes.rs2fw, io.fwdRes.rs2dt, io.fromReg.bits.rs2Val)
@@ -301,7 +304,7 @@ class DecodeStage extends Module {
   val ioex = io.out.bits
   ioex.imm    := iDec.io.imm
   ioex.rs1V   := rs1Val
-  ioex.rs2V   := rs2Val
+  ioex.rs2V   := Mux(iDec.io.csralu, csrVal, rs2Val)
   ioex.aluOp  := iDec.io.aluOp
   ioex.aluSel := iDec.io.aluSel
   ioex.memOp  := iDec.io.memAcc

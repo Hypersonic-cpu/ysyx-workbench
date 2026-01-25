@@ -117,7 +117,7 @@ class MemoryStage extends Module {
 
   /** Forward */
   io.fwdDet.valid := io.in.valid
-  io.fwdDet.gprFw := !ioex.memOp.isEn
+  io.fwdDet.gprFw := ioex.foward.wbSel === WbSel.fromAlu // !ioex.memOp.isEn
   io.fwdDet.gprDt := ioex.aluOut
   // io.fwdDet.gprFw := io.out.valid &&
   //   io.in.bits.foward.wbSel =/= WbSel.fromCsr

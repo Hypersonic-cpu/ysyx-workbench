@@ -17,6 +17,9 @@
 #define __CPU_DECODE_H__
 
 #include <isa.h>
+#ifdef CONFIG_NPSIM_TRACE
+#include "trace.hh"
+#endif
 
 typedef struct Decode {
   vaddr_t pc;
@@ -24,6 +27,7 @@ typedef struct Decode {
   vaddr_t dnpc; // dynamic next pc
   ISADecodeInfo isa;
   IFDEF(CONFIG_ITRACE, char logbuf[128]);
+  IFDEF(CONFIG_NPSIM_TRACE, struct TraceInst nptrace);
 } Decode;
 
 // --- pattern matching mechanism ---

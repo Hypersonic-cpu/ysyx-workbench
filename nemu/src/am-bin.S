@@ -13,34 +13,10 @@
 * See the Mulan PSL v2 for more details.
 ***************************************************************************************/
 
-#include <assert.h>
-#include <common.h>
-#include <readline/readline.h>
-#include <stdio.h>
-#include <string.h>
-#include <sys/types.h>
-
-void init_monitor(int, char *[]);
-void am_init_monitor();
-void engine_start();
-int is_exit_status_bad();
-
-#ifdef CONFIG_NPSIM_TRACE
-void close_npsim_trace();
+.section .rodata
+.globl bin_start, bin_end
+bin_start:
+#ifdef BIN_PATH
+.incbin BIN_PATH
 #endif
-
-int main(int argc, char *argv[]) {
-  /* Initialize the monitor. */
-#ifdef CONFIG_TARGET_AM
-  am_init_monitor();
-#else
-  init_monitor(argc, argv);
-#endif
-
-  /* Start engine. */
-  engine_start();
-
-  IFDEF(CONFIG_NPSIM_TRACE, close_npsim_trace());
-
-  return is_exit_status_bad();
-}
+bin_end:

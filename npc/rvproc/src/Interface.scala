@@ -15,6 +15,7 @@ class RegFromIDU extends Bundle {
   val rs1  = Tp.RegIdxType()
   val rs2  = Tp.RegIdxType()
   val csrr = Tp.CsrIdxType()
+  val ecall = Bool()
 }
 
 class RegToIDU extends Bundle {
