@@ -121,11 +121,11 @@ static void execute(uint64_t n) {
 
     IFDEF(CONFIG_NPSIM_TRACE,
       struct TraceInst* tr = &s.nptrace;
-      printf(" npSim Trace: pc %x rs %d,%d rd %d br:taken %d:%d memOp %d addr %x\n",
-        tr->pc, tr->src_reg[0], tr->src_reg[1],  tr->dst_reg,
-        tr->is_branch, tr->br_taken,
-        tr->mem_op, tr->mem_addr);
-      fwrite(&s.nptrace, sizeof(struct TraceInst), 1, npsim_trace_fp);
+      // printf(" npSim Trace: pc %x rs %d,%d rd %d br:taken %d:%d memOp %d addr %x\n",
+      //   tr->pc, tr->src_reg[0], tr->src_reg[1],  tr->dst_reg,
+      //   tr->is_branch, tr->br_taken,
+      //   tr->mem_op, tr->mem_addr);
+      fwrite(tr, sizeof(struct TraceInst), 1, npsim_trace_fp);
     );
     g_nr_guest_inst ++;
     trace_and_difftest(&s, cpu.pc);
