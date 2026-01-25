@@ -13,6 +13,7 @@
 * See the Mulan PSL v2 for more details.
 ***************************************************************************************/
 
+#include "macro.h"
 #include <isa.h>
 #include <memory/paddr.h>
 
@@ -78,17 +79,24 @@ static int parse_args(int argc, char *argv[]) {
     {"log"      , required_argument, NULL, 'l'},
     {"diff"     , required_argument, NULL, 'd'},
     {"port"     , required_argument, NULL, 'p'},
+    {"nptr"     , required_argument, NULL, 't'},
     {"help"     , no_argument      , NULL, 'h'},
     {0          , 0                , NULL,  0 },
   };
+  IFDEF(CONFIG_NPSIM_TRACE, void set_nptr_file(const char*));
   int o;
-  while ( (o = getopt_long(argc, argv, "-bhl:e:d:p:", table, NULL)) != -1) {
+  while ( (o = getopt_long(argc, argv, "-bht:l:e:d:p:", table, NULL)) != -1) {
     switch (o) {
       case 'b': sdb_set_batch_mode(); break;
       case 'p': sscanf(optarg, "%d", &difftest_port); break;
       case 'l': log_file = optarg; break;
       case 'd': diff_so_file = optarg; break;
       case 'e': elf_file = optarg; break;
+      case 't':
+        IFNDEF(CONFIG_NPSIM_TRACE,
+          Assert(false, "NPSIM_TRACE=y required to generate trace for npSim"));
+        IFDEF(CONFIG_NPSIM_TRACE, set_nptr_file(optarg));
+        break;
       case 1: img_file = optarg; return 0;
       default:
         printf("Usage: %s [OPTION...] IMAGE [args]\n\n", argv[0]);
@@ -97,6 +105,7 @@ static int parse_args(int argc, char *argv[]) {
         printf("\t-l,--log=FILE           output log to FILE\n");
         printf("\t-d,--diff=REF_SO        run DiffTest with reference REF_SO\n");
         printf("\t-p,--port=PORT          run DiffTest with port PORT\n");
+        printf("\t-t,--nptr=FILE          store trace for npSim in PATH\n");
         printf("\n");
         exit(0);
     }
@@ -126,6 +135,8 @@ void init_monitor(int argc, char *argv[]) {
   IFDEF(CONFIG_DEVICE, init_device());
 
   IFDEF(CONFIG_SOC, init_soc());
+
+  IFDEF(CONFIG_NPSIM_TRACE, void init_npsim_trace(); init_npsim_trace();)
 
   /* Perform ISA dependent initialization. */
   init_isa();

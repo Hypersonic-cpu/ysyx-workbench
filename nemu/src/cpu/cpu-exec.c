@@ -13,6 +13,9 @@
 * See the Mulan PSL v2 for more details.
 ***************************************************************************************/
 
+#include "common.h"
+#include "debug.h"
+#include "difftest-def.h"
 #include "utils.h"
 #include <cpu/cpu.h>
 #include <cpu/decode.h>
@@ -38,13 +41,32 @@ static char iringbuf[IRING_BUF_LEN][128];
 static unsigned iringptr;
 #endif
 
+#ifdef CONFIG_NPSIM_TRACE
+static char* npsim_trace_file = CONFIG_NPSIM_DEFAULT_PATH;
+static FILE *npsim_trace_fp = NULL;
+
+// Called in monitor.c:parse_args()
+void set_nptr_file(const char* filename) {
+  if (filename) npsim_trace_file = (char*)filename;
+}
+
+void init_npsim_trace(const char* filename) {
+  npsim_trace_fp = fopen(npsim_trace_file, "wb");
+  Assert(npsim_trace_fp, "npSim Trace File %s open failed", npsim_trace_file);
+}
+
+void close_npsim_trace() {
+  fclose(npsim_trace_fp);
+  npsim_trace_fp = NULL;
+}
+#endif
 
 void device_update();
 bool trig_wp();
 
 static void trace_and_difftest(Decode *_this, vaddr_t dnpc) {
 #ifdef CONFIG_ITRACE_COND
-  if (ITRACE_COND) { log_write("%s\n", _this->logbuf); }
+  IFDEF(ITRACE_COND, log_write("%s\n", _this->logbuf));
 #endif
   if (g_print_step) { IFDEF(CONFIG_ITRACE, puts(_this->logbuf)); }
   IFDEF(CONFIG_DIFFTEST, difftest_step(_this->pc, dnpc));
@@ -59,18 +81,10 @@ static void exec_once(Decode *s, vaddr_t pc) {
   s->pc = pc;
   s->snpc = pc;
   isa_exec_once(s);
-  // printf("ThisPC " FMT_PADDR " NextPC " FMT_WORD "\n", cpu.pc, s->dnpc);
   cpu.pc = s->dnpc;
 }
 
 #ifdef CONFIG_ITRACE
-/**
- * WARN: For Inst Ring Buffer. 
- * 这段代码本来处在 exec_once 以后, 
- * 因此无法记录下出错的指令本身. 因此现在改到 
- * isa_exec_once 函数当中. 
- * 对后续的 difftest 不应产生影响.
- */
 void itrace_logging(Decode *s) {
   char *p = s->logbuf;
   p += snprintf(p, sizeof(s->logbuf), FMT_WORD ":", s->pc);
@@ -104,8 +118,16 @@ static void execute(uint64_t n) {
   Decode s;
   for (;n > 0; n --) {
     exec_once(&s, cpu.pc);
+
+    IFDEF(CONFIG_NPSIM_TRACE,
+      struct TraceInst* tr = &s.nptrace;
+      printf(" npSim Trace: pc %x rs %d,%d rd %d br:taken %d:%d memOp %d addr %x\n",
+        tr->pc, tr->src_reg[0], tr->src_reg[1],  tr->dst_reg,
+        tr->is_branch, tr->br_taken,
+        tr->mem_op, tr->mem_addr);
+      fwrite(&s.nptrace, sizeof(struct TraceInst), 1, npsim_trace_fp);
+    );
     g_nr_guest_inst ++;
-    // printf("Diff PC " FMT_PADDR  "\n", cpu.pc);
     trace_and_difftest(&s, cpu.pc);
     if (nemu_state.state != NEMU_RUNNING) break;
     IFDEF(CONFIG_DEVICE, device_update());
@@ -122,7 +144,7 @@ static void statistic() {
 }
 
 #ifdef CONFIG_ITRACE
-void 
+void
 inst_ringbuf_display() {
   printf("\n === Recent %d Insts === \n", IRING_BUF_LEN);
   for (unsigned i = iringptr, n = IRING_BUF_LEN; n > 0;
@@ -135,8 +157,8 @@ inst_ringbuf_display() {
 void assert_fail_msg() {
   isa_reg_display();
   MUXDEF(CONFIG_ITRACE, inst_ringbuf_display(), printf("Inst ring buffer disabled\n"));
-  MUXDEF(CONFIG_FTRACE_ENABLE, 
-         void frame_stack_display(); frame_stack_display(), 
+  MUXDEF(CONFIG_FTRACE_ENABLE,
+         void frame_stack_display(); frame_stack_display(),
          printf("Frame trace disabled\n"));
   statistic();
 }
