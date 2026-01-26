@@ -58,7 +58,8 @@ enum {
   s->nptrace.is_branch = true); \
   if (cond) { \
     IFDEF(CONFIG_NPSIM_TRACE, \
-    s->nptrace.br_taken = true); \
+    s->nptrace.br_taken = true; \
+    s->nptrace.mem_addr = s->pc + imm); \
     s->dnpc = s->pc + imm; \
   } \
 } while (0);
@@ -66,7 +67,8 @@ enum {
 #define brAbs(taraddr) do { \
   IFDEF(CONFIG_NPSIM_TRACE, \
   s->nptrace.is_branch = true; \
-  s->nptrace.br_taken = true); \
+  s->nptrace.br_taken = true; \
+  s->nptrace.mem_addr = taraddr); \
   s->dnpc = taraddr; \
 } while (0);
 #define dstR() do { IFDEF(CONFIG_NPSIM_TRACE, s->nptrace.dst_reg = *rd); } while (0)
