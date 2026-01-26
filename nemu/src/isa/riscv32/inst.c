@@ -30,9 +30,23 @@
 #define R(i) gpr(i)
 #define Mr vaddr_read
 #define Mw vaddr_write
-#define Mwlog(addr, len, data) \
+
+#define Mrlog(var, addr, len) do { \
+  var = vaddr_read((addr), (len)); \
+  IFDEF(CONFIG_NPSIM_TRACE, \
+    s->nptrace.mem_op = MemLoad; \
+    s->nptrace.mem_addr = (addr); \
+  ); \
+} while (0);
+
+#define Mwlog(addr, len, data) do { \
   vaddr_write((addr), (len), (data)); \
-  isa_set_memwr_event((addr), (len), (data))
+  isa_set_memwr_event((addr), (len), (data)); \
+  IFDEF(CONFIG_NPSIM_TRACE, \
+    s->nptrace.mem_op = MemStore; \
+    s->nptrace.mem_addr = (addr); \
+  ); \
+} while (0);
 
 enum {
   TYPE_R, TYPE_I, TYPE_S, TYPE_B, TYPE_U, TYPE_J,
@@ -198,10 +212,12 @@ static void decode_operand(Decode *s, int *rd, word_t *src1, word_t *src2, word_
     s->nptrace.src_reg[0] = 0;
     s->nptrace.src_reg[1] = 0;
     s->nptrace.dst_reg    = 0;
-    s->nptrace.mem_op     = None;
+    s->nptrace.mem_op     = MemNone;
     s->nptrace.mem_addr   = 0;
     s->nptrace.is_branch  = false;
     s->nptrace.br_taken   = false;
+    s->nptrace.sys_op     = SysNone;
+    s->nptrace.dummy      = 0x73;
   );
   int rs1 = BITS(i, 19, 15);
   int rs2 = BITS(i, 24, 20);
@@ -268,11 +284,11 @@ static int decode_exec(Decode *s) {
   INSTPAT("??????? ????? ????? 001 ????? 00000 11",
           lh     , I, R(rd) = SEXT(Mr(src1 + imm, 2), 16));
   INSTPAT("??????? ????? ????? 010 ????? 00000 11",
-          lw     , I, R(rd) = Mr(src1 + imm, 4));
+          lw     , I,  Mrlog(R(rd), src1 + imm, 4));
   INSTPAT("??????? ????? ????? 100 ????? 00000 11",
-          lbu    , I, R(rd) = Mr(src1 + imm, 1));
+          lbu    , I, Mrlog(R(rd), src1 + imm, 1));
   INSTPAT("??????? ????? ????? 101 ????? 00000 11",
-          lhu    , I, R(rd) = Mr(src1 + imm, 2));
+          lhu    , I, Mrlog(R(rd), src1 + imm, 2));
   INSTPAT("??????? ????? ????? 000 ????? 01000 11",
           sb     , S, Mwlog(src1 + imm, 1, src2));
   INSTPAT("??????? ????? ????? 001 ????? 01000 11",
@@ -328,9 +344,20 @@ static int decode_exec(Decode *s) {
   INSTPAT("0000000 ????? ????? 111 ????? 01100 11",
           and    , R, R(rd) = src1 & src2);
   INSTPAT("0000000 00001 00000 000 00000 11100 11",
-          ebreak , N, { if (R(15)) NEMUTRAP(s->pc, R(10)); }); // R(10) is $a0
+          ebreak , N, {
+            // abstract-machine/src/platform/nemu/
+            if (R(15) == 0xaa) NEMUTRAP(s->pc, R(10));
+            else if (R(15) == 0) {
+              s->nptrace.sys_op = SysResetStats;
+            } else if (R(15) == 1) {
+              s->nptrace.sys_op = SysDumpStats;
+            } else {
+              Assert(false, "UnRecognized ebreak with a5 = " FMT_WORD, R(15));
+              INV(s->pc);
+            }
+          }); // R(10) is $a0
   INSTPAT("0000000 00000 00000 001 00000 00011 11",
-          fencei,  I, {});
+          fencei,  I, { /** TODO: npSim stall here */});
 
   /** RV32M Extension */
   INSTPAT("0000001 ????? ????? 000 ????? 01100 11",
