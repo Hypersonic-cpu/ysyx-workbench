@@ -1,11 +1,10 @@
 # soc or npc mode
 SOCMODE?=0
-EXEMODE=0
 SOC_SCALA_ARG=
 ifeq ($(SOCMODE),1)
 SOC_SCALA_ARG= --soc-mode
 else
-include ../npsim/Makefile
+include ../npsim/MakeInclude.mk
 endif
 # if this build involve NV Board
 NVBENA ?= 0
