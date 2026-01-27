@@ -178,6 +178,7 @@ main(int argc, char* argv[]) {
   unifiedMem = uMem.get();
 
   auto instCache = std::make_unique<cacheSim::CacheSimulator>(
+    /* name */ "l1iCache",
     /* size */ options::arch_config_val.at(options::ICacheSize),
     /* lineSize */ options::arch_config_val.at(options::ICacheBlock),
     /* assoc */ options::arch_config_val.at(options::ICacheAssoc));
