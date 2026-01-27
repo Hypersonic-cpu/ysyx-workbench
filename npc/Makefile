@@ -107,6 +107,7 @@ $(SIM_BIN): $(CSRCS) $(DPIC_SRCS) $(NVB_ARCHIVE)
 
 printhook:
 	@echo
+	@echo "NPSIMPATH" $(NPSIMPATH)
 	@echo "INCFLAGS" $(INC_PATH)
 	@echo "CXXFLAGS" $(CXXFLAGS)
 	@echo "CSRCS" $(CSRCS)
