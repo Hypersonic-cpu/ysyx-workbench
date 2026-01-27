@@ -21,6 +21,7 @@
 #include <cpu/decode.h>
 #include <cpu/difftest.h>
 #include <locale.h>
+#include <stdio.h>
 #include <string.h>
 
 /* The assembly code of instructions executed is only output to the screen
@@ -51,13 +52,19 @@ void set_nptr_file(const char* filename) {
 }
 
 void init_npsim_trace(const char* filename) {
-  npsim_trace_fp = fopen(npsim_trace_file, "wb");
+  // npsim_trace_fp = fopen(npsim_trace_file, "wb");
+  char cmd[256] = "xz -ek9 - > ";
+  strcat(cmd, filename);
+  Log("npSim trace output with command %s", cmd);
+  npsim_trace_fp = popen(cmd, "w");
   Assert(npsim_trace_fp, "npSim Trace File %s open failed", npsim_trace_file);
 }
 
 void close_npsim_trace() {
-  fclose(npsim_trace_fp);
-  npsim_trace_fp = NULL;
+  // fclose(npsim_trace_fp);
+  int retcode = pclose(npsim_trace_fp);
+  Assert(retcode == 0, "npSim Trace File close failed with code %d", retcode);
+  // npsim_trace_fp = NULL;
 }
 #endif
 
