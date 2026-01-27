@@ -51,10 +51,10 @@ void set_nptr_file(const char* filename) {
   if (filename) npsim_trace_file = (char*)filename;
 }
 
-void init_npsim_trace(const char* filename) {
+void init_npsim_trace() {
   // npsim_trace_fp = fopen(npsim_trace_file, "wb");
   char cmd[256] = "xz -ek9 - > ";
-  strcat(cmd, filename);
+  strcat(cmd, npsim_trace_file);
   Log("npSim trace output with command %s", cmd);
   npsim_trace_fp = popen(cmd, "w");
   Assert(npsim_trace_fp, "npSim Trace File %s open failed", npsim_trace_file);
