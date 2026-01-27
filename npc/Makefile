@@ -1,5 +1,6 @@
 # soc or npc mode
 SOCMODE?=0
+EXEMODE=0
 SOC_SCALA_ARG=
 ifeq ($(SOCMODE),1)
 SOC_SCALA_ARG= --soc-mode
@@ -105,13 +106,12 @@ $(SIM_BIN): $(CSRCS) $(DPIC_SRCS) $(NVB_ARCHIVE)
 		--Mdir $(BUILD_OBJ_DIR) --exe -o $(abspath $(SIM_BIN))
 
 printhook:
-
-	# @echo
-	# @echo "INCFLAGS" $(INC_PATH)
-	# @echo "CXXFLAGS" $(CXXFLAGS)
-	# @echo "CSRCS" $(CSRCS)
-	# @echo "COMMON" $(SRCS_COMMON)
-	# @echo
+	@echo
+	@echo "INCFLAGS" $(INC_PATH)
+	@echo "CXXFLAGS" $(CXXFLAGS)
+	@echo "CSRCS" $(CSRCS)
+	@echo "COMMON" $(SRCS_COMMON)
+	@echo
 
 test:
 	# $(call git_commit, "test RTL")
