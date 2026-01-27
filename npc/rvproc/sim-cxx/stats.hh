@@ -3,20 +3,13 @@
 #include "shared_types.hh"
 
 #include <algorithm>
-#include <capstone/capstone.h>
 #include <cassert>
 #include <cstddef>
-#include <cstdio>
 #include <cstdlib>
-#include <dlfcn.h>
-#include <elf.h>
-#include <fcntl.h>
 #include <format>
 #include <iostream>
 #include <ostream>
 #include <string>
-#include <sys/mman.h>
-#include <sys/stat.h>
 #include <unordered_map>
 #include <vector>
 

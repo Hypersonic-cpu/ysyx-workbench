@@ -70,11 +70,11 @@ print_stats() {
   // pccdb->dump_stats(std::cerr);
   ppmu->dump_stats(std::cerr);
   if (iCache) {
-    auto const stat = iCache->stats();
+    auto const stat = iCache->stats;
     std::cerr << std::format(
                    ">> iCache:\n"
                    "   Hit {:d} Miss {:d} Total {:d} MissRate {:f}\n",
-                   stat.hits, stat.misses, stat.accesses, stat.missRate())
+                   stat.hits, stat.misses, stat.accesses, stat.miss_rate())
               << std::endl;
   }
 }
@@ -82,7 +82,7 @@ print_stats() {
 inline json
 dump_stats() {
   json obj{};
-  obj["l1icache"] = json(iCache->stats_map());
+  obj["l1icache"] = iCache->stats_json();
   obj["pmu"] = ppmu->stats_json();
   obj["image"] = options::binary_img;
   return obj;
@@ -92,7 +92,7 @@ inline json
 dump_config() {
   json conf{};
   if (iCache) {
-    conf["l1icache"] = json(iCache->config_map());
+    conf["l1icache"] = iCache->config_json();
   }
   conf["sdram"] = json({{"latency", MemLatency}, {"burstlat", MemBstLat}});
   conf["image"] = options::binary_img;
