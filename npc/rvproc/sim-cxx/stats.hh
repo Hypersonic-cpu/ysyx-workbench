@@ -1,6 +1,6 @@
 #pragma once
 
-#include "probe.hh"
+#include "shared_types.hh"
 
 #include <algorithm>
 #include <capstone/capstone.h>
