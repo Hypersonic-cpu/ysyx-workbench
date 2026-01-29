@@ -10,3 +10,6 @@
 [submodule "rt-thread-am"]
 	path = rt-thread-am
 	url = https://github.com/Hypersonic-cpu/RT-Thread-ysyx.git
+[submodule "am-kernels"]
+	path = am-kernels
+	url = https://github.com/Hypersonic-cpu/ysyx-AM-kernels.git

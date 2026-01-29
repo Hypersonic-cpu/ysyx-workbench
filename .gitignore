@@ -11,7 +11,7 @@
 !.gitignore
 !init.sh
 /fceux-am
-/am-kernels
+!/am-kernels
 logs/
 log/
 *.log
