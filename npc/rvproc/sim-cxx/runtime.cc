@@ -91,7 +91,7 @@ cacheSim::CacheSimulator* iCache = nullptr;
 
 // mt-unsafe
 tick_t
-pmem_read(uint32_t araddr, uint32_t* prdata, bool bfirst) {
+pmem_read(uint32_t araddr, uint32_t* prdata, bool bfirst, uint16_t) {
   static uint64_t ready_time = 0;
 
   auto curr_lat = bfirst ? MemLatency : MemBstLat;
@@ -108,7 +108,7 @@ pmem_read(uint32_t araddr, uint32_t* prdata, bool bfirst) {
 
 tick_t
 pmem_write(uint32_t awaddr, uint32_t wdata, unsigned char wstrb,
-           bool bfirst) {
+           bool bfirst, uint16_t) {
   static uint64_t ready_time = 0;
 
   auto curr_lat = bfirst ? MemLatency : MemBstLat;
