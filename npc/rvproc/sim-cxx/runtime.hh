@@ -44,8 +44,8 @@ extern "C" uint32_t axi_write(uint32_t awaddr, uint32_t wdata,
                               unsigned char wstrb, uint16_t id);
 extern "C" void axi_cache_flush(uint16_t id);
 
-uint32_t pmem_read(uint32_t araddr, uint32_t* prdata, bool bfirst);
-uint32_t pmem_write(uint32_t awaddr, uint32_t wdata, unsigned char wstrb,
+tick_t pmem_read(uint32_t araddr, uint32_t* prdata, bool bfirst);
+tick_t pmem_write(uint32_t awaddr, uint32_t wdata, unsigned char wstrb,
                     bool bfirst);
 
 #endif
