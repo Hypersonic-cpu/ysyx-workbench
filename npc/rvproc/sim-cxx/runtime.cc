@@ -138,7 +138,7 @@ axi_read(uint32_t araddr, uint32_t* prdata, uint16_t id) {
   if (iCache && id == 0) {
     finish_time = iCache->read_req(araddr, prdata);
   } else {
-    finish_time = pmem_read(araddr, prdata, true);
+    finish_time = pmem_read(araddr, prdata, true, 0xff);
   }
   v_assert(finish_time > curr_tick(), "Finished", finish_time, "< curr",
            curr_tick());
@@ -155,7 +155,7 @@ axi_write(uint32_t awaddr, uint32_t wdata, unsigned char wstrb,
   if (iCache && id == 0) {
     finish_time = iCache->write_req(awaddr, wdata, wstrb);
   } else {
- finish_time = pmem_write(awaddr, wdata, wstrb, true);
+ finish_time = pmem_write(awaddr, wdata, wstrb, true, 0xff);
   }
   v_assert(finish_time > curr_tick(), "Finished", finish_time, "< curr",
            curr_tick());
