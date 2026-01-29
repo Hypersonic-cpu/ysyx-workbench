@@ -18,3 +18,4 @@ log/
 /nvboard
 *.bak/
 .vscode*/
+!*.png
