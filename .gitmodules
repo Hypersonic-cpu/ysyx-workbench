@@ -4,3 +4,9 @@
 [submodule "npsim"]
 	path = npsim
 	url = https://github.com/Hypersonic-cpu/ysyx-npSim.git
+[submodule "ysyxSoC"]
+	path = ysyxSoC
+	url = https://github.com/Hypersonic-cpu/ysyx-SoC.git
+[submodule "rt-thread-am"]
+	path = rt-thread-am
+	url = https://github.com/Hypersonic-cpu/RT-Thread-ysyx.git
