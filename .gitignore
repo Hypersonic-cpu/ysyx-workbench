@@ -12,7 +12,6 @@
 !init.sh
 /fceux-am
 /am-kernels
-/ysyxSoC
 logs/
 log/
 *.log
