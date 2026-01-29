@@ -50,3 +50,14 @@ v_warn(bool cond, const Args&... args) {
     std::cerr << std::endl;
   }
 }
+
+template <typename... Args>
+inline void
+v_warn_dec(bool cond, const Args&... args) {
+  if (!cond) {
+    std::cerr << ANSI_YELLOW "[WARN COND] " << __FILE__ << ":" << __LINE__
+              << " " ANSI_NONE << std::dec;
+    ((std::cerr << args << " "), ...);
+    std::cerr << std::endl;
+  }
+}
