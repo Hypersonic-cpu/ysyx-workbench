@@ -1,7 +1,15 @@
 # CAS「一生一芯」Project: RISC-V Core Design Framework
 
-Forked from [一生一芯](https://github.com/OSCPU/ysyx-workbench). This repo contains a `RV32E` Core (1GHz with `NANGATE45`) `npc`, a RV32IM functional emulator `nemu`, a trace-driven timing simulator `npsim` and SoC integrations. The structure is as follows:
+Forked from [一生一芯](https://github.com/OSCPU/ysyx-workbench). 
 
+This repo contains 
+- a `RV32E` Core `npc` (1GHz under `NANGATE45`),
+- a RV32IM functional emulator `nemu`,
+- a trace-driven timing simulator `npsim` and
+- SoC integrations.
+
+
+The structure is as follows:
 ```
 ysyx-workbench/
 ├── abstract-machine   # Runtime and link scripts 
