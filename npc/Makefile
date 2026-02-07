@@ -107,14 +107,14 @@ $(SIM_BIN): $(CSRCS) $(DPIC_SRCS) $(NVB_ARCHIVE)
 		$(addprefix -CFLAGS , $(CXXFLAGS)) $(addprefix -LDFLAGS , $(LDFLAGS)) \
 		--Mdir $(BUILD_OBJ_DIR) --exe -o $(abspath $(SIM_BIN))
 
-printhook:
-	@echo
-	@echo "NPSIMPATH" $(NPSIMPATH)
-	@echo "INCFLAGS" $(INC_PATH)
-	@echo "CXXFLAGS" $(CXXFLAGS)
-	@echo "CSRCS" $(CSRCS)
-	@echo "COMMON" $(SRCS_COMMON)
-	@echo
+# printhook:
+# 	@echo
+# 	@echo "NPSIMPATH" $(NPSIMPATH)
+# 	@echo "INCFLAGS" $(INC_PATH)
+# 	@echo "CXXFLAGS" $(CXXFLAGS)
+# 	@echo "CSRCS" $(CSRCS)
+# 	@echo "COMMON" $(SRCS_COMMON)
+# 	@echo
 
 test:
 	# $(call git_commit, "test RTL")
