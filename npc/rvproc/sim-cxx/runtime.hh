@@ -60,13 +60,12 @@ extern "C" void axi_write_req(addr_t addr, uint16_t id, uint16_t len,
                               uint8_t strb, uint8_t last);
 extern "C" void axi_cache_flush(uint16_t id);
 extern "C" void axi_read_resp(uint8_t* pvalid, uint8_t* presp, word_t* pdata,
-                              uint8_t* plast, uint16_t* pid, uint16_t devid);
-
+                              uint8_t* plast, uint16_t* pid, uint16_t devid,
+                              uint8_t devready);
 extern "C" void axi_write_resp(uint8_t* pvalid, uint8_t* presp,
                                uint16_t* pid, uint16_t devid,
                                uint8_t devready);
-extern "C" void axi_device_ready(uint8_t* pr, uint8_t* pw, uint16_t devid,
-                                 uint8_t devready);
+extern "C" void axi_device_ready(uint8_t* pr, uint8_t* pw, uint16_t devid);
 
 tick_t pmem_read(uint32_t araddr, uint32_t* prdata);
 tick_t pmem_write(uint32_t awaddr, uint32_t wdata, unsigned char wstrb);
