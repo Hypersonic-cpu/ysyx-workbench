@@ -115,6 +115,7 @@ module AXIConnBox (
     end else begin
       if (ar_fire) begin
         assert (io_master_arlen == 0);  // "Only support single beat read"
+        $display("WANT TO CALL!!");
         axi_read_req(
             /* 31:0 */ 32'(io_master_araddr),
             /* 15:0 */ 16'(io_master_arid),
