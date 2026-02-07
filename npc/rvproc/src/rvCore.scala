@@ -115,7 +115,7 @@ class rvCore(isSoc: Boolean) extends Module {
     iMemBox.io.flush.valid := ids.io.fenceI.valid && ids.io.fenceI.bits
 
     val dMemBox = Module(new device.AXIConnBox)
-    dMemBox.io.master <> lss.io.dMem
+    dMemBox.io.master <> dStrBuf.io.out
     dMemBox.io.flush.id    := 1.U // data port
     dMemBox.io.flush.valid := false.B
 
