@@ -4,6 +4,7 @@ SOC_SCALA_ARG=
 ifeq ($(SOCMODE),1)
 SOC_SCALA_ARG= --soc-mode
 else
+ACTIVE_MODE:=0
 include ../npsim/MakeInclude.mk
 endif
 # if this build involve NV Board
