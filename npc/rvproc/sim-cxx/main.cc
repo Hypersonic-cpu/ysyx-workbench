@@ -1,7 +1,9 @@
 #include "nlohmann/json.hpp"
 #include "nlohmann/json_fwd.hpp"
 
+#include <array>
 #include <cassert>
+#include <cstdint>
 #include <cstdio>
 #include <filesystem>
 #include <format>
@@ -10,8 +12,6 @@
 #include <memory>
 #include <ostream>
 #include <string>
-#include <unordered_map>
-#include <vector>
 #include <verilated.h>
 #include <verilated_fst_c.h>
 
@@ -21,7 +21,7 @@
 #else
 #include "VrvCore.h"
 #include "VrvCore___024root.h"
-#include "cacheSim/CacheSimulator.hh"
+#include "cacheSim/CacheBase.hh"
 #endif
 
 #include "ccdb.hh"
@@ -111,6 +111,15 @@ handler_t resetAllStats = reset_all_stats;
 handler_t dumpAllStats = dump_all_stats;
 
 inline void
+upd_cache_buf_dpic() {
+  std::array<cacheSim::CacheBase*, 2> caches{iCache, dCache};
+  for (auto ptr : caches) {
+    auto& ent = cacheRespBuf.at(ptr->cache_id());
+    ent.rw_ready = ptr->is_ready();
+  }
+}
+
+inline void
 single_cycle(const std::unique_ptr<TOP_NAME>& top,
              const std::unique_ptr<VerilatedContext>& context,
              const trace::FstTracer& wave) {
@@ -119,6 +128,10 @@ single_cycle(const std::unique_ptr<TOP_NAME>& top,
   context->timeInc(1);
   top->eval();
   wave.dump(context->time());
+
+  // Only update buffer, will influence RTL after
+  // next posedge
+  upd_cache_buf_dpic();
 
   top->clock = 0;
   context->timeInc(1);
@@ -152,6 +165,7 @@ main(int argc, char* argv[]) {
   options::binary_img = std::string(argv[1]);
   options::parse_args(argc, argv);
 
+  /** CONFIG BEGIN */
 #if SOCMODE
   auto mromBin = std::make_shared<RuntimeBin>(
     std::vector<ureg_t>(10U, 0xbadc0de), 0x2000'0000U, "MROM");
@@ -177,12 +191,18 @@ main(int argc, char* argv[]) {
     options::binary_img, (4U << 20) / 4, 0x8000'0000LLU, "UnifiedMem");
   unifiedMem = uMem.get();
 
-  auto instCache = std::make_unique<cacheSim::CacheSimulator>(
+  auto l1i = std::make_unique<cacheSim::PipeCache>(
     /* name */ "l1iCache",
+    /* depth */ 3,
     /* size */ options::arch_config_val.at(options::ICacheSize),
     /* lineSize */ options::arch_config_val.at(options::ICacheBlock),
-    /* assoc */ options::arch_config_val.at(options::ICacheAssoc));
-  iCache = instCache.get();
+    /* assoc */ options::arch_config_val.at(options::ICacheAssoc),
+    /* id */ static_cast<uint16_t>(0));
+  iCache = l1i.get();
+  auto l1d = std::make_unique<cacheSim::NoCache>(
+    /* name */ "l1dCache",
+    /* id */ static_cast<uint16_t>(0));
+  dCache = l1d.get();
 #endif
 
   if (options::wave_enable) {
@@ -207,7 +227,6 @@ main(int argc, char* argv[]) {
   nvboard_init();
 #endif
 
-  /** CONFIG BEGIN */
 #if SOCMODE
   trace::DiffTester diff(mrom->dataVec());
   pdiff = &diff;
@@ -235,7 +254,7 @@ main(int argc, char* argv[]) {
     confFile << std::setw(2) << dump_config() << std::endl;
     confFile.close();
   }
-  /* ^^^ CONFIG END ^^^ */
+  /** CONFIG END */
 
   const size_t MaxCyc{options::max_cycles};
   size_t currCyc{0U};

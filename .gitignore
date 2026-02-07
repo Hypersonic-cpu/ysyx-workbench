@@ -11,11 +11,11 @@
 !.gitignore
 !init.sh
 /fceux-am
-/am-kernels
-/ysyxSoC
+!/am-kernels
 logs/
 log/
 *.log
 /nvboard
 *.bak/
 .vscode*/
+!*.png

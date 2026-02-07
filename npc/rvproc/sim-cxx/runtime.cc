@@ -1,9 +1,11 @@
 #include "runtime.hh"
+#include "cacheSim/CacheBase.hh"
+#include "rtl_defs.hh"
+
 #include "difftest.hh"
 #include "options.hh"
 #include "pmu.hh"
 #include "probe.hh"
-#include "types.hh"
 #include <cassert>
 #include <cstdint>
 #include <future>
@@ -87,90 +89,99 @@ vga_read(uint32_t addr) {
 #else
 
 RuntimeBin* unifiedMem = nullptr;
-cacheSim::CacheSimulator* iCache = nullptr;
+cacheSim::CacheBase* iCache = nullptr;
+cacheSim::CacheBase* dCache = nullptr;
+
+// Update before sim loop
+std::array<CacheSimRespBuffer, 2> cacheRespBuf;
 
 // mt-unsafe
 tick_t
 pmem_read(uint32_t araddr, uint32_t* prdata, bool bfirst, uint16_t) {
-  static uint64_t ready_time = 0;
-
-  auto curr_lat = bfirst ? MemLatency : MemBstLat;
-  auto finish_time = std::max(ready_time, curr_tick()) + curr_lat;
   if (ppmu) {
-    ppmu->notifyMemXBar(false, ready_time, curr_lat);
+    ppmu->notifyMemXBar(false, -2, -2);
   }
-  ready_time = finish_time;
-
-  assert(unifiedMem);
   *prdata = unifiedMem->readWord(araddr & ~3U);
-  return finish_time;
+  return 0; // unused
 }
 
 tick_t
-pmem_write(uint32_t awaddr, uint32_t wdata, unsigned char wstrb,
-           bool bfirst, uint16_t) {
-  static uint64_t ready_time = 0;
-
-  auto curr_lat = bfirst ? MemLatency : MemBstLat;
-  auto finish_time = std::max(ready_time, curr_tick()) + curr_lat;
+pmem_write(uint32_t awaddr, uint32_t wdata, unsigned char wstrb, bool bfirst,
+           uint16_t) {
   if (ppmu) {
-    ppmu->notifyMemXBar(true, ready_time, curr_lat);
+    ppmu->notifyMemXBar(true, -2, -2);
   }
-  ready_time = finish_time;
 
   if (awaddr == 0x1000'0000) [[unlikely]] {
     putchar(wdata);
     goto rettime;
   }
-  assert(unifiedMem);
   unifiedMem->writeWord(awaddr & ~3U, wdata, wstrb);
 rettime:
-  return finish_time;
+  return 0;
 }
 
-uint32_t
-axi_read(uint32_t araddr, uint32_t* prdata, uint16_t id) {
-  // std::cerr << std::hex;
-  // std::cerr << "DPI-C axi read [" << id << "]@ " << araddr
-  //           << " data = " << unifiedMem->readWord(araddr) << std::endl;
-  assert(unifiedMem);
-  auto finish_time = 0;
-  if (iCache && id == 0) {
-    finish_time = iCache->read_req(araddr, prdata);
-  } else {
-    finish_time = pmem_read(araddr, prdata, true, 0xff);
-  }
-  v_assert(finish_time > curr_tick(), "Finished", finish_time, "< curr",
-           curr_tick());
-  tint_t latency = finish_time - curr_tick();
-  v_warn_dec(latency < 20'000U, "Too large read latency", latency);
-  return latency;
+inline cacheSim::CacheBase*
+sel_port_by_id(uint16_t id) {
+  switch (id) {
+  case 0:
+    return iCache;
+  case 1:
+    return dCache;
+  default:
+    v_assert(false, "No such ID", id, "for i|dCache");
+  };
+  return nullptr;
 }
 
-uint32_t
-axi_write(uint32_t awaddr, uint32_t wdata, unsigned char wstrb,
-          uint16_t id) {
-  assert(unifiedMem);
-  auto finish_time = 0;
-  if (iCache && id == 0) {
-    finish_time = iCache->write_req(awaddr, wdata, wstrb);
-  } else {
- finish_time = pmem_write(awaddr, wdata, wstrb, true, 0xff);
-  }
-  v_assert(finish_time > curr_tick(), "Finished", finish_time, "< curr",
-           curr_tick());
-  tint_t latency = finish_time - curr_tick();
-  v_warn_dec(latency < 20'000U, "Too large write latency", latency);
-  return latency;
+void
+axi_read_req(addr_t addr, uint16_t id, uint16_t len, uint16_t size,
+             uint16_t burst) {
+  assert(len == 0);
+  sel_port_by_id(id)->read_req(addr);
+}
+
+void
+axi_write_req(addr_t addr, uint16_t id, uint16_t len, uint16_t size,
+              uint16_t burst, word_t data, uint8_t strb, uint8_t last) {
+  assert(len == 0);
+  sel_port_by_id(id)->write_req(addr, data, strb);
 }
 
 void
 axi_cache_flush(uint16_t id) {
-  std::cerr << std::hex;
-  std::cerr << "DPI-C cache flush [" << id << "]" << std::endl;
-  if (iCache && id == 0) {
-    iCache->flush_all();
-  }
+  // std::cerr << std::hex;
+  // std::cerr << "DPI-C cache flush [" << id << "]" << std::endl;
+  sel_port_by_id(id)->flush_all();
+}
+
+void
+axi_read_resp(uint8_t* pvalid, uint8_t* presp, word_t* pdata, uint8_t* plast,
+              uint16_t* pid, uint16_t devid) {
+  auto& ent = cacheRespBuf.at(devid);
+  *pvalid = ent.r_valid;
+  *presp = ent.r_resp;
+  *pdata = ent.r_data;
+  *plast = ent.r_last;
+  *pid = devid;
+  ent.r_valid = false;
+}
+
+void
+axi_write_resp(uint8_t* pvalid, uint8_t* presp, uint16_t* pid,
+               uint16_t devid) {
+  auto& ent = cacheRespBuf.at(devid);
+  *pvalid = ent.b_valid;
+  *presp = ent.b_resp;
+  *pid = devid;
+  ent.b_valid = false;
+}
+
+void
+axi_device_ready(uint8_t* pr, uint8_t* pw, uint16_t devid) {
+  auto& ent = cacheRespBuf.at(devid);
+  *pr = ent.rw_ready.first;
+  *pw = ent.rw_ready.second;
 }
 
 #endif

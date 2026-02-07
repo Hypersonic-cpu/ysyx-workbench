@@ -1,6 +1,14 @@
 #pragma once
 
 // clang-format off
+
+/** probe.hh
+ * Connect verilator generated files and CXX driving framekwork.
+ * This .cc does not depend on RTL simulation driver.
+ */
+
+#include "rtl_defs.hh"
+
 #include <array>
 #include <cstdint>
 #include <iomanip>
@@ -9,8 +17,6 @@
 #include <string>
 #include <sys/cdefs.h>
 #include <unordered_map>
-
-#include "shared_types.hh"
 
 #if SOCMODE
 #include "VysyxSoCFull.h"
@@ -234,6 +240,7 @@ read_reg(uint8_t regid) noexcept {
     case 0xe: ret = r->rvCore__DOT__reg_0__DOT__gpr__DOT__gprs_14; break;
     case 0xf: ret = r->rvCore__DOT__reg_0__DOT__gpr__DOT__gprs_15; break;
     case 0x10:ret = r->rvCore__DOT__wbs_io_in_bits_rfoward_pc ; break;
+    // TODO: PC
 #endif
     default: v_assert(false, "Invalid GPR read @ regid =", std::to_string(regid));
       break;
@@ -314,6 +321,3 @@ read_double_csr(CsrSel hi, CsrSel lo) noexcept {
 // }
 
 } // namespace trace
-
-__attribute_noinline__
-size_t curr_tick() noexcept;

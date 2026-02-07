@@ -1,7 +1,5 @@
 #pragma once
 
-#include "shared_types.hh"
-
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -12,6 +10,15 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <concepts>
+
+#include "nlohmann/json.hpp"
+#include "nlohmann/json_fwd.hpp"
+
+using json = nlohmann::ordered_json;
+
+template<typename Derived, typename Base>
+concept IsDerived = std::derived_from<Derived, Base>;
 
 class StatsBase {
 protected:
@@ -21,6 +28,7 @@ public:
   StatsBase(const std::string& name)
       : name_{name} {}
   StatsBase() = delete;
+  virtual ~StatsBase() {}
 
   std::string
   name() const {
