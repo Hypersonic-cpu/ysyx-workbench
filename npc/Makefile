@@ -40,7 +40,7 @@ SIM_CXX_DIR = $(PRJ)/sim-cxx
 
 ## NV Board related
 NXDC_FILES = $(PRJ)/constr/$(TOPNAME).nxdc
-INC_PATH  += $(abspath $(PRJ))/dpic $(abspath $(PRJ))/sim-cxx
+INC_PATH  += $(abspath $(PRJ))/dpic $(abspath $(PRJ))/sim-cxx $(abspath $(PRJ))/sim-cxx/include
 VINC_PATH += $(SOC_HOME)/perip/uart16550/rtl $(SOC_HOME)/perip/spi/rtl $(SOC_HOME)/perip/psram
 
 ## Verilator related
