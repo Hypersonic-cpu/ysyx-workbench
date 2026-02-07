@@ -2,6 +2,7 @@
 #include "defines/base.hh"
 #include "defines/interface.hh"
 #include "nlohmann/json.hpp"
+#include "rtl_defs.hh"
 
 #include <cassert>
 #include <cstdint>
@@ -307,10 +308,11 @@ main(int argc, char* argv[]) {
 
     if (auto mismatch = diff->test_on_commit(); !mismatch.empty()) {
       for (auto const& [id, golden, real] : mismatch) {
-        std::cerr << std::format(
-                       "Reg {:>2d} mismatch: golden {:>8x} real {:>8x}", id,
-                       golden, real)
-                  << std::endl;
+        std::cerr
+          << std::format(
+               "{:d}: Reg {:>2d} mismatch: golden {:>8x} real {:>8x}",
+               curr_tick(), id, golden, real)
+          << std::endl;
       }
 
       ccdb.dump_print();
