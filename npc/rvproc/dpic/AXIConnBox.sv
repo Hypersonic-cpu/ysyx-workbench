@@ -110,7 +110,9 @@ module AXIConnBox (
   always_ff @(posedge clock) begin : Everyting
     // $display("++ DEVICE ID = %d ++", device_id);
 
+        $display("WANT TO CLK !!");
     if (reset) begin
+        $display("WANT TO RST !!");
       //
     end else begin
       if (ar_fire) begin
