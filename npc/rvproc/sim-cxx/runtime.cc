@@ -190,10 +190,11 @@ axi_write_resp(uint8_t* pvalid, uint8_t* presp, uint16_t* pid,
 
 void
 axi_device_ready(uint8_t* pr, uint8_t* pw, uint16_t devid) {
-  auto& ent = cacheRespBuf.at(devid);
-  DPICERR("DPI-C read probe, ID = {:d} Ready {:d}:{:d}", devid, ent.rw_ready.first, ent.rw_ready.second);
-  *pr = ent.rw_ready.first;
-  *pw = ent.rw_ready.second;
+  auto* ptr = sel_port_by_id(devid);
+  auto const [rr, wr] = ptr->is_ready();
+  DPICERR("DPI-C read probe, ID = {:d} Ready {:d}:{:d}", devid, rr, wr);
+  *pr = rr;
+  *pw = wr;
 }
 
 #endif

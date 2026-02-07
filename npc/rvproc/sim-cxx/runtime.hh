@@ -97,7 +97,7 @@ extern cacheSim::CacheBase* iCache;
 extern cacheSim::CacheBase* dCache;
 
 struct CacheSimRespBuffer {
-  std::pair<bool, bool> rw_ready;
+  // std::pair<bool, bool> rw_ready;
   // Read
   bool r_valid;
   bool r_last;
