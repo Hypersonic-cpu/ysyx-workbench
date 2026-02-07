@@ -47,6 +47,7 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
   def iotaMod(a: UInt) = Mux(a === PipeDepth.U, 0.U, a + 1.U)
 
   val bufFull   = iotaMod(headPtr) === toidPtr
+  dontTouch(bufFull)
   val instEmpty = toidPtr === tailPtr
 
   // Recv inst from iCache
