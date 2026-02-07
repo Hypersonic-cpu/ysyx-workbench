@@ -136,11 +136,11 @@ module AXIConnBox (
       if (io_flush_valid) begin
         axi_cache_flush(device_id);
       end
+      // Response probing, called only once per cycle. Will clear CXX-side valid bit.
+      axi_read_resp(c_rvalid, c_rresp, c_rdata, c_rlast, c_rid, device_id);
+      axi_write_resp(c_bvalid, c_bresp, c_bid, device_id);
+      axi_device_ready(c_r_ready, c_w_ready, device_id);
     end
-    // Response probing, called only once per cycle. Will clear CXX-side valid bit.
-    axi_read_resp(c_rvalid, c_rresp, c_rdata, c_rlast, c_rid, device_id);
-    axi_write_resp(c_bvalid, c_bresp, c_bid, device_id);
-    axi_device_ready(c_r_ready, c_w_ready, device_id);
   end
 
   assign io_master_bvalid = c_bvalid[0];
