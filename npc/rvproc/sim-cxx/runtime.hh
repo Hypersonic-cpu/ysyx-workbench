@@ -21,6 +21,7 @@
 #include <utility>
 
 extern "C" void call_ebreak(uint32_t pc, uint32_t a0, uint32_t a5);
+
 #if SOCMODE
 
 extern "C" void flash_read(int32_t addr, int32_t* data);
@@ -64,9 +65,8 @@ extern "C" void axi_write_resp(uint8_t* pvalid, uint8_t* presp,
                                uint16_t* pid, uint16_t devid);
 extern "C" void axi_device_ready(uint8_t* pr, uint8_t* pw, uint16_t devid);
 
-tick_t pmem_read(uint32_t araddr, uint32_t* prdata, bool bfirst, uint16_t);
-tick_t pmem_write(uint32_t awaddr, uint32_t wdata, unsigned char wstrb,
-                  bool bfirst, uint16_t);
+tick_t pmem_read(uint32_t araddr);
+tick_t pmem_write(uint32_t awaddr, uint32_t wdata, unsigned char wstrb);
 
 #endif
 
