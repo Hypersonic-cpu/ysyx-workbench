@@ -114,24 +114,24 @@ module AXIConnBox (
       if (ar_fire) begin
         assert(io_master_arlen == 0); // "Only support single beat read"
         axi_read_req(
-            /* 31:0 */ 32'h0 + io_master_araddr,
-            /* 15:0 */ 16'h0 + io_master_arid,
-            /* 15:0 */ 16'h0 + io_master_arlen,
-            /* 15:0 */ 16'h0 + io_master_arsize,
-            /* 15:0 */ 16'h0 + io_master_arburst);
+            /* 31:0 */ 32'h0 | io_master_araddr,
+            /* 15:0 */ 16'h0 | io_master_arid,
+            /* 15:0 */ 16'h0 | io_master_arlen,
+            /* 15:0 */ 16'h0 | io_master_arsize,
+            /* 15:0 */ 16'h0 | io_master_arburst);
       end else if (aw_fire) begin
         assert (w_fire);              // "AW and W valid is restricted.
         assert(io_master_awlen == 0); // "Only support single beat write"
         // Decoupled w and aw & burst read/write is not supported so far.
         axi_write_req(
-            /* 31:0 */ 32'h0 + io_master_awaddr,
-            /* 15:0 */ 16'h0 + io_master_awid,
-            /* 15:0 */ 16'h0 + io_master_awlen,
-            /* 15:0 */ 16'h0 + io_master_awsize,
-            /* 15:0 */ 16'h0 + io_master_awburst,
-            /* 31:0 */ 32'h0 + io_master_wdata,
-            /*  7:0 */ 8'h0 + io_master_wstrb,
-            /*  7:0 */ 8'h0 + io_master_wlast);
+            /* 31:0 */ 32'h0 | io_master_awaddr,
+            /* 15:0 */ 16'h0 | io_master_awid,
+            /* 15:0 */ 16'h0 | io_master_awlen,
+            /* 15:0 */ 16'h0 | io_master_awsize,
+            /* 15:0 */ 16'h0 | io_master_awburst,
+            /* 31:0 */ 32'h0 | io_master_wdata,
+            /*  7:0 */ 8'h0 | io_master_wstrb,
+            /*  7:0 */ 8'h0 | io_master_wlast);
       end
       if (io_flush_valid) begin
         axi_cache_flush(device_id);
