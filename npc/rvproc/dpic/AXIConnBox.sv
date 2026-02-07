@@ -73,7 +73,7 @@ module AXIConnBox (
     output byte unsigned rvalid,
     output byte unsigned rresp,
     output int unsigned rdata,
-    output shortint unsigned rlast,
+    output byte unsigned rlast,
     output shortint unsigned rid,
     input shortint unsigned devid
   );
