@@ -115,6 +115,7 @@ module AXIConnBox (
         $display("WANT TO RST !!");
       //
     end else begin
+      $display("WANT TO ARFIRE %d", ar_fire);
       if (ar_fire) begin
         assert (io_master_arlen == 0);  // "Only support single beat read"
         $display("WANT TO CALL!!");
