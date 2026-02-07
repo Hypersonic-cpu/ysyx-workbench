@@ -93,22 +93,22 @@ module AXIConnBox (
     input shortint unsigned devid
   );
 
-  logic [ 7:0] c_rvalid;
-  logic [ 7:0] c_rresp;
+  logic [7:0] c_rvalid;
+  logic [7:0] c_rresp;
   logic [31:0] c_rdata;
-  logic [ 7:0] c_rlast;
+  logic [7:0] c_rlast;
   logic [15:0] c_rid;
 
-  logic [ 7:0] c_bvalid;
-  logic [ 7:0] c_bresp;
+  logic [7:0] c_bvalid;
+  logic [7:0] c_bresp;
   logic [15:0] c_bid;
 
-  logic [ 7:0] c_r_ready;
-  logic [ 7:0] c_w_ready;
+  logic [7:0] c_r_ready;
+  logic [7:0] c_w_ready;
 
-  logic   ar_fire;
-  logic   aw_fire;
-  logic   w_fire ;
+  logic ar_fire;
+  logic aw_fire;
+  logic w_fire;
 
   always_ff @(posedge clock) begin : Everyting
     if (io_master_arid == 0) begin
@@ -120,6 +120,9 @@ module AXIConnBox (
 
     if (reset) begin
     end else begin
+      ar_fire = io_master_arvalid && io_master_arready;
+      aw_fire = io_master_awvalid && io_master_awready;
+      w_fire  = io_master_wvalid && io_master_wready;
       if (ar_fire) begin
         assert (io_master_arlen == 0);  // "Only support single beat read"
         axi_read_req(
@@ -153,9 +156,6 @@ module AXIConnBox (
       axi_write_resp(c_bvalid, c_bresp, c_bid, device_id, 8'(io_master_awready));
 
     end
-    ar_fire<= io_master_arvalid && io_master_arready;
-    aw_fire<= io_master_awvalid && io_master_awready;
-    w_fire <= io_master_wvalid && io_master_wready;
   end
 
   assign io_master_bvalid = c_bvalid[0];
