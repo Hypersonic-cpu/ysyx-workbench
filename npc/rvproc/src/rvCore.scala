@@ -107,7 +107,16 @@ class rvCore(isSoc: Boolean) extends Module {
     locxbar.io.devices(1) <> clint.io.port
     AXIPortPassing(io.master, locxbar.io.devices(0))
   } else {
-    // val iMemBox = Module(new PMemBox)
+
+    /**  IFU       LSU
+      *   |         |
+      *   |       StBuf
+      *   |         | XBar
+      *   |       *----*
+      *   |       |    |
+      * DPI-C   CLINT DPI-C
+      */
+
     val iMemBox = Module(new device.AXIConnBox)
 
     iMemBox.io.master <> ifs.io.iMem
@@ -118,6 +127,10 @@ class rvCore(isSoc: Boolean) extends Module {
     dMemBox.io.master <> dStrBuf.io.out
     dMemBox.io.flush.id    := 1.U // data port
     dMemBox.io.flush.valid := false.B
+
+    locxbar.io.host <> dStrBuf.io.out
+    locxbar.io.devices(0) <> clint.io.port
+    locxbar.io.devices(1) <> dMemBox.io.master
 
     // locxbar.io.host <> lss.io.dMem
     // locxbar.io.host <> dStrBuf.io.out
