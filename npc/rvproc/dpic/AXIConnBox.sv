@@ -47,48 +47,48 @@ module AXIConnBox (
 
   // Request
   import "DPI-C" function void axi_read_req(
-    input bit [31:0] araddr,
-    input bit [15:0] arid,
-    input bit [15:0] arlen,
-    input bit [15:0] arsize,
-    input bit [15:0] arburst
+    input int unsigned araddr,
+    input shortint unsigned arid,
+    input shortint unsigned arlen,
+    input shortint unsigned arsize,
+    input shortint unsigned arburst
   );
 
   import "DPI-C" function void axi_write_req(
-    input bit [31:0] awaddr,
-    input bit [15:0] awid,
-    input bit [15:0] awlen,
-    input bit [15:0] awsize,
-    input bit [15:0] awburst,
-    input bit [31:0] wdata,
-    input bit [ 7:0] wstrb,
-    input bit [ 7:0] wlast
+    input int unsigned awaddr,
+    input shortint unsigned awid,
+    input shortint unsigned awlen,
+    input shortint unsigned awsize,
+    input shortint unsigned awburst,
+    input int unsigned wdata,
+    input byte unsigned wstrb,
+    input byte unsigned wlast
   );
 
-  import "DPI-C" function void axi_cache_flush(input bit [15:0] sim_id);
+  import "DPI-C" function void axi_cache_flush(input shortint unsigned sim_id);
 
   // Response Prober
   // Assume host is always ready
   import "DPI-C" function void axi_read_resp(
-    output bit [ 7:0] rvalid,
-    output bit [ 7:0] rresp,
-    output bit [31:0] rdata,
-    output bit [ 7:0] rlast,
-    output bit [15:0] rid,
-    input  bit [15:0] devid
+    output byte unsigned rvalid,
+    output byte unsigned rresp,
+    output int unsigned rdata,
+    output shortint unsigned rlast,
+    output shortint unsigned rid,
+    input shortint unsigned devid
   );
 
   import "DPI-C" function void axi_write_resp(
-    output bit [ 7:0] bvalid,
-    output bit [ 7:0] bresp,
-    output bit [15:0] rid,
-    input  bit [15:0] devid
+    output byte unsigned bvalid,
+    output byte unsigned bresp,
+    output shortint unsigned rid,
+    input shortint unsigned devid
   );
 
   import "DPI-C" function void axi_device_ready(
-    output bit [ 7:0] r_port_ready,
-    output bit [ 7:0] w_port_ready,
-    input  bit [15:0] devid
+    output byte unsigned r_port_ready,
+    output byte unsigned w_port_ready,
+    input shortint unsigned devid
   );
 
   logic [ 7:0] c_rvalid;
@@ -108,7 +108,7 @@ module AXIConnBox (
   logic        aw_fire = io_master_awvalid && io_master_awready;
   logic        w_fire = io_master_wvalid && io_master_wready;
   always_ff @(posedge clock) begin : Everyting
-    $display("++ DEVICE ID = %d ++", device_id);
+    // $display("++ DEVICE ID = %d ++", device_id);
 
     if (reset) begin
       //
