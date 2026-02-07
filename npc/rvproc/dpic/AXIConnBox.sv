@@ -113,15 +113,10 @@ module AXIConnBox (
     w_fire  <= io_master_wvalid && io_master_wready;
     // $display("++ DEVICE ID = %d ++", device_id);
 
-    $display("WANT TO CLK !!");
     if (reset) begin
-      $display("WANT TO RST !!");
-      //
     end else begin
-      $strobe("WANT TO ARFIRE %d", ar_fire);
       if (ar_fire) begin
         assert (io_master_arlen == 0);  // "Only support single beat read"
-        $display("WANT TO CALL!!");
         axi_read_req(
             /* 31:0 */ 32'(io_master_araddr),
             /* 15:0 */ 16'(io_master_arid),

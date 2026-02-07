@@ -148,7 +148,6 @@ void
 axi_read_req(addr_t addr, uint16_t id, uint16_t len, uint16_t size,
              uint16_t burst) {
   DPICERR("DPI-C read req @ {:08x} ID = {:d}", addr, id);
-  assert(false);
   assert(len == 0);
   sel_port_by_id(id)->read_req(addr);
 }
