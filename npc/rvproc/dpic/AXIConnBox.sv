@@ -3,38 +3,38 @@ module AXIConnBox (
     input clock,
     input reset,
 
-    output reg        io_master_awready,
-    input             io_master_awvalid,
-    input      [31:0] io_master_awaddr,
-    input      [ 3:0] io_master_awid,
-    input      [ 7:0] io_master_awlen,
-    input      [ 2:0] io_master_awsize,
-    input      [ 1:0] io_master_awburst,
-    output reg        io_master_wready,
-    input             io_master_wvalid,
-    input      [31:0] io_master_wdata,
-    input      [ 3:0] io_master_wstrb,
-    input             io_master_wlast,
-    input             io_master_bready,
-    output reg        io_master_bvalid,
-    output reg [ 1:0] io_master_bresp,
-    output reg [ 3:0] io_master_bid,
+    output        io_master_awready,
+    input         io_master_awvalid,
+    input  [31:0] io_master_awaddr,
+    input  [ 3:0] io_master_awid,
+    input  [ 7:0] io_master_awlen,
+    input  [ 2:0] io_master_awsize,
+    input  [ 1:0] io_master_awburst,
+    output        io_master_wready,
+    input         io_master_wvalid,
+    input  [31:0] io_master_wdata,
+    input  [ 3:0] io_master_wstrb,
+    input         io_master_wlast,
+    input         io_master_bready,
+    output        io_master_bvalid,
+    output [ 1:0] io_master_bresp,
+    output [ 3:0] io_master_bid,
 
-    output reg        io_master_arready,
-    input             io_master_arvalid,
-    input      [31:0] io_master_araddr,
-    input      [ 3:0] io_master_arid,
-    input      [ 7:0] io_master_arlen,
-    input      [ 2:0] io_master_arsize,
-    input      [ 1:0] io_master_arburst,
-    input             io_master_rready,
-    output reg        io_master_rvalid,
-    output reg [ 1:0] io_master_rresp,
-    output reg [31:0] io_master_rdata,
-    output reg        io_master_rlast,
-    output reg [ 3:0] io_master_rid,
-    input             io_flush_valid,
-    input      [15:0] io_flush_id
+    output        io_master_arready,
+    input         io_master_arvalid,
+    input  [31:0] io_master_araddr,
+    input  [ 3:0] io_master_arid,
+    input  [ 7:0] io_master_arlen,
+    input  [ 2:0] io_master_arsize,
+    input  [ 1:0] io_master_arburst,
+    input         io_master_rready,
+    output        io_master_rvalid,
+    output [ 1:0] io_master_rresp,
+    output [31:0] io_master_rdata,
+    output        io_master_rlast,
+    output [ 3:0] io_master_rid,
+    input         io_flush_valid,
+    input  [15:0] io_flush_id
 );
   logic [15:0] device_id = io_flush_id;
 
@@ -106,9 +106,9 @@ module AXIConnBox (
   logic [ 7:0] c_r_ready;
   logic [ 7:0] c_w_ready;
 
-  logic        ar_fire = io_master_arvalid && io_master_arready;
-  logic        aw_fire = io_master_awvalid && io_master_awready;
-  logic        w_fire = io_master_wvalid && io_master_wready;
+  logic   ar_fire;
+  logic   aw_fire;
+  logic   w_fire ;
 
   always_ff @(posedge clock) begin : Everyting
     if (io_master_arid == 0) begin
@@ -152,23 +152,23 @@ module AXIConnBox (
       axi_read_resp(c_rvalid, c_rresp, c_rdata, c_rlast, c_rid, device_id, 8'(io_master_arready));
       axi_write_resp(c_bvalid, c_bresp, c_bid, device_id, 8'(io_master_awready));
 
-      io_master_bvalid <= c_bvalid[0];
-      io_master_bresp  <= c_bresp[1:0];
-      io_master_bid    <= c_bid[3:0];
-
-      io_master_rvalid <= c_rvalid[0];
-      io_master_rresp  <= c_rresp[1:0];
-      io_master_rdata  <= c_rdata[31:0];
-      io_master_rlast  <= c_rlast[0];
-      io_master_rid    <= c_rid[3:0];
-
-
-      io_master_arready <= c_r_ready[0];
-      io_master_awready <= c_w_ready[0];
-      io_master_wready  <= c_w_ready[0];
-
     end
+    ar_fire<= io_master_arvalid && io_master_arready;
+    aw_fire<= io_master_awvalid && io_master_awready;
+    w_fire <= io_master_wvalid && io_master_wready;
   end
+
+  assign io_master_bvalid = c_bvalid[0];
+  assign io_master_bresp  = c_bresp[1:0];
+  assign io_master_bid    = c_bid[3:0];
+  assign io_master_rvalid = c_rvalid[0];
+  assign io_master_rresp  = c_rresp[1:0];
+  assign io_master_rdata  = c_rdata[31:0];
+  assign io_master_rlast  = c_rlast[0];
+  assign io_master_rid    = c_rid[3:0];
+  assign io_master_arready = c_r_ready[0];
+  assign io_master_awready = c_w_ready[0];
+  assign io_master_wready  = c_w_ready[0];
 
   // Assume host is always ready
   assert property (@(posedge clock) io_master_rvalid |-> io_master_rready);
