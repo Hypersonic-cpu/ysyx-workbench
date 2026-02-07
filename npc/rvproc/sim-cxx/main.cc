@@ -1,5 +1,6 @@
 #include "cacheSim/RamConn.hh"
 #include "defines/base.hh"
+#include "defines/interface.hh"
 #include "nlohmann/json.hpp"
 
 #include <cassert>
@@ -183,6 +184,7 @@ main(int argc, char* argv[]) {
     options::binary_img, (4U << 20) / 4, 0x8000'0000LLU, "UnifiedMem");
   unifiedMem = uMem.get();
 
+  // Top-down
   auto l1i = std::make_unique<cacheSim::PipeCache>(
     /* name */ "l1iCache",
     /* depth */ 3,
@@ -199,6 +201,28 @@ main(int argc, char* argv[]) {
   auto sdram = std::make_unique<memSim::RAMArbiter>(
     "SDRAM", MemLatency, MemBstLat,
     std::vector<cacheSim::CacheBase*>{iCache, dCache});
+
+  auto recv_func = [](CpuTrans t) -> void {
+    auto& ent = cacheRespBuf.at(t.id);
+    if (t.mop == MemRWOpt::Read) {
+      ent.r_data = t.data;
+      ent.r_resp = RspStatus::Okay;
+      ent.r_last = true;
+      // FIXME: 不应该每一次查询都抹除
+      ent.r_valid = true;
+    } else {
+      ent.b_resp = RspStatus::Okay;
+      ent.b_valid = true;
+    }
+  };
+
+  auto ack_func = [](AckTrans t) -> void {};
+
+  // Bottom-up
+  l1i->set_mem_port(sdram.get());
+  l1d->set_mem_port(sdram.get());
+  l1i->set_cpu_side_handlers(recv_func, ack_func);
+  l1d->set_cpu_side_handlers(recv_func, ack_func);
 
   // Reverse order
   std::vector<ClockedObject*> npsim_objs{sdram.get(), l1d.get(), l1i.get()};

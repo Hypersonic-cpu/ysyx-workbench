@@ -8,6 +8,7 @@
  */
 
 #include "ccdb.hh"
+#include "defines/interface.hh"
 #include "difftest.hh"
 #include "pmu.hh"
 
@@ -62,8 +63,10 @@ extern "C" void axi_read_resp(uint8_t* pvalid, uint8_t* presp, word_t* pdata,
                               uint8_t* plast, uint16_t* pid, uint16_t devid);
 
 extern "C" void axi_write_resp(uint8_t* pvalid, uint8_t* presp,
-                               uint16_t* pid, uint16_t devid);
-extern "C" void axi_device_ready(uint8_t* pr, uint8_t* pw, uint16_t devid);
+                               uint16_t* pid, uint16_t devid,
+                               uint8_t devready);
+extern "C" void axi_device_ready(uint8_t* pr, uint8_t* pw, uint16_t devid,
+                                 uint8_t devready);
 
 tick_t pmem_read(uint32_t araddr, uint32_t* prdata);
 tick_t pmem_write(uint32_t awaddr, uint32_t wdata, unsigned char wstrb);
@@ -101,11 +104,11 @@ struct CacheSimRespBuffer {
   // Read
   bool r_valid;
   bool r_last;
-  uint8_t r_resp;
+  RspStatus r_resp;
   word_t r_data;
   // Write
   bool b_valid;
-  bool b_resp;
+  RspStatus b_resp;
 };
 // Indexed by id
 extern std::array<CacheSimRespBuffer, 2> cacheRespBuf;

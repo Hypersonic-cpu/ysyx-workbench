@@ -168,24 +168,26 @@ axi_cache_flush(uint16_t id) {
 
 void
 axi_read_resp(uint8_t* pvalid, uint8_t* presp, word_t* pdata, uint8_t* plast,
-              uint16_t* pid, uint16_t devid) {
+              uint16_t* pid, uint16_t devid, uint8_t devready) {
   auto& ent = cacheRespBuf.at(devid);
   *pvalid = ent.r_valid;
-  *presp = ent.r_resp;
+  *presp = static_cast<uint8_t>(ent.r_resp);
   *pdata = ent.r_data;
   *plast = ent.r_last;
   *pid = devid;
-  ent.r_valid = false;
+  if (devready)
+    ent.r_valid = false;
 }
 
 void
 axi_write_resp(uint8_t* pvalid, uint8_t* presp, uint16_t* pid,
-               uint16_t devid) {
+               uint16_t devid, uint8_t devready) {
   auto& ent = cacheRespBuf.at(devid);
   *pvalid = ent.b_valid;
-  *presp = ent.b_resp;
+  *presp = static_cast<uint8_t>(ent.b_resp);
   *pid = devid;
-  ent.b_valid = false;
+  if (devready)
+    ent.b_valid = false;
 }
 
 void
