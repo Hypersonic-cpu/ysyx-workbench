@@ -97,7 +97,7 @@ std::array<CacheSimRespBuffer, 2> cacheRespBuf;
 
 // mt-unsafe
 tick_t
-pmem_read(uint32_t araddr, uint32_t* prdata, bool bfirst, uint16_t) {
+pmem_read(uint32_t araddr, uint32_t* prdata) {
   if (ppmu) {
     ppmu->notifyMemXBar(false, -2, -2);
   }
@@ -106,8 +106,7 @@ pmem_read(uint32_t araddr, uint32_t* prdata, bool bfirst, uint16_t) {
 }
 
 tick_t
-pmem_write(uint32_t awaddr, uint32_t wdata, unsigned char wstrb, bool bfirst,
-           uint16_t) {
+pmem_write(uint32_t awaddr, uint32_t wdata, unsigned char wstrb) {
   if (ppmu) {
     ppmu->notifyMemXBar(true, -2, -2);
   }
