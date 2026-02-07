@@ -111,15 +111,6 @@ handler_t resetAllStats = reset_all_stats;
 handler_t dumpAllStats = dump_all_stats;
 
 inline void
-upd_cache_buf_dpic() {
-  std::array<cacheSim::CacheBase*, 2> caches{iCache, dCache};
-  for (auto ptr : caches) {
-    auto& ent = cacheRespBuf.at(ptr->cache_id());
-    ent.rw_ready = ptr->is_ready();
-  }
-}
-
-inline void
 single_cycle(const std::unique_ptr<TOP_NAME>& top,
              const std::unique_ptr<VerilatedContext>& context,
              const trace::FstTracer& wave) {
@@ -128,10 +119,6 @@ single_cycle(const std::unique_ptr<TOP_NAME>& top,
   context->timeInc(1);
   top->eval();
   wave.dump(context->time());
-
-  // Only update buffer, will influence RTL after
-  // next posedge
-  upd_cache_buf_dpic();
 
   top->clock = 0;
   context->timeInc(1);
