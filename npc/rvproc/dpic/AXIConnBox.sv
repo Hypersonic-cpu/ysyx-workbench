@@ -120,6 +120,7 @@ module AXIConnBox (
 
     if (reset) begin
     end else begin
+      // Forced blocking assignment to avoid `ready` being modified.
       ar_fire = io_master_arvalid && io_master_arready;
       aw_fire = io_master_awvalid && io_master_awready;
       w_fire  = io_master_wvalid && io_master_wready;
