@@ -104,18 +104,21 @@ module AXIConnBox (
   logic [ 7:0] c_r_ready;
   logic [ 7:0] c_w_ready;
 
-  logic        ar_fire = io_master_arvalid && io_master_arready;
-  logic        aw_fire = io_master_awvalid && io_master_awready;
-  logic        w_fire = io_master_wvalid && io_master_wready;
+  logic        ar_fire;
+  logic        aw_fire;
+  logic        w_fire;
   always_ff @(posedge clock) begin : Everyting
+    ar_fire <= io_master_arvalid && io_master_arready;
+    aw_fire <= io_master_awvalid && io_master_awready;
+    w_fire  <= io_master_wvalid && io_master_wready;
     // $display("++ DEVICE ID = %d ++", device_id);
 
-        $display("WANT TO CLK !!");
+    $display("WANT TO CLK !!");
     if (reset) begin
-        $display("WANT TO RST !!");
+      $display("WANT TO RST !!");
       //
     end else begin
-      $display("WANT TO ARFIRE %d", ar_fire);
+      $strobe("WANT TO ARFIRE %d", ar_fire);
       if (ar_fire) begin
         assert (io_master_arlen == 0);  // "Only support single beat read"
         $display("WANT TO CALL!!");
