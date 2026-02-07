@@ -37,7 +37,7 @@ module AXIConnBox (
     input  [15:0] io_flush_id
 );
   logic [15:0] device_id = io_flush_id;
-  printf("++ DEVICE ID = %d ++\n", io_flush_id);
+  $display("++ DEVICE ID = %d ++\n", io_flush_id);
 
   /**
    *         *-----------*
