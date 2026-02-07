@@ -111,12 +111,12 @@ module AXIConnBox (
   logic w_fire;
 
   always_ff @(posedge clock) begin : Everyting
-    if (io_master_arid == 0) begin
-      $display("++ DEVICE DISP ID = %d AR_FIRE %d %d ++", device_id, io_master_arvalid,
-               io_master_arready);
-      $strobe("++ DEVICE STRB ID = %d AR_FIRE %d %d ++", device_id, io_master_arvalid,
-              io_master_arready);
-    end
+    // if (io_master_arid == 0) begin
+    //   $display("++ DEVICE DISP ID = %d AR_FIRE %d %d ++", device_id, io_master_arvalid,
+    //            io_master_arready);
+    //   $strobe("++ DEVICE STRB ID = %d AR_FIRE %d %d ++", device_id, io_master_arvalid,
+    //           io_master_arready);
+    // end
 
     if (reset) begin
     end else begin
