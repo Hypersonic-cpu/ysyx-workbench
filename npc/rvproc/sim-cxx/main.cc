@@ -1,7 +1,7 @@
+#include "cacheSim/RamConn.hh"
+#include "defines/base.hh"
 #include "nlohmann/json.hpp"
-#include "nlohmann/json_fwd.hpp"
 
-#include <array>
 #include <cassert>
 #include <cstdint>
 #include <cstdio>
@@ -20,7 +20,6 @@
 #include "VysyxSoCFull___024root.h"
 #else
 #include "VrvCore.h"
-#include "VrvCore___024root.h"
 #include "cacheSim/CacheBase.hh"
 #include "defines/debug.hh"
 #endif
@@ -114,7 +113,11 @@ handler_t dumpAllStats = dump_all_stats;
 inline void
 single_cycle(const std::unique_ptr<TOP_NAME>& top,
              const std::unique_ptr<VerilatedContext>& context,
+             const std::vector<ClockedObject*>& objlist,
              const trace::FstTracer& wave) {
+  for (auto ptr : objlist) {
+    ptr->do_update();
+  }
 
   top->clock = 1;
   context->timeInc(1);
@@ -130,10 +133,11 @@ single_cycle(const std::unique_ptr<TOP_NAME>& top,
 inline void
 single_reset(const std::unique_ptr<TOP_NAME>& top,
              const std::unique_ptr<VerilatedContext>& context,
+             const std::vector<ClockedObject*>& objlist,
              const trace::FstTracer& wave) {
   top->reset = 1;
   for (size_t i = 0; i < 15; i++) {
-    single_cycle(top, context, wave);
+    single_cycle(top, context, objlist, wave);
   }
   top->clock = 1;
   context->timeInc(1);
@@ -191,6 +195,13 @@ main(int argc, char* argv[]) {
     /* name */ "l1dCache",
     /* id */ static_cast<uint16_t>(0));
   dCache = l1d.get();
+
+  auto sdram = std::make_unique<memSim::RAMArbiter>(
+    "SDRAM", MemLatency, MemBstLat,
+    std::vector<cacheSim::CacheBase*>{iCache, dCache});
+
+  // Reverse order
+  std::vector<ClockedObject*> npsim_objs{sdram.get(), l1d.get(), l1i.get()};
 #endif
 
   if (options::wave_enable) {
@@ -250,7 +261,7 @@ main(int argc, char* argv[]) {
   int retBad = 0;
 
   /** RESET SIMULATOR */
-  single_reset(top, contextp, tfp);
+  single_reset(top, contextp, npsim_objs, tfp);
   diff->copy();
 
   debug::set_flags("All");
@@ -265,7 +276,7 @@ main(int argc, char* argv[]) {
 #if NVBENA
     nvboard_update();
 #endif
-    single_cycle(top, contextp, tfp);
+    single_cycle(top, contextp, npsim_objs, tfp);
 
     if (auto mismatch = diff->test_on_commit(); !mismatch.empty()) {
       for (auto const& [id, golden, real] : mismatch) {
