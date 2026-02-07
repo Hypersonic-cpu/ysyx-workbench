@@ -8,6 +8,7 @@
 #include "probe.hh"
 #include <cassert>
 #include <cstdint>
+#include <format>
 #include <future>
 #include <unistd.h>
 
@@ -113,6 +114,8 @@ pmem_read(uint32_t araddr, uint32_t* prdata) {
     ppmu->notifyMemXBar(false, -2, -2);
   }
   *prdata = unifiedMem->readWord(araddr & ~3U);
+  std::cerr << std::format("PMEM READ @ {:8x} Data {:8x}\n", araddr,
+                           *prdata);
   return 0; // unused
 }
 
