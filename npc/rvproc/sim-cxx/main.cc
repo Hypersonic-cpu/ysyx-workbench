@@ -119,7 +119,7 @@ single_cycle(const std::unique_ptr<TOP_NAME>& top,
   for (auto ptr : objlist) {
     ptr->do_update();
   }
-  std::cerr << std::format("iCache Avail = %d %d\n",
+  std::cerr << std::format("iCache Avail = {:d} {:d}\n",
                            iCache->is_ready().first,
                            iCache->is_ready().second);
 
