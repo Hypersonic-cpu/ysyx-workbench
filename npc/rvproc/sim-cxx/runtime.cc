@@ -11,6 +11,17 @@
 #include <future>
 #include <unistd.h>
 
+#ifdef DPICDBG
+#include <iostream>
+#define DPICERR(fmt, ...)                                                   \
+  do {                                                                      \
+    std::cerr << std::format("{:d}: " fmt, curr_tick(), ##__VA_ARGS__)      \
+              << std::endl;                                                 \
+  } while (0)
+#else
+#define DPICERR(fmt, ...)
+#endif
+
 #if SOCMODE
 
 const RuntimeBin* mrom = nullptr;
@@ -136,6 +147,7 @@ sel_port_by_id(uint16_t id) {
 void
 axi_read_req(addr_t addr, uint16_t id, uint16_t len, uint16_t size,
              uint16_t burst) {
+  DPICERR("DPI-C read req @ {:08x} ID = {:d}", addr, id);
   assert(len == 0);
   sel_port_by_id(id)->read_req(addr);
 }
