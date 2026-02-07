@@ -84,18 +84,18 @@ class rvCore(isSoc: Boolean) extends Module {
   dStrBuf.io.empty <> ifs.io.fromLs
   lss.io.dMem <> dStrBuf.io.in
 
-  if (isSoc) {
-    val arbiter = Module(new AXIArbiter(2))
-    val locxbar = Module(
-      new AXIXBar(
-        2,
-        Seq(
-          AddrMap(0x0f00_0000L, 0xffff_ffffL, 0),
-          AddrMap(0x0200_0000L, 0x0201_0000L, 1)
-        )
+  val locxbar = Module(
+    new AXIXBar(
+      2,
+      Seq(
+        AddrMap(0x0f00_0000L, 0xffff_ffffL, 0),
+        AddrMap(0x0200_0000L, 0x0201_0000L, 1)
       )
     )
+  )
 
+  if (isSoc) {
+    val arbiter = Module(new AXIArbiter(2))
     // FIXME:
     // AXIPortPassing(io.master, arbiter.io.device)
     arbiter.io.hosts(0) <> ifs.io.iMem
