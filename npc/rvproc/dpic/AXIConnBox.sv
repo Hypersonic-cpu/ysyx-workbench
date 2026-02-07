@@ -37,7 +37,6 @@ module AXIConnBox (
     input  [15:0] io_flush_id
 );
   logic [15:0] device_id = io_flush_id;
-  $display("++ DEVICE ID = %d ++\n", io_flush_id);
 
   /**
    *         *-----------*
@@ -109,6 +108,8 @@ module AXIConnBox (
   logic        aw_fire = io_master_awvalid && io_master_awready;
   logic        w_fire = io_master_wvalid && io_master_wready;
   always_ff @(posedge clock) begin : Everyting
+    $display("++ DEVICE ID = %d ++", io_flush_id);
+
     if (reset) begin
       //
     end else begin
