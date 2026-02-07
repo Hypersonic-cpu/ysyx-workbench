@@ -291,8 +291,8 @@ main(int argc, char* argv[]) {
   single_reset(top, contextp, npsim_objs, tfp);
   diff->copy();
 
-  debug::set_flags("All");
-
+  // debug::set_flags("All");
+  //
   /** SIMULATION LOOP */
   while (currCyc < MaxCyc) {
     if (options::runtime_dump_opt.cycle_no)
