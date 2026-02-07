@@ -106,13 +106,11 @@ module AXIConnBox (
   logic [ 7:0] c_r_ready;
   logic [ 7:0] c_w_ready;
 
-  logic        ar_fire;
-  logic        aw_fire;
-  logic        w_fire;
+  logic        ar_fire = io_master_arvalid && io_master_arready;
+  logic        aw_fire = io_master_awvalid && io_master_awready;
+  logic        w_fire = io_master_wvalid && io_master_wready;
+
   always_ff @(posedge clock) begin : Everyting
-    ar_fire <= io_master_arvalid && io_master_arready;
-    aw_fire <= io_master_awvalid && io_master_awready;
-    w_fire  <= io_master_wvalid && io_master_wready;
     // $display("++ DEVICE ID = %d ++", device_id);
 
     if (reset) begin
