@@ -126,6 +126,7 @@ runam:
 run: verilate verilog $(LIBCAPSTONE) printhook $(SIM_BIN)
 	# $(call git_commit, "run with AM via verilator cc")
 	@echo "MROMBIN = $(mrombin)"
+	@echo $(SIM_BIN) $(mrombin) $(simccargs)
 	$(SIM_BIN) $(mrombin) $(simccargs)
 
 runonly: verilate $(SIM_BIN)
