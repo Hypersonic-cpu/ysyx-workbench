@@ -1,4 +1,5 @@
 #include "rtl_defs.hh"
+#include "runtime.hh"
 
 #include <cassert>
 #include <cstdlib>
