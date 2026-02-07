@@ -22,6 +22,7 @@
 #include "VrvCore.h"
 #include "VrvCore___024root.h"
 #include "cacheSim/CacheBase.hh"
+#include "defines/debug.hh"
 #endif
 
 #include "ccdb.hh"
@@ -251,6 +252,8 @@ main(int argc, char* argv[]) {
   /** RESET SIMULATOR */
   single_reset(top, contextp, tfp);
   diff->copy();
+
+  debug::set_flags("All");
 
   /** SIMULATION LOOP */
   while (currCyc < MaxCyc) {
