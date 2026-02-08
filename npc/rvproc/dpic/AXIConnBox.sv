@@ -176,6 +176,10 @@ module AXIConnBox (
   assign io_master_rlast  = c_rlast[0];
   assign io_master_rid    = c_rid[3:0];
 
+  assign io_master_arready = prb_arready;
+  assign io_master_awready = prb_awready;
+  assign io_master_wready  = prb_wready;
+
   // assign io_master_arready = c_r_ready[0];
   // assign io_master_awready = c_w_ready[0];
   // assign io_master_wready  = c_w_ready[0];
