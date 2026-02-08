@@ -92,19 +92,19 @@ module AXIConnBox (
     output byte unsigned w_port_ready,
     input shortint unsigned devid
   );
-
-  logic [7:0] c_rvalid;
-  logic [7:0] c_rresp;
-  logic [31:0] c_rdata;
-  logic [7:0] c_rlast;
-  logic [15:0] c_rid;
-
-  logic [7:0] c_bvalid;
-  logic [7:0] c_bresp;
-  logic [15:0] c_bid;
-
-  logic [7:0] c_r_ready;
-  logic [7:0] c_w_ready;
+  //
+  // logic [7:0] c_rvalid;
+  // logic [7:0] c_rresp;
+  // logic [31:0] c_rdata;
+  // logic [7:0] c_rlast;
+  // logic [15:0] c_rid;
+  //
+  // logic [7:0] c_bvalid;
+  // logic [7:0] c_bresp;
+  // logic [15:0] c_bid;
+  //
+  // logic [7:0] c_r_ready;
+  // logic [7:0] c_w_ready;
 
   reg ar_fire;
   reg aw_fire;
@@ -129,6 +129,16 @@ module AXIConnBox (
       ar_fire = io_master_arvalid && io_master_arready;
       aw_fire = io_master_awvalid && io_master_awready;
       w_fire  = io_master_wvalid && io_master_wready;
+
+      // Response probing, called only once per cycle. Will clear CXX-side valid bit.
+      // Asking for CURRENT CYCLE status.
+      // Transaction caused valid clearing event only influences the next cycle
+      axi_device_ready(io_master_arready, io_master_awready, device_id);
+      axi_read_resp(io_master_rvalid, io_master_rresp, io_master_rdata, io_master_rlast,
+                    io_master_rid, device_id, 8'(io_master_arready));
+      axi_write_resp(io_master_bvalid, io_master_bresp, io_master_bid, device_id,
+                     8'(io_master_awready));
+
       if (ar_fire) begin
         assert (io_master_arlen == 0);  // "Only support single beat read"
         axi_read_req(
@@ -154,31 +164,24 @@ module AXIConnBox (
       if (io_flush_valid) begin
         axi_cache_flush(device_id);
       end
-      // Response probing, called only once per cycle. Will clear CXX-side valid bit.
-      // Asking for CURRENT CYCLE status.
-      // Transaction caused valid clearing event only influences the next cycle
-      axi_device_ready(c_r_ready, c_w_ready, device_id);
-      axi_read_resp(c_rvalid, c_rresp, c_rdata, c_rlast, c_rid, device_id, 8'(io_master_arready));
-      axi_write_resp(c_bvalid, c_bresp, c_bid, device_id, 8'(io_master_awready));
-
     end
     prb_arready <= c_r_ready[0];
     prb_awready <= c_w_ready[0];
     prb_wready  <= c_w_ready[0];
   end
 
-  assign io_master_bvalid = c_bvalid[0];
-  assign io_master_bresp  = c_bresp[1:0];
-  assign io_master_bid    = c_bid[3:0];
-  assign io_master_rvalid = c_rvalid[0];
-  assign io_master_rresp  = c_rresp[1:0];
-  assign io_master_rdata  = c_rdata[31:0];
-  assign io_master_rlast  = c_rlast[0];
-  assign io_master_rid    = c_rid[3:0];
-
-  assign io_master_arready = prb_arready;
-  assign io_master_awready = prb_awready;
-  assign io_master_wready  = prb_wready;
+  // assign io_master_bvalid = c_bvalid[0];
+  // assign io_master_bresp  = c_bresp[1:0];
+  // assign io_master_bid    = c_bid[3:0];
+  // assign io_master_rvalid = c_rvalid[0];
+  // assign io_master_rresp  = c_rresp[1:0];
+  // assign io_master_rdata  = c_rdata[31:0];
+  // assign io_master_rlast  = c_rlast[0];
+  // assign io_master_rid    = c_rid[3:0];
+  //
+  // assign io_master_arready = prb_arready;
+  // assign io_master_awready = prb_awready;
+  // assign io_master_wready  = prb_wready;
 
   // assign io_master_arready = c_r_ready[0];
   // assign io_master_awready = c_w_ready[0];
