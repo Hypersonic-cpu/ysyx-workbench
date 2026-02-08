@@ -124,12 +124,12 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
   ioid.pc   := Mux(io.out.valid, pcBuf(toidPtr), 0.U)
   ioid.inst := Mux(io.out.valid, instBuf(toidPtr), 0.U)
 
-  // when(iMem.ar.fire) {
-  //   printf(cf"[  IF  ] Fetch PC = ${io.iMem.ar.bits.addr}%x\n")
-  // }
-  // when(iMem.r.fire) {
-  //   printf(cf"[  IF  ] Recvd PC = ${pcBuf(tailPtr)}%x\n")
-  // }
+  when(iMem.ar.fire) {
+    printf(cf"[  IF  ] Fetch PC = ${io.iMem.ar.bits.addr}%x\n")
+  }
+  when(iMem.r.fire) {
+    printf(cf"[  IF  ] Recvd PC = ${pcBuf(tailPtr)}%x\n")
+  }
 
   if (GlbCtrl.debug) {
     val pmu = Module(new FetchPMU)
