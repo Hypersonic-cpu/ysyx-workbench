@@ -150,7 +150,7 @@ module AXIConnBox (
     axi_read_resp(c_rvalid, c_rresp, c_rdata, c_rlast, c_rid, device_id, 8'(io_master_arready));
     axi_write_resp(c_bvalid, c_bresp, c_bid, device_id, 8'(io_master_awready));
 
-    $display("-- always  rvalid      =     -- %d\n", c_rvalid[0]);
+    #0 $display("-- always  rvalid      =     -- %d\n", c_rvalid[0]);
 
     io_master_bvalid  <= c_bvalid[0];
     io_master_bresp   <= c_bresp[1:0];
