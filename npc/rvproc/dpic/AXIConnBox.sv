@@ -120,6 +120,10 @@ module AXIConnBox (
 
     if (reset) begin
     end else begin
+      // Forced blocking assignment to avoid `ready` being modified.
+      ar_fire = io_master_arvalid && io_master_arready;
+      aw_fire = io_master_awvalid && io_master_awready;
+      w_fire  = io_master_wvalid && io_master_wready;
       if (ar_fire) begin
         assert (io_master_arlen == 0);  // "Only support single beat read"
         axi_read_req(
@@ -151,12 +155,8 @@ module AXIConnBox (
       axi_device_ready(c_r_ready, c_w_ready, device_id);
       axi_read_resp(c_rvalid, c_rresp, c_rdata, c_rlast, c_rid, device_id, 8'(io_master_arready));
       axi_write_resp(c_bvalid, c_bresp, c_bid, device_id, 8'(io_master_awready));
-    end
 
-    // Forced blocking assignment to avoid `ready` being modified.
-    ar_fire = io_master_arvalid && io_master_arready;
-    aw_fire = io_master_awvalid && io_master_awready;
-    w_fire  = io_master_wvalid && io_master_wready;
+    end
   end
 
   assign io_master_bvalid = c_bvalid[0];

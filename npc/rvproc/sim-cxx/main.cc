@@ -125,14 +125,14 @@ single_cycle(const std::unique_ptr<TOP_NAME>& top,
   //                          iCache->is_ready().second);
   //
   top->clock = 1;
-  context->timeInc(1);
   top->eval();
   wave.dump(context->time());
+  context->timeInc(1);
 
   top->clock = 0;
-  context->timeInc(1);
   top->eval();
   wave.dump(context->time());
+  context->timeInc(1);
 }
 
 inline void
