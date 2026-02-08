@@ -107,21 +107,8 @@ module AXIConnBox (
   logic ar_fire = io_master_arvalid && io_master_arready;
   logic aw_fire = io_master_awvalid && io_master_awready;
   logic w_fire = io_master_wvalid && io_master_wready;
-  //
-  // reg prb_arready;
-  // reg prb_awready;
-  // reg prb_wready;
-
-  event posedge_updated;
 
   always_ff @(posedge clock) begin : Everyting
-    // if (io_master_arid == 0) begin
-    //   $display("++ DEVICE DISP ID = %d AR_FIRE %d %d ++", device_id, io_master_arvalid,
-    //            io_master_arready);
-    //   $strobe("++ DEVICE STRB ID = %d AR_FIRE %d %d ++", device_id, io_master_arvalid,
-    //           io_master_arready);
-    // end
-
     if (reset) begin
     end else begin
       // Forced blocking assignment to avoid `ready` being modified.
@@ -156,42 +143,25 @@ module AXIConnBox (
         axi_cache_flush(device_id);
       end
     end
-    // prb_arready <= c_r_ready[0];
-    // prb_awready <= c_w_ready[0];
-    // prb_wready  <= c_w_ready[0];
-
-    ->posedge_updated;
   end
 
-  always @(posedge_updated) begin
+  always @(posedge clock) begin
     axi_device_ready(c_ar_ready, c_aw_ready, device_id);
     axi_read_resp(c_rvalid, c_rresp, c_rdata, c_rlast, c_rid, device_id, 8'(io_master_arready));
     axi_write_resp(c_bvalid, c_bresp, c_bid, device_id, 8'(io_master_awready));
 
-    io_master_bvalid = c_bvalid[0];
-    io_master_bresp  = c_bresp[1:0];
-    io_master_bid    = c_bid[3:0];
-    io_master_rvalid = c_rvalid[0];
-    io_master_rresp  = c_rresp[1:0];
-    io_master_rdata  = c_rdata[31:0];
-    io_master_rlast  = c_rlast[0];
-    io_master_rid    = c_rid[3:0];
-    io_master_arready = c_ar_ready[0];
-    io_master_awready = c_aw_ready[0];
-    io_master_wready  = c_aw_ready[0];
+    io_master_bvalid  <= c_bvalid[0];
+    io_master_bresp   <= c_bresp[1:0];
+    io_master_bid     <= c_bid[3:0];
+    io_master_rvalid  <= c_rvalid[0];
+    io_master_rresp   <= c_rresp[1:0];
+    io_master_rdata   <= c_rdata[31:0];
+    io_master_rlast   <= c_rlast[0];
+    io_master_rid     <= c_rid[3:0];
+    io_master_arready <= c_ar_ready[0];
+    io_master_awready <= c_aw_ready[0];
+    io_master_wready  <= c_aw_ready[0];
   end
-  //
-  // assign io_master_bvalid = c_bvalid[0];
-  // assign io_master_bresp  = c_bresp[1:0];
-  // assign io_master_bid    = c_bid[3:0];
-  // assign io_master_rvalid = c_rvalid[0];
-  // assign io_master_rresp  = c_rresp[1:0];
-  // assign io_master_rdata  = c_rdata[31:0];
-  // assign io_master_rlast  = c_rlast[0];
-  // assign io_master_rid    = c_rid[3:0];
-  // assign io_master_arready = c_r_ready[0];
-  // assign io_master_awready = c_w_ready[0];
-  // assign io_master_wready  = c_w_ready[0];
 
   // Assume host is always ready
   assert property (@(posedge clock) io_master_rvalid |-> io_master_rready);
