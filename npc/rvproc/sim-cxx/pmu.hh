@@ -129,7 +129,6 @@ public:
 
   void
   notifyIFRecvd(addr_t pc) {
-    return;
     std::cerr << std::format("-- ifetch queue search {:x} in [", pc);
     for (auto elem: ifetchboard) {
       std::cerr << std::format("{:x}, ", std::get<0>(elem));

@@ -106,15 +106,13 @@ module AXIConnBox (
   logic [7:0] c_r_ready;
   logic [7:0] c_w_ready;
 
-  reg ar_fire;
-  reg aw_fire;
-  reg w_fire;
+  logic ar_fire = io_master_arvalid && io_master_arready;
+  logic aw_fire = io_master_awvalid && io_master_awready;
+  logic w_fire = io_master_wvalid && io_master_wready;
   //
   // reg prb_arready;
   // reg prb_awready;
   // reg prb_wready;
-
-  // Calling DPI-C is equiv to @posedge
 
   always_ff @(posedge clock) begin : Everyting
     // if (io_master_arid == 0) begin
@@ -127,15 +125,10 @@ module AXIConnBox (
     if (reset) begin
     end else begin
       // Forced blocking assignment to avoid `ready` being modified.
-      ar_fire = io_master_arvalid && io_master_arready;
-      aw_fire = io_master_awvalid && io_master_awready;
-      w_fire  = io_master_wvalid && io_master_wready;
 
       // Response probing, called only once per cycle. Will clear CXX-side valid bit.
       // Asking for CURRENT CYCLE status.
       // Transaction caused valid clearing event only influences the next cycle
-      axi_read_resp(c_rvalid, c_rresp, c_rdata, c_rlast, c_rid, device_id, c_r_ready);
-      axi_write_resp(c_bvalid, c_bresp, c_bid, device_id, c_w_ready);
 
       if (ar_fire) begin
         assert (io_master_arlen == 0);  // "Only support single beat read"
@@ -163,10 +156,15 @@ module AXIConnBox (
         axi_cache_flush(device_id);
       end
     end
-    axi_device_ready(c_r_ready, c_w_ready, device_id);
     // prb_arready <= c_r_ready[0];
     // prb_awready <= c_w_ready[0];
     // prb_wready  <= c_w_ready[0];
+  end
+
+  always_ff @(negedge clock) begin : cxxOutputs
+    axi_device_ready(c_r_ready, c_w_ready, device_id);
+    axi_read_resp(c_rvalid, c_rresp, c_rdata, c_rlast, c_rid, device_id, io_master_arready);
+    axi_write_resp(c_bvalid, c_bresp, c_bid, device_id, io_master_awready);
   end
 
   assign io_master_bvalid = c_bvalid[0];
