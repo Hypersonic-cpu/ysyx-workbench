@@ -126,7 +126,6 @@ single_cycle(const std::unique_ptr<TOP_NAME>& top,
                            iCache->is_ready().first,
                            iCache->is_ready().second);
 
-  g_global_tick++;
   std::cerr << std::format("Rising edge of {:d}\n", curr_tick());
   top->clock = 1;
   top->eval();
@@ -141,6 +140,8 @@ single_cycle(const std::unique_ptr<TOP_NAME>& top,
   top->eval();
   wave.dump(context->time());
   context->timeInc(1);
+
+  g_global_tick++;
 }
 
 inline void
