@@ -39,7 +39,7 @@ mrom_read(int32_t addr, int32_t* data) {
 void
 flash_read(int32_t addr, int32_t* data) {
   *(uint32_t*)data = flash->readWord(addr);
-  // std::cerr << std::hex;
+  // std::cerr << std::hex;runtime.cc
   // std::cerr << "DPI-C flash read @ " << addr << " data = " << *data
   //           << std::endl;
 }
@@ -178,8 +178,12 @@ axi_read_resp(uint8_t* pvalid, uint8_t* presp, word_t* pdata, uint8_t* plast,
   *pdata = ent.r_data;
   *plast = ent.r_last;
   *pid = devid;
+  DPICERR("DPI-C read resp (before), ID = {:d} Va:Re {:d}:{:d}", devid,
+          ent.r_valid, devready);
   if (devready)
     ent.r_valid = false;
+  DPICERR("DPI-C read resp (after), ID = {:d} Va:Re {:d}:{:d}", devid,
+          ent.r_valid, devready);
 }
 
 void
