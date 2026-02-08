@@ -164,9 +164,9 @@ module AXIConnBox (
   end
 
   always @(posedge_updated) begin
-    axi_device_ready(c_r_ready, c_w_ready, device_id);
-    axi_read_resp(c_rvalid, c_rresp, c_rdata, c_rlast, c_rid, device_id, c_ar_ready);
-    axi_write_resp(c_bvalid, c_bresp, c_bid, device_id, c_aw_ready);
+    axi_device_ready(c_ar_ready, c_aw_ready, device_id);
+    axi_read_resp(c_rvalid, c_rresp, c_rdata, c_rlast, c_rid, device_id, 8'(io_master_arready));
+    axi_write_resp(c_bvalid, c_bresp, c_bid, device_id, 8'(io_master_awready));
 
     io_master_bvalid <= c_bvalid[0];
     io_master_bresp  <= c_bresp[1:0];
