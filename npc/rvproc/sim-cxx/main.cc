@@ -145,15 +145,15 @@ single_reset(const std::unique_ptr<TOP_NAME>& top,
     single_cycle(top, context, objlist, wave);
   }
   top->clock = 1;
-  context->timeInc(1);
   top->eval();
   wave.dump(context->time());
+  context->timeInc(1);
 
   top->clock = 0;
   top->reset = 0;
-  context->timeInc(1);
   top->eval();
   wave.dump(context->time());
+  context->timeInc(1);
 }
 
 int
