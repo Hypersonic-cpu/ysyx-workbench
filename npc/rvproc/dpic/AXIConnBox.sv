@@ -114,6 +114,7 @@ module AXIConnBox (
   // reg prb_awready;
   // reg prb_wready;
 
+  // Calling DPI-C is equiv to @posedge
 
   always_ff @(posedge clock) begin : Everyting
     // if (io_master_arid == 0) begin
