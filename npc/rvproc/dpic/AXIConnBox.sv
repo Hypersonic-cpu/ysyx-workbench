@@ -93,18 +93,16 @@ module AXIConnBox (
     input shortint unsigned devid
   );
 
-  logic [7:0] c_rvalid;
-  logic [7:0] c_rresp;
-  logic [31:0] c_rdata;
-  logic [7:0] c_rlast;
-  logic [15:0] c_rid;
-
-  logic [7:0] c_bvalid;
-  logic [7:0] c_bresp;
-  logic [15:0] c_bid;
-
-  logic [7:0] c_r_ready;
-  logic [7:0] c_w_ready;
+  reg [7:0] c_rvalid;
+  reg [7:0] c_rresp;
+  reg [31:0] c_rdata;
+  reg [7:0] c_rlast;
+  reg [15:0] c_rid;
+  reg [7:0] c_bvalid;
+  reg [7:0] c_bresp;
+  reg [15:0] c_bid;
+  reg [7:0] c_r_ready;
+  reg [7:0] c_w_ready;
 
   logic ar_fire = io_master_arvalid && io_master_arready;
   logic aw_fire = io_master_awvalid && io_master_awready;
@@ -160,6 +158,10 @@ module AXIConnBox (
     // prb_awready <= c_w_ready[0];
     // prb_wready  <= c_w_ready[0];
 
+    ->posedge_updated;
+  end
+
+  always @(posedge_updated) begin
     axi_device_ready(c_r_ready, c_w_ready, device_id);
     axi_read_resp(c_rvalid, c_rresp, c_rdata, c_rlast, c_rid, device_id, 8'(io_master_arready));
     axi_write_resp(c_bvalid, c_bresp, c_bid, device_id, 8'(io_master_awready));
