@@ -46,6 +46,8 @@ const TOP_NAME* trace::ptop = nullptr;
 static std::ofstream statFile;
 static std::ofstream confFile;
 
+tick_t g_global_tick = 0;
+
 void
 abort_handler() {
   if (pccdb)
@@ -133,6 +135,8 @@ single_cycle(const std::unique_ptr<TOP_NAME>& top,
   top->eval();
   wave.dump(context->time());
   context->timeInc(1);
+
+  g_global_tick++;
 }
 
 inline void

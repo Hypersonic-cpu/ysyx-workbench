@@ -7,6 +7,7 @@
  * This .cc does not depend on RTL simulation driver.
  */
 
+#include "defines/types.hh"
 #include "rtl_defs.hh"
 
 #include <array>
@@ -26,6 +27,8 @@
 #include "VrvCore___024root.h"
 constexpr uint32_t ResetVector{0x8000'0000U};
 #endif
+
+extern tick_t g_global_tick;
 
 namespace util {
 
