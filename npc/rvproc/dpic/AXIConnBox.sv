@@ -163,7 +163,7 @@ module AXIConnBox (
     ->posedge_updated;
   end
 
-  always @(posedge clock) begin
+  always @(posedge posedge_updated) begin
     axi_device_ready(c_ar_ready, c_aw_ready, device_id);
     axi_read_resp(c_rvalid, c_rresp, c_rdata, c_rlast, c_rid, device_id, 8'(io_master_arready));
     axi_write_resp(c_bvalid, c_bresp, c_bid, device_id, 8'(io_master_awready));
