@@ -1,8 +1,15 @@
 #pragma once
 
 // clang-format off
-#include "nlohmann/json.hpp"
-#include "nlohmann/json_fwd.hpp"
+
+/** probe.hh
+ * Connect verilator generated files and CXX driving framekwork.
+ * This .cc does not depend on RTL simulation driver.
+ */
+
+#include "defines/types.hh"
+#include "rtl_defs.hh"
+
 #include <array>
 #include <cstdint>
 #include <iomanip>
@@ -21,49 +28,7 @@
 constexpr uint32_t ResetVector{0x8000'0000U};
 #endif
 
-#define ANSI_NONE "\033[0m"
-#define ANSI_RED "\033[31m"
-#define ANSI_GREEN "\033[32m"
-#define ANSI_YELLOW "\033[33m"
-#define ANSI_B_RED "\033[1;31m"
-#define ANSI_B_GREEN "\033[1;32m"
-
-using json = nlohmann::ordered_json;
-
-using addr_t = uint32_t;
-using ureg_t = uint32_t;
-using handler_t = void (*)();
-extern handler_t abortHandler;
-extern handler_t resetAllStats;
-extern handler_t dumpAllStats;
-
-template<typename Derived, typename Base>
-concept IsDerived = std::derived_from<Derived, Base>;
-
-template <typename... Args>
-inline void
-v_assert(bool cond, const Args&... args) {
-  if (!cond) [[unlikely]] {
-    std::cerr << ANSI_RED "[ASSERT FAILED] " << __FILE__ << ":" << __LINE__
-              << " " ANSI_NONE << std::hex;
-    ((std::cerr << args << " "), ...);
-    std::cerr << std::endl;
-    // vl_fatal(__FILE__, __LINE__, "v_assert", "FAIL");
-    // throw std::runtime_error("Assertion failed");
-    abortHandler();
-  }
-}
-
-template <typename... Args>
-inline void
-v_warn(bool cond, const Args&... args) {
-  if (!cond) {
-    std::cerr << ANSI_YELLOW "[WARN COND] " << __FILE__ << ":" << __LINE__
-              << " " ANSI_NONE << std::hex;
-    ((std::cerr << args << " "), ...);
-    std::cerr << std::endl;
-  }
-}
+extern tick_t g_global_tick;
 
 namespace util {
 
@@ -278,6 +243,7 @@ read_reg(uint8_t regid) noexcept {
     case 0xe: ret = r->rvCore__DOT__reg_0__DOT__gpr__DOT__gprs_14; break;
     case 0xf: ret = r->rvCore__DOT__reg_0__DOT__gpr__DOT__gprs_15; break;
     case 0x10:ret = r->rvCore__DOT__wbs_io_in_bits_rfoward_pc ; break;
+    // TODO: PC
 #endif
     default: v_assert(false, "Invalid GPR read @ regid =", std::to_string(regid));
       break;
@@ -358,6 +324,3 @@ read_double_csr(CsrSel hi, CsrSel lo) noexcept {
 // }
 
 } // namespace trace
-
-__attribute_noinline__
-size_t curr_tick() noexcept;

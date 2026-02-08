@@ -4,7 +4,8 @@ SOC_SCALA_ARG=
 ifeq ($(SOCMODE),1)
 SOC_SCALA_ARG= --soc-mode
 else
-include ../npsim/Makefile
+ACTIVE_MODE:=0
+include ../npsim/MakeInclude.mk
 endif
 # if this build involve NV Board
 NVBENA ?= 0
@@ -40,7 +41,7 @@ SIM_CXX_DIR = $(PRJ)/sim-cxx
 
 ## NV Board related
 NXDC_FILES = $(PRJ)/constr/$(TOPNAME).nxdc
-INC_PATH  += $(abspath $(PRJ))/dpic $(abspath $(PRJ))/sim-cxx
+INC_PATH  += $(abspath $(PRJ))/dpic $(abspath $(PRJ))/sim-cxx $(abspath $(PRJ))/sim-cxx/include
 VINC_PATH += $(SOC_HOME)/perip/uart16550/rtl $(SOC_HOME)/perip/spi/rtl $(SOC_HOME)/perip/psram
 
 ## Verilator related
@@ -58,6 +59,8 @@ VINCFLAGS = $(addprefix -I, $(VINC_PATH))
 CXXFLAGS += $(INCFLAGS) -DTOP_NAME="\"V$(TOPNAME)\"" -std=c++23 -g
 CXXFLAGS += -DLOGENA=$(LOGENA) -DDIFFENA=$(DIFFENA) -DDBGENA=$(DBGENA) -DNVBENA=$(NVBENA)
 CXXFLAGS += -DSOCMODE=$(SOCMODE)
+
+CXXFLAGS += -DDPICDBG
 
 #json
 CXXFLAGS += -I$(NPC_HOME)/libs/json/include
@@ -104,14 +107,14 @@ $(SIM_BIN): $(CSRCS) $(DPIC_SRCS) $(NVB_ARCHIVE)
 		$(addprefix -CFLAGS , $(CXXFLAGS)) $(addprefix -LDFLAGS , $(LDFLAGS)) \
 		--Mdir $(BUILD_OBJ_DIR) --exe -o $(abspath $(SIM_BIN))
 
-printhook:
-
-	# @echo
-	# @echo "INCFLAGS" $(INC_PATH)
-	# @echo "CXXFLAGS" $(CXXFLAGS)
-	# @echo "CSRCS" $(CSRCS)
-	# @echo "COMMON" $(SRCS_COMMON)
-	# @echo
+# printhook:
+# 	@echo
+# 	@echo "NPSIMPATH" $(NPSIMPATH)
+# 	@echo "INCFLAGS" $(INC_PATH)
+# 	@echo "CXXFLAGS" $(CXXFLAGS)
+# 	@echo "CSRCS" $(CSRCS)
+# 	@echo "COMMON" $(SRCS_COMMON)
+# 	@echo
 
 test:
 	# $(call git_commit, "test RTL")
@@ -124,6 +127,7 @@ runam:
 run: verilate verilog $(LIBCAPSTONE) printhook $(SIM_BIN)
 	# $(call git_commit, "run with AM via verilator cc")
 	@echo "MROMBIN = $(mrombin)"
+	@echo $(SIM_BIN) $(mrombin) $(simccargs)
 	$(SIM_BIN) $(mrombin) $(simccargs)
 
 runonly: verilate $(SIM_BIN)
@@ -137,7 +141,7 @@ verilog: $(SCALA_SOURCES)
 	@echo "Verilog written to " $(BUILD_SV_DIR)
 	@echo "Apply memory port changes for SoC"
 	@find $(BUILD_SV_DIR) -type f -name "*.v" -o -name "*.sv" -print0 | xargs -0 sed -i -e 's/_\(aw\|ar\|w\|r\|b\)_\(\|bits_\)/_\1/g'
-	@cp $(SRC_DPIC_DIR)/PMemBox.sv $(BUILD_SV_DIR)/PMemBox.sv
+	@cp $(SRC_DPIC_DIR)/AXIConnBox.sv $(BUILD_SV_DIR)/AXIConnBox.sv
 	@echo "Memory port renaming done"
 
 rtlsta: $(SCALA_SOURCES)

@@ -1,12 +1,25 @@
+#include "runtime.hh"
+#include "cacheSim/CacheBase.hh"
+#include "rtl_defs.hh"
+
 #include "difftest.hh"
 #include "options.hh"
 #include "pmu.hh"
-#include "probe.hh"
-#include "runtime.hh"
 #include <cassert>
 #include <cstdint>
-#include <future>
+#include <format>
 #include <unistd.h>
+
+#ifdef DPICDBG
+#include <iostream>
+#define DPICERR(fmt, ...)                                                   \
+  do {                                                                      \
+    std::cerr << std::format("{:d}: " fmt, curr_tick(), ##__VA_ARGS__)      \
+              << std::endl;                                                 \
+  } while (0)
+#else
+#define DPICERR(fmt, ...)
+#endif
 
 #if SOCMODE
 
@@ -24,7 +37,7 @@ mrom_read(int32_t addr, int32_t* data) {
 void
 flash_read(int32_t addr, int32_t* data) {
   *(uint32_t*)data = flash->readWord(addr);
-  // std::cerr << std::hex;
+  // std::cerr << std::hex;runtime.cc
   // std::cerr << "DPI-C flash read @ " << addr << " data = " << *data
   //           << std::endl;
 }
@@ -86,76 +99,128 @@ vga_read(uint32_t addr) {
 #else
 
 RuntimeBin* unifiedMem = nullptr;
-cacheSim::CacheSimulator* iCache = nullptr;
+cacheSim::CacheBase* iCache = nullptr;
+cacheSim::CacheBase* dCache = nullptr;
+
+// Update before sim loop
+std::array<std::pair<NPSimPortFSM, NPSimPortFSM>, 2> cacheRespQue;
 
 // mt-unsafe
-uint32_t
-pmem_read(uint32_t araddr, uint32_t* prdata, bool bfirst) {
-  static uint64_t ready_time = 0;
-  // TODO: Exact number
-  auto curr_lat = bfirst ? MemLatency : MemBstLat;
-  auto finish_time = std::max(ready_time, curr_tick()) + curr_lat;
+tick_t
+pmem_read(uint32_t araddr, uint32_t* prdata) {
   if (ppmu) {
-    ppmu->notifyMemXBar(false, ready_time, curr_lat);
+    ppmu->notifyMemXBar(false, -2, -2);
   }
-  ready_time = finish_time;
-  assert(unifiedMem);
   *prdata = unifiedMem->readWord(araddr & ~3U);
-  return finish_time - curr_tick();
+  std::cerr << std::format("PMEM READ @ {:8x} Data {:8x}\n", araddr,
+                           *prdata);
+  return 0; // unused
 }
 
-uint32_t
-pmem_write(uint32_t awaddr, uint32_t wdata, unsigned char wstrb,
-           bool bfirst) {
-  static uint64_t ready_time = 0;
-  // TODO: Exact number
-  auto curr_lat = bfirst ? MemLatency : MemBstLat;
-  auto finish_time = std::max(ready_time, curr_tick()) + curr_lat;
+tick_t
+pmem_write(uint32_t awaddr, uint32_t wdata, unsigned char wstrb) {
   if (ppmu) {
-    ppmu->notifyMemXBar(true, ready_time, curr_lat);
+    ppmu->notifyMemXBar(true, -2, -2);
   }
-  ready_time = finish_time;
-  // TODO: upd ready time
+
   if (awaddr == 0x1000'0000) [[unlikely]] {
     putchar(wdata);
     goto rettime;
   }
-  assert(unifiedMem);
   unifiedMem->writeWord(awaddr & ~3U, wdata, wstrb);
 rettime:
-  return finish_time - curr_tick();
+  return 0;
 }
 
-uint32_t
-axi_read(uint32_t araddr, uint32_t* prdata, uint16_t id) {
-  // std::cerr << std::hex;
-  // std::cerr << "DPI-C axi read [" << id << "]@ " << araddr
-  //           << " data = " << unifiedMem->readWord(araddr) << std::endl;
-  assert(unifiedMem);
-  if (iCache && id == 0) {
-    return iCache->read_req(araddr, prdata);
-  }
-  return pmem_read(araddr, prdata, true);
+inline cacheSim::CacheBase*
+sel_port_by_id(uint16_t id) {
+  switch (id) {
+  case 0:
+    return iCache;
+  case 1:
+    return dCache;
+  default:
+    v_assert(false, "No such ID", id, "for i|dCache");
+  };
+  return nullptr;
 }
 
-uint32_t
-axi_write(uint32_t awaddr, uint32_t wdata, unsigned char wstrb,
-          uint16_t id) {
-  assert(unifiedMem);
-  if (iCache && id == 0) {
-    return iCache->write_req(awaddr, wdata, wstrb);
-  }
-  return pmem_write(awaddr, wdata, wstrb, true);
+void
+axi_read_req(addr_t addr, uint16_t id, uint16_t len, uint16_t size,
+             uint16_t burst) {
+  // TODO:
+  DPICERR("DPI-C read req @ {:08x} ID = {:d}", addr, id);
+  assert(len == 0);
+  sel_port_by_id(id)->read_req(addr);
+}
+
+void
+axi_write_req(addr_t addr, uint16_t id, uint16_t len, uint16_t size,
+              uint16_t burst, word_t data, uint8_t strb, uint8_t last) {
+  // TODO:
+  assert(len == 0);
+  sel_port_by_id(id)->write_req(addr, data, strb);
 }
 
 void
 axi_cache_flush(uint16_t id) {
-  std::cerr << std::hex;
-  std::cerr << "DPI-C cache flush [" << id << "]" << std::endl;
-  if (iCache && id == 0) {
-    // TODO: 记得清空流水线
-    iCache->flush_all();
+  // std::cerr << std::hex;
+  // std::cerr << "DPI-C cache flush [" << id << "]" << std::endl;
+  sel_port_by_id(id)->flush_all();
+}
+
+void
+axi_read_resp(uint8_t* pvalid, uint8_t* presp, word_t* pdata, uint8_t* plast,
+              uint16_t* pid, uint16_t devid, uint8_t devready) {
+  auto& lst = cacheRespQue.at(devid).first;
+  if ((*pvalid = !lst.empty())) {
+    const auto& ent = lst.front();
+    *presp = static_cast<uint8_t>(ent.resp);
+    *pdata = ent.data;
+    *plast = ent.last;
+    *pid = devid;
+    if (devready) {
+      lst.pop_front();
+    }
+    if (devid == 0) {
+      DPICERR("[[]] Response!TakeAway DPI-C read resp, ID = {:d} Va:Re "
+              "{:d}:{:d} Data "
+              "{:8x} QueSize {:d} Poped {:d}",
+              devid, *pvalid, devready, *pdata, lst.size(), devready);
+    }
   }
+}
+
+void
+axi_write_resp(uint8_t* pvalid, uint8_t* presp, uint16_t* pid,
+               uint16_t devid, uint8_t devready) {
+  // TODO:
+  auto& fsm = cacheRespQue.at(devid).first;
+  if ((*pvalid = !lst.empty())) {
+    const auto& ent = lst.front();
+    *presp = static_cast<uint8_t>(ent.resp);
+    *pid = devid;
+    if (devready) {
+      lst.pop_front();
+    }
+    if (devid == 0) {
+      DPICERR("DPI-C write resp, ID = {:d} Va:Re {:d}:{:d} Data "
+              "ignored QueSize {:d} Poped {:d}",
+              devid, *pvalid, devready, lst.size(), devready);
+    }
+  }
+}
+
+void
+axi_device_ready(uint8_t* pr, uint8_t* pw, uint16_t devid) {
+  auto* ptr = sel_port_by_id(devid);
+  // TODO: is_ready should not depend on requests received this cycle.
+  // Once update_impl() is called, it should remain the same value.
+  // - Currently, `flush` voilates this rule.
+  auto const [rr, wr] = ptr->is_ready();
+  // DPICERR("DPI-C read probe, ID = {:d} Ready {:d}:{:d}", devid, rr, wr);
+  *pr = rr;
+  *pw = wr;
 }
 
 #endif

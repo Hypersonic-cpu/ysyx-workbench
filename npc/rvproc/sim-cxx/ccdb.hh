@@ -1,5 +1,12 @@
 #pragma once
 
+/**
+ * Debugger of .cc side (opposite to .scala side)
+ */
+
+#include "options.hh"
+#include "probe.hh"
+
 #include <array>
 #include <capstone/capstone.h>
 #include <cassert>
@@ -11,14 +18,9 @@
 #include <elf.h>
 #include <fcntl.h>
 #include <format>
-#include <list>
 #include <string>
 #include <sys/mman.h>
 #include <sys/stat.h>
-#include <unordered_map>
-
-#include "options.hh"
-#include "probe.hh"
 
 namespace trace {
 
@@ -61,8 +63,7 @@ public:
       , frameStk{}
       , instLatch{0U}
       , pcLatch{0U}
-      , instCnt{0U}
-  {
+      , instCnt{0U} {
     if constexpr (!options::gdbg_enable) {
       return;
     }

@@ -1,18 +1,18 @@
-package rvproc
+package rvproc.device
 
 import chisel3._
 import chisel3.util._
 import chisel3.util.HasBlackBoxPath
 import rvproc.axi4.AXIBus
 
-class PMemBox extends Module {
+class AXIConnBox extends Module {
   val io = IO(new Bundle {
     val master = Flipped(new AXIBus)
-    val simid  = Input(UInt(16.W))
-    val flush  = Input(Bool())
+    val flush  = Input(new Bundle{
+      val id = UInt(16.W)
+      val valid = Bool()
+    })
   })
-  // val fakeReg = Reg(Flipped(new AXIBus))
-  // fakeReg := io.master;
   io := DontCare
   dontTouch(io)
   dontTouch(clock)

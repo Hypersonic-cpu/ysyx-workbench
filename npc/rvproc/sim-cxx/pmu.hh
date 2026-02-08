@@ -1,7 +1,7 @@
 #pragma once
 
+#include "include/stats.hpp"
 #include "probe.hh"
-#include "stats.hh"
 
 #include <format>
 #include <iostream>
@@ -129,18 +129,29 @@ public:
 
   void
   notifyIFRecvd(addr_t pc) {
+    std::cerr << std::format("-- ifetch queue search {:x} in [", pc);
+    for (auto elem: ifetchboard) {
+      std::cerr << std::format("{:x}, ", std::get<0>(elem));
+    }
+    std::cerr << std::format("]\n");
     while (std::get<0>(ifetchboard.front()) != pc) {
-      ifetchboard.pop_front();
       v_assert(!ifetchboard.empty(), "Cannot find pc @", pc,
                "in IF Pipeline");
+      ifetchboard.pop_front();
     }
     ifcyc.sample(curr_tick() - std::get<1>(ifetchboard.front()));
-    ifetchboard.pop_front();
+    // DO NOT POP SELF
+    // ifetchboard.pop_front();
   }
 
   void
   notifyIFFetch(addr_t pc) {
     ifetchboard.emplace_back(pc, curr_tick());
+    std::cerr << std::format("-- ifetch queue [");
+    for (auto elem: ifetchboard) {
+      std::cerr << std::format("{:x}, ", std::get<0>(elem));
+    }
+    std::cerr << std::format("]\n");
   }
 
   void

@@ -47,8 +47,11 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
   def iotaMod(a: UInt) = Mux(a === PipeDepth.U, 0.U, a + 1.U)
 
   val bufFull   = iotaMod(headPtr) === toidPtr
+  dontTouch(bufFull)
   val instEmpty = toidPtr === tailPtr
 
+  val recvFire = iMem.r.fire
+  dontTouch(recvFire)
   // Recv inst from iCache
   when(iMem.r.fire) {
     instBuf(tailPtr) := iMem.r.bits.data
@@ -67,6 +70,9 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
     toidPtr           := iotaMod(toidPtr)
   }
 
+  when (io.out.fire) {
+    printf(cf"[  IF  ] ISSUE ${io.out.bits.pc}%x inst ${io.out.bits.inst}%x\n");
+  }
   io.out.valid    := !instEmpty && !flushWire && validBuf(toidPtr)
   io.fromEx.ready := true.B
   io.fromId.ready := true.B
@@ -123,12 +129,12 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
   ioid.pc   := Mux(io.out.valid, pcBuf(toidPtr), 0.U)
   ioid.inst := Mux(io.out.valid, instBuf(toidPtr), 0.U)
 
-  // when(iMem.ar.fire) {
-  //   printf(cf"[  IF  ] Fetch PC = ${io.iMem.ar.bits.addr}%x\n")
-  // }
-  // when(iMem.r.fire) {
-  //   printf(cf"[  IF  ] Recvd PC = ${pcBuf(tailPtr)}%x\n")
-  // }
+  when(iMem.ar.fire) {
+    printf(cf"[  IF  ] Fetch PC = ${io.iMem.ar.bits.addr}%x\n")
+  }
+  when(iMem.r.fire) {
+    printf(cf"[  IF  ] Recvd PC = ${pcBuf(toidPtr)}%x Val = ${instBuf(toidPtr)}%x\n")
+  }
 
   if (GlbCtrl.debug) {
     val pmu = Module(new FetchPMU)

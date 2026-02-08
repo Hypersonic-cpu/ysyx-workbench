@@ -1,16 +1,27 @@
 #pragma once
+
+/** runtime.hh
+ * RTL simulation runtime support, including:
+ * (MemSide) Handle DPI-C call
+ * - Core-Only Mode: Connect to npSim for Cache or BranchPred.
+ * - SoC Mode: pmem_read/write by rocketchip
+ */
+
+#include "ccdb.hh"
+#include "defines/interface.hh"
+#include "difftest.hh"
+#include "pmu.hh"
+
+#include <array>
 #include <cassert>
 #include <cstdint>
 #include <fstream>
 #include <ios>
 #include <iostream>
 #include <string>
-#include <vector>
+#include <utility>
 
-#include "ccdb.hh"
-#include "difftest.hh"
-#include "pmu.hh"
-#include "probe.hh"
+extern "C" void call_ebreak(uint32_t pc, uint32_t a0, uint32_t a5);
 
 #if SOCMODE
 
@@ -29,24 +40,35 @@ extern "C" uint32_t vga_read(uint32_t addr);
 
 #else
 
-#include "cacheSim/CacheSimulator.hh"
+#include "cacheSim/CacheBase.hh"
 
-/* NOTE:
- * Called by hardware handler
- * rvCore xbar -> CLINT
- *             -> HW Handler <-> DPI-C
+/** Core iPort         dPort       - Chisel hardware
+ *       iCache        dCache      - class CacheBase
+ *         |---Arbiter---|         / timing (blocking & priority)
+ *                |                - class RAMArbiter
+ *         |--- XBar ----|         / functional only
+ *       Device         PMem       - pmem_read|write()
  */
 
-constexpr uint32_t MemLatency{30U};
-constexpr uint32_t MemBstLat{5U};
-extern "C" uint32_t axi_read(uint32_t araddr, uint32_t* prdata, uint16_t id);
-extern "C" uint32_t axi_write(uint32_t awaddr, uint32_t wdata,
-                              unsigned char wstrb, uint16_t id);
+// Should align with SoC and npSim
+constexpr uint32_t MemLatency{40U};
+constexpr uint32_t MemBstLat{8U};
+extern "C" void axi_read_req(addr_t addr, uint16_t id, uint16_t len,
+                             uint16_t size, uint16_t burst);
+extern "C" void axi_write_req(addr_t addr, uint16_t id, uint16_t len,
+                              uint16_t size, uint16_t burst, word_t data,
+                              uint8_t strb, uint8_t last);
 extern "C" void axi_cache_flush(uint16_t id);
+extern "C" void axi_read_resp(uint8_t* pvalid, uint8_t* presp, word_t* pdata,
+                              uint8_t* plast, uint16_t* pid, uint16_t devid,
+                              uint8_t devready);
+extern "C" void axi_write_resp(uint8_t* pvalid, uint8_t* presp,
+                               uint16_t* pid, uint16_t devid,
+                               uint8_t devready);
+extern "C" void axi_device_ready(uint8_t* pr, uint8_t* pw, uint16_t devid);
 
-uint32_t pmem_read(uint32_t araddr, uint32_t* prdata, bool bfirst);
-uint32_t pmem_write(uint32_t awaddr, uint32_t wdata, unsigned char wstrb,
-                    bool bfirst);
+tick_t pmem_read(uint32_t araddr, uint32_t* prdata);
+tick_t pmem_write(uint32_t awaddr, uint32_t wdata, unsigned char wstrb);
 
 #endif
 
@@ -73,7 +95,26 @@ extern RuntimeBin* sdram;
 extern RuntimeBin* vmem;
 #else
 extern RuntimeBin* unifiedMem;
-extern cacheSim::CacheSimulator* iCache;
+extern cacheSim::CacheBase* iCache;
+extern cacheSim::CacheBase* dCache;
+
+struct NPSimRespEnt {
+  bool last;
+  RspStatus resp;
+  word_t data;
+  word_t addr;
+};
+
+using NPSimRespQue = std::list<NPSimRespEnt>;
+
+struct NPSimPortFSM {
+  bool have_resp;
+  NPSimRespQue que;
+};
+
+// Indexed by id
+extern std::array<std::pair<NPSimPortFSM, NPSimPortFSM>, 2> cacheRespQue;
+
 #endif
 
 extern trace::GuestTracer* pccdb;

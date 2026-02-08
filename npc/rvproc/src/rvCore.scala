@@ -53,17 +53,6 @@ class rvCore(isSoc: Boolean) extends Module {
   val clint = Module(new CLINT)
   val raw   = Module(new RAWDet)
 
-  val arbiter = Module(new AXIArbiter(2))
-  val locxbar = Module(
-    new AXIXBar(
-      2,
-      Seq(
-        AddrMap(0x0f00_0000L, 0xffff_ffffL, 0),
-        AddrMap(0x0200_0000L, 0x0201_0000L, 1)
-      )
-    )
-  )
-
   // exs.io.toFetch <> ifs.io.fromEx
   // exs.io.toDec <> ids.io.isFlush
   // TODO: brDet 和 exs.toFetch 功能类似, 考虑合并
@@ -94,36 +83,61 @@ class rvCore(isSoc: Boolean) extends Module {
   val dStrBuf = Module(new StoreBuffer(2))
   dStrBuf.io.empty <> ifs.io.fromLs
   lss.io.dMem <> dStrBuf.io.in
-  locxbar.io.host <> dStrBuf.io.out
+
+  val locxbar = Module(
+    new AXIXBar(
+      2,
+      Seq(
+        AddrMap(0x0f00_0000L, 0xffff_ffffL, 0),
+        AddrMap(0x0200_0000L, 0x0201_0000L, 1)
+      )
+    )
+  )
 
   if (isSoc) {
+    val arbiter = Module(new AXIArbiter(2))
+    // FIXME:
     // AXIPortPassing(io.master, arbiter.io.device)
     arbiter.io.hosts(0) <> ifs.io.iMem
     arbiter.io.hosts(1) <> dStrBuf.io.out
     // arbiter.io.hosts(1) <> lss.io.dMem
     arbiter.io.device <> locxbar.io.host
+
+    locxbar.io.host <> dStrBuf.io.out
     locxbar.io.devices(1) <> clint.io.port
     AXIPortPassing(io.master, locxbar.io.devices(0))
   } else {
-    arbiter.io := DontCare
 
-    // val iMemBox = Module(new PMemBox)
-    val iMemBox =
-      if (GlbCtrl.sta) Module(new iCacheDummy(3))
-      else Module(new iCache(3))
+    /**  IFU       LSU
+      *   |         |
+      *   |       StBuf
+      *   |         | XBar
+      *   |       *----*
+      *   |       |    |
+      * DPI-C   CLINT DPI-C
+      */
+
+    val iMemBox = Module(new device.AXIConnBox)
 
     iMemBox.io.master <> ifs.io.iMem
-    iMemBox.io.simid := 0.U // inst cache
-    iMemBox.io.flush := ids.io.fenceI.valid && ids.io.fenceI.bits
+    iMemBox.io.flush.id    := 0.U // inst cache
+    iMemBox.io.flush.valid := ids.io.fenceI.valid && ids.io.fenceI.bits
 
-    val dMemBox = Module(new PMemBox)
-    // locxbar.io.host <> lss.io.dMem
+    val dMemBox = Module(new device.AXIConnBox)
+    dMemBox.io.master <> dStrBuf.io.out
+    dMemBox.io.flush.id    := 1.U // data port
+    dMemBox.io.flush.valid := false.B
+
     locxbar.io.host <> dStrBuf.io.out
-    locxbar.io.devices(1) <> clint.io.port
-    locxbar.io.devices(0) <> dMemBox.io.master
-    dMemBox.io.simid := 1.U // data port
-    dMemBox.io.flush := false.B
-    io.master        := DontCare
+    locxbar.io.devices(0) <> clint.io.port
+    locxbar.io.devices(1) <> dMemBox.io.master
+
+    // locxbar.io.host <> lss.io.dMem
+    // locxbar.io.host <> dStrBuf.io.out
+    // locxbar.io.devices(1) <> clint.io.port
+    // locxbar.io.devices(0) <> dMemBox.io.master
+
+    io.master := DontCare
   }
 
   if (GlbCtrl.debug) {

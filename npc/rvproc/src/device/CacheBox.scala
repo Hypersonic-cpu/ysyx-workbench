@@ -56,6 +56,7 @@ class iCacheDummy(PipeDepth: Int) extends CacheBox(PipeDepth) {
   }
 }
 
+// TODO: Change to pipe but not ring buffer
 class iCache(PipeDepth: Int) extends CacheBox(PipeDepth) {
   require(PipeDepth > 0)
   io.master.w  := DontCare
