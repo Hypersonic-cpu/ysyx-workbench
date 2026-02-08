@@ -68,9 +68,11 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
   when(io.out.ready && !instEmpty) {
     validBuf(toidPtr) := false.B
     toidPtr           := iotaMod(toidPtr)
-    printf(cf"[  IF  ] ISSUE ${io.out.bits.pc}%x inst ${io.out.bits.inst}%x\n");
   }
 
+  when (io.out.fire) {
+    printf(cf"[  IF  ] ISSUE ${io.out.bits.pc}%x inst ${io.out.bits.inst}%x\n");
+  }
   io.out.valid    := !instEmpty && !flushWire && validBuf(toidPtr)
   io.fromEx.ready := true.B
   io.fromId.ready := true.B
