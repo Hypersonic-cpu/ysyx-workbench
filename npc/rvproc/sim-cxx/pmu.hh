@@ -140,7 +140,8 @@ public:
       ifetchboard.pop_front();
     }
     ifcyc.sample(curr_tick() - std::get<1>(ifetchboard.front()));
-    ifetchboard.pop_front();
+    // DO NOT POP SELF
+    // ifetchboard.pop_front();
   }
 
   void
