@@ -50,6 +50,8 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
   dontTouch(bufFull)
   val instEmpty = toidPtr === tailPtr
 
+  val recvFire = iMem.r.fire
+  dontTouch(recvFire)
   // Recv inst from iCache
   when(iMem.r.fire) {
     instBuf(tailPtr) := iMem.r.bits.data
