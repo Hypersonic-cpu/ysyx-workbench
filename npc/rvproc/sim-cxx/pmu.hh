@@ -129,6 +129,7 @@ public:
 
   void
   notifyIFRecvd(addr_t pc) {
+    return ;
     while (std::get<0>(ifetchboard.front()) != pc) {
       ifetchboard.pop_front();
       v_assert(!ifetchboard.empty(), "Cannot find pc @", pc,
