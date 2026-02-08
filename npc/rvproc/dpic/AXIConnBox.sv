@@ -163,8 +163,8 @@ module AXIConnBox (
 
   always_ff @(negedge clock) begin : cxxOutputs
     axi_device_ready(c_r_ready, c_w_ready, device_id);
-    axi_read_resp(c_rvalid, c_rresp, c_rdata, c_rlast, c_rid, device_id, io_master_arready);
-    axi_write_resp(c_bvalid, c_bresp, c_bid, device_id, io_master_awready);
+    axi_read_resp(c_rvalid, c_rresp, c_rdata, c_rlast, c_rid, device_id, 8'(io_master_arready));
+    axi_write_resp(c_bvalid, c_bresp, c_bid, device_id, 8'(io_master_awready));
   end
 
   assign io_master_bvalid = c_bvalid[0];
