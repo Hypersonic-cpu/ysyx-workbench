@@ -181,7 +181,7 @@ axi_read_resp(uint8_t* pvalid, uint8_t* presp, word_t* pdata, uint8_t* plast,
       lst.pop_front();
     }
     if (devid == 0) {
-      DPICERR("DPI-C read resp, ID = {:d} Va:Re {:d}:{:d} Data "
+      DPICERR("[[]] Response!TakeAway DPI-C read resp, ID = {:d} Va:Re {:d}:{:d} Data "
               "{:8x} QueSize {:d} Poped {:d}",
               devid, *pvalid, devready, *pdata, lst.size(), devready);
     }
