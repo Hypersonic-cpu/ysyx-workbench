@@ -106,9 +106,9 @@ module AXIConnBox (
   logic [7:0] c_r_ready;
   logic [7:0] c_w_ready;
 
-  logic ar_fire;
-  logic aw_fire;
-  logic w_fire;
+  reg ar_fire;
+  reg aw_fire;
+  reg w_fire;
 
   always_ff @(posedge clock) begin : Everyting
     // if (io_master_arid == 0) begin
