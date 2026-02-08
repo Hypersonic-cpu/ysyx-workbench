@@ -15,6 +15,7 @@ call_ebreak(uint32_t pc, uint32_t a0, uint32_t a5) {
                              pc)
               << std::endl;
     resetAllStats();
+    std::cerr << "================== RESET ==================" << std::endl;
   } else if (a5 == 1) {
     std::cout << std::format(ANSI_YELLOW "dump Stats @ pc {:>8x}" ANSI_NONE,
                              pc)
