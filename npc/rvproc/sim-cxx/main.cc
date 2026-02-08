@@ -119,6 +119,7 @@ single_cycle(const std::unique_ptr<TOP_NAME>& top,
              const std::unique_ptr<VerilatedContext>& context,
              const std::vector<ClockedObject*>& objlist,
              const trace::FstTracer& wave) {
+  std::cerr << std::format("+++++++++++++++  Rising edge of {:d} ++++++++++++++++++\n", curr_tick());
   for (auto ptr : objlist) {
     ptr->do_update();
   }
@@ -126,7 +127,6 @@ single_cycle(const std::unique_ptr<TOP_NAME>& top,
                            iCache->is_ready().first,
                            iCache->is_ready().second);
 
-  std::cerr << std::format("Rising edge of {:d}\n", curr_tick());
   top->clock = 1;
   top->eval();
   wave.dump(context->time());
