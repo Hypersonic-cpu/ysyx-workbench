@@ -165,9 +165,9 @@ module AXIConnBox (
         axi_cache_flush(device_id);
       end
     end
-    prb_arready <= c_r_ready[0];
-    prb_awready <= c_w_ready[0];
-    prb_wready  <= c_w_ready[0];
+    // prb_arready <= c_r_ready[0];
+    // prb_awready <= c_w_ready[0];
+    // prb_wready  <= c_w_ready[0];
   end
 
   // assign io_master_bvalid = c_bvalid[0];
