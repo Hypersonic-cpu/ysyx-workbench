@@ -218,12 +218,19 @@ main(int argc, char* argv[]) {
   auto recv_func = [](CpuTrans t) -> void {
     auto& lsp = cacheRespQue.at(t.id);
     if (t.mop == MemRWOpt::Read) {
-      lsp.first.emplace_back(
-        NPSimRespEnt{.last = true, .resp = RspStatus::Okay, .data = t.data});
+      lsp.first.emplace_back(NPSimRespEnt{.last = true,
+                                          .resp = RspStatus::Okay,
+                                          .data = t.data,
+                                          .addr = t.addr});
     } else {
       lsp.second.emplace_back(NPSimRespEnt{
         .last = true, .resp = RspStatus::Okay, .data = 0xff00ff00U});
     }
+    std::cerr << std::format("<<>> Response ! ReadQue = [");
+    for (const auto& elem : lsp.first) {
+      std::cerr << std::format("@{:8x}:{:8x}, ", elem.addr, elem.data);
+    }
+    std::cerr << std::format("]\n");
   };
 
   auto ack_func = [](AckTrans t) -> void {};

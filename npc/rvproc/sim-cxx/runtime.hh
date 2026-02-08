@@ -102,6 +102,7 @@ struct NPSimRespEnt {
   bool last;
   RspStatus resp;
   word_t data;
+  word_t addr;
 };
 using NPSimRespQue = std::list<NPSimRespEnt>;
 
