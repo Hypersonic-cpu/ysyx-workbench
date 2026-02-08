@@ -110,6 +110,11 @@ module AXIConnBox (
   reg aw_fire;
   reg w_fire;
 
+  reg prb_arready;
+  reg prb_awready;
+  reg prb_wready;
+
+
   always_ff @(posedge clock) begin : Everyting
     // if (io_master_arid == 0) begin
     //   $display("++ DEVICE DISP ID = %d AR_FIRE %d %d ++", device_id, io_master_arvalid,
@@ -157,6 +162,9 @@ module AXIConnBox (
       axi_write_resp(c_bvalid, c_bresp, c_bid, device_id, 8'(io_master_awready));
 
     end
+    prb_arready <= c_r_ready[0];
+    prb_awready <= c_w_ready[0];
+    prb_wready  <= c_w_ready[0];
   end
 
   assign io_master_bvalid = c_bvalid[0];
@@ -167,9 +175,10 @@ module AXIConnBox (
   assign io_master_rdata  = c_rdata[31:0];
   assign io_master_rlast  = c_rlast[0];
   assign io_master_rid    = c_rid[3:0];
-  assign io_master_arready = c_r_ready[0];
-  assign io_master_awready = c_w_ready[0];
-  assign io_master_wready  = c_w_ready[0];
+
+  // assign io_master_arready = c_r_ready[0];
+  // assign io_master_awready = c_w_ready[0];
+  // assign io_master_wready  = c_w_ready[0];
 
   // Assume host is always ready
   assert property (@(posedge clock) io_master_rvalid |-> io_master_rready);
