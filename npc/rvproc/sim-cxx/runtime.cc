@@ -178,12 +178,16 @@ axi_read_resp(uint8_t* pvalid, uint8_t* presp, word_t* pdata, uint8_t* plast,
   *pdata = ent.r_data;
   *plast = ent.r_last;
   *pid = devid;
-  DPICERR("DPI-C read resp (before), ID = {:d} Va:Re {:d}:{:d}", devid,
-          ent.r_valid, devready);
+  if (devid == 0) {
+    DPICERR("DPI-C read resp (before), ID = {:d} Va:Re {:d}:{:d}", devid,
+            ent.r_valid, devready);
+  }
   if (devready)
     ent.r_valid = false;
-  DPICERR("DPI-C read resp (after), ID = {:d} Va:Re {:d}:{:d}", devid,
-          ent.r_valid, devready);
+  if (devid == 0) {
+    DPICERR("DPI-C read resp (after), ID = {:d} Va:Re {:d}:{:d}", devid,
+            ent.r_valid, devready);
+  }
 }
 
 void
