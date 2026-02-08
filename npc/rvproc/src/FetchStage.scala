@@ -128,7 +128,7 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
     printf(cf"[  IF  ] Fetch PC = ${io.iMem.ar.bits.addr}%x\n")
   }
   when(iMem.r.fire) {
-    printf(cf"[  IF  ] Recvd PC = ${pcBuf(tailPtr)}%x\n")
+    printf(cf"[  IF  ] Recvd PC = ${pcBuf(tailPtr)}%x Val = ${io.iMem.r.bits.data}\n")
   }
 
   if (GlbCtrl.debug) {
