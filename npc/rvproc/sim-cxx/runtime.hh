@@ -98,19 +98,15 @@ extern RuntimeBin* unifiedMem;
 extern cacheSim::CacheBase* iCache;
 extern cacheSim::CacheBase* dCache;
 
-struct CacheSimRespBuffer {
-  // std::pair<bool, bool> rw_ready;
-  // Read
-  bool r_valid;
-  bool r_last;
-  RspStatus r_resp;
-  word_t r_data;
-  // Write
-  bool b_valid;
-  RspStatus b_resp;
+struct NPSimRespEnt {
+  bool last;
+  RspStatus resp;
+  word_t data;
 };
+using NPSimRespQue = std::list<NPSimRespEnt>;
+
 // Indexed by id
-extern std::array<CacheSimRespBuffer, 2> cacheRespBuf;
+extern std::array<std::pair<NPSimRespQue, NPSimRespQue>, 2> cacheRespQue;
 
 #endif
 

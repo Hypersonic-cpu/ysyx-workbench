@@ -216,16 +216,13 @@ main(int argc, char* argv[]) {
     std::vector<cacheSim::CacheBase*>{iCache, dCache});
 
   auto recv_func = [](CpuTrans t) -> void {
-    auto& ent = cacheRespBuf.at(t.id);
+    auto& lsp = cacheRespQue.at(t.id);
     if (t.mop == MemRWOpt::Read) {
-      ent.r_data = t.data;
-      ent.r_resp = RspStatus::Okay;
-      ent.r_last = true;
-      // FIXME: 不应该每一次查询都抹除
-      ent.r_valid = true;
+      lsp.first.emplace_back(
+        NPSimRespEnt{.last = true, .resp = RspStatus::Okay, .data = t.data});
     } else {
-      ent.b_resp = RspStatus::Okay;
-      ent.b_valid = true;
+      lsp.second.emplace_back(NPSimRespEnt{
+        .last = true, .resp = RspStatus::Okay, .data = 0xff00ff00U});
     }
   };
 

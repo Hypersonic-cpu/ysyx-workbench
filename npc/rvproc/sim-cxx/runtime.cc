@@ -5,11 +5,9 @@
 #include "difftest.hh"
 #include "options.hh"
 #include "pmu.hh"
-#include "probe.hh"
 #include <cassert>
 #include <cstdint>
 #include <format>
-#include <future>
 #include <unistd.h>
 
 #ifdef DPICDBG
@@ -105,7 +103,7 @@ cacheSim::CacheBase* iCache = nullptr;
 cacheSim::CacheBase* dCache = nullptr;
 
 // Update before sim loop
-std::array<CacheSimRespBuffer, 2> cacheRespBuf;
+std::array<std::pair<NPSimRespQue, NPSimRespQue>, 2> cacheRespQue{{{}, {}}};
 
 // mt-unsafe
 tick_t
@@ -172,35 +170,41 @@ axi_cache_flush(uint16_t id) {
 void
 axi_read_resp(uint8_t* pvalid, uint8_t* presp, word_t* pdata, uint8_t* plast,
               uint16_t* pid, uint16_t devid, uint8_t devready) {
-  auto& ent = cacheRespBuf.at(devid);
-  *pvalid = ent.r_valid;
-  *presp = static_cast<uint8_t>(ent.r_resp);
-  *pdata = ent.r_data;
-  *plast = ent.r_last;
-  *pid = devid;
-  if (devid == 0) {
-    DPICERR("DPI-C read resp (before), ID = {:d} Va:Re {:d}:{:d} Data {:8x}",
-            devid, ent.r_valid, devready, *pdata);
-  }
-  if (devready) {
-    ent.r_valid = false;
-    ent.r_data = 0;
-  }
-  if (devid == 0) {
-    DPICERR("DPI-C read resp (after), ID = {:d} Va:Re {:d}:{:d}", devid,
-            ent.r_valid, devready);
+  auto& lst = cacheRespQue.at(devid).first;
+  if ((*pvalid = !lst.empty())) {
+    const auto& ent = lst.front();
+    *presp = static_cast<uint8_t>(ent.resp);
+    *pdata = ent.data;
+    *plast = ent.last;
+    *pid = devid;
+    if (devready) {
+      lst.pop_front();
+    }
+    if (devid == 0) {
+      DPICERR("DPI-C read resp, ID = {:d} Va:Re {:d}:{:d} Data "
+              "{:8x} QueSize {:d} Poped {:d}",
+              devid, *pvalid, devready, *pdata, lst.size(), devready);
+    }
   }
 }
 
 void
 axi_write_resp(uint8_t* pvalid, uint8_t* presp, uint16_t* pid,
                uint16_t devid, uint8_t devready) {
-  auto& ent = cacheRespBuf.at(devid);
-  *pvalid = ent.b_valid;
-  *presp = static_cast<uint8_t>(ent.b_resp);
-  *pid = devid;
-  if (devready)
-    ent.b_valid = false;
+  auto& lst = cacheRespQue.at(devid).first;
+  if ((*pvalid = !lst.empty())) {
+    const auto& ent = lst.front();
+    *presp = static_cast<uint8_t>(ent.resp);
+    *pid = devid;
+    if (devready) {
+      lst.pop_front();
+    }
+    if (devid == 0) {
+      DPICERR("DPI-C write resp, ID = {:d} Va:Re {:d}:{:d} Data "
+              "ignored QueSize {:d} Poped {:d}",
+              devid, *pvalid, devready, lst.size(), devready);
+    }
+  }
 }
 
 void
