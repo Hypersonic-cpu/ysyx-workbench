@@ -112,6 +112,8 @@ module AXIConnBox (
   // reg prb_awready;
   // reg prb_wready;
 
+  event posedge_updated;
+
   always_ff @(posedge clock) begin : Everyting
     // if (io_master_arid == 0) begin
     //   $display("++ DEVICE DISP ID = %d AR_FIRE %d %d ++", device_id, io_master_arvalid,
