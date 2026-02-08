@@ -134,8 +134,8 @@ module AXIConnBox (
       // Asking for CURRENT CYCLE status.
       // Transaction caused valid clearing event only influences the next cycle
       axi_device_ready(c_r_ready, c_w_ready, device_id);
-      axi_read_resp(c_rvalid, c_rresp, c_rdata, c_rlast, c_rid, device_id, 8'(io_master_arready));
-      axi_write_resp(c_bvalid, c_bresp, c_bid, device_id, 8'(io_master_awready));
+      axi_read_resp(c_rvalid, c_rresp, c_rdata, c_rlast, c_rid, device_id, c_r_ready);
+      axi_write_resp(c_bvalid, c_bresp, c_bid, device_id, c_w_ready);
 
       if (ar_fire) begin
         assert (io_master_arlen == 0);  // "Only support single beat read"
