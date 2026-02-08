@@ -176,9 +176,9 @@ module AXIConnBox (
     io_master_rdata  <= c_rdata[31:0];
     io_master_rlast  <= c_rlast[0];
     io_master_rid    <= c_rid[3:0];
-    io_master_arready <= c_r_ready[0];
-    io_master_awready <= c_w_ready[0];
-    io_master_wready  <= c_w_ready[0];
+    io_master_arready <= c_ar_ready[0];
+    io_master_awready <= c_aw_ready[0];
+    io_master_wready  <= c_aw_ready[0];
   end
   //
   // assign io_master_bvalid = c_bvalid[0];
