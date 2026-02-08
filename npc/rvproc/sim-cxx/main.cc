@@ -119,18 +119,20 @@ single_cycle(const std::unique_ptr<TOP_NAME>& top,
              const std::unique_ptr<VerilatedContext>& context,
              const std::vector<ClockedObject*>& objlist,
              const trace::FstTracer& wave) {
-  top->clock = 1;
-  top->eval();
-
   for (auto ptr : objlist) {
     ptr->do_update();
   }
   std::cerr << std::format("iCache Avail = {:d} {:d}\n",
                            iCache->is_ready().first,
                            iCache->is_ready().second);
-
+  top->clock = 1;
+  top->eval();
   wave.dump(context->time());
   context->timeInc(1);
+
+  std::cerr << std::format("iCache Avail Dn = {:d} {:d}\n",
+                           iCache->is_ready().first,
+                           iCache->is_ready().second);
 
   top->clock = 0;
   top->eval();
