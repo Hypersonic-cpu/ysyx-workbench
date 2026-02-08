@@ -133,7 +133,6 @@ module AXIConnBox (
       // Response probing, called only once per cycle. Will clear CXX-side valid bit.
       // Asking for CURRENT CYCLE status.
       // Transaction caused valid clearing event only influences the next cycle
-      axi_device_ready(c_r_ready, c_w_ready, device_id);
       axi_read_resp(c_rvalid, c_rresp, c_rdata, c_rlast, c_rid, device_id, c_r_ready);
       axi_write_resp(c_bvalid, c_bresp, c_bid, device_id, c_w_ready);
 
@@ -163,6 +162,7 @@ module AXIConnBox (
         axi_cache_flush(device_id);
       end
     end
+    axi_device_ready(c_r_ready, c_w_ready, device_id);
     // prb_arready <= c_r_ready[0];
     // prb_awready <= c_w_ready[0];
     // prb_wready  <= c_w_ready[0];
