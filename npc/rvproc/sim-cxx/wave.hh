@@ -1,9 +1,5 @@
 #pragma once
 
-/** wave.hh 
- * Generating FST wave file
- */
-
 #include "options.hh"
 
 #include <cassert>

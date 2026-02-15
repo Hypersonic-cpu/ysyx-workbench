@@ -6,7 +6,6 @@
 #include <cstdint>
 #include <dlfcn.h>
 #include <format>
-#include <iostream>
 #include <string>
 #include <unistd.h>
 #include <utility>
@@ -150,7 +149,6 @@ public:
     if (!fire) {
       return {};
     }
-    std::cerr << std::format("Tester work\n");
     fire = false;
 
     iota();

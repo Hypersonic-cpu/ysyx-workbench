@@ -234,10 +234,6 @@ config NPSIM_DEFAULT_PATH
   depends on NPSIM_TRACE
   string "Default path for npSim trace file"
   default "build/npsim.nptr"
-config NPSIM_USE_ZSTD
-  depends on NPSIM_TRACE
-  bool "Use zstd compression for npSim trace file. Otherwise use xz"
-  default y
 endmenu
 
 menu "Miscellaneous"

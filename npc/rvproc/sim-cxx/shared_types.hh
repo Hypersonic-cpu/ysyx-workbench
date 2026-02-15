@@ -1,19 +1,11 @@
 #pragma once
 
+#include "nlohmann/json.hpp"
+#include "nlohmann/json_fwd.hpp"
+
 #include <cstdint>
+#include <concepts>
 #include <iostream>
-
-#if SOCMODE
-using tick_t = uint64_t;
-__attribute_noinline__
-size_t curr_tick() noexcept;
-#else
-
-// Use npSim global clock and types.
-#include "defines/types.hh"
-extern tick_t curr_tick() noexcept;
-
-#endif
 
 #define ANSI_NONE "\033[0m"
 #define ANSI_RED "\033[31m"
@@ -22,12 +14,17 @@ extern tick_t curr_tick() noexcept;
 #define ANSI_B_RED "\033[1;31m"
 #define ANSI_B_GREEN "\033[1;32m"
 
+using json = nlohmann::ordered_json;
+
 using addr_t = uint32_t;
 using ureg_t = uint32_t;
 using handler_t = void (*)();
 extern handler_t abortHandler;
 extern handler_t resetAllStats;
 extern handler_t dumpAllStats;
+
+template<typename Derived, typename Base>
+concept IsDerived = std::derived_from<Derived, Base>;
 
 template <typename... Args>
 inline void

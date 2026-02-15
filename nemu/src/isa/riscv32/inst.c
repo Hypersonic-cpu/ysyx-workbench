@@ -24,7 +24,6 @@
 #include <cpu/cpu.h>
 #include <cpu/ifetch.h>
 #include <cpu/decode.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <sys/cdefs.h>
 
@@ -59,8 +58,7 @@ enum {
   s->nptrace.is_branch = true); \
   if (cond) { \
     IFDEF(CONFIG_NPSIM_TRACE, \
-    s->nptrace.br_taken = true; \
-    s->nptrace.mem_addr = s->pc + imm); \
+    s->nptrace.br_taken = true); \
     s->dnpc = s->pc + imm; \
   } \
 } while (0);
@@ -68,8 +66,7 @@ enum {
 #define brAbs(taraddr) do { \
   IFDEF(CONFIG_NPSIM_TRACE, \
   s->nptrace.is_branch = true; \
-  s->nptrace.br_taken = true; \
-  s->nptrace.mem_addr = taraddr); \
+  s->nptrace.br_taken = true); \
   s->dnpc = taraddr; \
 } while (0);
 #define dstR() do { IFDEF(CONFIG_NPSIM_TRACE, s->nptrace.dst_reg = *rd); } while (0)
@@ -349,17 +346,15 @@ static int decode_exec(Decode *s) {
   INSTPAT("0000000 00001 00000 000 00000 11100 11",
           ebreak , N, {
             // abstract-machine/src/platform/nemu/
-            printf("====== R10 = %08x =======\n", R(10));
             if (R(15) == 0xaa) NEMUTRAP(s->pc, R(10));
             else if (R(15) == 0) {
-              IFDEF(CONFIG_NPSIM_TRACE, s->nptrace.sys_op = SysResetStats);
+              s->nptrace.sys_op = SysResetStats;
             } else if (R(15) == 1) {
-              IFDEF(CONFIG_NPSIM_TRACE, s->nptrace.sys_op = SysDumpStats);
+              s->nptrace.sys_op = SysDumpStats;
             } else {
               Assert(false, "UnRecognized ebreak with a5 = " FMT_WORD, R(15));
               INV(s->pc);
             }
-            printf("====== R10 = %08x =======\n", R(10));
           }); // R(10) is $a0
   INSTPAT("0000000 00000 00000 001 00000 00011 11",
           fencei,  I, { /** TODO: npSim stall here */});

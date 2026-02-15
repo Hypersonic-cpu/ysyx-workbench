@@ -9,31 +9,8 @@ import rvproc.device.UART
 import rvproc.device.CLINT
 import rvproc.device.CLINTAddr
 import rvproc.BusType._
-
-object BitMath {
-  implicit class UIntSignExtender(val i: UInt) extends AnyVal {
-    def SExt(width: Int = ISA.RegBits):     UInt = {
-      i.asSInt.pad(width).asUInt
-    }
-    def MSBU(idx: Int = 0):                 UInt = {
-      val chosen = ISA.RegBits - 1 - idx
-      i(chosen, chosen)
-    }
-    def MSB(idx: Int = 0):                  UInt = {
-      val chosen = ISA.RegBits - 1 - idx
-      i(chosen, chosen)
-    }
-    def UExt(width: Int = ISA.RegBits + 1): UInt = {
-      i.pad(width)
-    }
-  }
-
-  implicit class LogicPropagator(val p: Bool) extends AnyVal {
-    def Implies(q:  Bool): Bool = (~p) || q
-    def Excludes(q: Bool): Bool = p Implies (~q)
-  }
-}
 import BitMath._
+import rvproc.cache.iCacheConf
 
 class rvCore(isSoc: Boolean) extends Module {
   val io = IO(new Bundle {
@@ -52,6 +29,17 @@ class rvCore(isSoc: Boolean) extends Module {
   val reg   = Module(new RegFile)
   val clint = Module(new CLINT)
   val raw   = Module(new RAWDet)
+
+  val arbiter = Module(new AXIArbiter(2))
+  val locxbar = Module(
+    new AXIXBar(
+      2,
+      Seq(
+        AddrMap(0x0f00_0000L, 0xffff_ffffL, 0),
+        AddrMap(0x0200_0000L, 0x0201_0000L, 1)
+      )
+    )
+  )
 
   // exs.io.toFetch <> ifs.io.fromEx
   // exs.io.toDec <> ids.io.isFlush
@@ -80,64 +68,41 @@ class rvCore(isSoc: Boolean) extends Module {
   RdPacket(lss.io.fwdDet, lss.io.in.bits.foward, raw.io.lssrd)
   RdPacket(wbs.io.fwdDet, wbs.io.in.bits.foward, raw.io.wbsrd)
 
-  val dStrBuf = Module(new StoreBuffer(2))
-  dStrBuf.io.empty <> ifs.io.fromLs
-  lss.io.dMem <> dStrBuf.io.in
+  val l1dPort = Module(new StoreBuffer(2))
+  l1dPort.io.cpuSide <> lss.io.dMem
+  l1dPort.io.empty <> ifs.io.fromLs
 
-  val locxbar = Module(
-    new AXIXBar(
-      2,
-      Seq(
-        AddrMap(0x0f00_0000L, 0xffff_ffffL, 0),
-        AddrMap(0x0200_0000L, 0x0201_0000L, 1)
-      )
-    )
+  val l1iPort = Module(
+    new cache.iCache(new iCacheConf(32, 1024, 16, 1))
   )
 
   if (isSoc) {
-    val arbiter = Module(new AXIArbiter(2))
-    // FIXME:
     // AXIPortPassing(io.master, arbiter.io.device)
     arbiter.io.hosts(0) <> ifs.io.iMem
-    arbiter.io.hosts(1) <> dStrBuf.io.out
+    arbiter.io.hosts(1) <> l1dPort.io.memSide
     // arbiter.io.hosts(1) <> lss.io.dMem
     arbiter.io.device <> locxbar.io.host
-
-    locxbar.io.host <> dStrBuf.io.out
     locxbar.io.devices(1) <> clint.io.port
     AXIPortPassing(io.master, locxbar.io.devices(0))
   } else {
 
-    /**  IFU       LSU
-      *   |         |
-      *   |       StBuf
-      *   |         | XBar
-      *   |       *----*
-      *   |       |    |
-      * DPI-C   CLINT DPI-C
+    /** IFU           LSU
+      *  |             |
+      * l1i$          StBuf
+      *  *------*------*
+      *         | Arbiter
+      *  *------^------- XBar
+      *  | CLINT       | PMem
       */
 
-    val iMemBox = Module(new device.AXIConnBox)
+    arbiter.io.hosts(0) <> l1iPort.io.memSide
+    arbiter.io.hosts(1) <> l1dPort.io.memSide
+    arbiter.io.device <> locxbar.io.host
 
-    iMemBox.io.master <> ifs.io.iMem
-    iMemBox.io.flush.id    := 0.U // inst cache
-    iMemBox.io.flush.valid := ids.io.fenceI.valid && ids.io.fenceI.bits
-
-    val dMemBox = Module(new device.AXIConnBox)
-    dMemBox.io.master <> dStrBuf.io.out
-    dMemBox.io.flush.id    := 1.U // data port
-    dMemBox.io.flush.valid := false.B
-
-    locxbar.io.host <> dStrBuf.io.out
-    locxbar.io.devices(0) <> clint.io.port
-    locxbar.io.devices(1) <> dMemBox.io.master
-
-    // locxbar.io.host <> lss.io.dMem
-    // locxbar.io.host <> dStrBuf.io.out
-    // locxbar.io.devices(1) <> clint.io.port
-    // locxbar.io.devices(0) <> dMemBox.io.master
-
-    io.master := DontCare
+    val pMem = Module(new PMemBox)
+    locxbar.io.devices(1) <> clint.io.port
+    locxbar.io.devices(0) <> pMem.io.master
+    io.master        := DontCare
   }
 
   if (GlbCtrl.debug) {

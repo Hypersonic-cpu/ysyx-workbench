@@ -31,5 +31,3 @@ build-*/
 !*.nxdc
 logs/
 ccout/
-!.clang-format
-.github/

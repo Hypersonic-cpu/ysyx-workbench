@@ -1,11 +1,7 @@
-#include "cacheSim/RamConn.hh"
-#include "defines/base.hh"
-#include "defines/interface.hh"
 #include "nlohmann/json.hpp"
-#include "rtl_defs.hh"
+#include "nlohmann/json_fwd.hpp"
 
 #include <cassert>
-#include <cstdint>
 #include <cstdio>
 #include <filesystem>
 #include <format>
@@ -14,6 +10,8 @@
 #include <memory>
 #include <ostream>
 #include <string>
+#include <unordered_map>
+#include <vector>
 #include <verilated.h>
 #include <verilated_fst_c.h>
 
@@ -22,8 +20,8 @@
 #include "VysyxSoCFull___024root.h"
 #else
 #include "VrvCore.h"
-#include "cacheSim/CacheBase.hh"
-#include "defines/debug.hh"
+#include "VrvCore___024root.h"
+#include "cacheSim/CacheSimulator.hh"
 #endif
 
 #include "ccdb.hh"
@@ -45,8 +43,6 @@ const TOP_NAME* trace::ptop = nullptr;
 
 static std::ofstream statFile;
 static std::ofstream confFile;
-
-tick_t g_global_tick = 0;
 
 void
 abort_handler() {
@@ -74,11 +70,11 @@ print_stats() {
   // pccdb->dump_stats(std::cerr);
   ppmu->dump_stats(std::cerr);
   if (iCache) {
-    auto const stat = iCache->stats;
+    auto const stat = iCache->stats();
     std::cerr << std::format(
                    ">> iCache:\n"
                    "   Hit {:d} Miss {:d} Total {:d} MissRate {:f}\n",
-                   stat.hits, stat.misses, stat.accesses, stat.miss_rate())
+                   stat.hits, stat.misses, stat.accesses, stat.missRate())
               << std::endl;
   }
 }
@@ -86,7 +82,7 @@ print_stats() {
 inline json
 dump_stats() {
   json obj{};
-  obj["l1icache"] = iCache->stats_json();
+  obj["l1icache"] = json(iCache->stats_map());
   obj["pmu"] = ppmu->stats_json();
   obj["image"] = options::binary_img;
   return obj;
@@ -96,7 +92,7 @@ inline json
 dump_config() {
   json conf{};
   if (iCache) {
-    conf["l1icache"] = iCache->config_json();
+    conf["l1icache"] = json(iCache->config_map());
   }
   conf["sdram"] = json({{"latency", MemLatency}, {"burstlat", MemBstLat}});
   conf["image"] = options::binary_img;
@@ -117,52 +113,37 @@ handler_t dumpAllStats = dump_all_stats;
 inline void
 single_cycle(const std::unique_ptr<TOP_NAME>& top,
              const std::unique_ptr<VerilatedContext>& context,
-             const std::vector<ClockedObject*>& objlist,
              const trace::FstTracer& wave) {
-  std::cerr << std::format("+++++++++++++++  Rising edge of {:d} ++++++++++++++++++\n", curr_tick());
-  for (auto ptr : objlist) {
-    ptr->do_update();
-  }
-  std::cerr << std::format("iCache Avail = {:d} {:d}\n",
-                           iCache->is_ready().first,
-                           iCache->is_ready().second);
 
   top->clock = 1;
+  context->timeInc(1);
   top->eval();
   wave.dump(context->time());
-  context->timeInc(1);
-
-  std::cerr << std::format("iCache Avail Dn = {:d} {:d}\n",
-                           iCache->is_ready().first,
-                           iCache->is_ready().second);
 
   top->clock = 0;
+  context->timeInc(1);
   top->eval();
   wave.dump(context->time());
-  context->timeInc(1);
-
-  g_global_tick++;
 }
 
 inline void
 single_reset(const std::unique_ptr<TOP_NAME>& top,
              const std::unique_ptr<VerilatedContext>& context,
-             const std::vector<ClockedObject*>& objlist,
              const trace::FstTracer& wave) {
   top->reset = 1;
   for (size_t i = 0; i < 15; i++) {
-    single_cycle(top, context, objlist, wave);
+    single_cycle(top, context, wave);
   }
   top->clock = 1;
+  context->timeInc(1);
   top->eval();
   wave.dump(context->time());
-  context->timeInc(1);
 
   top->clock = 0;
   top->reset = 0;
+  context->timeInc(1);
   top->eval();
   wave.dump(context->time());
-  context->timeInc(1);
 }
 
 int
@@ -171,7 +152,6 @@ main(int argc, char* argv[]) {
   options::binary_img = std::string(argv[1]);
   options::parse_args(argc, argv);
 
-  /** CONFIG BEGIN */
 #if SOCMODE
   auto mromBin = std::make_shared<RuntimeBin>(
     std::vector<ureg_t>(10U, 0xbadc0de), 0x2000'0000U, "MROM");
@@ -197,52 +177,11 @@ main(int argc, char* argv[]) {
     options::binary_img, (4U << 20) / 4, 0x8000'0000LLU, "UnifiedMem");
   unifiedMem = uMem.get();
 
-  // Top-down
-  auto l1i = std::make_unique<cacheSim::PipeCache>(
-    /* name */ "l1iCache",
-    /* depth */ 3,
+  auto instCache = std::make_unique<cacheSim::CacheSimulator>(
     /* size */ options::arch_config_val.at(options::ICacheSize),
     /* lineSize */ options::arch_config_val.at(options::ICacheBlock),
-    /* assoc */ options::arch_config_val.at(options::ICacheAssoc),
-    /* id */ static_cast<uint16_t>(0));
-  iCache = l1i.get();
-  auto l1d = std::make_unique<cacheSim::NoCache>(
-    /* name */ "l1dCache",
-    /* id */ static_cast<uint16_t>(0));
-  dCache = l1d.get();
-
-  auto sdram = std::make_unique<memSim::RAMArbiter>(
-    "SDRAM", MemLatency, MemBstLat,
-    std::vector<cacheSim::CacheBase*>{iCache, dCache});
-
-  auto recv_func = [](CpuTrans t) -> void {
-    auto& lsp = cacheRespQue.at(t.id);
-    if (t.mop == MemRWOpt::Read) {
-      lsp.first.emplace_back(NPSimRespEnt{.last = true,
-                                          .resp = RspStatus::Okay,
-                                          .data = t.data,
-                                          .addr = t.addr});
-    } else {
-      lsp.second.emplace_back(NPSimRespEnt{
-        .last = true, .resp = RspStatus::Okay, .data = 0xff00ff00U});
-    }
-    std::cerr << std::format("<<>> Response ! ReadQue = [");
-    for (const auto& elem : lsp.first) {
-      std::cerr << std::format("@{:8x}:{:8x}, ", elem.addr, elem.data);
-    }
-    std::cerr << std::format("]\n");
-  };
-
-  auto ack_func = [](AckTrans t) -> void {};
-
-  // Bottom-up
-  l1i->set_mem_port(sdram.get());
-  l1d->set_mem_port(sdram.get());
-  l1i->set_cpu_side_handlers(recv_func, ack_func);
-  l1d->set_cpu_side_handlers(recv_func, ack_func);
-
-  // Reverse order
-  std::vector<ClockedObject*> npsim_objs{sdram.get(), l1d.get(), l1i.get()};
+    /* assoc */ options::arch_config_val.at(options::ICacheAssoc));
+  iCache = instCache.get();
 #endif
 
   if (options::wave_enable) {
@@ -267,6 +206,7 @@ main(int argc, char* argv[]) {
   nvboard_init();
 #endif
 
+  /** CONFIG BEGIN */
 #if SOCMODE
   trace::DiffTester diff(mrom->dataVec());
   pdiff = &diff;
@@ -294,7 +234,7 @@ main(int argc, char* argv[]) {
     confFile << std::setw(2) << dump_config() << std::endl;
     confFile.close();
   }
-  /** CONFIG END */
+  /* ^^^ CONFIG END ^^^ */
 
   const size_t MaxCyc{options::max_cycles};
   size_t currCyc{0U};
@@ -302,10 +242,8 @@ main(int argc, char* argv[]) {
   int retBad = 0;
 
   /** RESET SIMULATOR */
-  single_reset(top, contextp, npsim_objs, tfp);
+  single_reset(top, contextp, tfp);
   diff->copy();
-
-  debug::set_flags("All");
 
   /** SIMULATION LOOP */
   while (currCyc < MaxCyc) {
@@ -317,15 +255,14 @@ main(int argc, char* argv[]) {
 #if NVBENA
     nvboard_update();
 #endif
-    single_cycle(top, contextp, npsim_objs, tfp);
+    single_cycle(top, contextp, tfp);
 
     if (auto mismatch = diff->test_on_commit(); !mismatch.empty()) {
       for (auto const& [id, golden, real] : mismatch) {
-        std::cerr
-          << std::format(
-               "{:d}: Reg {:>2d} mismatch: golden {:>8x} real {:>8x}",
-               curr_tick(), id, golden, real)
-          << std::endl;
+        std::cerr << std::format(
+                       "Reg {:>2d} mismatch: golden {:>8x} real {:>8x}", id,
+                       golden, real)
+                  << std::endl;
       }
 
       ccdb.dump_print();

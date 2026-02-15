@@ -1,21 +1,21 @@
-#include "rtl_defs.hh"
-#include "runtime.hh"
-
 #include <cassert>
 #include <cstdlib>
 #include <format>
+#include <iomanip>
 #include <ios>
 #include <iostream>
+#include <stdexcept>
 #include <verilated.h>
 
-void
+#include "probe.hh"
+
+extern "C" void
 call_ebreak(uint32_t pc, uint32_t a0, uint32_t a5) {
   if (a5 == 0) {
     std::cout << std::format(ANSI_YELLOW "reset stats @ pc {:8x}" ANSI_NONE,
                              pc)
               << std::endl;
     resetAllStats();
-    std::cerr << "================== RESET ==================" << std::endl;
   } else if (a5 == 1) {
     std::cout << std::format(ANSI_YELLOW "dump Stats @ pc {:>8x}" ANSI_NONE,
                              pc)

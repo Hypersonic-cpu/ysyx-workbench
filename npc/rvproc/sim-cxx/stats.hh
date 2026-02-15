@@ -1,24 +1,24 @@
 #pragma once
 
+#include "probe.hh"
+
 #include <algorithm>
+#include <capstone/capstone.h>
 #include <cassert>
 #include <cstddef>
+#include <cstdio>
 #include <cstdlib>
+#include <dlfcn.h>
+#include <elf.h>
+#include <fcntl.h>
 #include <format>
 #include <iostream>
 #include <ostream>
 #include <string>
+#include <sys/mman.h>
+#include <sys/stat.h>
 #include <unordered_map>
 #include <vector>
-#include <concepts>
-
-#include "nlohmann/json.hpp"
-#include "nlohmann/json_fwd.hpp"
-
-using json = nlohmann::ordered_json;
-
-template<typename Derived, typename Base>
-concept IsDerived = std::derived_from<Derived, Base>;
 
 class StatsBase {
 protected:
@@ -28,7 +28,6 @@ public:
   StatsBase(const std::string& name)
       : name_{name} {}
   StatsBase() = delete;
-  virtual ~StatsBase() {}
 
   std::string
   name() const {
