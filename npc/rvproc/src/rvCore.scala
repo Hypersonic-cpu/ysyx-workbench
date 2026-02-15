@@ -9,31 +9,8 @@ import rvproc.device.UART
 import rvproc.device.CLINT
 import rvproc.device.CLINTAddr
 import rvproc.BusType._
-
-object BitMath {
-  implicit class UIntSignExtender(val i: UInt) extends AnyVal {
-    def SExt(width: Int = ISA.RegBits):     UInt = {
-      i.asSInt.pad(width).asUInt
-    }
-    def MSBU(idx: Int = 0):                 UInt = {
-      val chosen = ISA.RegBits - 1 - idx
-      i(chosen, chosen)
-    }
-    def MSB(idx: Int = 0):                  UInt = {
-      val chosen = ISA.RegBits - 1 - idx
-      i(chosen, chosen)
-    }
-    def UExt(width: Int = ISA.RegBits + 1): UInt = {
-      i.pad(width)
-    }
-  }
-
-  implicit class LogicPropagator(val p: Bool) extends AnyVal {
-    def Implies(q:  Bool): Bool = (~p) || q
-    def Excludes(q: Bool): Bool = p Implies (~q)
-  }
-}
 import BitMath._
+import rvproc.cache.iCacheConf
 
 class rvCore(isSoc: Boolean) extends Module {
   val io = IO(new Bundle {
@@ -91,38 +68,40 @@ class rvCore(isSoc: Boolean) extends Module {
   RdPacket(lss.io.fwdDet, lss.io.in.bits.foward, raw.io.lssrd)
   RdPacket(wbs.io.fwdDet, wbs.io.in.bits.foward, raw.io.wbsrd)
 
-  val dStrBuf = Module(new StoreBuffer(2))
-  dStrBuf.io.empty <> ifs.io.fromLs
-  lss.io.dMem <> dStrBuf.io.in
-  locxbar.io.host <> dStrBuf.io.out
+  val l1dPort = Module(new StoreBuffer(2))
+  l1dPort.io.cpuSide <> lss.io.dMem
+  l1dPort.io.empty <> ifs.io.fromLs
+
+  val l1iPort = Module(
+    new cache.iCache(new iCacheConf(32, 1024, 16, 1))
+  )
 
   if (isSoc) {
     // AXIPortPassing(io.master, arbiter.io.device)
     arbiter.io.hosts(0) <> ifs.io.iMem
-    arbiter.io.hosts(1) <> dStrBuf.io.out
+    arbiter.io.hosts(1) <> l1dPort.io.memSide
     // arbiter.io.hosts(1) <> lss.io.dMem
     arbiter.io.device <> locxbar.io.host
     locxbar.io.devices(1) <> clint.io.port
     AXIPortPassing(io.master, locxbar.io.devices(0))
   } else {
-    arbiter.io := DontCare
 
-    // val iMemBox = Module(new PMemBox)
-    val iMemBox =
-      if (GlbCtrl.sta) Module(new iCacheDummy(3))
-      else Module(new iCache(3))
+    /** IFU           LSU
+      *  |             |
+      * l1i$          StBuf
+      *  *------*------*
+      *         | Arbiter
+      *  *------^------- XBar
+      *  | CLINT       | PMem
+      */
 
-    iMemBox.io.master <> ifs.io.iMem
-    iMemBox.io.simid := 0.U // inst cache
-    iMemBox.io.flush := ids.io.fenceI.valid && ids.io.fenceI.bits
+    arbiter.io.hosts(0) <> l1iPort.io.memSide
+    arbiter.io.hosts(1) <> l1dPort.io.memSide
+    arbiter.io.device <> locxbar.io.host
 
-    val dMemBox = Module(new PMemBox)
-    // locxbar.io.host <> lss.io.dMem
-    locxbar.io.host <> dStrBuf.io.out
+    val pMem = Module(new PMemBox)
     locxbar.io.devices(1) <> clint.io.port
-    locxbar.io.devices(0) <> dMemBox.io.master
-    dMemBox.io.simid := 1.U // data port
-    dMemBox.io.flush := false.B
+    locxbar.io.devices(0) <> pMem.io.master
     io.master        := DontCare
   }
 
