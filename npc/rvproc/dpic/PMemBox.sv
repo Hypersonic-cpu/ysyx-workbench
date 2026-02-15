@@ -29,18 +29,8 @@ module PMemBox (
     output [ 1:0] io_master_rresp,
     output [31:0] io_master_rdata,
     output        io_master_rlast,
-    output [ 3:0] io_master_rid,
-    input  [15:0] io_simid,
-    input         io_flush
+    output [ 3:0] io_master_rid
 );
-
-  // import "DPI-C" function void pmem_init();
-  // initial begin
-  //   pmem_init();
-  // end
-
-  import "DPI-C" function void axi_cache_flush(input shortint unsigned id);
-  // TODO: fence之后的重新取指留给IFU做?
   always_ff @(posedge clock) begin : fenceI
     if (io_flush) axi_cache_flush(io_simid);
   end
@@ -61,7 +51,6 @@ module PMemBox (
       .io_master_rdata  (io_master_rdata),
       .io_master_rlast  (io_master_rlast),
       .io_master_rid    (io_master_rid),
-      .io_simid         (io_simid)
   );
 
   PMemWriter mwrite (
@@ -83,7 +72,6 @@ module PMemBox (
       .io_master_bvalid (io_master_bvalid),
       .io_master_bresp  (io_master_bresp),
       .io_master_bid    (io_master_bid),
-      .io_simid         (io_simid)
   );
 endmodule
 
@@ -103,8 +91,7 @@ module PMemReader (
     output [ 1:0] io_master_rresp,
     output [31:0] io_master_rdata,
     output        io_master_rlast,
-    output [ 3:0] io_master_rid,
-    input  [15:0] io_simid
+    output [ 3:0] io_master_rid
 );
   import "DPI-C" function int unsigned axi_read(
     input int unsigned raddr,
@@ -192,8 +179,7 @@ module PMemWriter (
     input         io_master_bready,
     output        io_master_bvalid,
     output [ 1:0] io_master_bresp,
-    output [ 3:0] io_master_bid,
-    input  [15:0] io_simid
+    output [ 3:0] io_master_bid
 );
   import "DPI-C" function int unsigned axi_write(
     input int unsigned waddr,

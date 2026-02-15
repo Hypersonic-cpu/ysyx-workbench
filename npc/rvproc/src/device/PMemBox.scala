@@ -8,8 +8,6 @@ import rvproc.axi4.AXIBus
 class PMemBox extends Module {
   val io = IO(new Bundle {
     val master = Flipped(new AXIBus)
-    val simid  = Input(UInt(16.W))
-    val flush  = Input(Bool())
   })
   // val fakeReg = Reg(Flipped(new AXIBus))
   // fakeReg := io.master;

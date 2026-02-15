@@ -56,7 +56,7 @@ class iCacheDummy(PipeDepth: Int) extends CacheBox(PipeDepth) {
   }
 }
 
-class iCache(PipeDepth: Int) extends CacheBox(PipeDepth) {
+class iCacheSim(PipeDepth: Int) extends CacheBox(PipeDepth) {
   require(PipeDepth > 0)
   io.master.w  := DontCare
   io.master.b  := DontCare
