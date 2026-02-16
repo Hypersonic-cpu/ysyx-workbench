@@ -60,7 +60,11 @@ class iCache(conf: iCacheConf) extends Module {
   val fillBuf    = Reg(Vec(conf.lineBytes * 8 / ISA.RegBits, Tp.RegType()))
   // Avoid SyncReadMem read-write conflict: don't accept new requests on
   // the cycle the fill completes (write and read would hit the same index).
-  val fillFinish = RegNext(io.memSide.r.bits.last && io.memSide.r.fire)
+  val ffSrc      = io.memSide.r.bits.last && io.memSide.r.fire
+  val fillFinish = RegNext(ffSrc)
+  when(ffSrc && state =/= waiting) {
+    printf(cf"[iC BUG] ffSrc while s=$state rv=${io.memSide.r.valid} rl=${io.memSide.r.bits.last}\n")
+  }
   val willShift  = nextState === flowing && !fillFinish
   req.ready := willShift
   val hitRespV  = RegNext(tagHit)
