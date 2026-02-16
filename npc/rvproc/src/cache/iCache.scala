@@ -180,6 +180,14 @@ class iCache(conf: iCacheConf) extends Module {
     missServe := false.B
   }
 
+  // fence.i: invalidate all lines after any in-flight fill completes
+  val flushPending = RegInit(false.B)
+  when(io.flushAll) { flushPending := true.B }
+  when(flushPending && state === flowing && !fillFinish) {
+    for (i <- 0 until conf.numSets) { validArr(i) := false.B }
+    flushPending := false.B
+  }
+
   if (debug) {
     dontTouch(reqA1)
     dontTouch(reqA2)
