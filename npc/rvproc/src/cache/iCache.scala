@@ -108,7 +108,7 @@ class iCache(conf: iCacheConf) extends Module {
   wordSel := lineSplit(ithOf(reqA2))
 
   // Cycle 3 (resp)
-  val fillFinish = RegNext(io.memSide.r.bits.last && io.memSide.r.valid)
+  val fillFinish = RegNext(io.memSide.r.bits.last && io.memSide.r.fire)
   nextState := MuxLookup(state, waiting)(
     Seq(
       flowing -> Mux(tagHit || !reqV2, flowing, memreq),
@@ -161,7 +161,7 @@ class iCache(conf: iCacheConf) extends Module {
   io.memSide.aw            := DontCare
   io.memSide.b             := DontCare
 
-  val catData = VecInit(fillBuf.reverse).asUInt
+  val catData = fillBuf.asUInt
   when(fillFinish) {
     dataArr.write(idxOf(reqA2), catData)
     tagArr.write(idxOf(reqA2), tagOf(reqA2))
