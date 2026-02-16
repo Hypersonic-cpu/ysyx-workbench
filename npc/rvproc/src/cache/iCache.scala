@@ -30,7 +30,7 @@ case class iCacheConf(
 class iCache(conf: iCacheConf) extends Module {
   require(conf.assoc == 1, "Set assoc unimplemented")
   val io = IO(new Bundle {
-    val flushAll = Decoupled(Bool())
+    val flushAll = Flipped(Decoupled(Bool()))
     val cpuSide = Flipped(new CPUBus)
     val memSide = new AXIBus
   })
