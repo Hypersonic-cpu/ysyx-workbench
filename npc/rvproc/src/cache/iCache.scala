@@ -26,6 +26,8 @@ case class iCacheConf(
   def tagBits  = addrBits - this.idxBits - this.offBits
   def tagBitHi = addrBits - 1
   def tagBitLo = addrBits - tagBits
+  def lineTrans = this.lineBytes / (this.addrBits / 8)
+  def lineTBits = log2Ceil(this.lineTrans)
 }
 
 // Readonly
@@ -39,7 +41,7 @@ class iCache(conf: iCacheConf) extends Module {
 
   println(
     s"--> iCache Addr : [${conf.tagBitHi}: tag :${conf.tagBitLo}]"
-    +s"[${conf.idxBitHi}: idx :${conf.idxBitLo}][${conf.offBits-1}: off : 0]\n"
+    +s"[${conf.idxBitHi}: idx :${conf.idxBitLo}][${conf.offBits-1}: off :0]"
   )
 
   val validArr = Reg(Vec(conf.numSets, Bool())) // WARN: DELAY
@@ -117,7 +119,7 @@ class iCache(conf: iCacheConf) extends Module {
   )
   state     := nextState
 
-  val fillPtr = RegInit(0.U(conf.offBits.W))
+  val fillPtr = RegInit(0.U(conf.lineTBits.W))
   when(state === waiting && io.memSide.r.valid) {
     fillBuf(fillPtr) := io.memSide.r.bits.data
     fillPtr          := fillPtr + 1.U
@@ -144,7 +146,7 @@ class iCache(conf: iCacheConf) extends Module {
   io.memSide.r.ready       := true.B
   io.memSide.ar.valid      := state === memreq
   io.memSide.ar.bits.addr  := blkOf(reqA2)
-  io.memSide.ar.bits.len   := (conf.lineBytes / (conf.addrBits / 8)).U
+  io.memSide.ar.bits.len   := conf.lineTrans.U
   io.memSide.ar.bits.burst := INCR
   io.memSide.ar.bits.id    := 0.U   // iCache
   io.memSide.ar.bits.size  := 0x2.U // log2(4)
