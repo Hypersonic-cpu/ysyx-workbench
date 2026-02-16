@@ -86,24 +86,25 @@ class iCache(conf: iCacheConf) extends Module {
   val reqA2 = RegEnable(reqA1, willShift)
   val reqV2 = RegEnable(reqV1, willShift)
 
-  if (debug) {
-    dontTouch(reqA1)
-    dontTouch(reqA2)
-    dontTouch(reqV1)
-    dontTouch(reqV2)
-  }
-
   // Cycle 2 (comp)
   // Parallel 1
   val tagRead  = tagArr.read(idxOf(reqA1), willShift && reqV1)
   val tagValid = validArr(idxOf(reqA2))
-  tagHit := tagRead === tagOf(reqA2) && reqV2
+  tagHit := (tagRead === tagOf(reqA2)) && reqV2
 
   // Parallel 2
   val lineRead  = dataArr.read(reqA1, willShift && reqV1)
   val lineSplit =
     VecInit.tabulate(conf.lineBytes)(i => lineRead(i * 4 + 3, i * 4))
   wordSel := lineSplit(offOf(reqA2))
+
+  if (debug) {
+    dontTouch(reqA1)
+    dontTouch(reqA2)
+    dontTouch(reqV1)
+    dontTouch(reqV2)
+    dontTouch(tagRead)
+  }
 
   // Cycle 3 (resp)
   val fillFinish = RegNext(io.memSide.r.bits.last)
