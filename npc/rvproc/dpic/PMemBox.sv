@@ -144,7 +144,7 @@ module PMemReader (
         raddr_latch  <= raddr_latch + 32'h4;
       end else if (state == SERVE) begin
         delay_remain <= delay_remain - 1;
-      end else if (state === HOLD) begin
+      end else if (state === HOLD && next_state == RECV) begin
         burst_remain <= burst_remain - 1;
       end
 
