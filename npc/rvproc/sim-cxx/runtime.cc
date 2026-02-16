@@ -142,9 +142,6 @@ pmem_write(addr_t awaddr, ureg_t wdata, uint8_t wstrb) {
 
 tint_t
 axi_read(addr_t araddr, ureg_t* prdata, bool outstanding) {
-  std::cerr << std::format("DPI-C AXI READ @{:x}[{:s}] T@{:d}", araddr,
-                           outstanding ? "First" : "Burst", curr_tick())
-            << std::endl;
   // std::cerr << std::hex;
   // std::cerr << "DPI-C axi read [" << id << "]@ " << araddr
   //           << " data = " << unifiedMem->readWord(araddr) << std::endl;
@@ -159,6 +156,9 @@ axi_read(addr_t araddr, ureg_t* prdata, bool outstanding) {
   // *prdata = unifiedMem->readWord(araddr & ~3U);
   // return finish_time - curr_tick();
   pmem_read(araddr, prdata);
+  std::cerr << std::format("DPI-C AXI READ @{:x}[{:s}] Data {:x} T@{:d}", araddr,
+                           outstanding ? "First" : "Burst", *prdata, curr_tick())
+            << std::endl;
   auto lat = outstanding ? MemLatency : MemBstLat;
   return lat;
 }
