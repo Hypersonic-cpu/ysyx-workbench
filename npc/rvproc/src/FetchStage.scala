@@ -53,6 +53,7 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
   when(iMem.r.fire) {
     instBuf(tailPtr) := iMem.r.bits.data
     tailPtr          := iotaMod(tailPtr)
+    printf(cf"[FBUF] R.fire tail=$tailPtr->pcBuf=${pcBuf(tailPtr)}%x  H=$headPtr T=$tailPtr D=$toidPtr\n")
   }
   // Send fetch to iCache
   when(iMem.ar.fire) {
@@ -60,11 +61,16 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
     validBuf(headPtr) := true.B
     pcBuf(headPtr)    := pc
     headPtr           := iotaMod(headPtr)
+    printf(cf"[FBUF] AR.fire head=$headPtr pc=$pc%x  H=$headPtr T=$tailPtr D=$toidPtr\n")
   }
   // Issue to IDU
   when(io.out.ready && !instEmpty) {
     validBuf(toidPtr) := false.B
     toidPtr           := iotaMod(toidPtr)
+    printf(cf"[FBUF] OUT toid=$toidPtr v=${validBuf(toidPtr)} H=$headPtr T=$tailPtr D=$toidPtr\n")
+  }
+  when(flushWire) {
+    printf(cf"[FBUF] FLUSH  H=$headPtr T=$tailPtr D=$toidPtr\n")
   }
 
   io.out.valid    := !instEmpty && !flushWire && validBuf(toidPtr)
