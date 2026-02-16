@@ -141,6 +141,7 @@ module PMemReader (
       end else if (state == RECV) begin
         delay_remain <=
             axi_read(raddr_latch, rdata, 8'(burst_remain == burst_total));
+        raddr_latch <= raddr_latch + 32'h4;
       end else if (state == SERVE) begin
         delay_remain <= delay_remain - 1;
       end else if (state === HOLD) begin
