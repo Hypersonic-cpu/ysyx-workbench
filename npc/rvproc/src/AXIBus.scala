@@ -352,6 +352,7 @@ class CpuRdResp extends Bundle {
 class CpuWrReq extends Bundle {
   val addr = Tp.AddrType()
   val data = Tp.RegType()
+  val size = AXI.SizeType()
   val strb = UInt((ISA.AddrBits / 8).W)
 }
 

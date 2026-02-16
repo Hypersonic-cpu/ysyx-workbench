@@ -16,7 +16,7 @@ class MemoryStage extends Module {
   val io   = IO(new Bundle {
     val in     = Flipped(Decoupled(new ExecuteToMemory))
     val out    = Decoupled(new MemoryToWrBack)
-    val dMem   = new AXIBus
+    val dMem   = new CPUBus
     val fwdDet = Output(new FwBundle)
   })
   val iowb = io.out.bits
@@ -33,7 +33,6 @@ class MemoryStage extends Module {
   val reqReady  = Mux(!ioex.memOp.isSt, dMem.ar.ready, dMem.aw.ready)
   val respValid = Mux(!ioex.memOp.isSt, dMem.r.valid, dMem.b.valid)
 
-  // FIXME: awValid 和 bValid 同时高的时候 (1周期延迟), 会有问题吗?
   state := MuxLookup(state, idle)(
     Seq(
       idle  -> Mux(trigIss && reqReady, serve, idle),
@@ -48,15 +47,8 @@ class MemoryStage extends Module {
 
   dMem.ar.bits.addr  := addr // & Tp.AddrAligner()
   dMem.aw.bits.addr  := addr // & Tp.AddrAligner()
-  dMem.ar.bits.burst := INCR
-  dMem.aw.bits.burst := INCR
   dMem.ar.bits.size  := ioex.memOp.len.asUInt
   dMem.aw.bits.size  := ioex.memOp.len.asUInt
-  dMem.ar.bits.id    := 1.U
-  dMem.aw.bits.id    := 1.U
-  dMem.ar.bits.len   := 0.U  // NOTE: len 是传输的次数. 大小是 size
-  dMem.aw.bits.len   := 0.U
-  dMem.w.bits.last   := true.B
 
   val shamt = addr(1, 0)
   val dmask = MuxLookup(ioex.memOp.len, 0.U)(
@@ -66,8 +58,8 @@ class MemoryStage extends Module {
       MemLen.Word -> 0xffff_ffffL.U
     )
   )
-  dMem.w.bits.data := (wrdt & dmask) << (shamt << 3.U)
-  dMem.w.bits.strb := MuxLookup(ioex.memOp.len, 0.U)(
+  dMem.aw.bits.data := (wrdt & dmask) << (shamt << 3.U)
+  dMem.aw.bits.strb := MuxLookup(ioex.memOp.len, 0.U)(
     Seq(
       MemLen.Byte -> 0x1.U,
       MemLen.Half -> 0x3.U,
@@ -87,7 +79,7 @@ class MemoryStage extends Module {
 
   dMem.ar.valid := ~ioex.memOp.isSt && trigIss
   dMem.aw.valid := ioex.memOp.isSt && trigIss
-  dMem.w.valid  := ioex.memOp.isSt && trigIss
+  // dMem.w.valid  := ioex.memOp.isSt && trigIss
   dMem.r.ready  := ~ioex.memOp.isSt && io.out.ready
   dMem.b.ready  := ioex.memOp.isSt && io.out.ready
 
