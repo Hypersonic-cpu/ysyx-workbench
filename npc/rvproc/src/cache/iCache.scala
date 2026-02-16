@@ -129,7 +129,7 @@ class iCache(conf: iCacheConf) extends Module {
       "Memory error during cache fill"
     )
     when(io.memSide.r.bits.last) {
-      val goldenPtr = (conf.lineBytes - 1).U
+      val goldenPtr = (conf.lineTBits - 1).U
       assert(
         fillPtr === goldenPtr,
         cf"Only got ${fillPtr} + 1 transactions during fill, expect ${goldenPtr}\n"
