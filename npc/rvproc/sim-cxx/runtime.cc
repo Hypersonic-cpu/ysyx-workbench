@@ -111,7 +111,8 @@ vga_read(uint32_t addr) {
 
 #else
 
-// Always functional
+RuntimeBin* unifiedMem = nullptr;
+
 void
 pmem_read(addr_t araddr, ureg_t* prdata) {
   if (ppmu) {
