@@ -163,7 +163,7 @@ module PMemReader (
   assign io_master_rdata   = {32{io_master_rvalid}} & rdata;
   assign io_master_arready = state == IDLE;
   assign io_master_rresp   = 2'b00;
-  assign io_master_rlast   = io_master_rvalid;
+  assign io_master_rlast   = burst_remain == 0;
 endmodule
 
 
