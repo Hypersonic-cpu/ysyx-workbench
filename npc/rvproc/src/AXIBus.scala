@@ -144,8 +144,8 @@ class AXIArbiter(N: Int) extends Module {
     Seq(
       idle  -> Mux(hasReq, serve, idle),
       serve -> Mux(
-        (io.device.r.valid && pivot.r.ready)
-          || (io.device.b.valid && pivot.b.ready),
+        (io.device.r.valid && pivot.r.ready && pivot.r.bits.last)
+          || (io.device.b.valid && pivot.b.ready && pivot.w.bits.last),
         idle,
         serve
       )
@@ -183,7 +183,7 @@ class XBarRead(N: Int, amap: Seq[AddrMap]) extends Module {
       (
         (inputAd >= entry.lo.U(ISA.AddrBits.W) &&
           inputAd < entry.hi.U(ISA.AddrBits.W))
-          -> entry.id.U ## 0.U
+          -> entry.id.U ## 0.U(1.W)
       )
     }
   )
@@ -260,7 +260,7 @@ class XBarWrite(N: Int, amap: Seq[AddrMap]) extends Module {
       (
         (inputAd >= entry.lo.U(ISA.AddrBits.W) &&
           inputAd < entry.hi.U(ISA.AddrBits.W))
-          -> entry.id.U ## 0.U
+          -> entry.id.U ## 0.U(1.W)
       )
     }
   )

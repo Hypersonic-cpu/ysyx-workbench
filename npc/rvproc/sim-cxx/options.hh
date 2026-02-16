@@ -5,7 +5,7 @@
 #include <ctime>
 #include <getopt.h>
 #include <string>
-#include <unordered_map>
+// #include <unordered_map>
 
 namespace options {
 
@@ -25,16 +25,16 @@ extern std::string outdir;
 extern bool record_perf;
 
 enum ArchConfig {
-  ICacheSize = 256,
-  ICacheAssoc,
-  ICacheBlock,
+  // ICacheSize = 256,
+  // ICacheAssoc,
+  // ICacheBlock,
   SDRAMSize,
   IssueNum,
 };
 
 // Handle by components
 // extern std::unordered_map<ArchConfig, std::string> arch_config_name;
-extern std::unordered_map<ArchConfig, size_t> arch_config_val;
+// extern std::unordered_map<ArchConfig, size_t> arch_config_val;
 
 extern std::string binary_img;
 extern DumpPrintOpt runtime_dump_opt;

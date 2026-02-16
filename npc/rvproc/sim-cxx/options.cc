@@ -12,7 +12,7 @@
 #include <ios>
 #include <iostream>
 #include <string>
-#include <unordered_map>
+// #include <unordered_map>
 
 namespace options {
 
@@ -26,8 +26,8 @@ std::string elf_file = "";
 bool fast = false;
 size_t max_cycles = ~0ULL;
 
-std::unordered_map<ArchConfig, size_t> arch_config_val{
-  {ICacheSize, 1024}, {ICacheAssoc, 1}, {ICacheBlock, 16}};
+// std::unordered_map<ArchConfig, size_t> arch_config_val{
+//   {ICacheSize, 1024}, {ICacheAssoc, 1}, {ICacheBlock, 16}};
 
 static size_t
 parse_size(std::string s) {
@@ -74,10 +74,9 @@ parse_args(int argc, char* argv[]) {
     {"log", required_argument, NULL, 'l'},
     {"elf", required_argument, NULL, 'e'},
     {"help", no_argument, NULL, 'h'},
-    /** Arch related */
-    {"l1i-size", required_argument, NULL, ArchConfig::ICacheSize},
-    {"l1i-blksize", required_argument, NULL, ArchConfig::ICacheBlock},
-    {"l1i-assoc", required_argument, NULL, ArchConfig::ICacheAssoc},
+    // {"l1i-size", required_argument, NULL, ArchConfig::ICacheSize},
+    // {"l1i-blksize", required_argument, NULL, ArchConfig::ICacheBlock},
+    // {"l1i-assoc", required_argument, NULL, ArchConfig::ICacheAssoc},
     {0, 0, NULL, 0},
   };
 
@@ -127,15 +126,15 @@ parse_args(int argc, char* argv[]) {
     case 'c':
       runtime_dump_opt.cycle_no = true;
       break;
-    case ArchConfig::ICacheSize:
-      arch_config_val.insert_or_assign(ICacheSize, parse_size(optarg));
-      break;
-    case ArchConfig::ICacheAssoc:
-      arch_config_val.insert_or_assign(ICacheAssoc, atoi(optarg));
-      break;
-    case ArchConfig::ICacheBlock:
-      arch_config_val.insert_or_assign(ICacheBlock, atoi(optarg));
-      break;
+    // case ArchConfig::ICacheSize:
+    //   arch_config_val.insert_or_assign(ICacheSize, parse_size(optarg));
+    //   break;
+    // case ArchConfig::ICacheAssoc:
+    //   arch_config_val.insert_or_assign(ICacheAssoc, atoi(optarg));
+    //   break;
+    // case ArchConfig::ICacheBlock:
+    //   arch_config_val.insert_or_assign(ICacheBlock, atoi(optarg));
+    //   break;
     default:
       std::cerr << ANSI_RED << "Invalid Argument 0x" << std::hex << o << "\n"
                 << ANSI_NONE << std::endl;
