@@ -159,12 +159,12 @@ class StoreBuffer(Entries: Int, Id: Int = 1) extends Module {
   )
   // io.memSide.ar <> io.cpuSide.ar
   io.memSide.ar.bits.addr  := arAddr
-  io.memSide.ar.bits.size  := arSize
+  io.memSide.ar.bits.size  := 0x2.U // Always word-aligned read from PMemBox
   io.memSide.ar.bits.len   := 0.U
   io.memSide.ar.bits.burst := INCR
   io.memSide.ar.bits.id    := Id.U
 
-  io.memSide.ar.valid := readState === blocked && !delayReadBlock.orR // !readHitBlocked.orR
+  io.memSide.ar.valid := readState === blocked && !delayReadBlock.orR && wbempty
   io.memSide.r.ready  := readState === busy                           // RegNext(io.cpuSide.r.ready) // WARN: 出现多余的一拍 ready ?
 
   assert(
