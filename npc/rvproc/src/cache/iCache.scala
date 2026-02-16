@@ -44,7 +44,7 @@ class iCache(conf: iCacheConf) extends Module {
       + s"[${conf.idxBitHi}: idx :${conf.idxBitLo}][${conf.offBits - 1}: off :0]"
   )
 
-  val validArr = Reg(Vec(conf.numSets, Bool())) // WARN: DELAY
+  val validArr = RegInit(VecInit(Seq.fill(conf.numSets)(false.B)))
   val tagArr   = SyncReadMem(conf.numSets, UInt(conf.tagBits.W))
   val dataArr  = SyncReadMem(conf.numSets, UInt((conf.lineBytes * 8).W))
 
@@ -57,8 +57,13 @@ class iCache(conf: iCacheConf) extends Module {
   val resp      = io.cpuSide.r
   val tagHit    = Wire(Bool())
   val wordSel   = Wire(Tp.RegType())
-  val fillBuf   = Reg(Vec(conf.lineBytes * 8 / ISA.RegBits, Tp.RegType()))
-  val willShift = nextState === flowing
+  val fillBuf    = Reg(Vec(conf.lineBytes * 8 / ISA.RegBits, Tp.RegType()))
+  // Avoid SyncReadMem read-write conflict: don't accept new requests on
+  // the cycle the fill completes (write and read would hit the same index).
+  // Gate with state===waiting to ignore spurious AXI R responses that leak
+  // through the arbiter/crossbar during non-waiting states.
+  val fillFinish = RegNext(io.memSide.r.bits.last && io.memSide.r.fire && state === waiting)
+  val willShift  = nextState === flowing && !fillFinish
   req.ready := willShift
   val hitRespV  = RegNext(tagHit)
   val hitRespD  = RegNext(wordSel)
@@ -90,7 +95,10 @@ class iCache(conf: iCacheConf) extends Module {
   val reqV1 = req.valid
 
   val reqA2 = RegEnable(reqA1, willShift)
-  val reqV2 = RegEnable(reqV1, willShift)
+  // Clear reqV2 when pipeline stalls to prevent stale tag comparison
+  // from triggering a spurious miss after fill completion.
+  val reqV2 = RegInit(false.B)
+  when(willShift) { reqV2 := reqV1 }.otherwise { reqV2 := false.B }
 
   // Cycle 2 (comp)
   // Parallel 1
@@ -108,7 +116,6 @@ class iCache(conf: iCacheConf) extends Module {
   wordSel := lineSplit(ithOf(reqA2))
 
   // Cycle 3 (resp)
-  val fillFinish = RegNext(io.memSide.r.bits.last && io.memSide.r.fire)
   nextState := MuxLookup(state, waiting)(
     Seq(
       flowing -> Mux(tagHit || !reqV2, flowing, memreq),

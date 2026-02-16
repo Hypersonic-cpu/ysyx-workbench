@@ -193,13 +193,13 @@ trace::DiffTester* pdiff = nullptr;
 
 void
 notify_recvd(uint32_t pc, uint32_t inst) {
-  std::cerr << std::format(ANSI_YELLOW "IFetch Recv @ pc {:8x}" ANSI_NONE, pc) << std::endl;
+  // std::cerr << std::format(ANSI_YELLOW "IFetch Recv @ pc {:8x}" ANSI_NONE, pc) << std::endl;
   ppmu->notifyIFRecvd(pc);
 }
 
 void
 notify_fetch(uint32_t pc) {
-  std::cerr << std::format(ANSI_YELLOW "IFetch Req @ pc {:8x}" ANSI_NONE, pc) << std::endl;
+  // std::cerr << std::format(ANSI_YELLOW "IFetch Req @ pc {:8x}" ANSI_NONE, pc) << std::endl;
   ppmu->notifyIFFetch(pc);
 }
 
