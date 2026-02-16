@@ -76,7 +76,7 @@ class iCache(conf: iCacheConf) extends Module {
   def idxOf(x: UInt) = x(conf.idxBitHi, conf.idxBitLo)
   def tagOf(x: UInt) = x(conf.tagBitHi, conf.tagBitLo)
   def offOf(x: UInt) = x(conf.offBits - 1, 0)
-  def blkOf(x: UInt) = x(conf.tagBitHi, conf.offBits)
+  def blkOf(x: UInt) = x(conf.tagBitHi, conf.offBits) ## 0.U(conf.offBits.W)
 
   // Cycle 1 (recv)
   val reqA1 = req.bits.addr
@@ -123,8 +123,12 @@ class iCache(conf: iCacheConf) extends Module {
       )
 
     }
-  }.elsewhen(state === flowing) {
+  }.elsewhen(state === memreq && io.memSide.ar.fire) {
     fillPtr := 0.U
+  }
+
+  when (state === flowing && nextState === memreq) {
+    printf(cf"iCache Miss : addr ${reqA2}%x\n")
   }
 
   // MemSide Req
