@@ -11,6 +11,7 @@ import rvproc.Tp
 import rvproc.ISA
 import rvproc.axi4.AXI.RespStatus.OKAY
 import rvproc.axi4.AXI.BurstOpts._
+import rvproc.GlbCtrl.debug
 
 case class iCacheConf(
   addrBits:  Int = 32,
@@ -84,6 +85,13 @@ class iCache(conf: iCacheConf) extends Module {
 
   val reqA2 = RegEnable(reqA1, willShift)
   val reqV2 = RegEnable(reqV1, willShift)
+
+  if (debug) {
+    dontTouch(reqA1)
+    dontTouch(reqA2)
+    dontTouch(reqV1)
+    dontTouch(reqV2)
+  }
 
   // Cycle 2 (comp)
   // Parallel 1
