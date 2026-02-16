@@ -83,6 +83,7 @@ class iCache(conf: iCacheConf) extends Module {
   def offOf(x: UInt) = x(conf.offBits - 1, 0)
   def blkOf(x: UInt) =
     x(conf.tagBitHi, conf.offBits) ## 0.U(conf.offBits.W)
+  def ithOf(x: UInt) = x(conf.offBits - 1, ISA.WordShift)
 
   // Cycle 1 (recv)
   val reqA1 = req.bits.addr
@@ -102,7 +103,7 @@ class iCache(conf: iCacheConf) extends Module {
   val lineRead  = dataArr.read(reqA1, willShift && reqV1)
   val lineSplit =
     VecInit.tabulate(conf.lineBytes)(i => lineRead(i * 4 + 3, i * 4))
-  wordSel := lineSplit(offOf(reqA2) >> ISA.WordShift.U)
+  wordSel := lineSplit(ithOf(reqA2))
 
   // Cycle 3 (resp)
   val fillFinish = RegNext(io.memSide.r.bits.last && io.memSide.r.valid)
@@ -164,7 +165,7 @@ class iCache(conf: iCacheConf) extends Module {
     tagArr.write(idxOf(reqA2), tagOf(reqA2))
     validArr(idxOf(reqA2)) := true.B
     missServe              := true.B
-    missData               := fillBuf(offOf(reqA2) >> ISA.WordShift.U)
+    missData               := fillBuf(ithOf(reqA2))
     assert(!resp.fire, "Transaction (resp) during fill\n")
   }.elsewhen(resp.fire) {
     missServe := false.B
