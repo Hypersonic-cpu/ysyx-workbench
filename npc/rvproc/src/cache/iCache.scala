@@ -144,7 +144,7 @@ class iCache(conf: iCacheConf) extends Module {
 
   when(io.cpuSide.r.fire) {
     printf(
-      cf"iCache Hit : addr ${reqA2}%x data ${io.cpuSide.r.bits.data}%x\n"
+      cf"iCache Hit : addr ${RegNext(reqA2)}%x data ${io.cpuSide.r.bits.data}%x\n"
     )
   }
 
