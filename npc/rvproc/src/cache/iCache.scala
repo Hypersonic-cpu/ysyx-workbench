@@ -181,6 +181,7 @@ class iCache(conf: iCacheConf) extends Module {
     dontTouch(tagRead)
     dontTouch(wordSel)
     dontTouch(lineSplit)
+    dontTouch(lineRead)
   }
 
 }
