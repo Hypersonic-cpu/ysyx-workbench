@@ -1,9 +1,9 @@
 #pragma once
 
-#include "probe.hh"
+#include "nlohmann/json_fwd.hpp"
+#include <nlohmann/json.hpp>
 
 #include <algorithm>
-#include <capstone/capstone.h>
 #include <cassert>
 #include <cstddef>
 #include <cstdio>
@@ -19,6 +19,11 @@
 #include <sys/stat.h>
 #include <unordered_map>
 #include <vector>
+
+template<typename Derived, typename Base>
+concept IsDerived = std::derived_from<Derived, Base>;
+
+using json = nlohmann::ordered_json;
 
 class StatsBase {
 protected:

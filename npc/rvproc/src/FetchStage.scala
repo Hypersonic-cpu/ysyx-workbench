@@ -17,7 +17,7 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
     val fromEx = Flipped(Decoupled(new ExecuteBackward))
     val fromLs = Input(Bool())              // store buffer empty
     // val fromWb = Flipped(Decoupled(new InstCommit))
-    val iMem   = new AXIBus
+    val iMem   = new CPUBus
   })
 
   val idle :: serve :: Nil = Enum(2)
@@ -73,25 +73,16 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
 
   iMem.ar.bits.addr  := pc
   iMem.ar.bits.size  := 0x2.U  // log2(4)
-  iMem.ar.bits.len   := 0.U
-  iMem.ar.bits.burst := INCR
-  iMem.ar.bits.id    := 0.U
   iMem.ar.valid      := !reset.asBool && !bufFull && !fenceState && !flushWire
   iMem.r.ready       := true.B // io.out.ready
   iMem.aw.valid      := false.B
   iMem.aw.bits       := DontCare
-  iMem.w.valid       := false.B
-  iMem.w.bits        := DontCare
   iMem.b.ready       := false.B
   assert(~(iMem.b.valid), "Read only port")
-  assert(
-    iMem.r.valid Implies (iMem.r.bits.resp === OKAY),
-    "Inst fetch error"
-  )
-  assert(
-    iMem.r.valid Implies (iMem.r.bits.resp === OKAY),
-    cf"Inst Fetch Failed, rresp = ${iMem.r.bits.resp}"
-  )
+  // assert(
+  //   iMem.r.valid Implies (iMem.r.bits.resp === OKAY),
+  //   cf"Inst Fetch Failed, rresp = ${iMem.r.bits.resp}"
+  // )
 
   val brAbs = io.fromEx.valid && brex.brAbs
   val brRel = io.fromEx.valid && brex.brRel
