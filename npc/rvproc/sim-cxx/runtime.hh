@@ -1,4 +1,6 @@
 #pragma once
+#include "rtl_defs.hh"
+
 #include <cassert>
 #include <cstdint>
 #include <fstream>
@@ -10,7 +12,6 @@
 #include "ccdb.hh"
 #include "difftest.hh"
 #include "pmu.hh"
-#include "probe.hh"
 
 #if SOCMODE
 
@@ -29,24 +30,13 @@ extern "C" uint32_t vga_read(uint32_t addr);
 
 #else
 
-#include "cacheSim/CacheSimulator.hh"
+constexpr tint_t MemLatency{40U};
+constexpr tint_t MemBstLat{8U};
+extern "C" tint_t axi_read(addr_t, ureg_t*, uint16_t id, bool);
+extern "C" tint_t axi_write(addr_t, ureg_t, uint8_t, uint16_t id, bool);
 
-/* NOTE:
- * Called by hardware handler
- * rvCore xbar -> CLINT
- *             -> HW Handler <-> DPI-C
- */
-
-constexpr uint32_t MemLatency{30U};
-constexpr uint32_t MemBstLat{5U};
-extern "C" uint32_t axi_read(uint32_t araddr, uint32_t* prdata, uint16_t id);
-extern "C" uint32_t axi_write(uint32_t awaddr, uint32_t wdata,
-                              unsigned char wstrb, uint16_t id);
-extern "C" void axi_cache_flush(uint16_t id);
-
-uint32_t pmem_read(uint32_t araddr, uint32_t* prdata, bool bfirst);
-uint32_t pmem_write(uint32_t awaddr, uint32_t wdata, unsigned char wstrb,
-                    bool bfirst);
+extern "C" void pmem_read(addr_t, ureg_t*);
+extern "C" void pmem_write(addr_t, ureg_t, uint8_t);
 
 #endif
 
@@ -73,7 +63,6 @@ extern RuntimeBin* sdram;
 extern RuntimeBin* vmem;
 #else
 extern RuntimeBin* unifiedMem;
-extern cacheSim::CacheSimulator* iCache;
 #endif
 
 extern trace::GuestTracer* pccdb;

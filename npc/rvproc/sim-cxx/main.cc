@@ -10,8 +10,6 @@
 #include <memory>
 #include <ostream>
 #include <string>
-#include <unordered_map>
-#include <vector>
 #include <verilated.h>
 #include <verilated_fst_c.h>
 
@@ -21,7 +19,6 @@
 #else
 #include "VrvCore.h"
 #include "VrvCore___024root.h"
-#include "cacheSim/CacheSimulator.hh"
 #endif
 
 #include "ccdb.hh"
@@ -55,34 +52,19 @@ abort_handler() {
 
 void
 reset_all_stats() {
-  // std::cout << std::format("Before : \n iCache {:d}\n",
-  // iCache->stats().accesses); ppmu->dump_stats();
   if (ppmu)
     ppmu->reset_stats();
-  if (iCache)
-    iCache->reset_stats();
-  // std::cout << std::format("After: \n iCache {:d}\n",
-  // iCache->stats().accesses); ppmu->dump_stats();
 }
 
 void
 print_stats() {
   // pccdb->dump_stats(std::cerr);
   ppmu->dump_stats(std::cerr);
-  if (iCache) {
-    auto const stat = iCache->stats();
-    std::cerr << std::format(
-                   ">> iCache:\n"
-                   "   Hit {:d} Miss {:d} Total {:d} MissRate {:f}\n",
-                   stat.hits, stat.misses, stat.accesses, stat.missRate())
-              << std::endl;
-  }
 }
 
 inline json
 dump_stats() {
   json obj{};
-  obj["l1icache"] = json(iCache->stats_map());
   obj["pmu"] = ppmu->stats_json();
   obj["image"] = options::binary_img;
   return obj;
@@ -91,9 +73,6 @@ dump_stats() {
 inline json
 dump_config() {
   json conf{};
-  if (iCache) {
-    conf["l1icache"] = json(iCache->config_map());
-  }
   conf["sdram"] = json({{"latency", MemLatency}, {"burstlat", MemBstLat}});
   conf["image"] = options::binary_img;
   return conf;
@@ -176,12 +155,6 @@ main(int argc, char* argv[]) {
   auto uMem = std::make_unique<RuntimeBin>(
     options::binary_img, (4U << 20) / 4, 0x8000'0000LLU, "UnifiedMem");
   unifiedMem = uMem.get();
-
-  auto instCache = std::make_unique<cacheSim::CacheSimulator>(
-    /* size */ options::arch_config_val.at(options::ICacheSize),
-    /* lineSize */ options::arch_config_val.at(options::ICacheBlock),
-    /* assoc */ options::arch_config_val.at(options::ICacheAssoc));
-  iCache = instCache.get();
 #endif
 
   if (options::wave_enable) {
@@ -218,7 +191,7 @@ main(int argc, char* argv[]) {
   trace::GuestTracer ccdb(options::elf_file);
   pccdb = &ccdb;
 
-  const std::unique_ptr<trace::SoftPerfUnit> spmu{new trace::SoftPerfUnit};
+  auto const spmu = std::make_unique<trace::SoftPerfUnit>();
   ppmu = spmu.get();
 
   if (options::record_perf) {
@@ -234,7 +207,7 @@ main(int argc, char* argv[]) {
     confFile << std::setw(2) << dump_config() << std::endl;
     confFile.close();
   }
-  /* ^^^ CONFIG END ^^^ */
+  /** CONFIG END */
 
   const size_t MaxCyc{options::max_cycles};
   size_t currCyc{0U};

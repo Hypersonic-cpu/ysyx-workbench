@@ -99,6 +99,7 @@ object AXIPortPassing {
   }
 }
 
+// TODO: Split R-W channels
 class AXIArbiter(N: Int) extends Module {
   val io = IO(new Bundle {
     val hosts  = Vec(N, Flipped(new AXIBus))
@@ -351,6 +352,7 @@ class CpuRdResp extends Bundle {
 class CpuWrReq extends Bundle {
   val addr = Tp.AddrType()
   val data = Tp.RegType()
+  val size = AXI.SizeType()
   val strb = UInt((ISA.AddrBits / 8).W)
 }
 
