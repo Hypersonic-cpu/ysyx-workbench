@@ -139,7 +139,7 @@ pmem_write(addr_t awaddr, ureg_t wdata, uint8_t wstrb) {
 }
 
 tint_t
-axi_read(addr_t araddr, ureg_t* prdata, uint16_t id, bool outstanding) {
+axi_read(addr_t araddr, ureg_t* prdata, bool outstanding) {
   // std::cerr << std::hex;
   // std::cerr << "DPI-C axi read [" << id << "]@ " << araddr
   //           << " data = " << unifiedMem->readWord(araddr) << std::endl;
