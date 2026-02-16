@@ -156,9 +156,9 @@ axi_read(addr_t araddr, ureg_t* prdata, bool outstanding) {
   // *prdata = unifiedMem->readWord(araddr & ~3U);
   // return finish_time - curr_tick();
   pmem_read(araddr, prdata);
-  std::cerr << std::format("DPI-C AXI READ @{:x}[{:s}] Data {:08x} T@{:d}", araddr,
-                           outstanding ? "First" : "Burst", *prdata, curr_tick())
-            << std::endl;
+  // std::cerr << std::format("DPI-C AXI READ @{:x}[{:s}] Data {:08x} T@{:d}", araddr,
+  //                          outstanding ? "First" : "Burst", *prdata, curr_tick())
+  //           << std::endl;
   auto lat = outstanding ? MemLatency : MemBstLat;
   return lat;
 }
