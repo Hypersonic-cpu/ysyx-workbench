@@ -18,14 +18,14 @@ case class iCacheConf(
   dataBytes: Int = 1024,
   lineBytes: Int = 16,
   assoc: Int = 1) {
-  def numSets  = dataBytes / (lineBytes * assoc)
-  def idxBits  = log2Ceil(this.numSets)
-  def idxBitHi = this.offBits + this.idxBits - 1
-  def idxBitLo = this.offBits
-  def offBits  = log2Ceil(lineBytes)
-  def tagBits  = addrBits - this.idxBits - this.offBits
-  def tagBitHi = addrBits - 1
-  def tagBitLo = addrBits - tagBits
+  def numSets   = dataBytes / (lineBytes * assoc)
+  def idxBits   = log2Ceil(this.numSets)
+  def idxBitHi  = this.offBits + this.idxBits - 1
+  def idxBitLo  = this.offBits
+  def offBits   = log2Ceil(lineBytes)
+  def tagBits   = addrBits - this.idxBits - this.offBits
+  def tagBitHi  = addrBits - 1
+  def tagBitLo  = addrBits - tagBits
   def lineTrans = this.lineBytes / (this.addrBits / 8)
   def lineTBits = log2Ceil(this.lineTrans)
 }
@@ -41,7 +41,7 @@ class iCache(conf: iCacheConf) extends Module {
 
   println(
     s"--> iCache Addr : [${conf.tagBitHi}: tag :${conf.tagBitLo}]"
-    +s"[${conf.idxBitHi}: idx :${conf.idxBitLo}][${conf.offBits-1}: off :0]"
+      + s"[${conf.idxBitHi}: idx :${conf.idxBitLo}][${conf.offBits - 1}: off :0]"
   )
 
   val validArr = Reg(Vec(conf.numSets, Bool())) // WARN: DELAY
@@ -77,7 +77,8 @@ class iCache(conf: iCacheConf) extends Module {
   def idxOf(x: UInt) = x(conf.idxBitHi, conf.idxBitLo)
   def tagOf(x: UInt) = x(conf.tagBitHi, conf.tagBitLo)
   def offOf(x: UInt) = x(conf.offBits - 1, 0)
-  def blkOf(x: UInt) = x(conf.tagBitHi, conf.offBits) ## 0.U(conf.offBits.W)
+  def blkOf(x: UInt) =
+    x(conf.tagBitHi, conf.offBits) ## 0.U(conf.offBits.W)
 
   // Cycle 1 (recv)
   val reqA1 = req.bits.addr
@@ -138,7 +139,7 @@ class iCache(conf: iCacheConf) extends Module {
     fillPtr := 0.U
   }
 
-  when (state === flowing && nextState === memreq) {
+  when(state === flowing && nextState === memreq) {
     printf(cf"iCache Miss : addr ${reqA2}%x\n")
   }
 
@@ -146,7 +147,7 @@ class iCache(conf: iCacheConf) extends Module {
   io.memSide.r.ready       := true.B
   io.memSide.ar.valid      := state === memreq
   io.memSide.ar.bits.addr  := blkOf(reqA2)
-  io.memSide.ar.bits.len   := conf.lineTrans.U
+  io.memSide.ar.bits.len   := (conf.lineTrans - 1).U
   io.memSide.ar.bits.burst := INCR
   io.memSide.ar.bits.id    := 0.U   // iCache
   io.memSide.ar.bits.size  := 0x2.U // log2(4)
