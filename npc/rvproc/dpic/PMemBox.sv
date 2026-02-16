@@ -154,7 +154,7 @@ module PMemReader (
   end
 
   req_serial :
-  assert property (@(posedge clock) (io_master_arvalid) |->
+  assert property (@(posedge clock) (io_master_arvalid && io_master_arready) |->
     (state == IDLE || (state == HOLD && io_master_rready)));
   no_count_at_idle :
   assert property (@(posedge clock) (delay_remain != 0) |-> (state == SERVE));
