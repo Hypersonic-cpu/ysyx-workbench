@@ -29,7 +29,7 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
   val stBufEmpty = io.fromLs
   val fenceI     = io.fromId.valid && io.fromId.bits
   val fenceState = RegInit(false.B)
-  fenceState := Mux(fenceState, io.fromLs, fenceI)
+  fenceState := Mux(fenceState, !io.fromLs, fenceI)
   val flushWire =
     (io.fromEx.valid && brex.take) || fenceI
 
@@ -95,7 +95,7 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
     // brTake in EXU should override fence from IDU
     val brTarget = MuxCase(
       // nextPC,
-      lastPC, // fence.i
+      lastPC + 4.U, // fence.i: resume from instruction after fence.i
       Seq(
         brAbs -> brex.brVal,
         brRel -> (brex.brLPC + brex.brDel)
