@@ -59,9 +59,13 @@ class iCache(conf: iCacheConf) extends Module {
   val wordSel   = Wire(Tp.RegType())
   val fillBuf   = Reg(Vec(conf.lineBytes * 8 / ISA.RegBits, Tp.RegType()))
   val willShift = nextState === flowing
-  req.ready      := willShift
-  resp.valid     := RegNext(tagHit)
-  resp.bits.data := RegNext(wordSel)
+  req.ready := willShift
+  val hitRespV  = RegNext(tagHit)
+  val hitRespD  = RegNext(wordSel)
+  val missServe = RegInit(false.B)
+  val missData  = RegInit(0.U(32.W))
+  resp.valid     := missServe || hitRespV
+  resp.bits.data := Mux(missServe, missData, hitRespD)
 
   // Should not issue this request to cache if LSU has no position
   assert(
@@ -100,15 +104,6 @@ class iCache(conf: iCacheConf) extends Module {
     VecInit.tabulate(conf.lineBytes)(i => lineRead(i * 4 + 3, i * 4))
   wordSel := lineSplit(offOf(reqA2))
 
-  if (debug) {
-    dontTouch(reqA1)
-    dontTouch(reqA2)
-    dontTouch(reqV1)
-    dontTouch(reqV2)
-    dontTouch(tagRead)
-    dontTouch(wordSel)
-  }
-
   // Cycle 3 (resp)
   val fillFinish = RegNext(io.memSide.r.bits.last && io.memSide.r.valid)
   nextState := MuxLookup(state, waiting)(
@@ -144,8 +139,10 @@ class iCache(conf: iCacheConf) extends Module {
     printf(cf"iCache Miss : addr ${reqA2}%x\n")
   }
 
-  when (io.cpuSide.r.fire) {
-    printf(cf"iCache Hit : addr ${reqA2}%x data ${io.cpuSide.r.bits.data}%x")
+  when(io.cpuSide.r.fire) {
+    printf(
+      cf"iCache Hit : addr ${reqA2}%x data ${io.cpuSide.r.bits.data}%x"
+    )
   }
 
   // MemSide Req
@@ -166,5 +163,21 @@ class iCache(conf: iCacheConf) extends Module {
     dataArr.write(idxOf(reqA2), catData)
     tagArr.write(idxOf(reqA2), tagOf(reqA2))
     validArr(idxOf(reqA2)) := true.B
+    missServe              := true.B
+    missData               := catData(offOf(reqA2))
+    assert(!resp.fire, "Transaction (resp) during fill\n")
+  }.elsewhen(resp.fire) {
+    missServe := false.B
   }
+
+  if (debug) {
+    dontTouch(reqA1)
+    dontTouch(reqA2)
+    dontTouch(reqV1)
+    dontTouch(reqV2)
+    dontTouch(tagRead)
+    dontTouch(wordSel)
+    dontTouch(lineSplit)
+  }
+
 }
