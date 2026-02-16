@@ -141,7 +141,7 @@ class iCache(conf: iCacheConf) extends Module {
 
   when(io.cpuSide.r.fire) {
     printf(
-      cf"iCache Hit : addr ${reqA2}%x data ${io.cpuSide.r.bits.data}%x"
+      cf"iCache Hit : addr ${reqA2}%x data ${io.cpuSide.r.bits.data}%x\n"
     )
   }
 
@@ -164,7 +164,7 @@ class iCache(conf: iCacheConf) extends Module {
     tagArr.write(idxOf(reqA2), tagOf(reqA2))
     validArr(idxOf(reqA2)) := true.B
     missServe              := true.B
-    missData               := catData(offOf(reqA2))
+    missData               := fillBuf(offOf(reqA2))
     assert(!resp.fire, "Transaction (resp) during fill\n")
   }.elsewhen(resp.fire) {
     missServe := false.B
