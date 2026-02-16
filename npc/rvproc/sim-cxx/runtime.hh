@@ -34,8 +34,8 @@ extern "C" uint32_t vga_read(uint32_t addr);
 
 constexpr tint_t MemLatency{40U};
 constexpr tint_t MemBstLat{8U};
-extern "C" tint_t axi_read(addr_t, ureg_t*, uint16_t id, bool);
-extern "C" tint_t axi_write(addr_t, ureg_t, uint8_t, uint16_t id, bool);
+extern "C" tint_t axi_read(addr_t, ureg_t*, bool);
+extern "C" tint_t axi_write(addr_t, ureg_t, uint8_t, bool);
 
 extern "C" void pmem_read(addr_t, ureg_t*);
 extern "C" void pmem_write(addr_t, ureg_t, uint8_t);

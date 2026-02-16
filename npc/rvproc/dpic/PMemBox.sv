@@ -92,7 +92,7 @@ module PMemReader (
   import "DPI-C" function int unsigned axi_read(
     input int unsigned raddr,
     output int unsigned rdata,
-    input shortint unsigned id,
+    // input shortint unsigned id,
     input byte unsigned outstanding
   );
 
@@ -140,7 +140,7 @@ module PMemReader (
         assert(io_master_arsize == 3'b010);  // 4-byte per beat
       end else if (state == RECV) begin
         delay_remain <=
-            axi_read(raddr_latch, rdata, 16'(rid_latch), 8'(burst_remain == burst_total));
+            axi_read(raddr_latch, rdata, 8'(burst_remain == burst_total));
       end else if (state == SERVE) begin
         delay_remain <= delay_remain - 1;
       end else if (state === HOLD) begin
@@ -191,7 +191,7 @@ module PMemWriter (
     input int unsigned waddr,
     input int unsigned wdata,
     input byte unsigned wmask,
-    input shortint unsigned id,
+    // input shortint unsigned id,
     input byte unsigned outstanding
   );
 
@@ -234,7 +234,7 @@ module PMemWriter (
         bid_latch   <= io_master_awid;
         assert (io_master_awlen == 0);  // No burst write
       end else if (state == RECV) begin
-        delay_remain <= axi_write(waddr_latch, wdata_latch, 8'(wstrb_latch), 16'(bid_latch), 8'(1));
+        delay_remain <= axi_write(waddr_latch, wdata_latch, 8'(wstrb_latch), 8'(1));
       end else begin
         if (state == SERVE) delay_remain <= delay_remain - 1;
       end
