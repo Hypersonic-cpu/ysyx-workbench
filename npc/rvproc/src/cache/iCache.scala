@@ -187,6 +187,11 @@ class iCache(conf: iCacheConf) extends Module {
     dontTouch(wordSel)
     dontTouch(lineSplit)
     dontTouch(lineRead)
+    when(resp.valid || fillFinish || state =/= flowing) {
+      printf(cf"[iC] s=$state ns=$nextState ws=$willShift ff=$fillFinish " +
+        cf"rV2=$reqV2 rA2=${reqA2}%x tH=$tagHit hR=$hitRespV mS=$missServe " +
+        cf"rv=${resp.valid} rf=${resp.fire}\n")
+    }
   }
 
 }
