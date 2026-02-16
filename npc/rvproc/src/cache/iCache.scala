@@ -60,11 +60,9 @@ class iCache(conf: iCacheConf) extends Module {
   val fillBuf    = Reg(Vec(conf.lineBytes * 8 / ISA.RegBits, Tp.RegType()))
   // Avoid SyncReadMem read-write conflict: don't accept new requests on
   // the cycle the fill completes (write and read would hit the same index).
-  val ffSrc      = io.memSide.r.bits.last && io.memSide.r.fire
-  val fillFinish = RegNext(ffSrc)
-  when(ffSrc && state =/= waiting) {
-    printf(cf"[iC BUG] ffSrc while s=$state rv=${io.memSide.r.valid} rl=${io.memSide.r.bits.last}\n")
-  }
+  // Gate with state===waiting to ignore spurious AXI R responses that leak
+  // through the arbiter/crossbar during non-waiting states.
+  val fillFinish = RegNext(io.memSide.r.bits.last && io.memSide.r.fire && state === waiting)
   val willShift  = nextState === flowing && !fillFinish
   req.ready := willShift
   val hitRespV  = RegNext(tagHit)
@@ -191,11 +189,6 @@ class iCache(conf: iCacheConf) extends Module {
     dontTouch(wordSel)
     dontTouch(lineSplit)
     dontTouch(lineRead)
-    when(resp.valid || fillFinish || state =/= flowing) {
-      printf(cf"[iC] s=$state ns=$nextState ws=$willShift ff=$fillFinish " +
-        cf"rV2=$reqV2 rA2=${reqA2}%x tH=$tagHit hR=$hitRespV mS=$missServe " +
-        cf"rv=${resp.valid} rf=${resp.fire}\n")
-    }
   }
 
 }
