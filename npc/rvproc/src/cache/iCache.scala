@@ -102,7 +102,9 @@ class iCache(conf: iCacheConf) extends Module {
   // Parallel 2
   val lineRead  = dataArr.read(reqA1, willShift && reqV1)
   val lineSplit =
-    VecInit.tabulate(conf.lineBytes)(i => lineRead(i * 4 + 3, i * 4))
+    VecInit.tabulate(conf.lineBytes)(i =>
+      lineRead((i + 1) * ISA.RegBits - 1, i * ISA.RegBits)
+    )
   wordSel := lineSplit(ithOf(reqA2))
 
   // Cycle 3 (resp)
