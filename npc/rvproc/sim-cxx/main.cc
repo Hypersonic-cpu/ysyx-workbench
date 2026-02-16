@@ -226,7 +226,7 @@ main(int argc, char* argv[]) {
   diff->copy();
 
   /** SIMULATION LOOP */
-  while (g_tick < MaxCyc) {
+  while (true) {
     if (options::runtime_dump_opt.cycle_no)
       std::cerr << std::format("\r== @posedge of Cycle #{} ==", curr_tick())
                 << std::endl;
