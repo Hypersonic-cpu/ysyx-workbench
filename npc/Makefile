@@ -84,7 +84,7 @@ endif
 
 # FILELIST := $(shell find $(abspath $(BUILD_SV_DIR)/filelist.f))
 CSRCS += $(shell find $(abspath $(SIM_CXX_DIR)) -name "*.cc" -or -name "*.cpp")
-DPIC_SRCS = $(shell find $(abspath $(SRC_DPIC_DIR)) -name "*.cc" -or -name "*.cpp")
+# DPIC_SRCS = $(shell find $(abspath $(SRC_DPIC_DIR)) -name "*.cc" -or -name "*.cpp")
 
 ifeq ($(NVBENA),0)
 NVB_ARCHIVE=
@@ -96,7 +96,7 @@ NVB_ARCHIVE=$(NVBOARD_ARCHIVE)
 CSRCS += $(SRC_AUTO_BIND)
 endif
 
-$(SIM_BIN): $(CSRCS) $(DPIC_SRCS) $(NVB_ARCHIVE)
+$(SIM_BIN): $(CSRCS) $(NVB_ARCHIVE)
 	@rm -rf $(BUILD_OBJ_DIR)
 	$(VERILATOR) $(VERILATOR_CFLAGS) \
 		$(VSRCS) \

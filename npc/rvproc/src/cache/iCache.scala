@@ -11,20 +11,23 @@ import rvproc.Tp
 import rvproc.ISA
 import rvproc.axi4.AXI.RespStatus.OKAY
 import rvproc.axi4.AXI.BurstOpts._
+import rvproc.GlbCtrl.debug
 
 case class iCacheConf(
   addrBits:  Int = 32,
   dataBytes: Int = 1024,
   lineBytes: Int = 16,
   assoc: Int = 1) {
-  def numSets  = dataBytes / (lineBytes * assoc)
-  def idxBits  = log2Ceil(this.numSets)
-  def idxBitHi = this.offBits + this.idxBits - 1
-  def idxBitLo = this.offBits
-  def offBits  = log2Ceil(lineBytes)
-  def tagBits  = addrBits - this.idxBits - this.offBits
-  def tagBitHi = addrBits - 1
-  def tagBitLo = addrBits - tagBits
+  def numSets   = dataBytes / (lineBytes * assoc)
+  def idxBits   = log2Ceil(this.numSets)
+  def idxBitHi  = this.offBits + this.idxBits - 1
+  def idxBitLo  = this.offBits
+  def offBits   = log2Ceil(lineBytes)
+  def tagBits   = addrBits - this.idxBits - this.offBits
+  def tagBitHi  = addrBits - 1
+  def tagBitLo  = addrBits - tagBits
+  def lineTrans = this.lineBytes / (this.addrBits / 8)
+  def lineTBits = log2Ceil(this.lineTrans)
 }
 
 // Readonly
@@ -37,10 +40,8 @@ class iCache(conf: iCacheConf) extends Module {
   })
 
   println(
-    s"--> Component iCache : tag[${conf.tagBitHi}:${conf.tagBitLo}] |||"
-  )
-  println(
-    s"--> Component iCache : idx[${conf.idxBitHi}:${conf.idxBitLo}] |||"
+    s"--> iCache Addr : [${conf.tagBitHi}: tag :${conf.tagBitLo}]"
+      + s"[${conf.idxBitHi}: idx :${conf.idxBitLo}][${conf.offBits - 1}: off :0]"
   )
 
   val validArr = Reg(Vec(conf.numSets, Bool())) // WARN: DELAY
@@ -58,9 +59,13 @@ class iCache(conf: iCacheConf) extends Module {
   val wordSel   = Wire(Tp.RegType())
   val fillBuf   = Reg(Vec(conf.lineBytes * 8 / ISA.RegBits, Tp.RegType()))
   val willShift = nextState === flowing
-  req.ready      := willShift
-  resp.valid     := RegNext(tagHit)
-  resp.bits.data := RegNext(wordSel)
+  req.ready := willShift
+  val hitRespV  = RegNext(tagHit)
+  val hitRespD  = RegNext(wordSel)
+  val missServe = RegInit(false.B)
+  val missData  = RegInit(0.U(32.W))
+  resp.valid     := missServe || hitRespV
+  resp.bits.data := Mux(missServe, missData, hitRespD)
 
   // Should not issue this request to cache if LSU has no position
   assert(
@@ -76,7 +81,9 @@ class iCache(conf: iCacheConf) extends Module {
   def idxOf(x: UInt) = x(conf.idxBitHi, conf.idxBitLo)
   def tagOf(x: UInt) = x(conf.tagBitHi, conf.tagBitLo)
   def offOf(x: UInt) = x(conf.offBits - 1, 0)
-  def blkOf(x: UInt) = x(conf.tagBitHi, conf.offBits)
+  def blkOf(x: UInt) =
+    x(conf.tagBitHi, conf.offBits) ## 0.U(conf.offBits.W)
+  def ithOf(x: UInt) = x(conf.offBits - 1, ISA.WordShift)
 
   // Cycle 1 (recv)
   val reqA1 = req.bits.addr
@@ -89,16 +96,19 @@ class iCache(conf: iCacheConf) extends Module {
   // Parallel 1
   val tagRead  = tagArr.read(idxOf(reqA1), willShift && reqV1)
   val tagValid = validArr(idxOf(reqA2))
-  tagHit := tagRead === tagOf(reqA2) && reqV2
+  tagHit := tagRead === tagOf(reqA2) && tagValid && reqV2
 
+  // printf(cf"iCache Tag Read = ${tagRead}%x\n")
   // Parallel 2
-  val lineRead  = dataArr.read(reqA1, willShift && reqV1)
+  val lineRead  = dataArr.read(idxOf(reqA1), willShift && reqV1)
   val lineSplit =
-    VecInit.tabulate(conf.lineBytes)(i => lineRead(i * 4 + 3, i * 4))
-  wordSel := lineSplit(offOf(reqA2))
+    VecInit.tabulate(conf.lineTrans)(i =>
+      lineRead((i + 1) * ISA.RegBits - 1, i * ISA.RegBits)
+    )
+  wordSel := lineSplit(ithOf(reqA2))
 
   // Cycle 3 (resp)
-  val fillFinish = RegNext(io.memSide.r.bits.last)
+  val fillFinish = RegNext(io.memSide.r.bits.last && io.memSide.r.fire)
   nextState := MuxLookup(state, waiting)(
     Seq(
       flowing -> Mux(tagHit || !reqV2, flowing, memreq),
@@ -108,7 +118,7 @@ class iCache(conf: iCacheConf) extends Module {
   )
   state     := nextState
 
-  val fillPtr = RegInit(0.U(conf.offBits.W))
+  val fillPtr = RegInit(0.U(conf.lineTBits.W))
   when(state === waiting && io.memSide.r.valid) {
     fillBuf(fillPtr) := io.memSide.r.bits.data
     fillPtr          := fillPtr + 1.U
@@ -117,21 +127,32 @@ class iCache(conf: iCacheConf) extends Module {
       "Memory error during cache fill"
     )
     when(io.memSide.r.bits.last) {
+      val goldenPtr = (conf.lineTrans - 1).U
       assert(
-        fillPtr === (conf.lineBytes - 1).U,
-        cf"Only got ${fillPtr + 1.U} transactions during fill"
+        fillPtr === goldenPtr,
+        cf"Got ${fillPtr}+1 transactions during fill, expect ${goldenPtr}+1\n"
       )
 
     }
-  }.elsewhen(state === flowing) {
+  }.elsewhen(state === memreq && io.memSide.ar.fire) {
     fillPtr := 0.U
+  }
+
+  when(state === flowing && nextState === memreq) {
+    printf(cf"iCache Miss : addr ${reqA2}%x\n")
+  }
+
+  when(io.cpuSide.r.fire) {
+    printf(
+      cf"iCache Hit : addr ${RegNext(reqA2)}%x data ${io.cpuSide.r.bits.data}%x\n"
+    )
   }
 
   // MemSide Req
   io.memSide.r.ready       := true.B
   io.memSide.ar.valid      := state === memreq
   io.memSide.ar.bits.addr  := blkOf(reqA2)
-  io.memSide.ar.bits.len   := (conf.lineBytes / (conf.addrBits / 8)).U
+  io.memSide.ar.bits.len   := (conf.lineTrans - 1).U
   io.memSide.ar.bits.burst := INCR
   io.memSide.ar.bits.id    := 0.U   // iCache
   io.memSide.ar.bits.size  := 0x2.U // log2(4)
@@ -140,9 +161,27 @@ class iCache(conf: iCacheConf) extends Module {
   io.memSide.aw            := DontCare
   io.memSide.b             := DontCare
 
-  val catData = VecInit(fillBuf.reverse).asUInt
+  val catData = fillBuf.asUInt
   when(fillFinish) {
     dataArr.write(idxOf(reqA2), catData)
     tagArr.write(idxOf(reqA2), tagOf(reqA2))
+    validArr(idxOf(reqA2)) := true.B
+    missServe              := true.B
+    missData               := fillBuf(ithOf(reqA2))
+    assert(!resp.fire, "Transaction (resp) during fill\n")
+  }.elsewhen(resp.fire) {
+    missServe := false.B
   }
+
+  if (debug) {
+    dontTouch(reqA1)
+    dontTouch(reqA2)
+    dontTouch(reqV1)
+    dontTouch(reqV2)
+    dontTouch(tagRead)
+    dontTouch(wordSel)
+    dontTouch(lineSplit)
+    dontTouch(lineRead)
+  }
+
 }

@@ -10,10 +10,10 @@ object PATH {
 }
 
 object GlbCtrl {
-  val debug = false
-  val sta   = true
-  // val debug = true
-  // val sta   = false
+  // val debug = false
+  // val sta   = true
+  val debug = true
+  val sta   = false
 }
 
 object ISA {
@@ -23,6 +23,7 @@ object ISA {
   val RegIdxBits = 4
   val CsrIdxBits = 12
   val AddrBits   = 32 // Also bus bits
+  val WordShift  = 2
 }
 
 object Tp {
