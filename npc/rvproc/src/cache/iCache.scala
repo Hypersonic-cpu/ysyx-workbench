@@ -44,7 +44,7 @@ class iCache(conf: iCacheConf) extends Module {
       + s"[${conf.idxBitHi}: idx :${conf.idxBitLo}][${conf.offBits - 1}: off :0]"
   )
 
-  val validArr = Reg(Vec(conf.numSets, Bool())) // WARN: DELAY
+  val validArr = RegInit(VecInit(Seq.fill(conf.numSets)(false.B)))
   val tagArr   = SyncReadMem(conf.numSets, UInt(conf.tagBits.W))
   val dataArr  = SyncReadMem(conf.numSets, UInt((conf.lineBytes * 8).W))
 
