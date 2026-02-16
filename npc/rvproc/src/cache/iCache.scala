@@ -109,7 +109,7 @@ class iCache(conf: iCacheConf) extends Module {
   }
 
   // Cycle 3 (resp)
-  val fillFinish = RegNext(io.memSide.r.bits.last)
+  val fillFinish = RegNext(io.memSide.r.bits.last && io.memSide.r.valid)
   nextState := MuxLookup(state, waiting)(
     Seq(
       flowing -> Mux(tagHit || !reqV2, flowing, memreq),
