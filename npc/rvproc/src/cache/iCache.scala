@@ -90,10 +90,10 @@ class iCache(conf: iCacheConf) extends Module {
   // Parallel 1
   val tagRead  = tagArr.read(idxOf(reqA1), willShift && reqV1)
   val tagValid = validArr(idxOf(reqA2))
-  tagHit := tagRead === tagOf(reqA2) && reqV2
+  tagHit := tagRead === tagOf(reqA2) && tagValid && reqV2
 
-  printf(cf"iCache Tag Read = ${tagRead}%x\n")
-
+  // printf(cf"iCache Tag Read = ${tagRead}%x\n")
+  //
   // Parallel 2
   val lineRead  = dataArr.read(reqA1, willShift && reqV1)
   val lineSplit =
