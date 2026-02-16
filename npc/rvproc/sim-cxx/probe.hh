@@ -1,8 +1,7 @@
 #pragma once
+#include "rtl_defs.hh"
 
 // clang-format off
-#include "nlohmann/json.hpp"
-#include "nlohmann/json_fwd.hpp"
 #include <array>
 #include <cstdint>
 #include <iomanip>
@@ -18,78 +17,7 @@
 #else
 #include "VrvCore.h"
 #include "VrvCore___024root.h"
-constexpr uint32_t ResetVector{0x8000'0000U};
 #endif
-
-#define ANSI_NONE "\033[0m"
-#define ANSI_RED "\033[31m"
-#define ANSI_GREEN "\033[32m"
-#define ANSI_YELLOW "\033[33m"
-#define ANSI_B_RED "\033[1;31m"
-#define ANSI_B_GREEN "\033[1;32m"
-
-using json = nlohmann::ordered_json;
-
-using addr_t = uint32_t;
-using ureg_t = uint32_t;
-using handler_t = void (*)();
-extern handler_t abortHandler;
-extern handler_t resetAllStats;
-extern handler_t dumpAllStats;
-
-template<typename Derived, typename Base>
-concept IsDerived = std::derived_from<Derived, Base>;
-
-template <typename... Args>
-inline void
-v_assert(bool cond, const Args&... args) {
-  if (!cond) [[unlikely]] {
-    std::cerr << ANSI_RED "[ASSERT FAILED] " << __FILE__ << ":" << __LINE__
-              << " " ANSI_NONE << std::hex;
-    ((std::cerr << args << " "), ...);
-    std::cerr << std::endl;
-    // vl_fatal(__FILE__, __LINE__, "v_assert", "FAIL");
-    // throw std::runtime_error("Assertion failed");
-    abortHandler();
-  }
-}
-
-template <typename... Args>
-inline void
-v_warn(bool cond, const Args&... args) {
-  if (!cond) {
-    std::cerr << ANSI_YELLOW "[WARN COND] " << __FILE__ << ":" << __LINE__
-              << " " ANSI_NONE << std::hex;
-    ((std::cerr << args << " "), ...);
-    std::cerr << std::endl;
-  }
-}
-
-namespace util {
-
-inline uint32_t
-bmask(unsigned hi, unsigned lo) {
-  return (~0U >> (31 - hi)) << lo;
-}
-
-inline uint32_t
-bits(uint32_t num, unsigned hi, unsigned lo) {
-  return (num >> lo) & bmask(hi - lo, 0);
-}
-
-inline uint32_t
-sext(uint32_t num, unsigned bitnum) {
-  const unsigned shift = 32 - bitnum;
-  return static_cast<uint32_t>(static_cast<int32_t>(num << shift) >> shift);
-}
-
-inline std::ostream&
-sout32(std::ostream& os, char fill = '0', std::string prefix = "0x") {
-  std::ios::fmtflags original_flags = os.flags();
-  os << prefix << std::setfill(fill) << std::setw(8) << std::hex;
-  return os;
-}
-} // namespace util
 
 namespace trace {
 class InstEnt {
@@ -358,6 +286,3 @@ read_double_csr(CsrSel hi, CsrSel lo) noexcept {
 // }
 
 } // namespace trace
-
-__attribute_noinline__
-size_t curr_tick() noexcept;

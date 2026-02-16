@@ -1,7 +1,7 @@
 #pragma once
 
 #include "probe.hh"
-#include "stats.hh"
+#include "stats_template/stats.hpp"
 
 #include <format>
 #include <iostream>

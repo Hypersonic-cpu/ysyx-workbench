@@ -1,8 +1,9 @@
+#include "runtime.hh"
 #include "difftest.hh"
 #include "options.hh"
 #include "pmu.hh"
 #include "probe.hh"
-#include "runtime.hh"
+#include "rtl_defs.hh"
 #include <cassert>
 #include <cstdint>
 #include <future>
@@ -85,77 +86,72 @@ vga_read(uint32_t addr) {
 
 #else
 
-RuntimeBin* unifiedMem = nullptr;
-cacheSim::CacheSimulator* iCache = nullptr;
-
-// mt-unsafe
-uint32_t
-pmem_read(uint32_t araddr, uint32_t* prdata, bool bfirst) {
-  static uint64_t ready_time = 0;
-  // TODO: Exact number
-  auto curr_lat = bfirst ? MemLatency : MemBstLat;
-  auto finish_time = std::max(ready_time, curr_tick()) + curr_lat;
+// Always functional
+void
+pmem_read(addr_t araddr, ureg_t* prdata) {
   if (ppmu) {
-    ppmu->notifyMemXBar(false, ready_time, curr_lat);
+    // TODO: Time
+    ppmu->notifyMemXBar(false, 0, 0);
   }
-  ready_time = finish_time;
-  assert(unifiedMem);
   *prdata = unifiedMem->readWord(araddr & ~3U);
-  return finish_time - curr_tick();
 }
 
-uint32_t
-pmem_write(uint32_t awaddr, uint32_t wdata, unsigned char wstrb,
-           bool bfirst) {
+// Always functional
+void
+pmem_write(addr_t awaddr, ureg_t wdata, uint8_t wstrb) {
+  // TODO: Handle burst in one call
   static uint64_t ready_time = 0;
-  // TODO: Exact number
-  auto curr_lat = bfirst ? MemLatency : MemBstLat;
-  auto finish_time = std::max(ready_time, curr_tick()) + curr_lat;
   if (ppmu) {
-    ppmu->notifyMemXBar(true, ready_time, curr_lat);
+    ppmu->notifyMemXBar(true, 0, 0);
   }
-  ready_time = finish_time;
-  // TODO: upd ready time
-  if (awaddr == 0x1000'0000) [[unlikely]] {
+
+  if (awaddr == SerialAddr) [[unlikely]] {
     putchar(wdata);
-    goto rettime;
+  } else {
+    unifiedMem->writeWord(awaddr & ~3U, wdata, wstrb);
   }
-  assert(unifiedMem);
-  unifiedMem->writeWord(awaddr & ~3U, wdata, wstrb);
-rettime:
-  return finish_time - curr_tick();
 }
 
-uint32_t
-axi_read(uint32_t araddr, uint32_t* prdata, uint16_t id) {
+tint_t
+axi_read(addr_t araddr, ureg_t* prdata, uint16_t id, bool outstanding) {
   // std::cerr << std::hex;
   // std::cerr << "DPI-C axi read [" << id << "]@ " << araddr
   //           << " data = " << unifiedMem->readWord(araddr) << std::endl;
-  assert(unifiedMem);
-  if (iCache && id == 0) {
-    return iCache->read_req(araddr, prdata);
-  }
-  return pmem_read(araddr, prdata, true);
+  // static uint64_t ready_time = 0;
+  // auto curr_lat = bfirst ? MemLatency : MemBstLat;
+  // auto finish_time = std::max(ready_time, curr_tick()) + curr_lat;
+  // if (ppmu) {
+  //   ppmu->notifyMemXBar(false, ready_time, curr_lat);
+  // }
+  // ready_time = finish_time;
+  // assert(unifiedMem);
+  // *prdata = unifiedMem->readWord(araddr & ~3U);
+  // return finish_time - curr_tick();
+  pmem_read(araddr, prdata);
+  auto lat = outstanding ? MemLatency : MemBstLat;
+  return lat;
 }
 
-uint32_t
-axi_write(uint32_t awaddr, uint32_t wdata, unsigned char wstrb,
-          uint16_t id) {
-  assert(unifiedMem);
-  if (iCache && id == 0) {
-    return iCache->write_req(awaddr, wdata, wstrb);
-  }
-  return pmem_write(awaddr, wdata, wstrb, true);
-}
-
-void
-axi_cache_flush(uint16_t id) {
-  std::cerr << std::hex;
-  std::cerr << "DPI-C cache flush [" << id << "]" << std::endl;
-  if (iCache && id == 0) {
-    // TODO: 记得清空流水线
-    iCache->flush_all();
-  }
+tint_t
+axi_write(addr_t awaddr, ureg_t wdata, uint8_t wstrb, bool outstanding) {
+  // static uint64_t ready_time = 0;
+  //   auto curr_lat = bfirst ? MemLatency : MemBstLat;
+  //   auto finish_time = std::max(ready_time, curr_tick()) + curr_lat;
+  //   if (ppmu) {
+  //     ppmu->notifyMemXBar(true, ready_time, curr_lat);
+  //   }
+  //   ready_time = finish_time;
+  //   if (awaddr == 0x1000'0000) [[unlikely]] {
+  //     putchar(wdata);
+  //     goto rettime;
+  //   }
+  //   assert(unifiedMem);
+  //   unifiedMem->writeWord(awaddr & ~3U, wdata, wstrb);
+  // rettime:
+  //   return finish_time - curr_tick();
+  pmem_write(awaddr, wdata, wstrb);
+  auto lat = outstanding ? MemLatency : MemBstLat;
+  return lat;
 }
 
 #endif
