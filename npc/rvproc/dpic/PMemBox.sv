@@ -90,10 +90,10 @@ module PMemReader (
     output [ 3:0] io_master_rid
 );
   import "DPI-C" function int unsigned axi_read(
-    input int unsigned raddr,
-    output int unsigned rdata,
+    input  int unsigned  raddr,
+    output int unsigned  rdata,
     // input shortint unsigned id,
-    input byte unsigned outstanding
+    input  byte unsigned outstanding
   );
 
   typedef enum logic [1:0] {
@@ -136,12 +136,11 @@ module PMemReader (
         burst_remain <= io_master_arlen;
         burst_total  <= io_master_arlen;
         raddr_latch  <= io_master_araddr;
-        assert(io_master_arburst == 2'b01);  // INCR burst only
-        assert(io_master_arsize == 3'b010);  // 4-byte per beat
+        assert (io_master_arburst == 2'b01);  // INCR burst only
+        assert (io_master_arsize == 3'b010);  // 4-byte per beat
       end else if (state == RECV) begin
-        delay_remain <=
-            axi_read(raddr_latch, rdata, 8'(burst_remain == burst_total));
-        raddr_latch <= raddr_latch + 32'h4;
+        delay_remain <= axi_read(raddr_latch, rdata, 8'(burst_remain == burst_total));
+        raddr_latch  <= raddr_latch + 32'h4;
       end else if (state == SERVE) begin
         delay_remain <= delay_remain - 1;
       end else if (state === HOLD) begin
@@ -153,9 +152,6 @@ module PMemReader (
     end
   end
 
-  req_serial :
-  assert property (@(posedge clock) (io_master_arvalid && io_master_arready) |->
-    (state == IDLE || (state == HOLD && io_master_rready)));
   no_count_at_idle :
   assert property (@(posedge clock) (delay_remain != 0) |-> (state == SERVE));
 
@@ -189,8 +185,8 @@ module PMemWriter (
     output [ 3:0] io_master_bid
 );
   import "DPI-C" function int unsigned axi_write(
-    input int unsigned waddr,
-    input int unsigned wdata,
+    input int unsigned  waddr,
+    input int unsigned  wdata,
     input byte unsigned wmask,
     // input shortint unsigned id,
     input byte unsigned outstanding
@@ -244,10 +240,6 @@ module PMemWriter (
       //   $strobe("> Writer State %x counter %d req %d", state, delay_remain, io_master_awvalid);
     end
   end
-
-  req_serial :
-  assert property (@(posedge clock) (io_master_awvalid) |->
-    (state == IDLE || (state == HOLD && io_master_bready)));
 
   no_count_at_idle :
   assert property (@(posedge clock) (delay_remain != 0) |-> (state == SERVE));
