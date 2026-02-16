@@ -15,6 +15,7 @@ import rvproc.GlbCtrl.debug
 
 case class iCacheConf(
   addrBits:  Int = 32,
+  wordSize:  Int = 32,
   dataBytes: Int = 1024,
   lineBytes: Int = 16,
   assoc: Int = 1) {
@@ -28,6 +29,7 @@ case class iCacheConf(
   def tagBitLo  = addrBits - tagBits
   def lineTrans = this.lineBytes / (this.addrBits / 8)
   def lineTBits = log2Ceil(this.lineTrans)
+  def wordShift = log2Ceil(this.wordSize)
 }
 
 // Readonly
@@ -102,7 +104,7 @@ class iCache(conf: iCacheConf) extends Module {
   val lineRead  = dataArr.read(reqA1, willShift && reqV1)
   val lineSplit =
     VecInit.tabulate(conf.lineBytes)(i => lineRead(i * 4 + 3, i * 4))
-  wordSel := lineSplit(offOf(reqA2))
+  wordSel := lineSplit(offOf(reqA2) >> conf.wordShift.U)
 
   // Cycle 3 (resp)
   val fillFinish = RegNext(io.memSide.r.bits.last && io.memSide.r.valid)
@@ -164,7 +166,7 @@ class iCache(conf: iCacheConf) extends Module {
     tagArr.write(idxOf(reqA2), tagOf(reqA2))
     validArr(idxOf(reqA2)) := true.B
     missServe              := true.B
-    missData               := fillBuf(offOf(reqA2))
+    missData               := fillBuf(offOf(reqA2) >> conf.wordShift.U)
     assert(!resp.fire, "Transaction (resp) during fill\n")
   }.elsewhen(resp.fire) {
     missServe := false.B
