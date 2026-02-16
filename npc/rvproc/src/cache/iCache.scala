@@ -10,6 +10,7 @@ import rvproc.BitMath._
 import rvproc.Tp
 import rvproc.ISA
 import rvproc.axi4.AXI.RespStatus.OKAY
+import rvproc.axi4.AXI.BurstOpts._
 
 case class iCacheConf(
   addrBits:  Int = 32,
@@ -31,8 +32,8 @@ class iCache(conf: iCacheConf) extends Module {
   require(conf.assoc == 1, "Set assoc unimplemented")
   val io = IO(new Bundle {
     val flushAll = Input(Bool())
-    val cpuSide = Flipped(new CPUBus)
-    val memSide = new AXIBus
+    val cpuSide  = Flipped(new CPUBus)
+    val memSide  = new AXIBus
   })
 
   println(
@@ -46,9 +47,10 @@ class iCache(conf: iCacheConf) extends Module {
   val tagArr   = SyncReadMem(conf.numSets, UInt(conf.tagBits.W))
   val dataArr  = SyncReadMem(conf.numSets, UInt((conf.lineBytes * 8).W))
 
-  val flowing :: waiting :: Nil = Enum(2)
-  val state                     = RegInit(flowing)
-  val nextState                 = WireInit(flowing)
+  val flowing :: waiting :: memreq :: Nil = Enum(3)
+
+  val state     = RegInit(flowing)
+  val nextState = WireInit(flowing)
 
   val req       = io.cpuSide.ar
   val resp      = io.cpuSide.r
@@ -74,6 +76,7 @@ class iCache(conf: iCacheConf) extends Module {
   def idxOf(x: UInt) = x(conf.idxBitHi, conf.idxBitLo)
   def tagOf(x: UInt) = x(conf.tagBitHi, conf.tagBitLo)
   def offOf(x: UInt) = x(conf.offBits - 1, 0)
+  def blkOf(x: UInt) = x(conf.tagBitHi, conf.offBits)
 
   // Cycle 1 (recv)
   val reqA1 = req.bits.addr
@@ -98,14 +101,15 @@ class iCache(conf: iCacheConf) extends Module {
   val fillFinish = RegNext(io.memSide.r.bits.last)
   nextState := MuxLookup(state, waiting)(
     Seq(
-      flowing -> Mux(tagHit || !reqV2, flowing, waiting),
+      flowing -> Mux(tagHit || !reqV2, flowing, memreq),
+      memreq  -> Mux(io.memSide.ar.fire, waiting, memreq),
       waiting -> Mux(fillFinish, flowing, waiting)
     )
   )
   state     := nextState
 
   val fillPtr = RegInit(0.U(conf.offBits.W))
-  when(state =/= flowing && io.memSide.r.valid) {
+  when(state === waiting && io.memSide.r.valid) {
     fillBuf(fillPtr) := io.memSide.r.bits.data
     fillPtr          := fillPtr + 1.U
     assert(
@@ -122,6 +126,19 @@ class iCache(conf: iCacheConf) extends Module {
   }.elsewhen(state === flowing) {
     fillPtr := 0.U
   }
+
+  // MemSide Req
+  io.memSide.r.ready       := true.B
+  io.memSide.ar.valid      := state === memreq
+  io.memSide.ar.bits.addr  := blkOf(reqA2)
+  io.memSide.ar.bits.len   := (conf.lineBytes / (conf.addrBits / 8)).U
+  io.memSide.ar.bits.burst := INCR
+  io.memSide.ar.bits.id    := 0.U   // iCache
+  io.memSide.ar.bits.size  := 0x2.U // log2(4)
+  // TODO: Proper ID
+  io.memSide.w             := DontCare
+  io.memSide.aw            := DontCare
+  io.memSide.b             := DontCare
 
   val catData = VecInit(fillBuf.reverse).asUInt
   when(fillFinish) {
