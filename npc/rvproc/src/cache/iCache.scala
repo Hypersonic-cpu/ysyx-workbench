@@ -38,10 +38,8 @@ class iCache(conf: iCacheConf) extends Module {
   })
 
   println(
-    s"--> Component iCache : tag[${conf.tagBitHi}:${conf.tagBitLo}] |||"
-  )
-  println(
-    s"--> Component iCache : idx[${conf.idxBitHi}:${conf.idxBitLo}] |||"
+    s"--> iCache Addr : [${conf.tagBitHi}: tag :${conf.tagBitLo}]"
+    +s"[${conf.idxBitHi}: idx :${conf.idxBitLo}][${conf.offBits-1}: off : 0]\n"
   )
 
   val validArr = Reg(Vec(conf.numSets, Bool())) // WARN: DELAY
