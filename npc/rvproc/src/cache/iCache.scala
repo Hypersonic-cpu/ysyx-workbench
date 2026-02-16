@@ -159,5 +159,6 @@ class iCache(conf: iCacheConf) extends Module {
   when(fillFinish) {
     dataArr.write(idxOf(reqA2), catData)
     tagArr.write(idxOf(reqA2), tagOf(reqA2))
+    validArr(idxOf(reqA2)) := true.B
   }
 }
