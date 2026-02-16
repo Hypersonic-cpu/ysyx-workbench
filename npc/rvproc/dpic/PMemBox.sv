@@ -46,7 +46,7 @@ module PMemBox (
       .io_master_rresp  (io_master_rresp),
       .io_master_rdata  (io_master_rdata),
       .io_master_rlast  (io_master_rlast),
-      .io_master_rid    (io_master_rid),
+      .io_master_rid    (io_master_rid)
   );
 
   PMemWriter mwrite (
@@ -67,7 +67,7 @@ module PMemBox (
       .io_master_bready (io_master_bready),
       .io_master_bvalid (io_master_bvalid),
       .io_master_bresp  (io_master_bresp),
-      .io_master_bid    (io_master_bid),
+      .io_master_bid    (io_master_bid)
   );
 endmodule
 

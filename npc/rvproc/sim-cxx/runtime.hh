@@ -13,6 +13,8 @@
 #include "difftest.hh"
 #include "pmu.hh"
 
+extern "C" void call_ebreak(uint32_t pc, uint32_t a0, uint32_t a5);
+
 #if SOCMODE
 
 extern "C" void flash_read(int32_t addr, int32_t* data);
