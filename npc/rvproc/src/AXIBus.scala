@@ -144,8 +144,8 @@ class AXIArbiter(N: Int) extends Module {
     Seq(
       idle  -> Mux(hasReq, serve, idle),
       serve -> Mux(
-        (io.device.r.valid && pivot.r.ready)
-          || (io.device.b.valid && pivot.b.ready),
+        (io.device.r.valid && pivot.r.ready && pivot.r.bits.last)
+          || (io.device.b.valid && pivot.b.ready && pivot.w.bits.last),
         idle,
         serve
       )
