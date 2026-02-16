@@ -144,6 +144,10 @@ class iCache(conf: iCacheConf) extends Module {
     printf(cf"iCache Miss : addr ${reqA2}%x\n")
   }
 
+  when (io.cpuSide.r.fire) {
+    printf(cf"iCache Hit : addr ${reqA2}%x data ${io.cpuSide.r.bits.data}%x")
+  }
+
   // MemSide Req
   io.memSide.r.ready       := true.B
   io.memSide.ar.valid      := state === memreq
