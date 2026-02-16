@@ -111,7 +111,7 @@ module PMemReader (
   reg [31:0] raddr_latch;
   // wire [15:0] nxt_burst_remain;
 
-  logic arfire = io_master_arvalid && io_master_arready;
+  assign arfire = io_master_arvalid && io_master_arready;
   always_comb begin
     unique case (state)
       IDLE:  next_state = arfire ? RECV : IDLE;
