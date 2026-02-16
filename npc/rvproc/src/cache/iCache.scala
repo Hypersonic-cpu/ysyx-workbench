@@ -130,7 +130,7 @@ class iCache(conf: iCacheConf) extends Module {
       val goldenPtr = (conf.lineTrans - 1).U
       assert(
         fillPtr === goldenPtr,
-        cf"Got ${fillPtr} + 1 transactions during fill, expect ${goldenPtr}\n"
+        cf"Got ${fillPtr}+1 transactions during fill, expect ${goldenPtr}+1\n"
       )
 
     }

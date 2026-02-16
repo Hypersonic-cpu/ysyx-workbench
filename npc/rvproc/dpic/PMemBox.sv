@@ -111,9 +111,10 @@ module PMemReader (
   reg [31:0] raddr_latch;
   // wire [15:0] nxt_burst_remain;
 
+  logic arfire = io_master_arvalid && io_master_arready;
   always_comb begin
     unique case (state)
-      IDLE:  next_state = io_master_arvalid ? RECV : IDLE;
+      IDLE:  next_state = arfire ? RECV : IDLE;
       RECV:  next_state = SERVE;
       SERVE: next_state = (delay_remain == 1) ? HOLD : SERVE;
       HOLD:  next_state = io_master_rready ? (burst_remain == 0 ? IDLE : RECV) : HOLD;
@@ -130,7 +131,7 @@ module PMemReader (
       burst_total <= 0;
     end else begin
       state <= next_state;
-      if (state == IDLE && io_master_arvalid) begin
+      if (state == IDLE && arfire) begin
         rid_latch    <= io_master_arid;
         raddr_latch  <= io_master_araddr;
         burst_remain <= io_master_arlen;
