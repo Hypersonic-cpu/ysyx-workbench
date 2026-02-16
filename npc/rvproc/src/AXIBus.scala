@@ -99,6 +99,7 @@ object AXIPortPassing {
   }
 }
 
+// TODO: Split R-W channels
 class AXIArbiter(N: Int) extends Module {
   val io = IO(new Bundle {
     val hosts  = Vec(N, Flipped(new AXIBus))

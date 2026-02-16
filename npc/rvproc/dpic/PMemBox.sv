@@ -31,10 +31,6 @@ module PMemBox (
     output        io_master_rlast,
     output [ 3:0] io_master_rid
 );
-  always_ff @(posedge clock) begin : fenceI
-    if (io_flush) axi_cache_flush(io_simid);
-  end
-
   PMemReader mread (
       .clock            (clock),
       .reset            (reset),
@@ -99,13 +95,6 @@ module PMemReader (
     input shortint unsigned id
   );
 
-  // wire [4:0] curr_delay = 10;
-  // lfsr_1_to_32 lfsr (
-  //     .clk(clock),
-  //     .rst(reset),
-  //     .rand_out(curr_delay)
-  // );
-
   typedef enum logic [1:0] {
     IDLE  = 2'h0,
     RECV  = 2'h1,
@@ -116,13 +105,17 @@ module PMemReader (
   state_t next_state;
   reg [31:0] delay_remain;
   reg [3:0] rid_latch;
+  reg [15:0] burst_remain;
+  reg [15:0] burst_total;
+  reg [31:0] raddr_latch;
+  // wire [15:0] nxt_burst_remain;
 
   always_comb begin
     unique case (state)
       IDLE:  next_state = io_master_arvalid ? RECV : IDLE;
       RECV:  next_state = SERVE;
       SERVE: next_state = (delay_remain == 1) ? HOLD : SERVE;
-      HOLD:  next_state = io_master_rready ? IDLE : HOLD;
+      HOLD:  next_state = io_master_rready ? (burst_remain == 0 ? IDLE : RECV) : HOLD;
     endcase
   end
 
@@ -132,14 +125,21 @@ module PMemReader (
       rdata <= 0;
       state <= IDLE;
       delay_remain <= 0;
+      burst_remain <= 0;
+      burst_total <= 0;
     end else begin
       state <= next_state;
-      if (state == RECV) begin
-        rid_latch <= io_master_arid;
-        // delay_remain <= {{27{1'b0}}, curr_delay};
-        delay_remain <= axi_read(io_master_araddr, rdata, io_simid);
-      end else begin
-        if (state == SERVE) delay_remain <= delay_remain - 1;
+      if (state == IDLE && io_master_arvalid) begin
+        rid_latch    <= io_master_arid;
+        raddr_latch  <= io_master_araddr;
+        burst_remain <= io_master_arlen;
+        burst_total  <= io_master_arlen;
+      end else if (state == RECV) begin
+        delay_remain <= axi_read(io_master_araddr, rdata, rid_latch, burst_remain == burst_total);
+      end else if (state == SERVE) begin
+        delay_remain <= delay_remain - 1;
+      end else if (state === HOLD) begin
+        burst_remain <= burst_remain - 1;
       end
 
       // if (state == RECV || state == SERVE)
@@ -147,9 +147,9 @@ module PMemReader (
     end
   end
 
-  // req_not_conflict :
-  // assert property (@(posedge clock) (io_master_arvalid) |->
-  //   (state == IDLE || (state == HOLD && io_master_rready)));
+  req_serial :
+  assert property (@(posedge clock) (io_master_arvalid) |->
+    (state == IDLE || (state == HOLD && io_master_rready)));
   no_count_at_idle :
   assert property (@(posedge clock) (delay_remain != 0) |-> (state == SERVE));
 
@@ -190,11 +190,6 @@ module PMemWriter (
 
 
   wire [4:0] curr_delay = 10;
-  // lfsr_1_to_32 lfsr (
-  //     .clk(clock),
-  //     .rst(reset),
-  //     .rand_out(curr_delay)
-  // );
 
   typedef enum logic [1:0] {
     IDLE  = 2'h0,
@@ -206,10 +201,12 @@ module PMemWriter (
   state_t next_state;
   reg [31:0] delay_remain;
   reg [3:0] bid_latch;
+  reg [31:0] waddr_latch;
+  reg [31:0] wdata_latch;
+  reg [3:0] wstrb_latch;
 
-  // NOTE: Temporary, not required
-  // write_addr_data_timing :
-  // assert property (@(posedge clock) (io_master_awvalid ^ io_master_wvalid));
+  aw_w_channel_sync :
+  assert property (@(posedge clock) ~(io_master_awvalid ^ io_master_wvalid));
 
   always_comb begin
     unique case (state)
@@ -226,12 +223,14 @@ module PMemWriter (
       delay_remain <= 0;
     end else begin
       state <= next_state;
-      if (state == RECV) begin
-        bid_latch <= io_master_awid;
-        // delay_remain <= {{27{1'b0}}, curr_delay};
-        delay_remain <= axi_write(
-            io_master_awaddr, io_master_wdata, {{4'h0}, io_master_wstrb}, io_simid
-        );
+      if (state == IDLE && io_master_awvalid) begin
+        waddr_latch <= io_master_awaddr;
+        wdata_latch <= io_master_wdata;
+        wstrb_latch <= io_master_wstrb;
+        bid_latch   <= io_master_awid;
+        assert (io_master_arlen == 0);  // No burst write
+      end else if (state == RECV) begin
+        delay_remain <= axi_write(waddr_latch, wdata_latch, 8'(wstrb_latch), bid_latch);
       end else begin
         if (state == SERVE) delay_remain <= delay_remain - 1;
       end
@@ -241,9 +240,9 @@ module PMemWriter (
     end
   end
 
-  // req_not_conflict :
-  // assert property (@(posedge clock) (io_master_awvalid) |->
-  //   (state == IDLE || (state == HOLD && io_master_bready)));
+  req_serial :
+  assert property (@(posedge clock) (io_master_awvalid) |->
+    (state == IDLE || (state == HOLD && io_master_bready)));
 
   no_count_at_idle :
   assert property (@(posedge clock) (delay_remain != 0) |-> (state == SERVE));
@@ -253,27 +252,3 @@ module PMemWriter (
   assign io_master_wready  = state == IDLE;
   assign io_master_bresp   = 2'b00;
 endmodule
-
-
-// module lfsr_1_to_32 (
-//     input  logic       clk,
-//     input  logic       rst,
-//     output logic [4:0] rand_out
-// );
-//
-//   localparam int N = 5;
-//   logic [N-1:0] lfsr_reg;
-//   logic         feedback_bit;
-//   assign feedback_bit = lfsr_reg[N-1] ^ lfsr_reg[N-2] ^ lfsr_reg[0];
-//
-//   always_ff @(posedge clk) begin
-//     if (rst) begin
-//       lfsr_reg <= 'b10001;
-//     end else begin
-//       lfsr_reg <= {feedback_bit, lfsr_reg[N-1:1]};
-//     end
-//     // $strobe("Current out = %x", lfsr_reg);
-//   end
-//
-//   assign rand_out = (~(|lfsr_reg)) ? 5'b00001 : lfsr_reg;
-// endmodule

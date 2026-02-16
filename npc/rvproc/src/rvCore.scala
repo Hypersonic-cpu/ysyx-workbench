@@ -75,6 +75,7 @@ class rvCore(isSoc: Boolean) extends Module {
   val l1iPort = Module(
     new cache.iCache(new iCacheConf(32, 1024, 16, 1))
   )
+  l1iPort.io.flushAll <> ids.io.fenceI
 
   if (isSoc) {
     // AXIPortPassing(io.master, arbiter.io.device)
