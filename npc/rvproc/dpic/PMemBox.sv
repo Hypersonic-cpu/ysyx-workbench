@@ -46,7 +46,7 @@ module PMemBox (
       .io_master_rresp  (io_master_rresp),
       .io_master_rdata  (io_master_rdata),
       .io_master_rlast  (io_master_rlast),
-      .io_master_rid    (io_master_rid),
+      .io_master_rid    (io_master_rid)
   );
 
   PMemWriter mwrite (
@@ -67,7 +67,7 @@ module PMemBox (
       .io_master_bready (io_master_bready),
       .io_master_bvalid (io_master_bvalid),
       .io_master_bresp  (io_master_bresp),
-      .io_master_bid    (io_master_bid),
+      .io_master_bid    (io_master_bid)
   );
 endmodule
 
@@ -90,9 +90,10 @@ module PMemReader (
     output [ 3:0] io_master_rid
 );
   import "DPI-C" function int unsigned axi_read(
-    input int unsigned raddr,
-    output int unsigned rdata,
-    input shortint unsigned id
+    input  int unsigned  raddr,
+    output int unsigned  rdata,
+    // input shortint unsigned id,
+    input  byte unsigned outstanding
   );
 
   typedef enum logic [1:0] {
@@ -105,14 +106,15 @@ module PMemReader (
   state_t next_state;
   reg [31:0] delay_remain;
   reg [3:0] rid_latch;
-  reg [15:0] burst_remain;
-  reg [15:0] burst_total;
+  reg [7:0] burst_remain;
+  reg [7:0] burst_total;
   reg [31:0] raddr_latch;
   // wire [15:0] nxt_burst_remain;
 
+  wire arfire = io_master_arvalid && io_master_arready;
   always_comb begin
     unique case (state)
-      IDLE:  next_state = io_master_arvalid ? RECV : IDLE;
+      IDLE:  next_state = arfire ? RECV : IDLE;
       RECV:  next_state = SERVE;
       SERVE: next_state = (delay_remain == 1) ? HOLD : SERVE;
       HOLD:  next_state = io_master_rready ? (burst_remain == 0 ? IDLE : RECV) : HOLD;
@@ -129,16 +131,20 @@ module PMemReader (
       burst_total <= 0;
     end else begin
       state <= next_state;
-      if (state == IDLE && io_master_arvalid) begin
+      if (state == IDLE && arfire) begin
         rid_latch    <= io_master_arid;
         raddr_latch  <= io_master_araddr;
         burst_remain <= io_master_arlen;
         burst_total  <= io_master_arlen;
+        raddr_latch  <= io_master_araddr;
+        assert (io_master_arburst == 2'b01);  // INCR burst only
+        assert (io_master_arsize == 3'b010);  // 4-byte per beat
       end else if (state == RECV) begin
-        delay_remain <= axi_read(io_master_araddr, rdata, rid_latch, burst_remain == burst_total);
+        delay_remain <= axi_read(raddr_latch, rdata, 8'(burst_remain == burst_total));
+        raddr_latch  <= raddr_latch + 32'h4;
       end else if (state == SERVE) begin
         delay_remain <= delay_remain - 1;
-      end else if (state === HOLD) begin
+      end else if (state == HOLD && next_state == RECV) begin
         burst_remain <= burst_remain - 1;
       end
 
@@ -147,17 +153,15 @@ module PMemReader (
     end
   end
 
-  req_serial :
-  assert property (@(posedge clock) (io_master_arvalid) |->
-    (state == IDLE || (state == HOLD && io_master_rready)));
   no_count_at_idle :
   assert property (@(posedge clock) (delay_remain != 0) |-> (state == SERVE));
 
+  assign io_master_rid     = rid_latch;
   assign io_master_rvalid  = state == HOLD;
   assign io_master_rdata   = {32{io_master_rvalid}} & rdata;
   assign io_master_arready = state == IDLE;
   assign io_master_rresp   = 2'b00;
-  assign io_master_rlast   = io_master_rvalid;
+  assign io_master_rlast   = burst_remain == 0;
 endmodule
 
 
@@ -182,14 +186,12 @@ module PMemWriter (
     output [ 3:0] io_master_bid
 );
   import "DPI-C" function int unsigned axi_write(
-    input int unsigned waddr,
-    input int unsigned wdata,
+    input int unsigned  waddr,
+    input int unsigned  wdata,
     input byte unsigned wmask,
-    input shortint unsigned id
+    // input shortint unsigned id,
+    input byte unsigned outstanding
   );
-
-
-  wire [4:0] curr_delay = 10;
 
   typedef enum logic [1:0] {
     IDLE  = 2'h0,
@@ -228,9 +230,9 @@ module PMemWriter (
         wdata_latch <= io_master_wdata;
         wstrb_latch <= io_master_wstrb;
         bid_latch   <= io_master_awid;
-        assert (io_master_arlen == 0);  // No burst write
+        assert (io_master_awlen == 0);  // No burst write
       end else if (state == RECV) begin
-        delay_remain <= axi_write(waddr_latch, wdata_latch, 8'(wstrb_latch), bid_latch);
+        delay_remain <= axi_write(waddr_latch, wdata_latch, 8'(wstrb_latch), 8'(1));
       end else begin
         if (state == SERVE) delay_remain <= delay_remain - 1;
       end
@@ -240,13 +242,10 @@ module PMemWriter (
     end
   end
 
-  req_serial :
-  assert property (@(posedge clock) (io_master_awvalid) |->
-    (state == IDLE || (state == HOLD && io_master_bready)));
-
   no_count_at_idle :
   assert property (@(posedge clock) (delay_remain != 0) |-> (state == SERVE));
 
+  assign io_master_bid     = bid_latch;
   assign io_master_bvalid  = state == HOLD;
   assign io_master_awready = state == IDLE;
   assign io_master_wready  = state == IDLE;

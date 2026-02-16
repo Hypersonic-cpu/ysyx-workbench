@@ -2,12 +2,39 @@
 #include "difftest.hh"
 #include "options.hh"
 #include "pmu.hh"
-#include "probe.hh"
 #include "rtl_defs.hh"
 #include <cassert>
 #include <cstdint>
-#include <future>
+#include <format>
+#include <iostream>
 #include <unistd.h>
+#include <verilated.h>
+
+extern "C" void
+call_ebreak(uint32_t pc, uint32_t a0, uint32_t a5) {
+  if (a5 == 0) {
+    std::cout << std::format(ANSI_YELLOW "reset stats @ pc {:8x}" ANSI_NONE,
+                             pc)
+              << std::endl;
+    resetAllStats();
+  } else if (a5 == 1) {
+    std::cout << std::format(ANSI_YELLOW "dump Stats @ pc {:>8x}" ANSI_NONE,
+                             pc)
+              << std::endl;
+    dumpAllStats();
+  } else {
+    std::cout << (a0 ? (ANSI_B_RED "Hit BAD trap" ANSI_NONE)
+                     : (ANSI_B_GREEN "Hit GOOD trap" ANSI_NONE))
+              << " at pc = 0x" << std::hex << pc << " with a0 = 0x"
+              << std::hex << a0 << std::endl;
+    if (a0 == 0) {
+      vl_finish(__FILE__, __LINE__, "EcallBox:call_ebreak");
+    } else {
+      abortHandler();
+      // throw std::runtime_error("EcallBox: hit bad trap");
+    }
+  }
+}
 
 #if SOCMODE
 
@@ -86,7 +113,8 @@ vga_read(uint32_t addr) {
 
 #else
 
-// Always functional
+RuntimeBin* unifiedMem = nullptr;
+
 void
 pmem_read(addr_t araddr, ureg_t* prdata) {
   if (ppmu) {
@@ -113,7 +141,7 @@ pmem_write(addr_t awaddr, ureg_t wdata, uint8_t wstrb) {
 }
 
 tint_t
-axi_read(addr_t araddr, ureg_t* prdata, uint16_t id, bool outstanding) {
+axi_read(addr_t araddr, ureg_t* prdata, bool outstanding) {
   // std::cerr << std::hex;
   // std::cerr << "DPI-C axi read [" << id << "]@ " << araddr
   //           << " data = " << unifiedMem->readWord(araddr) << std::endl;
@@ -128,6 +156,9 @@ axi_read(addr_t araddr, ureg_t* prdata, uint16_t id, bool outstanding) {
   // *prdata = unifiedMem->readWord(araddr & ~3U);
   // return finish_time - curr_tick();
   pmem_read(araddr, prdata);
+  // std::cerr << std::format("DPI-C AXI READ @{:x}[{:s}] Data {:08x} T@{:d}", araddr,
+  //                          outstanding ? "First" : "Burst", *prdata, curr_tick())
+  //           << std::endl;
   auto lat = outstanding ? MemLatency : MemBstLat;
   return lat;
 }
@@ -162,11 +193,13 @@ trace::DiffTester* pdiff = nullptr;
 
 void
 notify_recvd(uint32_t pc, uint32_t inst) {
+  std::cerr << std::format(ANSI_YELLOW "IFetch Recv @ pc {:8x}" ANSI_NONE, pc) << std::endl;
   ppmu->notifyIFRecvd(pc);
 }
 
 void
 notify_fetch(uint32_t pc) {
+  std::cerr << std::format(ANSI_YELLOW "IFetch Req @ pc {:8x}" ANSI_NONE, pc) << std::endl;
   ppmu->notifyIFFetch(pc);
 }
 

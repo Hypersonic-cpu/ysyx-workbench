@@ -13,6 +13,8 @@
 #include "difftest.hh"
 #include "pmu.hh"
 
+extern "C" void call_ebreak(uint32_t pc, uint32_t a0, uint32_t a5);
+
 #if SOCMODE
 
 extern "C" void flash_read(int32_t addr, int32_t* data);
@@ -32,8 +34,8 @@ extern "C" uint32_t vga_read(uint32_t addr);
 
 constexpr tint_t MemLatency{40U};
 constexpr tint_t MemBstLat{8U};
-extern "C" tint_t axi_read(addr_t, ureg_t*, uint16_t id, bool);
-extern "C" tint_t axi_write(addr_t, ureg_t, uint8_t, uint16_t id, bool);
+extern "C" tint_t axi_read(addr_t, ureg_t*, bool);
+extern "C" tint_t axi_write(addr_t, ureg_t, uint8_t, bool);
 
 extern "C" void pmem_read(addr_t, ureg_t*);
 extern "C" void pmem_write(addr_t, ureg_t, uint8_t);

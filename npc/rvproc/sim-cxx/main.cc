@@ -1,5 +1,6 @@
 #include "nlohmann/json.hpp"
 #include "nlohmann/json_fwd.hpp"
+#include "rtl_defs.hh"
 
 #include <cassert>
 #include <cstdio>
@@ -40,6 +41,12 @@ const TOP_NAME* trace::ptop = nullptr;
 
 static std::ofstream statFile;
 static std::ofstream confFile;
+
+static tick_t g_tick{0};
+tick_t
+curr_tick() noexcept {
+  return g_tick;
+}
 
 void
 abort_handler() {
@@ -210,7 +217,7 @@ main(int argc, char* argv[]) {
   /** CONFIG END */
 
   const size_t MaxCyc{options::max_cycles};
-  size_t currCyc{0U};
+  // size_t currCyc{0U};
   std::string retCause = "??";
   int retBad = 0;
 
@@ -219,11 +226,10 @@ main(int argc, char* argv[]) {
   diff->copy();
 
   /** SIMULATION LOOP */
-  while (currCyc < MaxCyc) {
+  while (true) {
     if (options::runtime_dump_opt.cycle_no)
-      std::cerr << std::format("\r== @posedge of Cycle #{} ==", currCyc)
+      std::cerr << std::format("\r== @posedge of Cycle #{} ==", curr_tick())
                 << std::endl;
-    currCyc++;
 
 #if NVBENA
     nvboard_update();
@@ -233,8 +239,7 @@ main(int argc, char* argv[]) {
     if (auto mismatch = diff->test_on_commit(); !mismatch.empty()) {
       for (auto const& [id, golden, real] : mismatch) {
         std::cerr << std::format(
-                       "Reg {:>2d} mismatch: golden {:>8x} real {:>8x}", id,
-                       golden, real)
+          "Reg {:>2d} mismatch: golden {:>8x} real {:>8x}", id, golden, real)
                   << std::endl;
       }
 
@@ -250,10 +255,13 @@ main(int argc, char* argv[]) {
       retBad = 0;
       break;
     }
-    if (currCyc == MaxCyc) {
+    if (g_tick == MaxCyc) {
       retCause = "Max cycles reached";
       retBad = 1;
+      break;
     }
+
+    g_tick++;
   }
 
 final:
@@ -263,7 +271,7 @@ final:
 
   std::cerr << std::format(ANSI_YELLOW
                            "== Exit @ cyc #{:>12d} : {:s} ==" ANSI_NONE,
-                           currCyc, retCause)
+                           curr_tick(), retCause)
             << std::endl;
   auto instNum = spmu->get_instret();
   auto cycleNum = spmu->get_cycles();
