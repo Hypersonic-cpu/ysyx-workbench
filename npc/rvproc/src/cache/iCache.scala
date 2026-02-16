@@ -94,7 +94,6 @@ class iCache(conf: iCacheConf) extends Module {
   tagHit := tagRead === tagOf(reqA2) && tagValid && reqV2
 
   // printf(cf"iCache Tag Read = ${tagRead}%x\n")
-  //
   // Parallel 2
   val lineRead  = dataArr.read(reqA1, willShift && reqV1)
   val lineSplit =
@@ -107,6 +106,7 @@ class iCache(conf: iCacheConf) extends Module {
     dontTouch(reqV1)
     dontTouch(reqV2)
     dontTouch(tagRead)
+    dontTouch(wordSel)
   }
 
   // Cycle 3 (resp)
