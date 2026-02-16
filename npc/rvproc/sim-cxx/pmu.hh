@@ -129,7 +129,6 @@ public:
 
   void
   notifyIFRecvd(addr_t pc) {
-    return;
     v_assert(!ifetchboard.empty(), "Cannot find pc @", pc, "in IF Pipeline");
     while (std::get<0>(ifetchboard.front()) != pc) {
       ifetchboard.pop_front();
