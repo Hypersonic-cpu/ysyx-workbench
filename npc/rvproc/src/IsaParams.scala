@@ -23,7 +23,7 @@ object ISA {
   val RegIdxBits = 4
   val CsrIdxBits = 12
   val AddrBits   = 32 // Also bus bits
-  val WordBytes  = 4
+  val WordShift  = 2
 }
 
 object Tp {
