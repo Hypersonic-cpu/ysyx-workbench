@@ -1,0 +1,39 @@
+# SymbiYosys configuration for iCache formal verification
+# Run:  sby -f iCacheFormal.sby
+#
+# What this checks:
+#   For every possible sequence of CPU read requests, the iCache must
+#   return exactly the same data that memory provided during cache fills.
+#   This is a bounded model check (BMC) exploring up to `depth` cycles.
+
+[tasks]
+bmc
+
+[options]
+bmc: mode bmc
+# A cache miss needs ~7 cycles to complete (1 for ar, 4 for burst, 1 for
+# fill, 1 for response). Depth 20 covers ~2 miss+hit sequences.
+# Increase to 30+ for deeper coverage (will be much slower).
+bmc: depth 20
+
+[engines]
+bmc: smtbmc z3
+
+[script]
+# Read all generated SystemVerilog files
+read -sv iCacheFormal.sv
+read -sv iCache.sv
+read -sv Queue4_UInt32.sv
+read -sv ram_4x32.sv
+read -sv dataArr_64x128.sv
+read -sv tagArr_64x22.sv
+# Elaborate with iCacheFormal as top
+prep -top iCacheFormal
+
+[files]
+formal/icache/iCacheFormal.sv
+formal/icache/iCache.sv
+formal/icache/Queue4_UInt32.sv
+formal/icache/ram_4x32.sv
+formal/icache/dataArr_64x128.sv
+formal/icache/tagArr_64x22.sv

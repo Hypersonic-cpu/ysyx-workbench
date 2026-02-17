@@ -12,6 +12,9 @@
 !*.cc
 !*.hh
 !*.hpp
+!*.sby
+!*.py
+!*filelist.f
 !.gitignore
 !.scalafmt.conf
 !README.md

@@ -165,7 +165,19 @@ idea:
 clean:
 	-rm -rf $(BUILD_SV_DIR) $(BUILD_SIM_DIR)
 
-.PHONY: test runam verilog help reformat checkformat clean verilate sim printhook
+## Formal verification — iCache
+FORMAL_ICACHE_DIR = formal/icache
+FORMAL_ICACHE_SBY = $(FORMAL_ICACHE_DIR)/iCacheFormal.sby
+
+formal-icache:
+	@echo "=== Step 1: Generating iCache formal SV ==="
+	mill -i $(PRJ).runMain ElaborateFormal --target-dir $(FORMAL_ICACHE_DIR)/
+	@echo "=== Step 1.5: Patching SV for Yosys compatibility ==="
+	@python3 $(FORMAL_ICACHE_DIR)/patch_sv.py $(FORMAL_ICACHE_DIR)
+	@echo "=== Step 2: Running SymbiYosys ==="
+	cd $(NPC_HOME) && sby -f $(FORMAL_ICACHE_SBY) bmc
+
+.PHONY: test runam verilog help reformat checkformat clean verilate sim printhook formal-icache
 
 verilate:
 	@mkdir -p $(BUILD_OBJ_DIR)
