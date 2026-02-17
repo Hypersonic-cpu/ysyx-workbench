@@ -69,8 +69,8 @@ parse_args(int argc, char* argv[]) {
     {"print-cycle", no_argument, NULL, 'c'},
     {"fast-mode", no_argument, NULL, 'F'},
     {"max-cycle", required_argument, NULL, 'M'},
-    {"outdir", required_argument, NULL, 'O'},
-    {"record-perf", no_argument, NULL, 'R'},
+    {"rec-outdir", required_argument, NULL, 'R'},
+    // {"record-perf", no_argument, NULL, 'R'},
     {"log", required_argument, NULL, 'l'},
     {"elf", required_argument, NULL, 'e'},
     {"help", no_argument, NULL, 'h'},
@@ -91,8 +91,8 @@ parse_args(int argc, char* argv[]) {
 
   optind = 2;
   int o;
-  while ((o = getopt_long(argc, argv, "-hmidfFcTRO:M:l:e:", table, NULL)) !=
-         -1) {
+  while ((o = getopt_long(argc, argv, "-hmidfFcTRO:M:l:e:", table, NULL))
+         != -1) {
     switch (o) {
     case 'm':
       runtime_dump_opt.mem_buf = true;
@@ -106,7 +106,8 @@ parse_args(int argc, char* argv[]) {
       break;
     case 'l':
       wave_file = std::string(optarg);
-      v_warn(options::wave_enable, "Fst wave not enabled. Recompile with LOGENA=1");
+      v_warn(options::wave_enable,
+             "Fst wave not enabled. Recompile with LOGENA=1");
       break;
     case 'e':
       elf_file = optarg;
@@ -117,10 +118,11 @@ parse_args(int argc, char* argv[]) {
     case 'M':
       max_cycles = std::atoi(optarg);
       break;
+    // case 'R':
+    //   record_perf = true;
+    //   break;
     case 'R':
       record_perf = true;
-      break;
-    case 'O':
       custom_dir += "-" + std::string(optarg);
       break;
     case 'c':
