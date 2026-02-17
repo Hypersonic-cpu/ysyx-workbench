@@ -99,11 +99,10 @@ object AXIPortPassing {
   }
 }
 
-// TODO: Split R-W channels
-class AXIArbiter(N: Int) extends Module {
+class ArbiterRead(N: Int) extends Module {
   val io = IO(new Bundle {
-    val hosts  = Vec(N, Flipped(new AXIBus))
-    val device = new AXIBus
+    val hosts  = Vec(N, Flipped(new AXIReadChannel))
+    val device = new AXIReadChannel
   })
   val IdxWidth: Int = log2Ceil(N)
   def IdxType(): UInt = UInt(log2Ceil(N).W)
@@ -113,25 +112,69 @@ class AXIArbiter(N: Int) extends Module {
   val state   = RegInit(idle)
   val serveId = Reg(IdxType())
 
-  val vReadsRev = Cat(VecInit(io.hosts map (_.ar.valid)))
-  val vWriteRev = Cat(VecInit(io.hosts map (_.aw.valid)))
-  val validReqs = vReadsRev | vWriteRev
+  val validReqs = Cat(VecInit(io.hosts map (_.ar.valid)))
   val validIdx  = (N - 1).U - PriorityEncoder(validReqs)
   val hasReq    = validReqs.orR
   val usingIdx  = Mux(state === idle, validIdx, serveId)
 
   val pivot = io.hosts(usingIdx)
-  pivot <> io.device
+  io.device.ar.valid := pivot.ar.valid
+  io.device.ar.bits  := pivot.ar.bits
+  io.device.r.ready  := pivot.r.ready
+
   for (i <- 0 until N) {
-    // Can change to usingIdx
     val selectThis = i.U === usingIdx
-    // Response
     io.hosts(i).r.valid  := selectThis && io.device.r.valid
     io.hosts(i).r.bits   := io.device.r.bits
+    io.hosts(i).ar.ready := selectThis && io.device.ar.ready
+  }
+
+  when(state === idle && hasReq) {
+    serveId := validIdx
+  }
+
+  val nextState = MuxLookup(state, idle)(
+    Seq(
+      idle  -> Mux(hasReq, serve, idle),
+      serve -> Mux(
+        io.device.r.valid && pivot.r.ready && io.device.r.bits.last,
+        idle,
+        serve
+      )
+    )
+  )
+  state := nextState
+}
+
+class ArbiterWrite(N: Int) extends Module {
+  val io = IO(new Bundle {
+    val hosts  = Vec(N, Flipped(new AXIWriteChannel))
+    val device = new AXIWriteChannel
+  })
+  val IdxWidth: Int = log2Ceil(N)
+  def IdxType(): UInt = UInt(log2Ceil(N).W)
+
+  val idle :: serve :: Nil = Enum(2)
+
+  val state   = RegInit(idle)
+  val serveId = Reg(IdxType())
+
+  val validReqs = Cat(VecInit(io.hosts map (_.aw.valid)))
+  val validIdx  = (N - 1).U - PriorityEncoder(validReqs)
+  val hasReq    = validReqs.orR
+  val usingIdx  = Mux(state === idle, validIdx, serveId)
+
+  val pivot = io.hosts(usingIdx)
+  io.device.aw.valid := pivot.aw.valid
+  io.device.aw.bits  := pivot.aw.bits
+  io.device.w.valid  := pivot.w.valid
+  io.device.w.bits   := pivot.w.bits
+  io.device.b.ready  := pivot.b.ready
+
+  for (i <- 0 until N) {
+    val selectThis = i.U === usingIdx
     io.hosts(i).b.valid  := selectThis && io.device.b.valid
     io.hosts(i).b.bits   := io.device.b.bits
-    // Request
-    io.hosts(i).ar.ready := selectThis && io.device.ar.ready
     io.hosts(i).aw.ready := selectThis && io.device.aw.ready
     io.hosts(i).w.ready  := selectThis && io.device.w.ready
   }
@@ -144,14 +187,37 @@ class AXIArbiter(N: Int) extends Module {
     Seq(
       idle  -> Mux(hasReq, serve, idle),
       serve -> Mux(
-        (io.device.r.valid && pivot.r.ready && pivot.r.bits.last)
-          || (io.device.b.valid && pivot.b.ready && pivot.w.bits.last),
+        io.device.b.valid && pivot.b.ready,
         idle,
         serve
       )
     )
   )
   state := nextState
+}
+
+class AXIArbiter(N: Int) extends Module {
+  val io = IO(new Bundle {
+    val hosts  = Vec(N, Flipped(new AXIBus))
+    val device = new AXIBus
+  })
+
+  val readArb  = Module(new ArbiterRead(N))
+  val writeArb = Module(new ArbiterWrite(N))
+
+  for (i <- 0 until N) {
+    readArb.io.hosts(i).ar <> io.hosts(i).ar
+    readArb.io.hosts(i).r <> io.hosts(i).r
+    writeArb.io.hosts(i).aw <> io.hosts(i).aw
+    writeArb.io.hosts(i).w <> io.hosts(i).w
+    writeArb.io.hosts(i).b <> io.hosts(i).b
+  }
+
+  readArb.io.device.ar <> io.device.ar
+  readArb.io.device.r <> io.device.r
+  writeArb.io.device.aw <> io.device.aw
+  writeArb.io.device.w <> io.device.w
+  writeArb.io.device.b <> io.device.b
 }
 
 case class AddrMap(lo: BigInt, hi: BigInt, id: Int)
