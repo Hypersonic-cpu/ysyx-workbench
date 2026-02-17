@@ -91,7 +91,7 @@ parse_args(int argc, char* argv[]) {
 
   optind = 2;
   int o;
-  while ((o = getopt_long(argc, argv, "-hmidfFcTRO:M:l:e:", table, NULL))
+  while ((o = getopt_long(argc, argv, "-hmidfFcTR:M:l:e:", table, NULL))
          != -1) {
     switch (o) {
     case 'm':
