@@ -19,3 +19,4 @@ log/
 *.bak/
 .vscode*/
 !*.png
+.github/

@@ -42,8 +42,13 @@ static unsigned iringptr;
 #endif
 
 #ifdef CONFIG_NPSIM_TRACE
+#include <zstd.h>
+
 static char* npsim_trace_file = CONFIG_NPSIM_DEFAULT_PATH;
 static FILE *npsim_trace_fp = NULL;
+static ZSTD_CCtx* cctx = NULL;
+static void* out_buf = NULL;
+static size_t out_buf_size = 0;
 
 // Called in monitor.c:parse_args()
 void set_nptr_file(const char* filename) {
@@ -53,13 +58,28 @@ void set_nptr_file(const char* filename) {
 void init_npsim_trace(const char* filename) {
   npsim_trace_fp = fopen(npsim_trace_file, "wb");
   Assert(npsim_trace_fp, "npSim Trace File %s open failed", npsim_trace_file);
+  if (cctx == NULL) {
+    cctx = ZSTD_createCCtx();
+    ZSTD_CCtx_setParameter(cctx, ZSTD_c_compressionLevel, 3);
+    out_buf_size = ZSTD_CStreamOutSize();
+    out_buf = malloc(out_buf_size);
+  }
 }
 
 void close_npsim_trace() {
+  if (cctx) {
+    ZSTD_inBuffer input = { NULL, 0, 0 };
+    ZSTD_outBuffer output = { out_buf, out_buf_size, 0 };
+    ZSTD_compressStream2(cctx, &output, &input, ZSTD_e_end);
+    fwrite(out_buf, 1, output.pos, npsim_trace_fp);
+    ZSTD_freeCCtx(cctx);
+    free(out_buf);
+    cctx = NULL;
+  }
   fclose(npsim_trace_fp);
   npsim_trace_fp = NULL;
 }
-#endif
+#endif // npSim trace
 
 void device_update();
 bool trig_wp();
@@ -119,14 +139,22 @@ static void execute(uint64_t n) {
   for (;n > 0; n --) {
     exec_once(&s, cpu.pc);
 
-    IFDEF(CONFIG_NPSIM_TRACE,
-      struct TraceInst* tr = &s.nptrace;
-      // printf(" npSim Trace: pc %x rs %d,%d rd %d br:taken %d:%d memOp %d addr %x\n",
-      //   tr->pc, tr->src_reg[0], tr->src_reg[1],  tr->dst_reg,
-      //   tr->is_branch, tr->br_taken,
-      //   tr->mem_op, tr->mem_addr);
-      fwrite(tr, sizeof(struct TraceInst), 1, npsim_trace_fp);
-    );
+#ifdef CONFIG_NPSIM_TRACE
+    struct TraceInst* tr = &s.nptrace;
+    ZSTD_inBuffer input = { tr, sizeof(struct TraceInst), 0 };
+    while (input.pos < input.size) {
+      ZSTD_outBuffer output = { out_buf, out_buf_size, 0 };
+      size_t const ret = ZSTD_compressStream2(cctx, &output, &input, ZSTD_e_continue);
+      (void) ret;
+      if (output.pos > 0) {
+          fwrite(out_buf, 1, output.pos, npsim_trace_fp);
+      }
+    }
+    // IFDEF(CONFIG_NPSIM_TRACE,
+    //   struct TraceInst* tr = &s.nptrace;
+    //   fwrite(tr, sizeof(struct TraceInst), 1, npsim_trace_fp);
+    // );
+#endif
     g_nr_guest_inst ++;
     trace_and_difftest(&s, cpu.pc);
     if (nemu_state.state != NEMU_RUNNING) break;

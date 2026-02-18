@@ -233,7 +233,7 @@ config NPSIM_TRACE
 config NPSIM_DEFAULT_PATH
   depends on NPSIM_TRACE
   string "Default path for npSim trace file"
-  default "build/npsim.nptr"
+  default "build/npsim.nptr.zst"
 endmenu
 
 menu "Miscellaneous"
