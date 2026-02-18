@@ -42,18 +42,18 @@ extern "C" void pmem_write(addr_t, ureg_t, uint8_t);
 
 #endif
 
-extern "C" void notify_recvd(uint32_t pc, uint32_t inst);
-extern "C" void notify_fetch(uint32_t pc);
+extern "C" {
+void notify_recvd(uint32_t pc, uint32_t inst);
+void notify_fetch(uint32_t pc);
+void notify_ls_req(uint32_t addr);
+void notify_ls_resp(uint32_t addr);
+void notify_decode(uint32_t pc, unsigned char iop);
+void notify_commit(uint32_t pc, uint32_t inst, unsigned char stalltp);
+void notify_flush();
 
-extern "C" void notify_ls_req(uint32_t addr);
-extern "C" void notify_ls_resp(uint32_t addr);
-
-extern "C" void notify_decode(uint32_t pc, unsigned char iop);
-
-extern "C" void notify_commit(uint32_t pc, uint32_t inst,
-                              unsigned char stalltp);
-
-extern "C" void notify_flush();
+void notify_cache_resp(addr_t a, uint8_t is_hit, uint16_t id);
+void notify_cache_req(addr_t a, uint16_t id);
+}
 
 class RuntimeBin;
 

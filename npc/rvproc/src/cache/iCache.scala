@@ -12,6 +12,7 @@ import rvproc.ISA
 import rvproc.axi4.AXI.RespStatus.OKAY
 import rvproc.axi4.AXI.BurstOpts._
 import rvproc.GlbCtrl.{debug, sta}
+import rvproc.pmu.iCacheSwPMU
 
 case class iCacheConf(
   addrBits:  Int = 32,
@@ -28,36 +29,6 @@ case class iCacheConf(
   def tagBitLo  = addrBits - tagBits
   def lineTrans = this.lineBytes / (this.addrBits / 8)
   def lineTBits = log2Ceil(this.lineTrans)
-}
-
-class iCachePMU extends Module {
-  val io         = IO(new Bundle {
-    val access = Input(Bool())
-    val hit    = Input(Bool())
-    val regidx = Input(UInt(2.W))
-    val regout = Output(UInt(32.W))
-  })
-  val accCountHi = RegInit(0.U(32.W))
-  val accCountLo = RegInit(0.U(32.W))
-  val hitCountHi = RegInit(0.U(32.W))
-  val hitCountLo = RegInit(0.U(32.W))
-  when(io.access) {
-    accCountLo := accCountLo + 1.U
-    accCountHi := accCountHi + Mux(accCountLo.andR, 1.U, 0.U)
-  }
-  when(io.hit) {
-    hitCountLo := hitCountLo + 1.U
-    hitCountHi := hitCountHi + Mux(accCountLo.andR, 1.U, 0.U)
-  }
-  assert(io.hit Implies io.access, "Hit but not access ?");
-  io.regout := MuxLookup(io.regidx, 0.U)(
-    Seq(
-      0.U -> accCountLo,
-      1.U -> accCountHi,
-      2.U -> hitCountLo,
-      3.U -> hitCountHi
-    )
-  )
 }
 
 // Readonly
@@ -232,10 +203,15 @@ class iCache(conf: iCacheConf) extends Module {
   }
 
   if (!sta) {
-    val pmu = Module(new iCachePMU)
-    pmu.io.access := resp.fire
-    pmu.io.hit    := resp.fire && hitRespV
-    pmu.io.regidx := io.cpuSide.ar.bits.addr(3, 2)
-    dontTouch(pmu.io.regout)
+    val pmu        = Module(new iCacheSwPMU)
+    val delayedReq = RegNext(req.fire)
+    pmu.io.resp     := resp.fire
+    pmu.io.respHit  := resp.fire && hitRespV
+    pmu.io.respAddr := RegNext(reqA2)
+    pmu.io.reqAddr  := req.bits.addr
+    pmu.io.req      := req.bits.valid
+    pmu.io.id       := 0.U
+    // pmu.io.regidx := io.cpuSide.ar.bits.addr(3, 2)
+    // dontTouch(pmu.io.regout)
   }
 }

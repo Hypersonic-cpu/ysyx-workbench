@@ -156,8 +156,10 @@ axi_read(addr_t araddr, ureg_t* prdata, bool outstanding) {
   // *prdata = unifiedMem->readWord(araddr & ~3U);
   // return finish_time - curr_tick();
   pmem_read(araddr, prdata);
-  // std::cerr << std::format("DPI-C AXI READ @{:x}[{:s}] Data {:08x} T@{:d}", araddr,
-  //                          outstanding ? "First" : "Burst", *prdata, curr_tick())
+  // std::cerr << std::format("DPI-C AXI READ @{:x}[{:s}] Data {:08x}
+  // T@{:d}", araddr,
+  //                          outstanding ? "First" : "Burst", *prdata,
+  //                          curr_tick())
   //           << std::endl;
   auto lat = outstanding ? MemLatency : MemBstLat;
   return lat;
@@ -193,13 +195,15 @@ trace::DiffTester* pdiff = nullptr;
 
 void
 notify_recvd(uint32_t pc, uint32_t inst) {
-  // std::cerr << std::format(ANSI_YELLOW "IFetch Recv @ pc {:8x}" ANSI_NONE, pc) << std::endl;
+  // std::cerr << std::format(ANSI_YELLOW "IFetch Recv @ pc {:8x}" ANSI_NONE,
+  // pc) << std::endl;
   ppmu->notifyIFRecvd(pc);
 }
 
 void
 notify_fetch(uint32_t pc) {
-  // std::cerr << std::format(ANSI_YELLOW "IFetch Req @ pc {:8x}" ANSI_NONE, pc) << std::endl;
+  // std::cerr << std::format(ANSI_YELLOW "IFetch Req @ pc {:8x}" ANSI_NONE,
+  // pc) << std::endl;
   ppmu->notifyIFFetch(pc);
 }
 
@@ -233,4 +237,14 @@ notify_commit(uint32_t pc, uint32_t inst, unsigned char stalltp) {
     pdiff->upd_dut_pc(pc);
     pdiff->setFire();
   }
+}
+
+void
+notify_cache_resp(addr_t addr, uint8_t is_hit, uint16_t id) {
+  ppmu->notifyCacheResp(addr, is_hit, id);
+}
+
+void
+notify_cache_req(addr_t addr, uint16_t id) {
+  ppmu->notifyCacheReq(addr, id);
 }
