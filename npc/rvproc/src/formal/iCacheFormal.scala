@@ -53,7 +53,7 @@ class iCacheFormal extends Module {
 
   // ── CPU-side stimulus ────────────────────────────────────────────────
   chisel3.assume(io.cpuReqAddr(1, 0) === 0.U)
-  chisel3.assume(io.cpuReqAddr < 1024.U)
+  chisel3.assume(io.cpuReqAddr < conf.dataBytes.U)
 
   dut.io.cpuSide.ar.valid     := io.cpuReqValid
   dut.io.cpuSide.ar.bits.addr := io.cpuReqAddr
@@ -114,9 +114,9 @@ class iCacheFormal extends Module {
   // On a fill, we record which word each beat goes to and what data it
   // carried. Later, when the DUT responds, we look up the word.
   //
-  // Storage: 256 words (1kB addressable region)
-  val NumWords = 1024 / 4
-  val WAddrW   = log2Ceil(NumWords) // 8
+  // Storage: conf.dataBytes/4 words
+  val NumWords = conf.dataBytes / 4
+  val WAddrW   = log2Ceil(NumWords)
   val goldenRF = Reg(Vec(NumWords, UInt(32.W)))
 
   // Write golden RF during AXI burst beats
