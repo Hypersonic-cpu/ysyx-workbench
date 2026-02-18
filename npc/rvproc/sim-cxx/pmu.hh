@@ -228,7 +228,7 @@ public:
 
   void
   notifyCacheResp(addr_t addr, bool is_hit, uint16_t id) {
-    std::cerr << std::format("Resp @{:08x} Hit {:d}\n", addr, is_hit);
+    // std::cerr << std::format("Resp @{:08x} Hit {:d}\n", addr, is_hit);
     assert(id == 0);
     auto& front = icacheboard.front();
     auto [f_addr, f_tick] = front;
@@ -246,7 +246,7 @@ public:
   void
   notifyCacheReq(addr_t addr, uint16_t id) {
     assert(id == 0);
-    std::cerr << std::format("Req @{:08x}\n", addr);
+    // std::cerr << std::format("Req @{:08x}\n", addr);
     icacheboard.emplace_back(addr, curr_tick());
   }
 
