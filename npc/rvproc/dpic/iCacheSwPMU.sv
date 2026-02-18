@@ -21,7 +21,7 @@ module iCacheSwPMU (
   always_ff @(posedge clock) begin
     if (reset) begin
     end else begin
-      if (resp) notify_cache_resp(respAddr, 8'(hit), id);
+      if (resp) notify_cache_resp(respAddr, 8'(respHit), id);
       if (req) notify_cache_req(reqAddr, id);
     end
   end
