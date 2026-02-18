@@ -211,7 +211,7 @@ class iCache(conf: iCacheConf) extends Module {
     pmu.io.respHit  := resp.fire && hitRespV
     pmu.io.respAddr := RegNext(reqA2)
     pmu.io.reqAddr  := req.bits.addr
-    pmu.io.req      := req.valid
+    pmu.io.req      := req.fire
     pmu.io.id       := 0.U
     // pmu.io.regidx := io.cpuSide.ar.bits.addr(3, 2)
     // dontTouch(pmu.io.regout)
