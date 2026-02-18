@@ -11,7 +11,8 @@ import rvproc.Tp
 import rvproc.ISA
 import rvproc.axi4.AXI.RespStatus.OKAY
 import rvproc.axi4.AXI.BurstOpts._
-import rvproc.GlbCtrl.debug
+import rvproc.GlbCtrl.{debug, sta}
+import rvproc.pmu.iCacheSwPMU
 
 case class iCacheConf(
   addrBits:  Int = 32,
@@ -53,16 +54,18 @@ class iCache(conf: iCacheConf) extends Module {
   val state     = RegInit(flowing)
   val nextState = WireInit(flowing)
 
-  val req       = io.cpuSide.ar
-  val resp      = io.cpuSide.r
-  val tagHit    = Wire(Bool())
-  val wordSel   = Wire(Tp.RegType())
+  val req        = io.cpuSide.ar
+  val resp       = io.cpuSide.r
+  val tagHit     = Wire(Bool())
+  val wordSel    = Wire(Tp.RegType())
   val fillBuf    = Reg(Vec(conf.lineBytes * 8 / ISA.RegBits, Tp.RegType()))
   // Avoid SyncReadMem read-write conflict: don't accept new requests on
   // the cycle the fill completes (write and read would hit the same index).
   // Gate with state===waiting to ignore spurious AXI R responses that leak
   // through the arbiter/crossbar during non-waiting states.
-  val fillFinish = RegNext(io.memSide.r.bits.last && io.memSide.r.fire && state === waiting)
+  val fillFinish = RegNext(
+    io.memSide.r.bits.last && io.memSide.r.fire && state === waiting
+  )
   val willShift  = nextState === flowing && !fillFinish
   req.ready := willShift
   val hitRespV  = RegNext(tagHit)
@@ -199,4 +202,18 @@ class iCache(conf: iCacheConf) extends Module {
     dontTouch(lineRead)
   }
 
+  if (!sta) {
+    val pmu        = Module(new iCacheSwPMU)
+    val delayedReq = RegNext(req.fire)
+    pmu.io.reset    := reset
+    pmu.io.clock    := clock
+    pmu.io.resp     := resp.fire
+    pmu.io.respHit  := resp.fire && hitRespV
+    pmu.io.respAddr := RegNext(reqA2)
+    pmu.io.reqAddr  := req.bits.addr
+    pmu.io.req      := req.fire
+    pmu.io.id       := 0.U
+    // pmu.io.regidx := io.cpuSide.ar.bits.addr(3, 2)
+    // dontTouch(pmu.io.regout)
+  }
 }

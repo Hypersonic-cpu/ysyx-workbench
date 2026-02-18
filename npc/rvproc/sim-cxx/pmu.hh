@@ -1,8 +1,11 @@
 #pragma once
 
 #include "probe.hh"
+#include "rtl_defs.hh"
 #include "stats_template/stats.hpp"
 
+#include <cassert>
+#include <cstdio>
 #include <format>
 #include <iostream>
 #include <limits>
@@ -65,6 +68,12 @@ public:
                       {XBarBreakdown::XBarBlocking, "Blocking"},
                       {XBarBreakdown::XBarServing, "Serving"}};
 
+  enum class CacheBreakdown { Miss = 0, Hit };
+
+  inline static const std::unordered_map<CacheBreakdown, std::string>
+    CacheBreakdownName{{CacheBreakdown::Miss, "Miss"},
+                       {CacheBreakdown::Hit, "Hit"}};
+
 private:
   // DistriDelta<int64_t> pcjmp;
   DistriBase<uint64_t> ifcyc;
@@ -79,14 +88,18 @@ private:
   ClassifiedStats<XBarBreakdown> memRdStatus;
   ClassifiedStats<XBarBreakdown> memWrStatus;
 
-  std::vector<StatsBase*> statslist{&ifcyc,       &lscyc,      &instcyc,
-                                    &cycStatus,   &instStatus, &memRdStatus,
-                                    &memWrStatus, &recoverTime};
+  ClassifiedStats<CacheBreakdown> cacheRates;
+
+  std::vector<StatsBase*> statslist{&ifcyc,       &lscyc,       &instcyc,
+                                    &cycStatus,   &instStatus,  &memRdStatus,
+                                    &memWrStatus, &recoverTime, &cacheRates};
 
   using iboard_t = std::tuple<addr_t, size_t, uint64_t>;
   std::list<iboard_t> instboard;
   using ifetch_t = std::tuple<addr_t, uint64_t>;
   std::list<ifetch_t> ifetchboard;
+  using icache_t = std::tuple<addr_t, tick_t>;
+  std::list<icache_t> icacheboard;
 
 public:
   SoftPerfUnit()
@@ -103,7 +116,8 @@ public:
       , instStatus("InstBreakdown", InstBreakdownName)
       , cycStatus("BlockedCause", CycBreakdownName)
       , memRdStatus("XBarReadUsage", XBarBreakdownName)
-      , memWrStatus("XBarWriteUsage", XBarBreakdownName) {}
+      , memWrStatus("XBarWriteUsage", XBarBreakdownName)
+      , cacheRates("L1ICache", CacheBreakdownName) {}
 
   void
   dump_stats(std::ostream& os = std::cout) const {
@@ -210,6 +224,30 @@ public:
     // Since not break, must commit 1 insts.
     instStatus.sample(Commit, 1);
     instStatus.sample(NotUsed, remove_cnt);
+  }
+
+  void
+  notifyCacheResp(addr_t addr, bool is_hit, uint16_t id) {
+    // std::cerr << std::format("Resp @{:08x} Hit {:d}\n", addr, is_hit);
+    assert(id == 0);
+    auto& front = icacheboard.front();
+    auto [f_addr, f_tick] = front;
+    v_assert(f_addr == addr, "Cache access queue front", f_addr,
+             "!= resp. addr", addr);
+    if (is_hit) {
+      cacheRates.sample(CacheBreakdown::Hit);
+    } else {
+      cacheRates.sample(CacheBreakdown::Miss);
+      // TODO: Sample miss penalty
+    }
+    icacheboard.pop_front();
+  }
+
+  void
+  notifyCacheReq(addr_t addr, uint16_t id) {
+    assert(id == 0);
+    // std::cerr << std::format("Req @{:08x}\n", addr);
+    icacheboard.emplace_back(addr, curr_tick());
   }
 
   // void probeArbiter() {
