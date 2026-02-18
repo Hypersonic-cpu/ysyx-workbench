@@ -260,36 +260,36 @@ read_double_csr(CsrSel hi, CsrSel lo) noexcept {
   return ret;
 }
 
-enum CacheSel {
-  CacheAccLo = 0, CacheAccHi,
-  CacheHitLo, CacheHitHi,
-};
-
-inline ureg_t
-read_cache_pmu(CacheSel sel) {
-  auto r = ptop->rootp;
-  ureg_t ret = 0;
-  switch (sel) {
-#if SOCMODE
-    default: assert(false && "Unimpl");
-#else
-    case CacheAccHi: ret = r->rvCore__DOT__l1iPort__DOT__pmu__DOT__accCountHi; break;
-    case CacheAccLo: ret = r->rvCore__DOT__l1iPort__DOT__pmu__DOT__accCountLo; break;
-    case CacheHitHi: ret = r->rvCore__DOT__l1iPort__DOT__pmu__DOT__hitCountHi; break;
-    case CacheHitLo: ret = r->rvCore__DOT__l1iPort__DOT__pmu__DOT__hitCountLo; break;
-#endif
-    default: v_assert(false, "Out-of-range Cache PMU read, id =", std::to_string(sel)); break;
-  }
-  return ret;
-}
-
-inline uint64_t
-read_cache_perf(CacheSel hi, CacheSel lo) noexcept {
-  uint64_t ret = read_cache_pmu(hi);
-  ret <<= 32;
-  ret |= read_cache_pmu(lo);
-  return ret;
-}
+// enum CacheSel {
+//   CacheAccLo = 0, CacheAccHi,
+//   CacheHitLo, CacheHitHi,
+// };
+//
+// inline ureg_t
+// read_cache_pmu(CacheSel sel) {
+//   auto r = ptop->rootp;
+//   ureg_t ret = 0;
+//   switch (sel) {
+// #if SOCMODE
+//     default: assert(false && "Unimpl");
+// #else
+//     case CacheAccHi: ret = r->rvCore__DOT__l1iPort__DOT__pmu__DOT__accCountHi; break;
+//     case CacheAccLo: ret = r->rvCore__DOT__l1iPort__DOT__pmu__DOT__accCountLo; break;
+//     case CacheHitHi: ret = r->rvCore__DOT__l1iPort__DOT__pmu__DOT__hitCountHi; break;
+//     case CacheHitLo: ret = r->rvCore__DOT__l1iPort__DOT__pmu__DOT__hitCountLo; break;
+// #endif
+//     default: v_assert(false, "Out-of-range Cache PMU read, id =", std::to_string(sel)); break;
+//   }
+//   return ret;
+// }
+//
+// inline uint64_t
+// read_cache_perf(CacheSel hi, CacheSel lo) noexcept {
+//   uint64_t ret = read_cache_pmu(hi);
+//   ret <<= 32;
+//   ret |= read_cache_pmu(lo);
+//   return ret;
+// }
 
 // inline bool
 // read_arbiter_rport() noexcept {
