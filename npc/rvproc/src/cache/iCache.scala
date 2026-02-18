@@ -11,7 +11,7 @@ import rvproc.Tp
 import rvproc.ISA
 import rvproc.axi4.AXI.RespStatus.OKAY
 import rvproc.axi4.AXI.BurstOpts._
-import rvproc.GlbCtrl.debug
+import rvproc.GlbCtrl.{debug, sta}
 
 case class iCacheConf(
   addrBits:  Int = 32,
@@ -28,6 +28,36 @@ case class iCacheConf(
   def tagBitLo  = addrBits - tagBits
   def lineTrans = this.lineBytes / (this.addrBits / 8)
   def lineTBits = log2Ceil(this.lineTrans)
+}
+
+class iCachePMU extends Module {
+  val io         = IO(new Bundle {
+    val access = Input(Bool())
+    val hit    = Input(Bool())
+    val regidx = Input(UInt(2.W))
+    val regout = Output(UInt(32.W))
+  })
+  val accCountHi = RegInit(0.U(32.W))
+  val accCountLo = RegInit(0.U(32.W))
+  val hitCountHi = RegInit(0.U(32.W))
+  val hitCountLo = RegInit(0.U(32.W))
+  when(io.access) {
+    accCountLo := accCountLo + 1.U
+    accCountHi := accCountHi + Mux(accCountLo.andR, 1.U, 0.U)
+  }
+  when(io.hit) {
+    hitCountLo := hitCountLo + 1.U
+    hitCountHi := hitCountHi + Mux(accCountLo.andR, 1.U, 0.U)
+  }
+  assert(io.hit Implies io.access, "Hit but not access ?");
+  io.regout := MuxLookup(io.regidx, 0.U)(
+    Seq(
+      0.U -> accCountLo,
+      1.U -> accCountHi,
+      2.U -> hitCountLo,
+      3.U -> hitCountHi
+    )
+  )
 }
 
 // Readonly
@@ -53,16 +83,18 @@ class iCache(conf: iCacheConf) extends Module {
   val state     = RegInit(flowing)
   val nextState = WireInit(flowing)
 
-  val req       = io.cpuSide.ar
-  val resp      = io.cpuSide.r
-  val tagHit    = Wire(Bool())
-  val wordSel   = Wire(Tp.RegType())
+  val req        = io.cpuSide.ar
+  val resp       = io.cpuSide.r
+  val tagHit     = Wire(Bool())
+  val wordSel    = Wire(Tp.RegType())
   val fillBuf    = Reg(Vec(conf.lineBytes * 8 / ISA.RegBits, Tp.RegType()))
   // Avoid SyncReadMem read-write conflict: don't accept new requests on
   // the cycle the fill completes (write and read would hit the same index).
   // Gate with state===waiting to ignore spurious AXI R responses that leak
   // through the arbiter/crossbar during non-waiting states.
-  val fillFinish = RegNext(io.memSide.r.bits.last && io.memSide.r.fire && state === waiting)
+  val fillFinish = RegNext(
+    io.memSide.r.bits.last && io.memSide.r.fire && state === waiting
+  )
   val willShift  = nextState === flowing && !fillFinish
   req.ready := willShift
   val hitRespV  = RegNext(tagHit)
@@ -199,4 +231,11 @@ class iCache(conf: iCacheConf) extends Module {
     dontTouch(lineRead)
   }
 
+  if (!sta) {
+    val pmu = Module(new iCachePMU)
+    pmu.io.access := resp.fire
+    pmu.io.hit    := resp.fire && hitRespV
+    pmu.io.regidx := io.cpuSide.ar.bits.addr(3, 2)
+    dontTouch(pmu.io.regout)
+  }
 }

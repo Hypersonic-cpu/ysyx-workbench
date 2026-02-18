@@ -73,7 +73,7 @@ class rvCore(isSoc: Boolean) extends Module {
   l1dPort.io.empty <> ifs.io.fromLs
 
   val l1iPort = Module(
-    new cache.iCache(new iCacheConf(32, 512, 16, 1))
+    new cache.iCache(new iCacheConf(32, 1024, 16, 1))
   )
   l1iPort.io.cpuSide <> ifs.io.iMem
   l1iPort.io.flushAll := ids.io.fenceI.bits && ids.io.fenceI.valid

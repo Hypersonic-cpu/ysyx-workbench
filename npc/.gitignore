@@ -12,6 +12,8 @@
 !*.cc
 !*.hh
 !*.hpp
+!*.py
+!*filelist.f
 !.gitignore
 !.scalafmt.conf
 !README.md
@@ -27,7 +29,13 @@ out/
 test_run_dir/
 .metals/
 .bloop/
+
+# ysyx
 build-*/
 !*.nxdc
 logs/
 ccout/
+formal/**/*.sv
+!*.md
+*_bmc/
+formal/*/
