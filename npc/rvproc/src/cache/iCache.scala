@@ -205,6 +205,8 @@ class iCache(conf: iCacheConf) extends Module {
   if (!sta) {
     val pmu        = Module(new iCacheSwPMU)
     val delayedReq = RegNext(req.fire)
+    pmu.io.reset    := reset
+    pmu.io.clock    := clock
     pmu.io.resp     := resp.fire
     pmu.io.respHit  := resp.fire && hitRespV
     pmu.io.respAddr := RegNext(reqA2)
