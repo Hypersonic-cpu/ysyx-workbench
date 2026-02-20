@@ -68,12 +68,12 @@ class rvCore(isSoc: Boolean) extends Module {
   RdPacket(lss.io.fwdDet, lss.io.in.bits.foward, raw.io.lssrd)
   RdPacket(wbs.io.fwdDet, wbs.io.in.bits.foward, raw.io.wbsrd)
 
-  val l1dPort = Module(new StoreBuffer(8))
+  val l1dPort = Module(new StoreBuffer(2))
   l1dPort.io.cpuSide <> lss.io.dMem
   l1dPort.io.empty <> ifs.io.fromLs
 
   val l1iPort = Module(
-    new cache.iCache(new iCacheConf(32, 1024, 16, 1))
+    new cache.iCache(new iCacheConf(32, 1024, 32, 1))
   )
   l1iPort.io.cpuSide <> ifs.io.iMem
   l1iPort.io.flushAll := ids.io.fenceI.bits && ids.io.fenceI.valid
