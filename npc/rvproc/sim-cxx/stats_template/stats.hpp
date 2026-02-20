@@ -69,7 +69,9 @@ public:
 
   json
   gen_json() const override {
-    return json(arr);
+    auto brr = arr;
+    brr["samples"] = samples;
+    return json(brr);
   }
 
   void
