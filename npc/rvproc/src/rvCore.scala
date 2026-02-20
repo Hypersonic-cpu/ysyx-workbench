@@ -68,7 +68,7 @@ class rvCore(isSoc: Boolean) extends Module {
   RdPacket(lss.io.fwdDet, lss.io.in.bits.foward, raw.io.lssrd)
   RdPacket(wbs.io.fwdDet, wbs.io.in.bits.foward, raw.io.wbsrd)
 
-  val l1dPort = Module(new StoreBuffer(4))
+  val l1dPort = Module(new StoreBuffer(8))
   l1dPort.io.cpuSide <> lss.io.dMem
   l1dPort.io.empty <> ifs.io.fromLs
 
