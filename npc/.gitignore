@@ -18,6 +18,7 @@
 !.scalafmt.conf
 !README.md
 build/
+.github/
 
 # mill
 !*.mill
