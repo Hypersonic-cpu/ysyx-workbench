@@ -57,17 +57,19 @@ enum {
   IFDEF(CONFIG_NPSIM_TRACE, \
   s->nptrace.is_branch = true); \
   if (cond) { \
-    IFDEF(CONFIG_NPSIM_TRACE, \
-    s->nptrace.br_taken = true); \
     s->dnpc = s->pc + imm; \
+    IFDEF(CONFIG_NPSIM_TRACE, \
+    s->nptrace.br_taken = true; \
+    s->nptrace.mem_addr = s->dnpc); \
   } \
 } while (0);
 // Unconditional jumps
 #define brAbs(taraddr) do { \
+  s->dnpc = taraddr; \
   IFDEF(CONFIG_NPSIM_TRACE, \
   s->nptrace.is_branch = true; \
-  s->nptrace.br_taken = true); \
-  s->dnpc = taraddr; \
+  s->nptrace.br_taken = true; \
+  s->nptrace.mem_addr = s->dnpc); \
 } while (0);
 #define dstR() do { IFDEF(CONFIG_NPSIM_TRACE, s->nptrace.dst_reg = *rd); } while (0)
 #define src1R() do { \
