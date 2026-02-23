@@ -123,12 +123,14 @@ runam:
 	# $(call git_commit, "run with AM")
 	mill -i $(PRJ).test.testOnly $(PRJ).test.$(TOPNAME)Am
 
-run: verilate verilog $(LIBCAPSTONE) printhook $(SIM_BIN)
+compile: prebuild verilog $(SIM_BIN)
+
+run: printhook $(LIBCAPSTONE) compile
 	# $(call git_commit, "run with AM via verilator cc")
 	@echo "MROMBIN = $(mrombin)"
 	$(SIM_BIN) $(mrombin) $(simccargs)
 
-runonly: verilate $(SIM_BIN)
+runonly: prebuild $(SIM_BIN)
 	# $(call git_commit, "run with AM via verilator cc")
 	$(SIM_BIN) $(mrombin) $(simccargs)
 
@@ -182,13 +184,13 @@ formal-icache:
 	@echo "Running SymbiYosys"
 	cd $(NPC_HOME) && sby -f $(FORMAL_ICACHE_SBY) bmc && cd -
 
-.PHONY: test runam verilog help reformat checkformat clean verilate sim printhook formal-icache
+.PHONY: test runam verilog help reformat checkformat clean prebuild sim printhook formal-icache compile
 
-verilate:
+prebuild:
 	@mkdir -p $(BUILD_OBJ_DIR)
 	@mkdir -p $(BUILD_SIM_DIR)
 
-# sim: verilate verilog $(SIM_BIN)
+# sim: prebuild verilog $(SIM_BIN)
 # 	$(call git_commit, "sim RTL") # DO NOT REMOVE THIS LINE!!!
 # 	$(SIM_BIN)
 
