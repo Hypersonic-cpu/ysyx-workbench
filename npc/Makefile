@@ -124,6 +124,7 @@ runam:
 	mill -i $(PRJ).test.testOnly $(PRJ).test.$(TOPNAME)Am
 
 compile: prebuild verilog $(SIM_BIN)
+	@echo "Compiled:" $(SIM_BIN)
 
 run: printhook $(LIBCAPSTONE) compile
 	# $(call git_commit, "run with AM via verilator cc")
@@ -189,10 +190,6 @@ formal-icache:
 prebuild:
 	@mkdir -p $(BUILD_OBJ_DIR)
 	@mkdir -p $(BUILD_SIM_DIR)
-
-# sim: prebuild verilog $(SIM_BIN)
-# 	$(call git_commit, "sim RTL") # DO NOT REMOVE THIS LINE!!!
-# 	$(SIM_BIN)
 
 # WARN: DO NOT AUTO-CHANGE TO ANY OTHER BRANCHES!
 # THAT INVOLVES UNPREDICTABLE.
