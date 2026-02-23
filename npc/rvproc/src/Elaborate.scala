@@ -1,9 +1,36 @@
 import scala.util.Properties
 import java.nio.file.Paths
+import rvproc.cache.iCacheConf
+import scala.collection.mutable.ArrayBuffer
 
 object Elaborate extends App {
-  val isSocMode    = args.contains("--soc-mode")
-  val filteredArgs = args.filter(_ != "--soc-mode")
+  def parseArgs(args: Array[String]) = {
+    var isSocMode  = false
+    var l1iSize    = 1024
+    var l1iBlksize = 16
+    var l1iAssoc   = 1
+    val rest       = scala.collection.mutable.ArrayBuffer[String]()
+
+    var i = 0
+    while (i < args.length) {
+      args(i) match {
+        case "--soc-mode"    => isSocMode = true
+        case "--l1i-size"    => l1iSize = args(i + 1).toInt; i += 1
+        case "--l1i-blksize" => l1iBlksize = args(i + 1).toInt; i += 1
+        case "--l1i-assoc"   => l1iAssoc = args(i + 1).toInt; i += 1
+        case other           => rest += other
+      }
+      i += 1
+    }
+
+    (
+      isSocMode,
+      iCacheConf(32, l1iSize, l1iBlksize, l1iAssoc),
+      rest.toArray
+    )
+  }
+
+  val (isSoC, l1iConfig, restArgs) = parseArgs(args)
 
   val outputPath = "/home/kong/ysyx-workbench/npc/build-sv/rvproc/"
 
@@ -25,8 +52,8 @@ object Elaborate extends App {
   )
 
   circt.stage.ChiselStage.emitSystemVerilogFile(
-    new rvproc.rvCoreWrapper(isSocMode),
-    filteredArgs,
+    new rvproc.rvCoreWrapper(isSoC, l1iConfig),
+    restArgs,
     firtoolOptions
   )
 }

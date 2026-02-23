@@ -1,9 +1,10 @@
 # soc or npc mode
 SOCMODE?=0
+RTL_SCALA_ARG?=
+
 NPSIM_ACTIVE=0
-SOC_SCALA_ARG=
 ifeq ($(SOCMODE),1)
-SOC_SCALA_ARG= --soc-mode
+RTL_SCALA_ARG += --soc-mode
 else
 include ../npsim/Makefile
 endif
@@ -134,7 +135,7 @@ runonly: verilate $(SIM_BIN)
 verilog: $(SCALA_SOURCES)
 	$(call git_commit, "generate verilog")
 	mkdir -p $(BUILD_SV_DIR)
-	mill -i $(PRJ).runMain Elaborate --target-dir $(BUILD_SV_DIR) $(SOC_SCALA_ARG)
+	mill -i $(PRJ).runMain Elaborate --target-dir $(BUILD_SV_DIR) $(RTL_SCALA_ARG)
 	@echo "Verilog written to " $(BUILD_SV_DIR)
 	@echo "Apply memory port changes for SoC"
 	@find $(BUILD_SV_DIR) -type f -name "*.v" -o -name "*.sv" -print0 | xargs -0 sed -i -e 's/_\(aw\|ar\|w\|r\|b\)_\(\|bits_\)/_\1/g'
