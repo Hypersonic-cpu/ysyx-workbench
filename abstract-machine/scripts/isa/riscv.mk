@@ -1,8 +1,10 @@
 CROSS_COMPILE := riscv64-linux-gnu-
 COMMON_CFLAGS := -fno-pic -march=rv64g -mcmodel=medany -mstrict-align
 CFLAGS        += $(COMMON_CFLAGS) -static
-ASFLAGS       += $(COMMON_CFLAGS) -O2
+ASFLAGS       += $(COMMON_CFLAGS) -O0
 LDFLAGS       += -melf64lriscv
+
+CFLAGS        += -O2
 
 # overwrite ARCH_H defined in $(AM_HOME)/Makefile
 ARCH_H := arch/riscv.h
