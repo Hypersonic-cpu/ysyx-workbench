@@ -1,9 +1,9 @@
 #!/bin/bash
 set -eu
 
-L1I_SIZES=( "512" "1024" )
+L1I_SIZES=( "256" "512" "1024" "2048" )
 L1I_ASSOC=( "1" )
-L1I_BLKSZ=( "16" "32" )
+L1I_BLKSZ=( "16" "32" "64" )
 
 SIMCC_EXEC="$NPC_HOME/build-sim/rvproc/rvproc.elf"
 SIMCC_PREF="$NPC_HOME/build-sim/rvproc/rvproc_"
@@ -11,9 +11,7 @@ SIMCC_PREF="$NPC_HOME/build-sim/rvproc/rvproc_"
 BENCH_PATH="$AM_BENCH/coremark"
 BENCH_IMGS="$BENCH_PATH/build/coremark-riscv32e-npc.bin"
 BENCH_ARGS="test"
-OUT_ROOT="$NPC_HOME/ccout/sweep-cache/"
-mkdir -p $OUT_ROOT
-
+OUT_NAME="sweep-cache"
 
 if [[ "$#" -gt 0 ]]; then
 SKIP_FLAG="$1"
@@ -30,9 +28,9 @@ for size in "${L1I_SIZES[@]}"; do
   for block in "${L1I_BLKSZ[@]}"; do
     for assoc in "${L1I_ASSOC[@]}"; do
       curr_suffix="l1i_${size}_blk${block}_assoc${assoc}"
-      curr_out="$OUT_ROOT/$curr_suffix"
+      curr_out="$OUT_NAME/$curr_suffix"
       curr_exec="${SIMCC_PREF}${curr_suffix}.elf"
-      mkdir -p $curr_out
+      mkdir -p "$NPC_HOME/ccout/$curr_out"
 
       if [[ "$SKIP_FLAG" != "--skip-build" ]]; then
         make -C $NPC_HOME \
