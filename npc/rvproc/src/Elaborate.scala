@@ -32,7 +32,11 @@ object Elaborate extends App {
 
   val (isSoC, l1iConfig, restArgs) = parseArgs(args)
 
-  val outputPath = "/home/kong/ysyx-workbench/npc/build-sv/rvproc/"
+  l1iConfig.printConf()
+
+  val ysyxNPC = System.getenv("NPC_HOME")
+  assert(ysyxNPC.nonEmpty)
+  val outputPath = ysyxNPC + "/build-sv/rvproc/"
 
   val firtoolOptions = Array(
     "--split-verilog",
