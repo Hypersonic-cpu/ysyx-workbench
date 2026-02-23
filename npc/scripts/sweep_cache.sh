@@ -31,6 +31,7 @@ for size in "${L1I_SIZES[@]}"; do
     for assoc in "${L1I_ASSOC[@]}"; do
       curr_suffix="l1i_${size}_blk${block}_assoc${assoc}"
       curr_out="$OUT_ROOT/$curr_suffix"
+      curr_exec="${SIMCC_PREF}${curr_suffix}.elf"
       mkdir -p $curr_out
 
       if [[ "$SKIP_FLAG" != "--skip-build" ]]; then
@@ -41,7 +42,6 @@ for size in "${L1I_SIZES[@]}"; do
         mv $SIMCC_EXEC $curr_exec
       fi
 
-      curr_exec="${SIMCC_PREF}${curr_suffix}.elf"
       TARGET_EXEC+=("$curr_exec")
       OUTDIR_EXEC+=("$curr_out")
     done
