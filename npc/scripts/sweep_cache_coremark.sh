@@ -8,11 +8,10 @@ L1I_BLKSZ=( "16" "32" "64" )
 SIMCC_EXEC="$NPC_HOME/build-sim/rvproc/rvproc.elf"
 SIMCC_PREF="$NPC_HOME/build-sim/rvproc/rvproc_"
 
-# BENCH_PATH="$AM_BENCH/coremark"
-BENCH_PATH="$AM_BENCH/microbench"
-BENCH_IMGS="$BENCH_PATH/build/microbench-riscv32e-npc.bin"
-BENCH_ARGS="train"
-OUT_NAME="sweep-microtrain"
+BENCH_PATH="$AM_BENCH/coremark"
+BENCH_IMGS="$BENCH_PATH/build/coremark-riscv32e-npc.bin"
+BENCH_ARGS=""
+OUT_NAME="sweep-cache"
 
 if [[ "$#" -gt 0 ]]; then
 SKIP_FLAG="$1"
@@ -20,7 +19,7 @@ else
 SKIP_FLAG=""
 fi
 
-make -C $BENCH_PATH ARCH=riscv32e-npc mainargs="$BENCH_ARGS" insert-arg
+make -C $BENCH_PATH ARCH=riscv32e-npc
 
 TARGET_EXEC=( )
 OUTDIR_EXEC=( )
