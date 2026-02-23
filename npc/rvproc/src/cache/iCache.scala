@@ -33,7 +33,7 @@ case class iCacheConf(
     println(
       s"iCache : [${this.tagBitHi}: tag :${this.tagBitLo}]"
         + s"[${this.idxBitHi}: idx :${this.idxBitLo}][${this.offBits - 1}: off :0]"
-        + s" Assoc ${this.assoc} #Sets ${this.numSets}"
+        + s" Assoc ${this.assoc} #Sets ${this.numSets} BlkSize ${this.lineBytes}"
     )
   }
 }
