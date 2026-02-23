@@ -57,6 +57,7 @@ wait_jobs() {
 
 for tar in "${TARGET_EXEC[@]}"; do
   wait_jobs
+  echo "$tar $BENCH_IMGS"
   $tar $BENCH_IMGS &
 done
 
