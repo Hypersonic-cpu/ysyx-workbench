@@ -12,7 +12,10 @@ import rvproc.BusType._
 import BitMath._
 import rvproc.cache.iCacheConf
 
-class rvCore(isSoc: Boolean) extends Module {
+class rvCore(
+  isSoc:   Boolean,
+  l1iConf: iCacheConf = iCacheConf(32, 1024, 16, 1))
+    extends Module {
   val io = IO(new Bundle {
     val interrupt = Input(Bool())
     val master    = new AXIBus
@@ -73,7 +76,7 @@ class rvCore(isSoc: Boolean) extends Module {
   l1dPort.io.empty <> ifs.io.fromLs
 
   val l1iPort = Module(
-    new cache.iCache(new iCacheConf(32, 1024, 16, 1))
+    new cache.iCache(this.l1iConf)
   )
   l1iPort.io.cpuSide <> ifs.io.iMem
   l1iPort.io.flushAll := ids.io.fenceI.bits && ids.io.fenceI.valid
@@ -104,7 +107,7 @@ class rvCore(isSoc: Boolean) extends Module {
     val pMem = Module(new PMemBox)
     locxbar.io.devices(1) <> clint.io.port
     locxbar.io.devices(0) <> pMem.io.master
-    io.master        := DontCare
+    io.master := DontCare
   }
 
   if (GlbCtrl.debug) {
@@ -133,13 +136,13 @@ class rvCore(isSoc: Boolean) extends Module {
 //   core.io.slave     := DontCare
 // }
 
-class rvCoreWrapper(isSoc: Boolean) extends Module {
+class rvCoreWrapper(isSoc: Boolean, l1i: iCacheConf) extends Module {
   val io   = IO(new Bundle {
     val interrupt   = Input(Bool())
     val managerPort = new AXIBus
     val subordiPort = Flipped(new AXIBus)
   })
-  val core = Module(new rvCore(isSoc))
+  val core = Module(new rvCore(isSoc, l1i))
   core.io.interrupt := io.interrupt
   AXIPortPassing(io.managerPort, core.io.master)
   AXIPortPassing(core.io.slave, io.subordiPort)

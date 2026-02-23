@@ -19,16 +19,23 @@ case class iCacheConf(
   dataBytes: Int = 1024,
   lineBytes: Int = 16,
   assoc: Int = 1) {
-  def numSets   = dataBytes / (lineBytes * assoc)
-  def idxBits   = log2Ceil(this.numSets)
-  def idxBitHi  = this.offBits + this.idxBits - 1
-  def idxBitLo  = this.offBits
-  def offBits   = log2Ceil(lineBytes)
-  def tagBits   = addrBits - this.idxBits - this.offBits
-  def tagBitHi  = addrBits - 1
-  def tagBitLo  = addrBits - tagBits
-  def lineTrans = this.lineBytes / (this.addrBits / 8)
-  def lineTBits = log2Ceil(this.lineTrans)
+  def numSets     = dataBytes / (lineBytes * assoc)
+  def idxBits     = log2Ceil(this.numSets)
+  def idxBitHi    = this.offBits + this.idxBits - 1
+  def idxBitLo    = this.offBits
+  def offBits     = log2Ceil(lineBytes)
+  def tagBits     = addrBits - this.idxBits - this.offBits
+  def tagBitHi    = addrBits - 1
+  def tagBitLo    = addrBits - tagBits
+  def lineTrans   = this.lineBytes / (this.addrBits / 8)
+  def lineTBits   = log2Ceil(this.lineTrans)
+  def printConf() = {
+    println(
+      s"iCache : [${this.tagBitHi}: tag :${this.tagBitLo}]"
+        + s"[${this.idxBitHi}: idx :${this.idxBitLo}][${this.offBits - 1}: off :0]"
+        + s" Assoc ${this.assoc} #Sets ${this.numSets} BlkSize ${this.lineBytes}"
+    )
+  }
 }
 
 // Readonly
@@ -40,10 +47,7 @@ class iCache(conf: iCacheConf) extends Module {
     val memSide  = new AXIBus
   })
 
-  println(
-    s"--> iCache Addr : [${conf.tagBitHi}: tag :${conf.tagBitLo}]"
-      + s"[${conf.idxBitHi}: idx :${conf.idxBitLo}][${conf.offBits - 1}: off :0]"
-  )
+  conf.printConf()
 
   val validArr = RegInit(VecInit(Seq.fill(conf.numSets)(false.B)))
   val tagArr   = SyncReadMem(conf.numSets, UInt(conf.tagBits.W))

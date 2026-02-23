@@ -80,14 +80,14 @@ parse_args(int argc, char* argv[]) {
     {0, 0, NULL, 0},
   };
 
-  std::string custom_dir = "";
-  { /** Default dir */
-    auto now = std::chrono::system_clock::now();
-    auto in_time_t = std::chrono::system_clock::to_time_t(now);
-    std::stringstream ss;
-    ss << std::put_time(std::localtime(&in_time_t), "%Y%m%d-%H%M%S");
-    custom_dir = ss.str();
-  }
+  std::string custom_dir = "null";
+  // { /** Default dir */
+  //   auto now = std::chrono::system_clock::now();
+  //   auto in_time_t = std::chrono::system_clock::to_time_t(now);
+  //   std::stringstream ss;
+  //   ss << std::put_time(std::localtime(&in_time_t), "%Y%m%d-%H%M%S");
+  //   custom_dir = ss.str();
+  // }
 
   optind = 2;
   int o;
@@ -123,7 +123,7 @@ parse_args(int argc, char* argv[]) {
     //   break;
     case 'R':
       record_perf = true;
-      custom_dir += "-" + std::string(optarg);
+      custom_dir = std::string(optarg);
       break;
     case 'c':
       runtime_dump_opt.cycle_no = true;

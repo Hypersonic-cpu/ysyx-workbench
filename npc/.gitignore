@@ -13,6 +13,7 @@
 !*.hh
 !*.hpp
 !*.py
+!*.sh
 !*filelist.f
 !.gitignore
 !.scalafmt.conf
