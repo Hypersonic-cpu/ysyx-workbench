@@ -15,7 +15,7 @@ OUT_ROOT="$NPC_HOME/ccout/sweep-cache/"
 mkdir -p $OUT_ROOT
 
 
-if [[ "$#" -gt 1 ]]; then
+if [[ "$#" -gt 0 ]]; then
 SKIP_FLAG="$1"
 else
 SKIP_FLAG=""
@@ -24,6 +24,7 @@ fi
 make -C $BENCH_PATH ARCH=riscv32e-npc mainargs="$BENCH_ARGS"
 
 TARGET_EXEC=( )
+OUTDIR_EXEC=( )
 
 for size in "${L1I_SIZES[@]}"; do
   for block in "${L1I_BLKSZ[@]}"; do
@@ -37,11 +38,12 @@ for size in "${L1I_SIZES[@]}"; do
           RTL_SCALA_ARG="--l1i-size ${size} --l1i-blksize ${block} --l1i-assoc ${assoc}" \
           LOGENA=0 DIFFENA=0 DPRINTF=0 NVBENA=0 DBGENA=1 DPRINTF=0 \
           compile
+        mv $SIMCC_EXEC $curr_exec
       fi
 
       curr_exec="${SIMCC_PREF}${curr_suffix}.elf"
-      mv $SIMCC_EXEC $curr_exec
       TARGET_EXEC+=("$curr_exec")
+      OUTDIR_EXEC+=("$curr_out")
     done
   done
 done
@@ -55,10 +57,12 @@ wait_jobs() {
   done
 }
 
-for tar in "${TARGET_EXEC[@]}"; do
+for i in "${!TARGET_EXEC[@]}"; do
   wait_jobs
-  echo "$tar $BENCH_IMGS"
-  $tar $BENCH_IMGS &
+  tar="${TARGET_EXEC[$i]}"
+  out="${OUTDIR_EXEC[$i]}"
+  echo "$tar $BENCH_IMGS -R $out"
+  $tar $BENCH_IMGS -R $out &
 done
 
 wait
