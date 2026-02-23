@@ -38,8 +38,17 @@ for size in "${L1I_SIZES[@]}"; do
 done
 
 echo "== Cache Sweep Start =="
+MAX_JOBS=$(( $(nproc) - 2 ))
+
+wait_jobs() {
+  while [ "$(jobs -rp | wc -l)" -ge "$MAX_JOBS" ]; do
+    sleep 1
+  done
+}
+
 for tar in "${TARGET_EXEC[@]}"; do
-  echo "$tar $BENCH_IMGS"
+  wait_jobs
+  $tar $BENCH_IMGS &
 done
 
 wait
