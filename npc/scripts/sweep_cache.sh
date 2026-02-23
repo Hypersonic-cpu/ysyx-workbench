@@ -15,6 +15,12 @@ OUT_ROOT="$NPC_HOME/ccout/sweep-cache/"
 mkdir -p $OUT_ROOT
 
 
+if [[ "$#" -gt 1 ]]; then
+SKIP_FLAG="$1"
+else
+SKIP_FLAG=""
+fi
+
 make -C $BENCH_PATH ARCH=riscv32e-npc mainargs="$BENCH_ARGS"
 
 TARGET_EXEC=( )
@@ -25,11 +31,14 @@ for size in "${L1I_SIZES[@]}"; do
       curr_suffix="l1i_${size}_blk${block}_assoc${assoc}"
       curr_out="$OUT_ROOT/$curr_suffix"
       mkdir -p $curr_out
-      make -C $NPC_HOME \
-        RTL_SCALA_ARG="--l1i-size ${size} --l1i-blksize ${block} --l1i-assoc ${assoc}" \
-        LOGENA=0 DIFFENA=0 DPRINTF=0 NVBENA=0 DBGENA=1 DPRINTF=0 \
-        compile
-      
+
+      if [[ "$SKIP_FLAG" != "--skip-build" ]]; then
+        make -C $NPC_HOME \
+          RTL_SCALA_ARG="--l1i-size ${size} --l1i-blksize ${block} --l1i-assoc ${assoc}" \
+          LOGENA=0 DIFFENA=0 DPRINTF=0 NVBENA=0 DBGENA=1 DPRINTF=0 \
+          compile
+      fi
+
       curr_exec="${SIMCC_PREF}${curr_suffix}.elf"
       mv $SIMCC_EXEC $curr_exec
       TARGET_EXEC+=("$curr_exec")
