@@ -4,5 +4,7 @@ CFLAGS        += $(COMMON_CFLAGS) -static
 ASFLAGS       += $(COMMON_CFLAGS) -O0
 LDFLAGS       += -melf64lriscv
 
+CFLAGS 				+= -O2
+
 # overwrite ARCH_H defined in $(AM_HOME)/Makefile
 ARCH_H := arch/riscv.h
