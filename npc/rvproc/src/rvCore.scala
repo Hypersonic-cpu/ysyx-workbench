@@ -160,7 +160,7 @@ class rvCore(
       )
     )
     dSplit.io.host <> lss.io.dMem
-    dSplit.io.devices(0) <> clint.io.port
+    dSplit.io.devices(1) <> clint.io.port
 
     ifs.io.fromLs := true.B
 
@@ -168,7 +168,7 @@ class rvCore(
     icache.io.flushAll := ids.io.fenceI.bits && ids.io.fenceI.valid
 
     arbiter.io.hosts(0) <> icache.io.memSide
-    arbiter.io.hosts(1) <> dSplit.io.devices(1)
+    arbiter.io.hosts(1) <> dSplit.io.devices(0)
 
     // l1dPort.io.memSide
     // arbiter.io.hosts(1) <> l1dPort.io.memSide
