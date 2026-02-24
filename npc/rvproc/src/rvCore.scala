@@ -103,6 +103,7 @@ class rvCore(
         )
       )
     )
+    ifs.io.iMem <> iSplit.io.host
     iSplit.io.devices(0) <> icache.io.cpuSide
 
     val dSplit = Module(
@@ -116,9 +117,11 @@ class rvCore(
         )
       )
     )
+    lss.io.dMem <> dSplit.io.host
     dSplit.io.devices(2) <> clint.io.port
     // No CLINT memSide port
 
+    ifs.io.fromLs := true.B // is empty if no write buffer
     val arbiter = Module(new AXIArbiter(4))
     AXIPortPassing(io.master, arbiter.io.device)
     arbiter.io.hosts(0) <> icache.io.memSide
