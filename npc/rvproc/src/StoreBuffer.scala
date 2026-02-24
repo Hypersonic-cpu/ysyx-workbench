@@ -88,10 +88,10 @@ class StoreBuffer(Entries: Int, Id: Int = 1) extends Module {
   }
 
   io.memSide.w.bits.last   := true.B
-  io.memSide.w.valid       := buffer(head).valid
+  io.memSide.w.valid       := buffer(head).valid && !buffer(head).issued
   io.memSide.w.bits.strb   := buffer(head).strb
   io.memSide.w.bits.data   := buffer(head).data
-  io.memSide.aw.valid      := buffer(head).valid
+  io.memSide.aw.valid      := buffer(head).valid && !buffer(head).issued
   io.memSide.aw.bits.addr  := buffer(head).addr
   io.memSide.aw.bits.size  := buffer(head).size
   io.memSide.aw.bits.burst := INCR
@@ -165,7 +165,7 @@ class StoreBuffer(Entries: Int, Id: Int = 1) extends Module {
   io.memSide.ar.bits.id    := Id.U
 
   io.memSide.ar.valid := readState === blocked && !delayReadBlock.orR
-  io.memSide.r.ready  := readState === busy                           // RegNext(io.cpuSide.r.ready) // WARN: 出现多余的一拍 ready ?
+  io.memSide.r.ready  := readState === busy // RegNext(io.cpuSide.r.ready) // WARN: 出现多余的一拍 ready ?
 
   assert(
     io.cpuSide.ar.valid Implies io.cpuSide.r.ready,
