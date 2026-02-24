@@ -12,7 +12,6 @@ import rvproc.BusType._
 import BitMath._
 import rvproc.cache.iCacheConf
 import rvproc.cache.iCache
-import rvproc.AnsiColor.ColorString._
 import rvproc.AnsiColor.ColorString
 
 class rvCore(
@@ -122,17 +121,19 @@ class rvCore(
     )
     lss.io.dMem <> dSplit.io.host
 
-    val l1d = Module(new StoreBuffer(2))
-    l1d.io.cpuSide <> dSplit.io.devices(0)
+    // val l1d = Module(new StoreBuffer(2))
+    // l1d.io.cpuSide <> dSplit.io.devices(0)
     dSplit.io.devices(2) <> clint.io.port
     // No CLINT memSide port
 
-    ifs.io.fromLs := l1d.io.empty
+    ifs.io.fromLs := true.B
+    // ifs.io.fromLs := l1d.io.empty
     val arbiter = Module(new AXIArbiter(4))
     AXIPortPassing(io.master, arbiter.io.device)
     arbiter.io.hosts(0) <> icache.io.memSide
     arbiter.io.hosts(1) <> iSplit.io.devices(1)
-    arbiter.io.hosts(2) <> l1d.io.memSide // dSplit.io.devices(0)
+    arbiter.io.hosts(2) <> dSplit.io.devices(0)
+    // arbiter.io.hosts(2) <> l1d.io.memSide
     arbiter.io.hosts(3) <> dSplit.io.devices(1)
   } else {
     println("=== NPC MODE ===".yellow)
