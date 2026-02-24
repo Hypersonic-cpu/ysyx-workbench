@@ -4,7 +4,7 @@ import rvproc.cache.iCacheConf
 import scala.collection.mutable.ArrayBuffer
 
 object Elaborate extends App {
-  println(s"-> Elaborate Argv: ${args}")
+  println(s"-> Elaborate Argv: ${args.mkString(", ")}")
 
   def parseArgs(args: Array[String]) = {
     var isSocMode  = false
