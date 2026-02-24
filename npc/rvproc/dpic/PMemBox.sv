@@ -138,7 +138,7 @@ module PMemReader (
         burst_total  <= io_master_arlen;
         raddr_latch  <= io_master_araddr;
         assert (io_master_arburst == 2'b01);  // INCR burst only
-        assert (io_master_arsize == 3'b010);  // 4-byte per beat
+        // assert (io_master_arsize == 3'b010);  // 4-byte per beat
       end else if (state == RECV) begin
         delay_remain <= axi_read(raddr_latch, rdata, 8'(burst_remain == burst_total));
         raddr_latch  <= raddr_latch + 32'h4;

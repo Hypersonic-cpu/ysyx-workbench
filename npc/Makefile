@@ -99,7 +99,7 @@ endif
 
 $(SIM_BIN): $(CSRCS) $(NVB_ARCHIVE)
 	@rm -rf $(BUILD_OBJ_DIR)
-	$(VERILATOR) $(VERILATOR_CFLAGS) \
+	$(VERILATOR) -j$(nproc) $(VERILATOR_CFLAGS) \
 		$(VSRCS) \
 		--top-module $(TOPNAME) \
 		$^ $(VINCFLAGS) \

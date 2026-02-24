@@ -33,7 +33,7 @@
 #define UART_OFF_LS       5U // Line Status
 #define UART_BAUD_RATE    ((uint16_t)115200U)
 
-#define SOC_CYC_PER_US   500 // 500 MHz
+#define SOC_CYC_PER_US   1050 // 1050 MHz
 // #define SOC_CYC_PER_US       50
 
 #endif // !__RISCV_NPC_ADDRMAP_H__
