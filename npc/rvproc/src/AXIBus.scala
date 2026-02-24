@@ -220,13 +220,8 @@ class AXIArbiter(N: Int) extends Module {
   writeArb.io.device.b <> io.device.b
 }
 
-case class AddrMap(lo: BigInt, hi: BigInt, id: Int)
-
-class XBarRead(N: Int, amap: Seq[AddrMap]) extends Module {
-  require(N > 0 && amap.nonEmpty, "Empty address mapping")
-  val maxId = (amap map (_.id)).max
-  require(maxId < N, "Max MapId exceeds N")
-  require(amap forall (_.id >= 0), "Negative Id")
+class XBarRead(N: Int, amap: Seq[UInt => Bool]) extends Module {
+  require(N > 0 && amap.length == N, "amap length must match N")
   val io    = IO(new Bundle {
     val host    = Flipped(new AXIReadChannel)
     val devices = Vec(N, new AXIReadChannel)
@@ -245,12 +240,8 @@ class XBarRead(N: Int, amap: Seq[AddrMap]) extends Module {
 
   val tarIdxExt = MuxCase(
     1.U(IdxWidth.W),
-    amap map { entry =>
-      (
-        (inputAd >= entry.lo.U(ISA.AddrBits.W) &&
-          inputAd < entry.hi.U(ISA.AddrBits.W))
-          -> entry.id.U ## 0.U(1.W)
-      )
+    amap.zipWithIndex map { case (matchFn, i) =>
+      matchFn(inputAd) -> (i.U ## 0.U(1.W))
     }
   )
   val tarIdx    = tarIdxExt(IdxWidth, 1)
@@ -299,11 +290,8 @@ class XBarRead(N: Int, amap: Seq[AddrMap]) extends Module {
   dontTouch(io)
 }
 
-class XBarWrite(N: Int, amap: Seq[AddrMap]) extends Module {
-  require(N > 0 && amap.nonEmpty, "Empty address mapping")
-  val maxId = (amap map (_.id)).max
-  require(maxId < N, "Max MapId exceeds N")
-  require(amap forall (_.id >= 0), "Negative Id")
+class XBarWrite(N: Int, amap: Seq[UInt => Bool]) extends Module {
+  require(N > 0 && amap.length == N, "amap length must match N")
 
   val io = IO(new Bundle {
     val host    = Flipped(new AXIWriteChannel)
@@ -322,12 +310,8 @@ class XBarWrite(N: Int, amap: Seq[AddrMap]) extends Module {
   val inputAd   = io.host.aw.bits.addr
   val tarIdxExt = MuxCase(
     1.U(IdxWidth.W),
-    amap map { entry =>
-      (
-        (inputAd >= entry.lo.U(ISA.AddrBits.W) &&
-          inputAd < entry.hi.U(ISA.AddrBits.W))
-          -> entry.id.U ## 0.U(1.W)
-      )
+    amap.zipWithIndex map { case (matchFn, i) =>
+      matchFn(inputAd) -> (i.U ## 0.U(1.W))
     }
   )
   val tarIdx    = tarIdxExt(IdxWidth, 1)
@@ -380,9 +364,8 @@ class XBarWrite(N: Int, amap: Seq[AddrMap]) extends Module {
   dontTouch(io)
 }
 
-class AXIXBar(N: Int, amap: Seq[AddrMap]) extends Module {
-  val maxId = (amap map (_.id)).max
-  require(maxId < N, "Max MapId exceeds N")
+class AXIXBar(N: Int, amap: Seq[UInt => Bool]) extends Module {
+  require(amap.length == N, "amap length must match N")
 
   val io = IO(new Bundle {
     val host    = Flipped(new AXIBus)
