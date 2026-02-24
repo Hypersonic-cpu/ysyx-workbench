@@ -171,4 +171,6 @@ class StoreBuffer(Entries: Int, Id: Int = 1) extends Module {
     io.cpuSide.ar.valid Implies io.cpuSide.r.ready,
     cf"Host R channel not ready"
   )
+
+  printf(cf"Store buffer remaining count: ${count}\n")
 }
