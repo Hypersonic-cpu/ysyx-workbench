@@ -19,8 +19,8 @@ _boot_1st_loop:
   blt t1, a5, _boot_1st_loop
 _boot_1st_end:
   la t0, _boot2nd_beg
+  fence.i // Make sure the 2nd-stage insts are ready
   jalr 0(t0)
-  nop
 
 .size _start, . - _start
 
@@ -41,6 +41,7 @@ _boot_second:
   jal _boot_set
 
   mv s0, zero
+  fence.i // Wait until all codes are done
   call _trm_init
 
 _boot_cpy:
