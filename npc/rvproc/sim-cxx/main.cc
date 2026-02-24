@@ -83,8 +83,8 @@ dump_config() {
   conf["image"] = options::binary_img;
 #if SOCMODE
   conf["mode"] = std::string("soc");
-  conf["sdram"] = json({{"latency", MemLatency}, {"burstlat", MemBstLat}});
 #else
+  conf["sdram"] = json({{"latency", MemLatency}, {"burstlat", MemBstLat}});
   conf["mode"] = std::string("npc");
 #endif
   return conf;
