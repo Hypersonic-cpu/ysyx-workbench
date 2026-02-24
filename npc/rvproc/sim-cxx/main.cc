@@ -193,8 +193,9 @@ main(int argc, char* argv[]) {
 
   /** CONFIG BEGIN */
 #if SOCMODE
-  trace::DiffTester diff(mrom->dataVec());
-  pdiff = &diff;
+  auto const diff =
+    std::make_unique<trace::DiffTester>(mrom->dataVec());
+  pdiff = diff.get();
 #else
   auto const diff =
     std::make_unique<trace::DiffTester>(unifiedMem->dataVec());
