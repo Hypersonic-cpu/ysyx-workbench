@@ -120,16 +120,18 @@ class rvCore(
         )
       )
     )
-    lss.io.dMem <> dSplit.io.host
+    val l1d = Module(new StoreBuffer(2))
+    lss.io.dMem <> l1d.io.cpuSide
+    l1d.io.memSide <> dSplit.io.host
     dSplit.io.devices(2) <> clint.io.port
     // No CLINT memSide port
 
-    ifs.io.fromLs := true.B // is empty if no write buffer
+    ifs.io.fromLs := l1d.io.empty
     val arbiter = Module(new AXIArbiter(4))
     AXIPortPassing(io.master, arbiter.io.device)
     arbiter.io.hosts(0) <> icache.io.memSide
     arbiter.io.hosts(1) <> iSplit.io.devices(1)
-    arbiter.io.hosts(2) <> dSplit.io.devices(0) // or StoreBuf
+    arbiter.io.hosts(2) <> dSplit.io.devices(0)
     arbiter.io.hosts(3) <> dSplit.io.devices(1)
   } else {
     println("=== NPC MODE ===".yellow)
