@@ -140,17 +140,17 @@ class rvCore(
   } else {
     println("=== NPC MODE ===".yellow)
 
-    /** IFU           LSU
+    /** IFU        LSU
+      *  |       *--^--*
+      * l1i$    CLINT StBuf
       *  |             |
-      * l1i$          StBuf
       *  *------*------*
       *         | Arbiter
-      *  *------^------- XBar
-      *  | CLINT       | PMem (simulate)
+      *    PMem (DPI-C)
       */
 
     val arbiter = Module(new AXIArbiter(2))
-    val locxbar = Module(
+    val dSplit = Module(
       new AXIXBar(
         2,
         Seq(
@@ -159,24 +159,28 @@ class rvCore(
         )
       )
     )
+    dSplit.io.host <> lss.io.dMem
+    dSplit.io.devices(0) <> clint.io.port
 
-    val l1dPort = Module(new StoreBuffer(2))
-    l1dPort.io.cpuSide <> lss.io.dMem
-    l1dPort.io.empty <> ifs.io.fromLs
+    ifs.io.fromLs := true.B
 
-    val l1iPort = Module(
+    val l1iCache = Module(
       new cache.iCache(this.l1iConf)
     )
-    l1iPort.io.cpuSide <> ifs.io.iMem
-    l1iPort.io.flushAll := ids.io.fenceI.bits && ids.io.fenceI.valid
+    l1iCache.io.cpuSide <> ifs.io.iMem
+    l1iCache.io.flushAll := ids.io.fenceI.bits && ids.io.fenceI.valid
 
-    arbiter.io.hosts(0) <> l1iPort.io.memSide
-    arbiter.io.hosts(1) <> l1dPort.io.memSide
-    arbiter.io.device <> locxbar.io.host
+    arbiter.io.hosts(0) <> l1iCache.io.memSide
+    arbiter.io.hosts(1) <> dSplit.io.devices(1)
+
+    // l1dPort.io.memSide
+    // arbiter.io.hosts(1) <> l1dPort.io.memSide
+    // val l1dPort = Module(new StoreBuffer(2))
+    // l1dPort.io.cpuSide <> lss.io.dMem
+    // l1dPort.io.empty <> ifs.io.fromLs
 
     val pMem = Module(new PMemBox)
-    locxbar.io.devices(1) <> clint.io.port
-    locxbar.io.devices(0) <> pMem.io.master
+    pMem.io.master <> arbiter.io.device
     io.master := DontCare
   }
 
