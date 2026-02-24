@@ -150,7 +150,7 @@ class rvCore(
       */
 
     val arbiter = Module(new AXIArbiter(2))
-    val dSplit = Module(
+    val dSplit  = Module(
       new AXIXBar(
         2,
         Seq(
@@ -164,13 +164,10 @@ class rvCore(
 
     ifs.io.fromLs := true.B
 
-    val l1iCache = Module(
-      new cache.iCache(this.l1iConf)
-    )
-    l1iCache.io.cpuSide <> ifs.io.iMem
-    l1iCache.io.flushAll := ids.io.fenceI.bits && ids.io.fenceI.valid
+    icache.io.cpuSide <> ifs.io.iMem
+    icache.io.flushAll := ids.io.fenceI.bits && ids.io.fenceI.valid
 
-    arbiter.io.hosts(0) <> l1iCache.io.memSide
+    arbiter.io.hosts(0) <> icache.io.memSide
     arbiter.io.hosts(1) <> dSplit.io.devices(1)
 
     // l1dPort.io.memSide
