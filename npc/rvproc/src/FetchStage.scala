@@ -79,9 +79,10 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
   iMem.ar.bits.len   := 0.U
   iMem.r.ready       := true.B // io.out.ready
   iMem.aw.valid      := false.B
-  iMem.aw.bits       := DontCare
+  iMem.w.valid       := false.B
   iMem.b.ready       := false.B
   iMem.aw.bits       := DontCare
+  iMem.w.bits       := DontCare
   iMem.w.bits        := DontCare
 
   assert(~(iMem.b.valid), "Read only port")
