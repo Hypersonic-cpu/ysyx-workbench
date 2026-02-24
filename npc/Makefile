@@ -4,7 +4,7 @@ RTL_SCALA_ARG?=
 
 NPSIM_ACTIVE=0
 ifeq ($(SOCMODE),1)
-RTL_SCALA_ARG += --soc-mode
+override RTL_SCALA_ARG += --soc-mode
 else
 include ../npsim/Makefile
 endif

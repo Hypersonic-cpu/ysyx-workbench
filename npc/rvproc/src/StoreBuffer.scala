@@ -159,7 +159,7 @@ class StoreBuffer(Entries: Int, Id: Int = 1) extends Module {
   )
   // io.memSide.ar <> io.cpuSide.ar
   io.memSide.ar.bits.addr  := arAddr
-  io.memSide.ar.bits.size  := 0x2.U // Always word-aligned read from PMemBox
+  io.memSide.ar.bits.size  := arSize
   io.memSide.ar.bits.len   := 0.U
   io.memSide.ar.bits.burst := INCR
   io.memSide.ar.bits.id    := Id.U
@@ -171,10 +171,4 @@ class StoreBuffer(Entries: Int, Id: Int = 1) extends Module {
     io.cpuSide.ar.valid Implies io.cpuSide.r.ready,
     cf"Host R channel not ready"
   )
-
-  // printf("StQue")
-  // for (i <- 0 until Entries) {
-  //   printf(cf" [$i] v${buffer(i).valid} ${buffer(i).addr}%x:${buffer(i).data}%x")
-  // }
-  // printf("\n")
 }

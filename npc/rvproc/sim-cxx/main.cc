@@ -80,8 +80,13 @@ dump_stats() {
 inline json
 dump_config() {
   json conf{};
-  conf["sdram"] = json({{"latency", MemLatency}, {"burstlat", MemBstLat}});
   conf["image"] = options::binary_img;
+#if SOCMODE
+  conf["mode"] = std::string("soc");
+#else
+  conf["sdram"] = json({{"latency", MemLatency}, {"burstlat", MemBstLat}});
+  conf["mode"] = std::string("npc");
+#endif
   return conf;
 }
 
@@ -188,8 +193,9 @@ main(int argc, char* argv[]) {
 
   /** CONFIG BEGIN */
 #if SOCMODE
-  trace::DiffTester diff(mrom->dataVec());
-  pdiff = &diff;
+  auto const diff =
+    std::make_unique<trace::DiffTester>(mrom->dataVec());
+  pdiff = diff.get();
 #else
   auto const diff =
     std::make_unique<trace::DiffTester>(unifiedMem->dataVec());
