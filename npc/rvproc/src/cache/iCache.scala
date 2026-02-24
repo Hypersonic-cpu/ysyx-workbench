@@ -43,7 +43,7 @@ class iCache(conf: iCacheConf) extends Module {
   require(conf.assoc == 1, "Set assoc unimplemented")
   val io = IO(new Bundle {
     val flushAll = Input(Bool())
-    val cpuSide  = Flipped(new CPUBus)
+    val cpuSide  = Flipped(new AXIBus)
     val memSide  = new AXIBus
   })
 
@@ -58,8 +58,24 @@ class iCache(conf: iCacheConf) extends Module {
   val state     = RegInit(flowing)
   val nextState = WireInit(flowing)
 
-  val req        = io.cpuSide.ar
-  val resp       = io.cpuSide.r
+  io.cpuSide.w  := DontCare
+  io.cpuSide.b  := DontCare
+  io.cpuSide.aw := DontCare
+
+  val req  = io.cpuSide.ar
+  val resp = io.cpuSide.r
+
+  assert(
+    req.valid Implies req.bits.id === 0.U,
+    "iCache recv non-IFU req"
+  )
+  assert(
+    req.valid Implies req.bits.len === 2.U,
+    "iCache recv non-4byte req"
+  ) // 4 Bytes
+  resp.bits.id   := 0.U
+  resp.bits.resp := OKAY // TODO: pass mem-side error if cache miss
+
   val tagHit     = Wire(Bool())
   val wordSel    = Wire(Tp.RegType())
   val fillBuf    = Reg(Vec(conf.lineBytes * 8 / ISA.RegBits, Tp.RegType()))
@@ -85,9 +101,6 @@ class iCache(conf: iCacheConf) extends Module {
     "iCache response but host not ready"
   )
 
-  io.cpuSide.aw           := DontCare
-  io.cpuSide.b            := DontCare
-  io.cpuSide.ar.bits.size := DontCare
   // io.cpuSide.ar.ready
 
   def idxOf(x: UInt) = x(conf.idxBitHi, conf.idxBitLo)

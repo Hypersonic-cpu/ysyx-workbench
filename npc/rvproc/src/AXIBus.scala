@@ -389,27 +389,27 @@ class AXIXBar(N: Int, amap: Seq[UInt => Bool]) extends Module {
   }
 }
 
-class CpuRdReq extends Bundle {
-  val addr = Tp.AddrType()
-  val size = AXI.SizeType()
-}
-
-class CpuRdResp extends Bundle {
-  val data = Tp.RegType()
-}
-
-class CpuWrReq extends Bundle {
-  val addr = Tp.AddrType()
-  val data = Tp.RegType()
-  val size = AXI.SizeType()
-  val strb = UInt((ISA.AddrBits / 8).W)
-}
-
-class CpuWrResp extends Bundle {}
-
-class CPUBus extends Bundle {
-  val ar = Decoupled(new CpuRdReq)
-  val r  = Flipped(Decoupled(new CpuRdResp))
-  val aw = Decoupled(new CpuWrReq)
-  val b  = Flipped(Decoupled(new CpuWrResp))
-}
+// class CpuRdReq extends Bundle {
+//   val addr = Tp.AddrType()
+//   val size = AXI.SizeType()
+// }
+//
+// class CpuRdResp extends Bundle {
+//   val data = Tp.RegType()
+// }
+//
+// class CpuWrReq extends Bundle {
+//   val addr = Tp.AddrType()
+//   val data = Tp.RegType()
+//   val size = AXI.SizeType()
+//   val strb = UInt((ISA.AddrBits / 8).W)
+// }
+//
+// class CpuWrResp extends Bundle {}
+//
+// class CPUBus extends Bundle {
+//   val ar = Decoupled(new CpuRdReq)
+//   val r  = Flipped(Decoupled(new CpuRdResp))
+//   val aw = Decoupled(new CpuWrReq)
+//   val b  = Flipped(Decoupled(new CpuWrResp))
+// }
