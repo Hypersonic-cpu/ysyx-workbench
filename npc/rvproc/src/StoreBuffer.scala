@@ -172,5 +172,5 @@ class StoreBuffer(Entries: Int, Id: Int = 1) extends Module {
     cf"Host R channel not ready"
   )
 
-  printf(cf"Store buffer remaining count: ${count}\n")
+  // printf(cf"Store buffer remaining count: ${count}\n")
 }
