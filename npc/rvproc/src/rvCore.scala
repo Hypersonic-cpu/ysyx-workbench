@@ -66,6 +66,7 @@ class rvCore(
   )
 
   if (isSoc) {
+    println("=== FULL SoC MODE ===")
 
     /**       IFU                    LSU
       *     *--^--* IF Splitter    *--^--*-----* LS Splitter
