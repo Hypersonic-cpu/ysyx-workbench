@@ -105,7 +105,7 @@ class rvCore(
     )
     ifs.io.iMem <> iSplit.io.host
     iSplit.io.devices(0) <> icache.io.cpuSide
-    icache.io.flushAll := RegNext(
+    icache.io.flushAll := false.B && RegNext(
       ids.io.fenceI.bits && ids.io.fenceI.valid
     )
 
