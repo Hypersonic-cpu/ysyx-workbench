@@ -269,8 +269,8 @@ class DecodeStage extends Module {
   io.rawSrc.rs1  := iDec.io.rs1
   io.rawSrc.rs2  := iDec.io.rs2
   io.rawSrc.csr  := iDec.io.csrir
-  io.rawSrc.use1 := validCtrl && true.B // !iDec.io.aluSel.rs1SelPC
-  io.rawSrc.use2 := validCtrl && true.B // !iDec.io.aluSel.rs2SelImm || iDec.io.memAcc.isSt
+  io.rawSrc.use1 := validCtrl && !iDec.io.aluSel.rs1SelPC
+  io.rawSrc.use2 := validCtrl && (!iDec.io.aluSel.rs2SelImm || iDec.io.memAcc.isSt || iDec.io.ebreak)
   io.rawSrc.useC := validCtrl && 
     (iDec.io.wbSel === WbSel.fromCsr || iDec.io.aluSel.brSelCsr)
 
