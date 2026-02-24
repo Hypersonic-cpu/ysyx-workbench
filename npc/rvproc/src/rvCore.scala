@@ -149,35 +149,35 @@ class rvCore(
       *  | CLINT       | PMem (simulate)
       */
 
-    // val arbiter = Module(new AXIArbiter(2))
-    // val locxbar = Module(
-    //   new AXIXBar(
-    //     2,
-    //     Seq(
-    //       AddrMap(0x0f00_0000L, 0xffff_ffffL, 0),
-    //       AddrMap(0x0200_0000L, 0x0201_0000L, 1)
-    //     )
-    //   )
-    // )
-    //
-    // val l1dPort = Module(new StoreBuffer(2))
-    // l1dPort.io.cpuSide <> lss.io.dMem
-    // l1dPort.io.empty <> ifs.io.fromLs
-    //
-    // val l1iPort = Module(
-    //   new cache.iCache(this.l1iConf)
-    // )
-    // l1iPort.io.cpuSide <> ifs.io.iMem
-    // l1iPort.io.flushAll := ids.io.fenceI.bits && ids.io.fenceI.valid
-    //
-    // arbiter.io.hosts(0) <> l1iPort.io.memSide
-    // arbiter.io.hosts(1) <> l1dPort.io.memSide
-    // arbiter.io.device <> locxbar.io.host
-    //
-    // val pMem = Module(new PMemBox)
-    // locxbar.io.devices(1) <> clint.io.port
-    // locxbar.io.devices(0) <> pMem.io.master
-    // io.master := DontCare
+    val arbiter = Module(new AXIArbiter(2))
+    val locxbar = Module(
+      new AXIXBar(
+        2,
+        Seq(
+          (x: UInt) => (x >= 0x0f00_0000L.U && x <= 0xffff_ffffL.U),
+          (x: UInt) => (x >= 0x0200_0000L.U && x <= 0x0201_0000L.U)
+        )
+      )
+    )
+
+    val l1dPort = Module(new StoreBuffer(2))
+    l1dPort.io.cpuSide <> lss.io.dMem
+    l1dPort.io.empty <> ifs.io.fromLs
+
+    val l1iPort = Module(
+      new cache.iCache(this.l1iConf)
+    )
+    l1iPort.io.cpuSide <> ifs.io.iMem
+    l1iPort.io.flushAll := ids.io.fenceI.bits && ids.io.fenceI.valid
+
+    arbiter.io.hosts(0) <> l1iPort.io.memSide
+    arbiter.io.hosts(1) <> l1dPort.io.memSide
+    arbiter.io.device <> locxbar.io.host
+
+    val pMem = Module(new PMemBox)
+    locxbar.io.devices(1) <> clint.io.port
+    locxbar.io.devices(0) <> pMem.io.master
+    io.master := DontCare
   }
 
   if (GlbCtrl.debug) {
