@@ -98,7 +98,8 @@ class rvCore(
         Seq(
           (x: UInt) => isFlash(x) || isPsram(x) || isSdram(x),
           // PC should not reach here. Raise assert failure in XBar
-          (x: UInt) => false.B && isDev(x)
+          // 删掉了 false.B && 因为可能从 SRAM XIP (bootloader).
+          (x: UInt) => isDev(x)
         )
       )
     )
