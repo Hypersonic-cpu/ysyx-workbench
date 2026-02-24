@@ -74,6 +74,7 @@ class iCache(conf: iCacheConf) extends Module {
     "iCache recv non-4byte req"
   ) // 4 Bytes
   resp.bits.id   := 0.U
+  resp.bits.last := true.B
   resp.bits.resp := OKAY // TODO: pass mem-side error if cache miss
 
   val tagHit     = Wire(Bool())
