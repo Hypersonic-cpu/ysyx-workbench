@@ -70,7 +70,11 @@ class iCache(conf: iCacheConf) extends Module {
     "iCache recv non-IFU req"
   )
   assert(
-    req.valid Implies req.bits.len === 2.U,
+    req.valid Implies req.bits.len === 0.U,
+    "iCache recv burst req"
+  )
+  assert(
+    req.valid Implies req.bits.size === 2.U,
     "iCache recv non-4byte req"
   ) // 4 Bytes
   resp.bits.id   := 0.U
