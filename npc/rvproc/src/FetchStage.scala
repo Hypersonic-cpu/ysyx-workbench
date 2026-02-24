@@ -71,15 +71,18 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
   io.fromEx.ready := true.B
   io.fromId.ready := true.B
 
+  iMem.ar.valid      := !reset.asBool && !bufFull && !fenceState && !flushWire
   iMem.ar.bits.addr  := pc
   iMem.ar.bits.size  := 0x2.U  // log2(4)
-  iMem.ar.valid      := !reset.asBool && !bufFull && !fenceState && !flushWire
+  iMem.ar.bits.burst := INCR
+  iMem.ar.bits.id    := 0.U    // iCache
+  iMem.ar.bits.len   := 0.U
   iMem.r.ready       := true.B // io.out.ready
   iMem.aw.valid      := false.B
   iMem.aw.bits       := DontCare
   iMem.b.ready       := false.B
-  iMem.ar.bits.burst := INCR
-  iMem.ar.bits.id    := 0.U    // iCache
+  iMem.aw.bits       := DontCare
+  iMem.w.bits        := DontCare
 
   assert(~(iMem.b.valid), "Read only port")
   // assert(
