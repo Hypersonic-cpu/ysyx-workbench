@@ -12,6 +12,8 @@ import rvproc.BusType._
 import BitMath._
 import rvproc.cache.iCacheConf
 import rvproc.cache.iCache
+import rvproc.AnsiColor.ColorString._
+import rvproc.AnsiColor.ColorString
 
 class rvCore(
   isSoc:   Boolean,
@@ -66,7 +68,7 @@ class rvCore(
   )
 
   if (isSoc) {
-    println("=== FULL SoC MODE ===")
+    println("=== FULL SoC MODE ===".green)
 
     /**       IFU                    LSU
       *     *--^--* IF Splitter    *--^--*-----* LS Splitter
@@ -124,6 +126,7 @@ class rvCore(
     arbiter.io.hosts(2) <> dSplit.io.devices(0) // or StoreBuf
     arbiter.io.hosts(3) <> dSplit.io.devices(1)
   } else {
+    println("=== NPC MODE ===".yellow)
 
     /** IFU           LSU
       *  |             |

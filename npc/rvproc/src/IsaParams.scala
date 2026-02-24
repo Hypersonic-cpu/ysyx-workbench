@@ -40,3 +40,12 @@ object Tp {
 object ITYPE extends ChiselEnum {
   val tR, tI, tS, tB, tU, tJ, tN = Value
 }
+
+object AnsiColor {
+  implicit class ColorString(val s: String) extends AnyVal {
+    def red:    String = s"${Console.RED}$s${Console.RESET}"
+    def green:  String = s"${Console.GREEN}$s${Console.RESET}"
+    def blue:   String = s"${Console.BLUE}$s${Console.RESET}"
+    def yellow: String = s"${Console.YELLOW}$s${Console.RESET}"
+  }
+}
