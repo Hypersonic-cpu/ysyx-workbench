@@ -10,3 +10,6 @@
 !Kconfig
 include/config
 include/generated
+.vscode/
+.zed/
+.github/
