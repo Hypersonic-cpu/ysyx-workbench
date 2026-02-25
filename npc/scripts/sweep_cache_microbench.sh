@@ -1,18 +1,17 @@
 #!/bin/bash
 set -eu
 
-L1I_SIZES=( "256" "512" "1024" "2048" )
+L1I_SIZES=( "512" "1024" )
 L1I_ASSOC=( "1" )
-L1I_BLKSZ=( "16" "32" "64" )
+L1I_BLKSZ=( "16" "32" )
 
 SIMCC_EXEC="$NPC_HOME/build-sim/rvproc/rvproc.elf"
 SIMCC_PREF="$NPC_HOME/build-sim/rvproc/rvproc_"
 
-# BENCH_PATH="$AM_BENCH/coremark"
 BENCH_PATH="$AM_BENCH/microbench"
 BENCH_IMGS="$BENCH_PATH/build/microbench-riscv32e-npc.bin"
 BENCH_ARGS="train"
-OUT_NAME="sweep-microtrain"
+OUT_NAME="sweep-microbench-train"
 
 if [[ "$#" -gt 0 ]]; then
 SKIP_FLAG="$1"
