@@ -136,7 +136,7 @@ void init_monitor(int argc, char *argv[]) {
 
   IFDEF(CONFIG_SOC, init_soc());
 
-  IFDEF(CONFIG_NPSIM_TRACE, void init_npsim_trace(); init_npsim_trace();)
+  IFDEF(CONFIG_NPSIM_TRACE, void init_npsim_trace(void); init_npsim_trace();)
 
   /* Perform ISA dependent initialization. */
   init_isa();
