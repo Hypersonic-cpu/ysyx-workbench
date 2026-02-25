@@ -1,9 +1,9 @@
 #!/bin/bash
 set -eu
 
-L1I_SIZES=( "256" "512" "1024" "2048" )
+L1I_SIZES=( "256" "512" "1024" "4096" )
 L1I_ASSOC=( "1" )
-L1I_BLKSZ=( "16" "32" "64" )
+L1I_BLKSZ=( "8" "16" "32" "64" )
 
 SIMCC_EXEC="$NPC_HOME/build-sim/rvproc/rvproc.elf"
 SIMCC_PREF="$NPC_HOME/build-sim/rvproc/rvproc_"
@@ -47,7 +47,7 @@ for size in "${L1I_SIZES[@]}"; do
 done
 
 echo "== Cache Sweep Start =="
-MAX_JOBS=$(( $(nproc) - 2 ))
+MAX_JOBS=3
 
 wait_jobs() {
   while [ "$(jobs -rp | wc -l)" -ge "$MAX_JOBS" ]; do
