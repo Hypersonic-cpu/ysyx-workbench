@@ -38,7 +38,9 @@ add_mmio_map(const char *name, paddr_t addr, void *space, uint32_t len, io_callb
   assert(nr_map < NR_MAP);
   paddr_t left = addr, right = addr + len - 1;
   if (in_pmem(left) || in_pmem(right)) {
-    report_mmio_overlap(name, left, right, "pmem", PMEM_LEFT, PMEM_RIGHT);
+    Log("WARNING: MMIO region %s@[" FMT_PADDR ", " FMT_PADDR "] overlaps "
+        "pmem@[" FMT_PADDR ", " FMT_PADDR "] (pmem takes priority)",
+        name, left, right, PMEM_LEFT, PMEM_RIGHT);
   }
   for (int i = 0; i < nr_map; i++) {
     if (left <= maps[i].high && right >= maps[i].low) {
