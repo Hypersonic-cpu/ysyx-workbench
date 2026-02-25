@@ -55,7 +55,7 @@ void set_nptr_file(const char* filename) {
   if (filename) npsim_trace_file = (char*)filename;
 }
 
-void init_npsim_trace(const char* filename) {
+void init_npsim_trace(void) {
   npsim_trace_fp = fopen(npsim_trace_file, "wb");
   Assert(npsim_trace_fp, "npSim Trace File %s open failed", npsim_trace_file);
   if (cctx == NULL) {

@@ -350,9 +350,9 @@ static int decode_exec(Decode *s) {
             // abstract-machine/src/platform/nemu/
             if (R(15) == 0xaa) NEMUTRAP(s->pc, R(10));
             else if (R(15) == 0) {
-              s->nptrace.sys_op = SysResetStats;
+              IFDEF(CONFIG_NPSIM_TRACE, s->nptrace.sys_op = SysResetStats);
             } else if (R(15) == 1) {
-              s->nptrace.sys_op = SysDumpStats;
+              IFDEF(CONFIG_NPSIM_TRACE, s->nptrace.sys_op = SysDumpStats);
             } else {
               Assert(false, "UnRecognized ebreak with a5 = " FMT_WORD, R(15));
               INV(s->pc);
