@@ -2,9 +2,15 @@ import scala.util.Properties
 import java.nio.file.Paths
 import rvproc.cache.iCacheConf
 import scala.collection.mutable.ArrayBuffer
+import rvproc.GlbCtrl
 
 object Elaborate extends App {
   println(s"-> Elaborate Argv: ${args.mkString(":")}")
+
+  // Defaults for simulation: debug=true, sta=false
+  GlbCtrl.debug = true
+  GlbCtrl.sta = false
+  GlbCtrl.sramlib = false
 
   def parseArgs(args: Array[String]) = {
     var isSocMode  = false
@@ -20,6 +26,12 @@ object Elaborate extends App {
         case "--l1i-size"    => l1iSize = args(i + 1).toInt; i += 1
         case "--l1i-blksize" => l1iBlksize = args(i + 1).toInt; i += 1
         case "--l1i-assoc"   => l1iAssoc = args(i + 1).toInt; i += 1
+        case "--debug"       => GlbCtrl.debug = true
+        case "--no-debug"    => GlbCtrl.debug = false
+        case "--sta"         => GlbCtrl.sta = true
+        case "--no-sta"      => GlbCtrl.sta = false
+        case "--sramlib"     => GlbCtrl.sramlib = true
+        case "--no-sramlib"  => GlbCtrl.sramlib = false
         case other           => rest += other
       }
       i += 1
@@ -36,7 +48,7 @@ object Elaborate extends App {
 
   l1iConfig.printConf()
 
-  val ysyxNPC = System.getenv("NPC_HOME")
+  val ysyxNPC    = System.getenv("NPC_HOME")
   assert(ysyxNPC.nonEmpty)
   val outputPath = ysyxNPC + "/build-sv/rvproc/"
 
