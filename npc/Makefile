@@ -188,6 +188,8 @@ formal-icache:
 ## SRAM library generation
 SRAM_DIR = libs/sram
 SRAM_LIB = $(SRAM_DIR)/sram_1rw.lib
+SRAM_BB  = $(SRAM_DIR)/sram_1rw.blackbox.sv
+SRAM_WRAP = $(SRAM_DIR)/sram_1rw.wrappers.sv
 
 sramlib:
 	@mkdir -p $(SRAM_DIR)

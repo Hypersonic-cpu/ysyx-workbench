@@ -6,12 +6,8 @@ import rvproc.GlbCtrl
 import rvproc.PATH
 
 class SRAM1RW(wordSize: Int, numWords: Int)
-    extends BlackBox(
-      Map(
-        "WORD_SIZE" -> wordSize,
-        "NUM_WORDS" -> numWords
-      )
-    ) with HasBlackBoxPath {
+    extends BlackBox
+    with HasBlackBoxPath {
   override val desiredName =
     s"sram_1rw_${wordSize}x${numWords}"
   val io = IO(new Bundle {

@@ -68,12 +68,8 @@ def cache_configs():
 
 
 def scan_sv(sv_dir):
-    """Scan SV files for sram_1rw #(.WORD_SIZE(N), .NUM_WORDS(M))."""
-    pat = re.compile(
-        r"sram_1rw\s*#\(\s*"
-        r"\.WORD_SIZE\((\d+)\)\s*,\s*"
-        r"\.NUM_WORDS\((\d+)\)"
-    )
+    """Scan SV files for sram_1rw_WxD instantiations."""
+    pat = re.compile(r"sram_1rw_(\d+)x(\d+)\s*#\(")
     configs = set()
     for f in Path(sv_dir).glob("*.sv"):
         for m in pat.finditer(f.read_text()):
@@ -120,7 +116,7 @@ def gen_lib(configs, outfile):
 
 
 def gen_sv_wrappers(configs, outfile):
-    """Generate Verilog wrapper modules for each SRAM config."""
+    """Generate Verilog wrapper modules (instantiate parameterized sram_1rw)."""
     lines = []
     for wb, nw in sorted(configs):
         ab = max(int(math.log2(nw)), 1)
@@ -146,6 +142,30 @@ def gen_sv_wrappers(configs, outfile):
     print(f"Wrote {outfile} ({len(configs)} wrappers)")
 
 
+def gen_sv_blackbox(configs, outfile):
+    """Generate blackbox stubs for yosys synthesis."""
+    lines = []
+    for wb, nw in sorted(configs):
+        ab = max(int(math.log2(nw)), 1)
+        name = cell_name(wb, nw)
+        lines.append(f"(* blackbox *)")
+        lines.append(f"module {name} #(")
+        lines.append(f"  parameter WORD_SIZE = {wb},")
+        lines.append(f"  parameter NUM_WORDS = {nw}")
+        lines.append(f") (")
+        lines.append(f"  input              clk0,")
+        lines.append(f"  input              csb0,")
+        lines.append(f"  input              web0,")
+        lines.append(f"  input  [{ab-1}:0] addr0,")
+        lines.append(f"  input  [{wb-1}:0] din0,")
+        lines.append(f"  output [{wb-1}:0] dout0")
+        lines.append(f");")
+        lines.append(f"endmodule")
+        lines.append("")
+    Path(outfile).write_text("\n".join(lines))
+    print(f"Wrote {outfile} ({len(configs)} blackbox stubs)")
+
+
 def main():
     outfile = sys.argv[1] if len(sys.argv) > 1 else "libs/sram/sram_1rw.lib"
     if len(sys.argv) > 2:
@@ -153,8 +173,9 @@ def main():
     else:
         configs = set(cache_configs())
     gen_lib(configs, outfile)
-    sv_out = str(Path(outfile).with_suffix(".wrappers.sv"))
-    gen_sv_wrappers(configs, sv_out)
+    base = Path(outfile).with_suffix("")
+    gen_sv_wrappers(configs, str(base) + ".wrappers.sv")
+    gen_sv_blackbox(configs, str(base) + ".blackbox.sv")
 
 
 if __name__ == "__main__":
