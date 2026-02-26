@@ -13,6 +13,7 @@ class SRAM1RW(wordSize: Int, numWords: Int)
         "NUM_WORDS" -> numWords
       )
     ) with HasBlackBoxPath {
+  override val desiredName = "sram_1rw"
   val io = IO(new Bundle {
     val clk0 = Input(Clock())
     val csb0 = Input(Bool())
