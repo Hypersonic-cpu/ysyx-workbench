@@ -69,7 +69,7 @@ def cache_configs():
 
 def scan_sv(sv_dir):
     """Scan SV files for sram_1rw_WxD instantiations."""
-    pat = re.compile(r"sram_1rw_(\d+)x(\d+)\s*#\(")
+    pat = re.compile(r"sram_1rw_(\d+)x(\d+)\s")
     configs = set()
     for f in Path(sv_dir).glob("*.sv"):
         for m in pat.finditer(f.read_text()):
@@ -149,10 +149,7 @@ def gen_sv_blackbox(configs, outfile):
         ab = max(int(math.log2(nw)), 1)
         name = cell_name(wb, nw)
         lines.append(f"(* blackbox *)")
-        lines.append(f"module {name} #(")
-        lines.append(f"  parameter WORD_SIZE = {wb},")
-        lines.append(f"  parameter NUM_WORDS = {nw}")
-        lines.append(f") (")
+        lines.append(f"module {name} (")
         lines.append(f"  input              clk0,")
         lines.append(f"  input              csb0,")
         lines.append(f"  input              web0,")

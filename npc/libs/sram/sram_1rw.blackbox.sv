@@ -1,8 +1,5 @@
 (* blackbox *)
-module sram_1rw_24x32 #(
-  parameter WORD_SIZE = 24,
-  parameter NUM_WORDS = 32
-) (
+module sram_1rw_24x32 (
   input              clk0,
   input              csb0,
   input              web0,
@@ -13,10 +10,7 @@ module sram_1rw_24x32 #(
 endmodule
 
 (* blackbox *)
-module sram_1rw_128x32 #(
-  parameter WORD_SIZE = 128,
-  parameter NUM_WORDS = 32
-) (
+module sram_1rw_128x32 (
   input              clk0,
   input              csb0,
   input              web0,
