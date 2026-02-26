@@ -159,7 +159,7 @@ class iCache(conf: iCacheConf) extends Module {
         i * ISA.RegBits
       )
     )
-  val wordSel = lineSplit(ithOf(reqA3))
+  val wordSel = WireInit(lineSplit(ithOf(reqA3)))
 
   resp.valid     := missServe || hitRespV
   resp.bits.data := Mux(missServe, missData, wordSel)
