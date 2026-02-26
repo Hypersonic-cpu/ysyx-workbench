@@ -1,5 +1,5 @@
 menuconfig SOC
-  depends on TARGET_SHARE
+  # depends on TARGET_SHARE
   bool "SoC Devices"
   default y
   help
