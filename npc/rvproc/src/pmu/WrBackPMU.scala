@@ -7,7 +7,7 @@ import chisel3.util.HasBlackBoxPath
 import rvproc._
 
 class WrBackPMU extends BlackBox with HasBlackBoxPath {
-  val io = IO(new Bundle{
+  val io = IO(new Bundle {
     val clock     = Input(Clock())
     val reset     = Input(Reset())
     val isNewInst = Input(Bool())

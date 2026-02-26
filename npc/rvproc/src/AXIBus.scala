@@ -222,7 +222,7 @@ class AXIArbiter(N: Int) extends Module {
 
 class XBarRead(N: Int, amap: Seq[UInt => Bool]) extends Module {
   require(N > 0 && amap.length == N, "amap length must match N")
-  val io    = IO(new Bundle {
+  val io = IO(new Bundle {
     val host    = Flipped(new AXIReadChannel)
     val devices = Vec(N, new AXIReadChannel)
   })

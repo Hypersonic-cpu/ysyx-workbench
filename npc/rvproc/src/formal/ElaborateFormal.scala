@@ -7,7 +7,8 @@ object ElaborateFormal extends App {
 
   val firtoolOptions = Array(
     "--split-verilog",
-    "-o", outputDir,
+    "-o",
+    outputDir,
     "--verification-flavor=immediate",
     "--lowering-options=" + List(
       "disallowLocalVariables",
