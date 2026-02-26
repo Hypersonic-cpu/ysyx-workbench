@@ -12,7 +12,7 @@ object ElaborSta extends App {
   var l1iSize    = 512
   var l1iBlksize = 16
   var l1iAssoc   = 1
-  val rest = scala.collection.mutable.ArrayBuffer[String]()
+  val rest       = scala.collection.mutable.ArrayBuffer[String]()
 
   var i = 0
   while (i < args.length) {
@@ -34,19 +34,20 @@ object ElaborSta extends App {
   val l1iConf = iCacheConf(32, l1iSize, l1iBlksize, l1iAssoc)
   l1iConf.printConf()
 
-  val ysyxNPC = System.getenv("NPC_HOME")
+  val ysyxNPC        = System.getenv("NPC_HOME")
   assert(ysyxNPC != null && ysyxNPC.nonEmpty)
-  val outputPath =
+  val outputPath     =
     ysyxNPC + "/build-sv/rvproc/mcRvCore.sv"
   val firtoolOptions = Array(
-    "-o", outputPath,
+    "-o",
+    outputPath,
     "--lowering-options=" + List(
       // make yosys happy
       // see https://github.com/llvm/circt/blob/main/docs/VerilogGeneration.md
       "disallowLocalVariables",
       "disallowPackedArrays",
       "locationInfoStyle=wrapInAtSquareBracket",
-      "emittedLineLength=72",
+      "emittedLineLength=72"
     ).reduce(_ + "," + _)
   )
 

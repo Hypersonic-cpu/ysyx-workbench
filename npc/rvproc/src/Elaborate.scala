@@ -48,7 +48,7 @@ object Elaborate extends App {
 
   l1iConfig.printConf()
 
-  val ysyxNPC = System.getenv("NPC_HOME")
+  val ysyxNPC    = System.getenv("NPC_HOME")
   assert(ysyxNPC.nonEmpty)
   val outputPath = ysyxNPC + "/build-sv/rvproc/"
 

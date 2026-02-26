@@ -185,7 +185,17 @@ formal-icache:
 	@echo "Running SymbiYosys"
 	cd $(NPC_HOME) && sby -f $(FORMAL_ICACHE_SBY) bmc && cd -
 
-.PHONY: test runam verilog help reformat checkformat clean prebuild sim printhook formal-icache compile
+## SRAM library generation
+SRAM_DIR = libs/sram
+
+sramlib:
+	@mkdir -p $(SRAM_DIR)
+	@echo "SRAM behavioral model: $(SRAM_DIR)/sram_1rw.sv"
+	@echo "Generating OpenRAM config files for 128B-4KB caches"
+	@python3 scripts/gen_sram_configs.py $(SRAM_DIR)
+	@echo "SRAM configs generated in $(SRAM_DIR)/"
+
+.PHONY: test runam verilog help reformat checkformat clean prebuild sim printhook formal-icache sramlib compile
 
 prebuild:
 	@mkdir -p $(BUILD_OBJ_DIR)

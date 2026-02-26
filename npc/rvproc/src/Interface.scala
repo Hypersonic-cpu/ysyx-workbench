@@ -12,9 +12,9 @@ class FetchToDecode extends Bundle {
 }
 
 class RegFromIDU extends Bundle {
-  val rs1  = Tp.RegIdxType()
-  val rs2  = Tp.RegIdxType()
-  val csrr = Tp.CsrIdxType()
+  val rs1   = Tp.RegIdxType()
+  val rs2   = Tp.RegIdxType()
+  val csrr  = Tp.CsrIdxType()
   val ecall = Bool()
 }
 
@@ -109,7 +109,7 @@ class ExecuteBackward extends Bundle {
   val brAbs = Bool()
   val brVal = Tp.RegType()
   val brLPC = Tp.AddrType()
-  def take = brRel || brAbs
+  def take  = brRel || brAbs
 }
 
 object StallCause extends ChiselEnum {
@@ -142,8 +142,8 @@ class DecodeToExecute extends Bundle {
   val aluSel = new AluSel
   val brInst = new BrInst
 
-  val memOp = new MemOp
-  val aluEn = Bool()
+  val memOp  = new MemOp
+  val aluEn  = Bool()
   val foward = new DecodeFoward
 }
 

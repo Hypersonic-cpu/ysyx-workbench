@@ -73,11 +73,11 @@ class RAWForward extends Module {
   // [0] EX, [1] LS, [2] WB
   val fwdArr     = VecInit(Seq(io.exsrd, io.lssrd, io.wbsrd).map(_.gprFw))
   val fwdSrc     = VecInit(Seq(io.exsrd, io.lssrd, io.wbsrd).map(_.gprDt))
-  val rawBlocked = rawArr.asUInt // conflict, not stall
+  val rawBlocked = rawArr.asUInt               // conflict, not stall
   // val rawForward = rawArr.asUInt & fwdArr.asUInt
   val rawStall   = rawArr.asUInt & ~fwdArr.asUInt
   val fwdIndex   = PriorityEncoder(rawBlocked) // rawForward)
-  io.reqbl := rawStall.orR // rawBlocked.orR && !(rawForward.orR)
+  io.reqbl := rawStall.orR                    // rawBlocked.orR && !(rawForward.orR)
   io.reqfw := rawBlocked.orR && !rawStall.orR // block but not stall
   io.reqdt := fwdSrc(fwdIndex)
 

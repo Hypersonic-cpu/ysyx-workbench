@@ -43,7 +43,8 @@ case class iCacheConf(
 }
 
 // Readonly, 3-cycle pipeline: recv → tag-compare → word-select
-// Valid bit merged into tagArr SyncReadMem (MSB).
+// Valid bit merged into tag array (MSB).
+// Backend: SyncReadMem (sramlib=false) or SRAM BlackBox (=true).
 class iCache(conf: iCacheConf) extends Module {
   require(conf.assoc == 1, "Set assoc unimplemented")
   val io = IO(new Bundle {
@@ -54,23 +55,24 @@ class iCache(conf: iCacheConf) extends Module {
 
   conf.printConf()
 
-  // Tag array: {valid(1b), tag} per set — no separate DFF
-  val tagArr =
-    SyncReadMem(conf.numSets, UInt(conf.tagVBits.W))
-  val dataArr =
-    SyncReadMem(
-      conf.numSets,
-      UInt((conf.lineBytes * 8).W)
-    )
+  import rvproc.device.CacheArray
 
-  def mkTagV(tag: UInt, v: Bool): UInt = v ## tag
-  def tagOfTV(tv: UInt): UInt  = tv(conf.tagBits - 1, 0)
+  // Arrays — CacheArray selects SyncReadMem or SRAM
+  val tagArr  = Module(
+    new CacheArray(conf.numSets, conf.tagVBits)
+  )
+  val dataArr = Module(
+    new CacheArray(conf.numSets, conf.lineBytes * 8)
+  )
+
+  def mkTagV(tag:   UInt, v: Bool): UInt = v ## tag
+  def tagOfTV(tv:   UInt): UInt = tv(conf.tagBits - 1, 0)
   def validOfTV(tv: UInt): Bool = tv(conf.tagBits).asBool
 
   val flowing :: waiting :: memreq :: flushing :: Nil =
     Enum(4)
 
-  // Start in flushing: SyncReadMem has no reset, so we
+  // Start in flushing: arrays have no reset, so we
   // must write valid=0 to every set before accepting reqs.
   val state     = RegInit(flushing)
   val nextState = WireInit(flowing)
@@ -101,14 +103,12 @@ class iCache(conf: iCacheConf) extends Module {
   val tagHit  = Wire(Bool())
   val fillBuf =
     Reg(Vec(conf.lineBytes * 8 / ISA.RegBits, Tp.RegType()))
-  // Avoid SyncReadMem read-write conflict on fill completion.
-  // Gate with state===waiting to ignore spurious AXI R beats.
+  // Avoid read-write conflict on fill completion.
   val fillFinish = RegNext(
     io.memSide.r.bits.last
       && io.memSide.r.fire && state === waiting
   )
-  // Accept new C1 requests only when already flowing,
-  // staying flowing, and not on a fill-completion cycle.
+  // Accept C1 requests only in steady-state flowing.
   val willShift =
     state === flowing && nextState === flowing && !fillFinish
   req.ready := willShift
@@ -129,25 +129,27 @@ class iCache(conf: iCacheConf) extends Module {
     x(conf.tagBitHi, conf.offBits) ## 0.U(conf.offBits.W)
   def ithOf(x: UInt) = x(conf.offBits - 1, ISA.WordShift)
 
-  // ── Cycle 1 (recv) ─────────────────────────────────────
+  // ── Cycle 1 (recv) — issue array reads ─────────────────
   val reqA1 = req.bits.addr
   val reqV1 = req.valid
 
+  tagArr.io.raddr  := idxOf(reqA1)
+  tagArr.io.ren    := willShift && reqV1
+  dataArr.io.raddr := idxOf(reqA1)
+  dataArr.io.ren   := willShift && reqV1
+
   val reqA2 = RegEnable(reqA1, willShift)
-  // Clear reqV2 on stall to prevent stale tag comparison.
   val reqV2 = RegInit(false.B)
   when(willShift) { reqV2 := reqV1 }
     .otherwise { reqV2 := false.B }
 
   // ── Cycle 2 (tag compare) ──────────────────────────────
-  val tagRead =
-    tagArr.read(idxOf(reqA1), willShift && reqV1)
+  val tagRead = tagArr.io.rdata
   tagHit := tagOfTV(tagRead) === tagOf(reqA2) &&
     validOfTV(tagRead) && reqV2
 
   // Register line data for cycle 3 (breaks SRAM→mux path).
-  val lineRead =
-    dataArr.read(idxOf(reqA1), willShift && reqV1)
+  val lineRead  = dataArr.io.rdata
   val lineReadR = RegNext(lineRead)
   val reqA3     = RegNext(reqA2)
 
@@ -197,9 +199,8 @@ class iCache(conf: iCacheConf) extends Module {
   )
   state := nextState
 
-  // Flush: sequentially write valid=0 to every tag slot.
+  // Flush counter
   when(state === flushing) {
-    tagArr.write(flushCtr, 0.U(conf.tagVBits.W))
     when(flushCtr === (conf.numSets - 1).U) {
       flushCtr := 0.U
     }.otherwise {
@@ -252,14 +253,27 @@ class iCache(conf: iCacheConf) extends Module {
   io.memSide.aw            := DontCare
   io.memSide.b             := DontCare
 
-  // ── Fill completion ────────────────────────────────────
+  // ── Centralized array write ports ──────────────────────
   val catData = fillBuf.asUInt
+
+  // Tag: fill completion OR flush (mutually exclusive)
+  tagArr.io.wen :=
+    fillFinish || (state === flushing)
+  tagArr.io.waddr :=
+    Mux(fillFinish, idxOf(reqA2), flushCtr)
+  tagArr.io.wdata := Mux(
+    fillFinish,
+    mkTagV(tagOf(reqA2), true.B),
+    0.U(conf.tagVBits.W)
+  )
+
+  // Data: fill completion only
+  dataArr.io.wen   := fillFinish
+  dataArr.io.waddr := idxOf(reqA2)
+  dataArr.io.wdata := catData
+
+  // ── Fill completion bookkeeping ────────────────────────
   when(fillFinish) {
-    dataArr.write(idxOf(reqA2), catData)
-    tagArr.write(
-      idxOf(reqA2),
-      mkTagV(tagOf(reqA2), true.B)
-    )
     missServe := true.B
     missData  := fillBuf(ithOf(reqA2))
     assert(
