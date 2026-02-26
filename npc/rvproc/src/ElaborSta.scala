@@ -1,5 +1,6 @@
 import scala.util.Properties
 import java.nio.file.Paths
+import rvproc.cache.iCacheConf
 
 object ElaborSta extends App {
 val outputPath = "/home/kong/ysyx-workbench/npc/build-sv/rvproc/mcRvCore.sv"
@@ -15,5 +16,5 @@ val outputPath = "/home/kong/ysyx-workbench/npc/build-sv/rvproc/mcRvCore.sv"
     ).reduce(_ + "," + _)
   )
 
-  circt.stage.ChiselStage.emitSystemVerilogFile(new rvproc.rvCore(true), args, firtoolOptions)
+  circt.stage.ChiselStage.emitSystemVerilogFile(new rvproc.rvCore(true, iCacheConf(32, 512, 32, 1)), args, firtoolOptions)
 }
