@@ -13,3 +13,6 @@
 [submodule "am-kernels"]
 	path = am-kernels
 	url = https://github.com/Hypersonic-cpu/ysyx-AM-kernels.git
+[submodule "npc/libs/openram"]
+	path = npc/libs/openram
+	url = https://github.com/VLSIDA/OpenRAM.git
