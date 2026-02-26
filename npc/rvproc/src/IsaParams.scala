@@ -10,10 +10,9 @@ object PATH {
 }
 
 object GlbCtrl {
-  // val debug = false
-  // val sta   = true
-  val debug = true
-  val sta   = false
+  var debug   = true
+  var sta     = false
+  var sramlib = false
 }
 
 object ISA {

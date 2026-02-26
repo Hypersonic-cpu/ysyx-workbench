@@ -25,6 +25,7 @@ case class iCacheConf(
   def idxBitLo    = this.offBits
   def offBits     = log2Ceil(lineBytes)
   def tagBits     = addrBits - this.idxBits - this.offBits
+  def tagVBits    = tagBits + 1 // +1 valid bit
   def tagBitHi    = addrBits - 1
   def tagBitLo    = addrBits - tagBits
   def lineTrans   = this.lineBytes / (this.addrBits / 8)
@@ -32,13 +33,17 @@ case class iCacheConf(
   def printConf() = {
     println(
       s"iCache : [${this.tagBitHi}: tag :${this.tagBitLo}]"
-        + s"[${this.idxBitHi}: idx :${this.idxBitLo}][${this.offBits - 1}: off :0]"
-        + s" Assoc ${this.assoc} #Sets ${this.numSets} BlkSize ${this.lineBytes}"
+        + s"[${this.idxBitHi}: idx :${this.idxBitLo}]"
+        + s"[${this.offBits - 1}: off :0]"
+        + s" Assoc ${this.assoc} #Sets ${this.numSets}"
+        + s" BlkSize ${this.lineBytes}"
+        + s" TagV ${this.tagVBits}b"
     )
   }
 }
 
-// Readonly
+// Readonly, 3-cycle pipeline: recv → tag-compare → word-select
+// Valid bit merged into tagArr SyncReadMem (MSB).
 class iCache(conf: iCacheConf) extends Module {
   require(conf.assoc == 1, "Set assoc unimplemented")
   val io = IO(new Bundle {
@@ -49,13 +54,25 @@ class iCache(conf: iCacheConf) extends Module {
 
   conf.printConf()
 
-  val validArr = RegInit(VecInit(Seq.fill(conf.numSets)(false.B)))
-  val tagArr   = SyncReadMem(conf.numSets, UInt(conf.tagBits.W))
-  val dataArr  = SyncReadMem(conf.numSets, UInt((conf.lineBytes * 8).W))
+  // Tag array: {valid(1b), tag} per set — no separate DFF
+  val tagArr  =
+    SyncReadMem(conf.numSets, UInt(conf.tagVBits.W))
+  val dataArr =
+    SyncReadMem(
+      conf.numSets,
+      UInt((conf.lineBytes * 8).W)
+    )
 
-  val flowing :: waiting :: memreq :: Nil = Enum(3)
+  def mkTagV(tag:   UInt, v: Bool): UInt = v ## tag
+  def tagOfTV(tv:   UInt): UInt = tv(conf.tagBits - 1, 0)
+  def validOfTV(tv: UInt): Bool = tv(conf.tagBits).asBool
 
-  val state     = RegInit(flowing)
+  val flowing :: waiting :: memreq :: flushing :: Nil =
+    Enum(4)
+
+  // Start in flushing: SyncReadMem has no reset, so we
+  // must write valid=0 to every set before accepting reqs.
+  val state     = RegInit(flushing)
   val nextState = WireInit(flowing)
 
   io.cpuSide.w  := DontCare
@@ -79,34 +96,31 @@ class iCache(conf: iCacheConf) extends Module {
   ) // 4 Bytes
   resp.bits.id   := 0.U
   resp.bits.last := true.B
-  resp.bits.resp := OKAY // TODO: pass mem-side error if cache miss
+  resp.bits.resp := OKAY
 
   val tagHit     = Wire(Bool())
-  val wordSel    = Wire(Tp.RegType())
-  val fillBuf    = Reg(Vec(conf.lineBytes * 8 / ISA.RegBits, Tp.RegType()))
-  // Avoid SyncReadMem read-write conflict: don't accept new requests on
-  // the cycle the fill completes (write and read would hit the same index).
-  // Gate with state===waiting to ignore spurious AXI R responses that leak
-  // through the arbiter/crossbar during non-waiting states.
+  val fillBuf    =
+    Reg(Vec(conf.lineBytes * 8 / ISA.RegBits, Tp.RegType()))
+  // Avoid SyncReadMem read-write conflict on fill completion.
+  // Gate with state===waiting to ignore spurious AXI R beats.
   val fillFinish = RegNext(
-    io.memSide.r.bits.last && io.memSide.r.fire && state === waiting
+    io.memSide.r.bits.last
+      && io.memSide.r.fire && state === waiting
   )
-  val willShift  = nextState === flowing && !fillFinish
+  // Accept new C1 requests only when already flowing,
+  // staying flowing, and not on a fill-completion cycle.
+  val willShift  =
+    state === flowing && nextState === flowing && !fillFinish
   req.ready := willShift
+
   val hitRespV  = RegNext(tagHit)
-  val hitRespD  = RegNext(wordSel)
   val missServe = RegInit(false.B)
   val missData  = RegInit(0.U(32.W))
-  resp.valid     := missServe || hitRespV
-  resp.bits.data := Mux(missServe, missData, hitRespD)
 
-  // Should not issue this request to cache if LSU has no position
   assert(
     resp.valid Implies resp.ready,
     "iCache response but host not ready"
   )
-
-  // io.cpuSide.ar.ready
 
   def idxOf(x: UInt) = x(conf.idxBitHi, conf.idxBitLo)
   def tagOf(x: UInt) = x(conf.tagBitHi, conf.tagBitLo)
@@ -115,41 +129,85 @@ class iCache(conf: iCacheConf) extends Module {
     x(conf.tagBitHi, conf.offBits) ## 0.U(conf.offBits.W)
   def ithOf(x: UInt) = x(conf.offBits - 1, ISA.WordShift)
 
-  // Cycle 1 (recv)
+  // ── Cycle 1 (recv) ─────────────────────────────────────
   val reqA1 = req.bits.addr
   val reqV1 = req.valid
 
   val reqA2 = RegEnable(reqA1, willShift)
-  // Clear reqV2 when pipeline stalls to prevent stale tag comparison
-  // from triggering a spurious miss after fill completion.
+  // Clear reqV2 on stall to prevent stale tag comparison.
   val reqV2 = RegInit(false.B)
   when(willShift) { reqV2 := reqV1 }.otherwise { reqV2 := false.B }
 
-  // Cycle 2 (comp)
-  // Parallel 1
-  val tagRead  = tagArr.read(idxOf(reqA1), willShift && reqV1)
-  val tagValid = validArr(idxOf(reqA2))
-  tagHit := tagRead === tagOf(reqA2) && tagValid && reqV2
+  // ── Cycle 2 (tag compare) ──────────────────────────────
+  val tagRead =
+    tagArr.read(idxOf(reqA1), willShift && reqV1)
+  tagHit := tagOfTV(tagRead) === tagOf(reqA2) &&
+    validOfTV(tagRead) && reqV2
 
-  // printf(cf"iCache Tag Read = ${tagRead}%x\n")
-  // Parallel 2
-  val lineRead  = dataArr.read(idxOf(reqA1), willShift && reqV1)
+  // Register line data for cycle 3 (breaks SRAM→mux path).
+  val lineRead  =
+    dataArr.read(idxOf(reqA1), willShift && reqV1)
+  val lineReadR = RegNext(lineRead)
+  val reqA3     = RegNext(reqA2)
+
+  // ── Cycle 3 (word select + respond) ────────────────────
   val lineSplit =
     VecInit.tabulate(conf.lineTrans)(i =>
-      lineRead((i + 1) * ISA.RegBits - 1, i * ISA.RegBits)
+      lineReadR(
+        (i + 1) * ISA.RegBits - 1,
+        i * ISA.RegBits
+      )
     )
-  wordSel := lineSplit(ithOf(reqA2))
+  val wordSel   = WireInit(lineSplit(ithOf(reqA3)))
 
-  // Cycle 3 (resp)
+  resp.valid     := missServe || hitRespV
+  resp.bits.data := Mux(missServe, missData, wordSel)
+
+  // ── State machine ──────────────────────────────────────
+  val flushPending = RegInit(false.B)
+  when(io.flushAll) { flushPending := true.B }
+
+  val flushCtr =
+    RegInit(0.U(conf.idxBits.W))
+
   nextState := MuxLookup(state, waiting)(
     Seq(
-      flowing -> Mux(tagHit || !reqV2, flowing, memreq),
-      memreq  -> Mux(io.memSide.ar.fire, waiting, memreq),
-      waiting -> Mux(fillFinish, flowing, waiting)
+      flowing  -> Mux(
+        tagHit || !reqV2,
+        Mux(flushPending, flushing, flowing),
+        memreq
+      ),
+      memreq   -> Mux(
+        io.memSide.ar.fire,
+        waiting,
+        memreq
+      ),
+      waiting  -> Mux(
+        fillFinish,
+        Mux(flushPending, flushing, flowing),
+        waiting
+      ),
+      flushing -> Mux(
+        flushCtr === (conf.numSets - 1).U,
+        flowing,
+        flushing
+      )
     )
   )
   state     := nextState
 
+  // Flush: sequentially write valid=0 to every tag slot.
+  when(state === flushing) {
+    tagArr.write(flushCtr, 0.U(conf.tagVBits.W))
+    when(flushCtr === (conf.numSets - 1).U) {
+      flushCtr := 0.U
+    }.otherwise {
+      flushCtr := flushCtr + 1.U
+    }
+  }
+  when(nextState === flushing) { flushPending := false.B }
+
+  // ── Fill logic ─────────────────────────────────────────
   val fillPtr = RegInit(0.U(conf.lineTBits.W))
   when(state === waiting && io.memSide.r.valid) {
     fillBuf(fillPtr) := io.memSide.r.bits.data
@@ -162,9 +220,9 @@ class iCache(conf: iCacheConf) extends Module {
       val goldenPtr = (conf.lineTrans - 1).U
       assert(
         fillPtr === goldenPtr,
-        cf"Got ${fillPtr}+1 transactions during fill, expect ${goldenPtr}+1\n"
+        cf"Got ${fillPtr}+1 transactions during fill,"
+          + cf" expect ${goldenPtr}+1\n"
       )
-
     }
   }.elsewhen(state === memreq && io.memSide.ar.fire) {
     fillPtr := 0.U
@@ -176,11 +234,12 @@ class iCache(conf: iCacheConf) extends Module {
 
   when(io.cpuSide.r.fire) {
     printf(
-      cf"iCache Hit : addr ${RegNext(reqA2)}%x data ${io.cpuSide.r.bits.data}%x\n"
+      cf"iCache Hit : addr ${reqA3}%x"
+        + cf" data ${io.cpuSide.r.bits.data}%x\n"
     )
   }
 
-  // MemSide Req
+  // ── MemSide ────────────────────────────────────────────
   io.memSide.r.ready       := true.B
   io.memSide.ar.valid      := state === memreq
   io.memSide.ar.bits.addr  := blkOf(reqA2)
@@ -188,40 +247,40 @@ class iCache(conf: iCacheConf) extends Module {
   io.memSide.ar.bits.burst := INCR
   io.memSide.ar.bits.id    := 0.U   // iCache
   io.memSide.ar.bits.size  := 0x2.U // log2(4)
-  // TODO: Proper ID
   io.memSide.w             := DontCare
   io.memSide.aw            := DontCare
   io.memSide.b             := DontCare
 
+  // ── Fill completion ────────────────────────────────────
   val catData = fillBuf.asUInt
   when(fillFinish) {
     dataArr.write(idxOf(reqA2), catData)
-    tagArr.write(idxOf(reqA2), tagOf(reqA2))
-    validArr(idxOf(reqA2)) := true.B
-    missServe              := true.B
-    missData               := fillBuf(ithOf(reqA2))
-    assert(!resp.fire, "Transaction (resp) during fill\n")
+    tagArr.write(
+      idxOf(reqA2),
+      mkTagV(tagOf(reqA2), true.B)
+    )
+    missServe := true.B
+    missData  := fillBuf(ithOf(reqA2))
+    assert(
+      !resp.fire,
+      "Transaction (resp) during fill\n"
+    )
   }.elsewhen(resp.fire) {
     missServe := false.B
   }
 
-  // fence.i: invalidate all lines after any in-flight fill completes
-  val flushPending = RegInit(false.B)
-  when(io.flushAll) { flushPending := true.B }
-  when(flushPending && state === flowing && !fillFinish) {
-    for (i <- 0 until conf.numSets) { validArr(i) := false.B }
-    flushPending := false.B
-  }
-
+  // ── Debug ──────────────────────────────────────────────
   if (debug) {
     dontTouch(reqA1)
     dontTouch(reqA2)
+    dontTouch(reqA3)
     dontTouch(reqV1)
     dontTouch(reqV2)
     dontTouch(tagRead)
     dontTouch(wordSel)
     dontTouch(lineSplit)
     dontTouch(lineRead)
+    dontTouch(lineReadR)
   }
 
   if (!sta) {
@@ -231,11 +290,9 @@ class iCache(conf: iCacheConf) extends Module {
     pmu.io.clock    := clock
     pmu.io.resp     := resp.fire
     pmu.io.respHit  := resp.fire && hitRespV
-    pmu.io.respAddr := RegNext(reqA2)
+    pmu.io.respAddr := reqA3
     pmu.io.reqAddr  := req.bits.addr
     pmu.io.req      := req.fire
     pmu.io.id       := 0.U
-    // pmu.io.regidx := io.cpuSide.ar.bits.addr(3, 2)
-    // dontTouch(pmu.io.regout)
   }
 }
