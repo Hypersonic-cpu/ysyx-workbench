@@ -1,21 +1,21 @@
 (* blackbox *)
-module sram_1rw_25x16 (
+module sram_1rw_25x8 (
   input              clk0,
   input              csb0,
   input              web0,
-  input  [3:0] addr0,
+  input  [2:0] addr0,
   input  [24:0] din0,
   output [24:0] dout0
 );
 endmodule
 
 (* blackbox *)
-module sram_1rw_128x16 (
+module sram_1rw_256x8 (
   input              clk0,
   input              csb0,
   input              web0,
-  input  [3:0] addr0,
-  input  [127:0] din0,
-  output [127:0] dout0
+  input  [2:0] addr0,
+  input  [255:0] din0,
+  output [255:0] dout0
 );
 endmodule
