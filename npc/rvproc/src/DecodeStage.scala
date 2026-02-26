@@ -99,7 +99,7 @@ class IDU extends Module {
     immI(11, 0),
     Seq(
       isEcall -> 0x305.U, // mtvec
-      isMret  -> 0x341.U // mepc
+      isMret  -> 0x341.U  // mepc
     )
   )
   io.csriw := Mux(isEcall, 0x341.U, csrid12)
@@ -271,7 +271,7 @@ class DecodeStage extends Module {
   io.rawSrc.csr  := iDec.io.csrir
   io.rawSrc.use1 := validCtrl && !iDec.io.aluSel.rs1SelPC
   io.rawSrc.use2 := validCtrl && (!iDec.io.aluSel.rs2SelImm || iDec.io.memAcc.isSt || iDec.io.ebreak)
-  io.rawSrc.useC := validCtrl && 
+  io.rawSrc.useC := validCtrl &&
     (iDec.io.wbSel === WbSel.fromCsr || iDec.io.aluSel.brSelCsr)
 
   io.in.ready     := io.out.ready && !waitRAW
@@ -285,14 +285,16 @@ class DecodeStage extends Module {
   io.fenceI.bits := iDec.io.fenceI
 
   /** Reg Read */
-  io.toReg.valid     := io.in.valid
-  io.toReg.bits.rs1  := iDec.io.rs1
-  io.toReg.bits.rs2  := iDec.io.rs2
-  io.toReg.bits.csrr := iDec.io.csrir
+  io.toReg.valid      := io.in.valid
+  io.toReg.bits.rs1   := iDec.io.rs1
+  io.toReg.bits.rs2   := iDec.io.rs2
+  io.toReg.bits.csrr  := iDec.io.csrir
   io.toReg.bits.ecall := iDec.io.ecall
-  io.fromReg.ready   := true.B
-  val rs1Val = Mux(io.fwdRes.rs1fw, io.fwdRes.rs1dt, io.fromReg.bits.rs1Val)
-  val rs2Val = Mux(io.fwdRes.rs2fw, io.fwdRes.rs2dt, io.fromReg.bits.rs2Val)
+  io.fromReg.ready    := true.B
+  val rs1Val =
+    Mux(io.fwdRes.rs1fw, io.fwdRes.rs1dt, io.fromReg.bits.rs1Val)
+  val rs2Val =
+    Mux(io.fwdRes.rs2fw, io.fwdRes.rs2dt, io.fromReg.bits.rs2Val)
   val csrVal = io.fromReg.bits.csrVal
 
   /** Input from FetchStage */
@@ -335,6 +337,7 @@ class DecodeStage extends Module {
   }
 
   if (GlbCtrl.debug) {
+
     /** PMU related */
     val pmu = Module(new DecodePMU)
     pmu.io.clock     := clock
