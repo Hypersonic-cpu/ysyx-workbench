@@ -187,13 +187,12 @@ formal-icache:
 
 ## SRAM library generation
 SRAM_DIR = libs/sram
+SRAM_LIB = $(SRAM_DIR)/sram_1rw.lib
 
 sramlib:
 	@mkdir -p $(SRAM_DIR)
-	@echo "SRAM behavioral model: $(SRAM_DIR)/sram_1rw.sv"
-	@echo "Generating OpenRAM config files for 128B-4KB caches"
-	@python3 scripts/gen_sram_configs.py $(SRAM_DIR)
-	@echo "SRAM configs generated in $(SRAM_DIR)/"
+	@python3 scripts/gen_sram_lib.py $(SRAM_LIB) $(BUILD_SV_DIR) 2>&1 || \
+	 python3 scripts/gen_sram_lib.py $(SRAM_LIB)
 
 .PHONY: test runam verilog help reformat checkformat clean prebuild sim printhook formal-icache sramlib compile
 

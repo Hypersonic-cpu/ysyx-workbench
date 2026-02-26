@@ -100,8 +100,8 @@ class iCache(conf: iCacheConf) extends Module {
   resp.bits.last := true.B
   resp.bits.resp := OKAY
 
-  val tagHit  = Wire(Bool())
-  val fillBuf =
+  val tagHit     = Wire(Bool())
+  val fillBuf    =
     Reg(Vec(conf.lineBytes * 8 / ISA.RegBits, Tp.RegType()))
   // Avoid read-write conflict on fill completion.
   val fillFinish = RegNext(
@@ -109,7 +109,7 @@ class iCache(conf: iCacheConf) extends Module {
       && io.memSide.r.fire && state === waiting
   )
   // Accept C1 requests only in steady-state flowing.
-  val willShift =
+  val willShift  =
     state === flowing && nextState === flowing && !fillFinish
   req.ready := willShift
 
@@ -129,7 +129,7 @@ class iCache(conf: iCacheConf) extends Module {
     x(conf.tagBitHi, conf.offBits) ## 0.U(conf.offBits.W)
   def ithOf(x: UInt) = x(conf.offBits - 1, ISA.WordShift)
 
-  // ── Cycle 1 (recv) — issue array reads ─────────────────
+  // Cycle 1 (recv) — issue array reads
   val reqA1 = req.bits.addr
   val reqV1 = req.valid
 
@@ -140,10 +140,9 @@ class iCache(conf: iCacheConf) extends Module {
 
   val reqA2 = RegEnable(reqA1, willShift)
   val reqV2 = RegInit(false.B)
-  when(willShift) { reqV2 := reqV1 }
-    .otherwise { reqV2 := false.B }
+  when(willShift) { reqV2 := reqV1 }.otherwise { reqV2 := false.B }
 
-  // ── Cycle 2 (tag compare) ──────────────────────────────
+  // Cycle 2 tag compare
   val tagRead = tagArr.io.rdata
   tagHit := tagOfTV(tagRead) === tagOf(reqA2) &&
     validOfTV(tagRead) && reqV2
@@ -153,7 +152,7 @@ class iCache(conf: iCacheConf) extends Module {
   val lineReadR = RegNext(lineRead)
   val reqA3     = RegNext(reqA2)
 
-  // ── Cycle 3 (word select + respond) ────────────────────
+  // Cycle 3 word select + respond
   val lineSplit =
     VecInit.tabulate(conf.lineTrans)(i =>
       lineReadR(
@@ -161,12 +160,12 @@ class iCache(conf: iCacheConf) extends Module {
         i * ISA.RegBits
       )
     )
-  val wordSel = WireInit(lineSplit(ithOf(reqA3)))
+  val wordSel   = WireInit(lineSplit(ithOf(reqA3)))
 
   resp.valid     := missServe || hitRespV
   resp.bits.data := Mux(missServe, missData, wordSel)
 
-  // ── State machine ──────────────────────────────────────
+  // FSM
   val flushPending = RegInit(false.B)
   when(io.flushAll) { flushPending := true.B }
 
@@ -175,17 +174,17 @@ class iCache(conf: iCacheConf) extends Module {
 
   nextState := MuxLookup(state, waiting)(
     Seq(
-      flowing -> Mux(
+      flowing  -> Mux(
         tagHit || !reqV2,
         Mux(flushPending, flushing, flowing),
         memreq
       ),
-      memreq -> Mux(
+      memreq   -> Mux(
         io.memSide.ar.fire,
         waiting,
         memreq
       ),
-      waiting -> Mux(
+      waiting  -> Mux(
         fillFinish,
         Mux(flushPending, flushing, flowing),
         waiting
@@ -197,7 +196,7 @@ class iCache(conf: iCacheConf) extends Module {
       )
     )
   )
-  state := nextState
+  state     := nextState
 
   // Flush counter
   when(state === flushing) {
@@ -209,7 +208,7 @@ class iCache(conf: iCacheConf) extends Module {
   }
   when(nextState === flushing) { flushPending := false.B }
 
-  // ── Fill logic ─────────────────────────────────────────
+  // Cache line fill
   val fillPtr = RegInit(0.U(conf.lineTBits.W))
   when(state === waiting && io.memSide.r.valid) {
     fillBuf(fillPtr) := io.memSide.r.bits.data
@@ -241,7 +240,6 @@ class iCache(conf: iCacheConf) extends Module {
     )
   }
 
-  // ── MemSide ────────────────────────────────────────────
   io.memSide.r.ready       := true.B
   io.memSide.ar.valid      := state === memreq
   io.memSide.ar.bits.addr  := blkOf(reqA2)
@@ -253,11 +251,11 @@ class iCache(conf: iCacheConf) extends Module {
   io.memSide.aw            := DontCare
   io.memSide.b             := DontCare
 
-  // ── Centralized array write ports ──────────────────────
+  // Centralized array write ports
   val catData = fillBuf.asUInt
 
   // Tag: fill completion OR flush (mutually exclusive)
-  tagArr.io.wen :=
+  tagArr.io.wen   :=
     fillFinish || (state === flushing)
   tagArr.io.waddr :=
     Mux(fillFinish, idxOf(reqA2), flushCtr)
@@ -272,7 +270,6 @@ class iCache(conf: iCacheConf) extends Module {
   dataArr.io.waddr := idxOf(reqA2)
   dataArr.io.wdata := catData
 
-  // ── Fill completion bookkeeping ────────────────────────
   when(fillFinish) {
     missServe := true.B
     missData  := fillBuf(ithOf(reqA2))
@@ -284,7 +281,6 @@ class iCache(conf: iCacheConf) extends Module {
     missServe := false.B
   }
 
-  // ── Debug ──────────────────────────────────────────────
   if (debug) {
     dontTouch(reqA1)
     dontTouch(reqA2)

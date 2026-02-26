@@ -5,7 +5,6 @@ import chisel3.util._
 import rvproc.GlbCtrl
 import rvproc.PATH
 
-/** 1RW SRAM BlackBox — matches sram_1rw.sv interface. */
 class SRAM1RW(wordSize: Int, numWords: Int)
     extends BlackBox(
       Map(
@@ -13,7 +12,8 @@ class SRAM1RW(wordSize: Int, numWords: Int)
         "NUM_WORDS" -> numWords
       )
     ) with HasBlackBoxPath {
-  override val desiredName = "sram_1rw"
+  override val desiredName =
+    s"sram_1rw_${wordSize}x${numWords}"
   val io = IO(new Bundle {
     val clk0 = Input(Clock())
     val csb0 = Input(Bool())
@@ -26,9 +26,6 @@ class SRAM1RW(wordSize: Int, numWords: Int)
   addPath(PATH.sram("sram_1rw.sv"))
 }
 
-/** Unified cache array: SyncReadMem (sramlib=false)
-  * or SRAM BlackBox (sramlib=true). Single 1RW port.
-  */
 class CacheArray(depth: Int, width: Int)
     extends Module {
   val io = IO(new Bundle {
