@@ -32,10 +32,10 @@ import rvproc.cache.{iCache, iCacheConf}
 
 class iCacheFormal extends Module {
   val conf = iCacheConf(
-    addrBits  = 32,
+    addrBits = 32,
     dataBytes = 128,
     lineBytes = 16,
-    assoc     = 1
+    assoc = 1
   )
 
   val io = IO(new Bundle {
@@ -62,14 +62,14 @@ class iCacheFormal extends Module {
   dut.io.cpuSide.aw.valid     := false.B
   dut.io.cpuSide.aw.bits      := DontCare
   dut.io.cpuSide.b.ready      := false.B
-  dut.io.flushAll              := false.B
+  dut.io.flushAll             := false.B
 
   // ── AXI memory model ────────────────────────────────────────────────
   val sIdle :: sBurst :: Nil = Enum(2)
-  val memState  = RegInit(sIdle)
-  val burstBase = Reg(UInt(32.W))
-  val burstCnt  = RegInit(0.U(log2Ceil(conf.lineTrans).W))
-  val burstLen  = Reg(UInt(8.W))
+  val memState               = RegInit(sIdle)
+  val burstBase              = Reg(UInt(32.W))
+  val burstCnt               = RegInit(0.U(log2Ceil(conf.lineTrans).W))
+  val burstLen               = Reg(UInt(8.W))
 
   dut.io.memSide.ar.ready := memState === sIdle
 

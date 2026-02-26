@@ -8,12 +8,12 @@ import rvproc.pmu.WrBackPMU
 // MUX, Write data selection
 class WBU extends Module {
   val io = IO(new Bundle {
-    val wbSel  = Input(WbSel())
-    val pc     = Input(Tp.RegType())
-    val csrV   = Input(Tp.RegType())
-    val aluV   = Input(Tp.RegType())
-    val memV   = Input(Tp.RegType())
-    val gprdt  = Output(Tp.RegType())
+    val wbSel = Input(WbSel())
+    val pc    = Input(Tp.RegType())
+    val csrV  = Input(Tp.RegType())
+    val aluV  = Input(Tp.RegType())
+    val memV  = Input(Tp.RegType())
+    val gprdt = Output(Tp.RegType())
   })
 
   val snpc = io.pc + 4.U
@@ -29,8 +29,8 @@ class WBU extends Module {
 
 class WrBackStage extends Module {
   val io = IO(new Bundle {
-    val in    = Flipped(Decoupled(new MemoryToWrBack))
-    val toReg = Decoupled(new RegFromWBU)
+    val in     = Flipped(Decoupled(new MemoryToWrBack))
+    val toReg  = Decoupled(new RegFromWBU)
     // val toFetch = Decoupled(new InstCommit)
     val fwdDet = Output(new FwBundle)
   })
@@ -66,6 +66,7 @@ class WrBackStage extends Module {
   io.fwdDet.gprDt := ioreg.gprIn
 
   if (GlbCtrl.debug) {
+
     /** PMU */
     val pmu = Module(new WrBackPMU)
     pmu.io.clock     := clock

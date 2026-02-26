@@ -6,7 +6,11 @@ import chisel3.assert.Assert
 
 object PATH {
   val dpicPath = "/home/kong/ysyx-workbench/npc/rvproc/dpic/"
-  def dpic(s: String) = java.nio.file.Paths.get(dpicPath, s).toString()
+  val sramPath = "/home/kong/ysyx-workbench/npc/libs/sram/"
+  def dpic(s: String) =
+    java.nio.file.Paths.get(dpicPath, s).toString()
+  def sram(s: String) =
+    java.nio.file.Paths.get(sramPath, s).toString()
 }
 
 object GlbCtrl {

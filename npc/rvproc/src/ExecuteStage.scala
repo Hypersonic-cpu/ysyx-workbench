@@ -129,7 +129,7 @@ class ExecuteStage extends Module {
   /** Forward */
   io.fwdDet.valid := validCtrl
   io.fwdDet.gprFw := false.B // !ioid.memOp.isEn
-  io.fwdDet.gprDt := 0.U // iExe.io.aluOut
+  io.fwdDet.gprDt := 0.U     // iExe.io.aluOut
 
   /** Back to Fetch */
   io.toFetch.valid := validCtrl
@@ -143,9 +143,9 @@ class ExecuteStage extends Module {
   /** Back to Decoder */
   io.brDet.valid := validCtrl
   // Must add this validCtrl
-  io.brDet.bits  := validCtrl && 
-    io.toFetch.valid && io.toFetch.bits.take 
-    // (iExe.io.brRel || iExe.io.brAbs)
+  io.brDet.bits  := validCtrl &&
+    io.toFetch.valid && io.toFetch.bits.take
+  // (iExe.io.brRel || iExe.io.brAbs)
 
   /** To LSU, AluOut = Addr */
   iols.aluOut := Mux(

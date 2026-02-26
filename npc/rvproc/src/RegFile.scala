@@ -72,7 +72,7 @@ class CsrFile extends Module {
   //     + cf" C[${io.idxw}%x] <${io.wrEn} ${io.data}%x\n"
   // )
 
-  when (io.ecall) {
+  when(io.ecall) {
     mcause := 11.U
   }
 
