@@ -143,6 +143,11 @@ verilog: $(SCALA_SOURCES)
 	@echo "Apply memory port changes for SoC"
 	@find $(BUILD_SV_DIR) -type f -name "*.v" -o -name "*.sv" -print0 | xargs -0 sed -i -e 's/_\(aw\|ar\|w\|r\|b\)_\(\|bits_\)/_\1/g'
 	@cp $(SRC_DPIC_DIR)/PMemBox.sv $(BUILD_SV_DIR)/PMemBox.sv
+	@if grep -q 'sram_1rw_' $(BUILD_SV_DIR)/*.sv 2>/dev/null; then \
+	  mkdir -p $(SRAM_DIR) && \
+	  python3 scripts/gen_sram_lib.py $(SRAM_LIB) $(BUILD_SV_DIR) && \
+	  cp $(SRAM_WRAP) $(BUILD_SV_DIR)/sram_wrappers.sv; \
+	fi
 	@echo "Memory port renaming done"
 
 rtlsta: $(SCALA_SOURCES)
@@ -187,13 +192,14 @@ formal-icache:
 
 ## SRAM library generation
 SRAM_DIR = libs/sram
+SRAM_LIB = $(SRAM_DIR)/sram_1rw.lib
+SRAM_BB  = $(SRAM_DIR)/sram_1rw.blackbox.sv
+SRAM_WRAP = $(SRAM_DIR)/sram_1rw.wrappers.sv
 
 sramlib:
 	@mkdir -p $(SRAM_DIR)
-	@echo "SRAM behavioral model: $(SRAM_DIR)/sram_1rw.sv"
-	@echo "Generating OpenRAM config files for 128B-4KB caches"
-	@python3 scripts/gen_sram_configs.py $(SRAM_DIR)
-	@echo "SRAM configs generated in $(SRAM_DIR)/"
+	@python3 scripts/gen_sram_lib.py $(SRAM_LIB) $(BUILD_SV_DIR) 2>&1 || \
+	 python3 scripts/gen_sram_lib.py $(SRAM_LIB)
 
 .PHONY: test runam verilog help reformat checkformat clean prebuild sim printhook formal-icache sramlib compile
 
