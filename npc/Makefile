@@ -146,7 +146,9 @@ verilog: $(SCALA_SOURCES)
 	@if grep -q 'sram_1rw_' $(BUILD_SV_DIR)/*.sv 2>/dev/null; then \
 	  mkdir -p $(SRAM_DIR) && \
 	  python3 scripts/gen_sram_lib.py $(SRAM_LIB) $(BUILD_SV_DIR) && \
-	  cp $(SRAM_WRAP) $(BUILD_SV_DIR)/sram_wrappers.sv; \
+	  cp $(SRAM_WRAP) $(BUILD_SV_DIR)/sram_wrappers.sv && \
+	  cp $(SRAM_BB) $(BUILD_SV_DIR)/sram_blackbox.sv && \
+	  cp $(SRAM_LIB) $(BUILD_SV_DIR)/sram_1rw.lib; \
 	fi
 	@echo "Memory port renaming done"
 
@@ -154,7 +156,14 @@ rtlsta: $(SCALA_SOURCES)
 	$(call git_commit, "generate verilog") # WARN: Only allow tracking here
 	mkdir -p $(BUILD_SV_DIR)
 	mill -i $(PRJ).runMain ElaborSta --no-debug --sta $(RTL_SCALA_ARG)
-	@find $(BUILD_SV_DIR) -type f -name "*.v" -o -name "*.sv" -print0 | xargs -0 sed -i 's/^\.\/.*\.sv//'
+	@find $(BUILD_SV_DIR) -type f -name "*.v" -o -name "*.sv" -print0 | xargs -0 sed -i -e 's/_\(aw\|ar\|w\|r\|b\)_\(\|bits_\)/_\1/g'
+	@if grep -q 'sram_1rw_' $(BUILD_SV_DIR)/*.sv 2>/dev/null; then \
+	  mkdir -p $(SRAM_DIR) && \
+	  python3 scripts/gen_sram_lib.py $(SRAM_LIB) $(BUILD_SV_DIR) && \
+	  cp $(SRAM_WRAP) $(BUILD_SV_DIR)/sram_wrappers.sv && \
+	  cp $(SRAM_BB) $(BUILD_SV_DIR)/sram_blackbox.sv && \
+	  cp $(SRAM_LIB) $(BUILD_SV_DIR)/sram_1rw.lib; \
+	fi
 
 help:
 	mill -i $(PRJ).runMain Elaborate --help
