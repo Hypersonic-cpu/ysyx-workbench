@@ -160,6 +160,7 @@ rtlsta: $(SCALA_SOURCES)
 	mill -i $(PRJ).runMain ElaborSta --no-debug --sta $(RTL_SCALA_ARG)
 	@sed -i '/^\/\/ ----- 8< -----/,$$d' $(BUILD_SV_DIR)/*.sv
 	@find $(BUILD_SV_DIR) -type f -name "*.v" -o -name "*.sv" -print0 | xargs -0 sed -i -e 's/_\(aw\|ar\|w\|r\|b\)_\(\|bits_\)/_\1/g'
+	@cp $(SRC_DPIC_DIR)/FakeEcallBox.sv $(BUILD_SV_DIR)/FakeEcallBox.sv
 	@if grep -q 'sram_1rw_' $(BUILD_SV_DIR)/*.sv 2>/dev/null; then \
 	  mkdir -p $(SRAM_DIR) && \
 	  python3 scripts/gen_sram_lib.py $(SRAM_LIB) $(BUILD_SV_DIR) && \
