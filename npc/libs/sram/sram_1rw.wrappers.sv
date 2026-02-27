@@ -1,31 +1,31 @@
-module sram_1rw_23x32 (
+module sram_1rw_23x16 (
   input              clk0,
   input              csb0,
   input              web0,
-  input  [4:0] addr0,
+  input  [3:0] addr0,
   input  [22:0] din0,
   output [22:0] dout0
 );
   sram_1rw #(
     .WORD_SIZE(23),
-    .NUM_WORDS(32)
+    .NUM_WORDS(16)
   ) u0 (
     .clk0(clk0), .csb0(csb0), .web0(web0),
     .addr0(addr0), .din0(din0), .dout0(dout0)
   );
 endmodule
 
-module sram_1rw_128x32 (
+module sram_1rw_256x16 (
   input              clk0,
   input              csb0,
   input              web0,
-  input  [4:0] addr0,
-  input  [127:0] din0,
-  output [127:0] dout0
+  input  [3:0] addr0,
+  input  [255:0] din0,
+  output [255:0] dout0
 );
   sram_1rw #(
-    .WORD_SIZE(128),
-    .NUM_WORDS(32)
+    .WORD_SIZE(256),
+    .NUM_WORDS(16)
   ) u0 (
     .clk0(clk0), .csb0(csb0), .web0(web0),
     .addr0(addr0), .din0(din0), .dout0(dout0)
