@@ -137,10 +137,11 @@ runonly: prebuild $(SIM_BIN)
 
 verilog: $(SCALA_SOURCES)
 	$(call git_commit, "generate verilog")
+	rm -rf $(BUILD_SV_DIR)
 	mkdir -p $(BUILD_SV_DIR)
 	mill -i $(PRJ).runMain Elaborate --target-dir $(BUILD_SV_DIR) --debug --no-sta $(RTL_SCALA_ARG)
 	@echo "Verilog written to " $(BUILD_SV_DIR)
-	@echo "Apply memory port changes for SoC"
+	@sed -i '/^\/\/ ----- 8< -----/,$$d' $(BUILD_SV_DIR)/*.sv
 	@find $(BUILD_SV_DIR) -type f -name "*.v" -o -name "*.sv" -print0 | xargs -0 sed -i -e 's/_\(aw\|ar\|w\|r\|b\)_\(\|bits_\)/_\1/g'
 	@cp $(SRC_DPIC_DIR)/PMemBox.sv $(BUILD_SV_DIR)/PMemBox.sv
 	@if grep -q 'sram_1rw_' $(BUILD_SV_DIR)/*.sv 2>/dev/null; then \
@@ -154,8 +155,10 @@ verilog: $(SCALA_SOURCES)
 
 rtlsta: $(SCALA_SOURCES)
 	$(call git_commit, "generate verilog") # WARN: Only allow tracking here
+	rm -rf $(BUILD_SV_DIR)
 	mkdir -p $(BUILD_SV_DIR)
 	mill -i $(PRJ).runMain ElaborSta --no-debug --sta $(RTL_SCALA_ARG)
+	@sed -i '/^\/\/ ----- 8< -----/,$$d' $(BUILD_SV_DIR)/*.sv
 	@find $(BUILD_SV_DIR) -type f -name "*.v" -o -name "*.sv" -print0 | xargs -0 sed -i -e 's/_\(aw\|ar\|w\|r\|b\)_\(\|bits_\)/_\1/g'
 	@if grep -q 'sram_1rw_' $(BUILD_SV_DIR)/*.sv 2>/dev/null; then \
 	  mkdir -p $(SRAM_DIR) && \
