@@ -62,7 +62,7 @@ def cache_configs():
                 continue
             off = int(math.log2(blk))
             idx = int(math.log2(nsets))
-            tagv = 32 - off - idx + 1
+            tagv = 32 - off - idx  # valid is separate DFF
             yield (tagv, nsets)
             yield (blk * 8, nsets)
 
