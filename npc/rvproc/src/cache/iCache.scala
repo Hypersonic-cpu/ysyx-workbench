@@ -25,7 +25,7 @@ case class iCacheConf(
   def idxBitLo    = this.offBits
   def offBits     = log2Ceil(lineBytes)
   def tagBits     = addrBits - this.idxBits - this.offBits
-  def tagVBits    = tagBits + 1 // +1 valid bit
+  def tagVBits    = tagBits // valid bit is a separate DFF, not in tag
   def tagBitHi    = addrBits - 1
   def tagBitLo    = addrBits - tagBits
   def lineTrans   = this.lineBytes / (this.addrBits / 8)
@@ -43,8 +43,8 @@ case class iCacheConf(
 }
 
 // Readonly, 3-cycle pipeline: recv → tag-compare → word-select
-// Valid bit merged into tag array (MSB).
-// Backend: SyncReadMem (sramlib=false) or SRAM BlackBox (=true).
+// Valid bit is a separate DFF array (requires reset).
+// Tag/data backend: SyncReadMem (sramlib=false) or SRAM BlackBox (=true).
 class iCache(conf: iCacheConf) extends Module {
   require(conf.assoc == 1, "Set assoc unimplemented")
   val io = IO(new Bundle {
@@ -59,22 +59,21 @@ class iCache(conf: iCacheConf) extends Module {
 
   // Arrays — CacheArray selects SyncReadMem or SRAM
   val tagArr  = Module(
-    new CacheArray(conf.numSets, conf.tagVBits)
+    new CacheArray(conf.numSets, conf.tagBits)
   )
   val dataArr = Module(
     new CacheArray(conf.numSets, conf.lineBytes * 8)
   )
 
-  def mkTagV(tag:   UInt, v: Bool): UInt = v ## tag
-  def tagOfTV(tv:   UInt): UInt = tv(conf.tagBits - 1, 0)
-  def validOfTV(tv: UInt): Bool = tv(conf.tagBits).asBool
+  // Valid bits: separate DFF array with reset
+  val validArr =
+    RegInit(VecInit(Seq.fill(conf.numSets)(false.B)))
 
   val flowing :: waiting :: memreq :: flushing :: Nil =
     Enum(4)
 
-  // Start in flushing: arrays have no reset, so we
-  // must write valid=0 to every set before accepting reqs.
-  val state     = RegInit(flushing)
+  // validArr is all-false at reset, so start in flowing.
+  val state     = RegInit(flowing)
   val nextState = WireInit(flowing)
 
   io.cpuSide.w  := DontCare
@@ -144,8 +143,8 @@ class iCache(conf: iCacheConf) extends Module {
 
   // Cycle 2 tag compare
   val tagRead = tagArr.io.rdata
-  tagHit := tagOfTV(tagRead) === tagOf(reqA2) &&
-    validOfTV(tagRead) && reqV2
+  tagHit := tagRead === tagOf(reqA2) &&
+    validArr(idxOf(reqA2)) && reqV2
 
   // Register line data for cycle 3 (breaks SRAM→mux path).
   val lineRead  = dataArr.io.rdata
@@ -169,9 +168,6 @@ class iCache(conf: iCacheConf) extends Module {
   val flushPending = RegInit(false.B)
   when(io.flushAll) { flushPending := true.B }
 
-  val flushCtr =
-    RegInit(0.U(conf.idxBits.W))
-
   nextState := MuxLookup(state, waiting)(
     Seq(
       flowing  -> Mux(
@@ -189,22 +185,15 @@ class iCache(conf: iCacheConf) extends Module {
         Mux(flushPending, flushing, flowing),
         waiting
       ),
-      flushing -> Mux(
-        flushCtr === (conf.numSets - 1).U,
-        flowing,
-        flushing
-      )
+      // 1-cycle flush: validArr cleared below
+      flushing -> flowing
     )
   )
   state     := nextState
 
-  // Flush counter
+  // Flush valid bits (1-cycle clear)
   when(state === flushing) {
-    when(flushCtr === (conf.numSets - 1).U) {
-      flushCtr := 0.U
-    }.otherwise {
-      flushCtr := flushCtr + 1.U
-    }
+    validArr.foreach(_ := false.B)
   }
   when(nextState === flushing) { flushPending := false.B }
 
@@ -254,16 +243,15 @@ class iCache(conf: iCacheConf) extends Module {
   // Centralized array write ports
   val catData = fillBuf.asUInt
 
-  // Tag: fill completion OR flush (mutually exclusive)
-  tagArr.io.wen   :=
-    fillFinish || (state === flushing)
-  tagArr.io.waddr :=
-    Mux(fillFinish, idxOf(reqA2), flushCtr)
-  tagArr.io.wdata := Mux(
-    fillFinish,
-    mkTagV(tagOf(reqA2), true.B),
-    0.U(conf.tagVBits.W)
-  )
+  // Tag: fill completion only (flush uses validArr DFF)
+  tagArr.io.wen   := fillFinish
+  tagArr.io.waddr := idxOf(reqA2)
+  tagArr.io.wdata := tagOf(reqA2)
+
+  // Valid: set on fill, cleared on flush (above)
+  when(fillFinish) {
+    validArr(idxOf(reqA2)) := true.B
+  }
 
   // Data: fill completion only
   dataArr.io.wen   := fillFinish
