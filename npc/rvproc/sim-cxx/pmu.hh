@@ -109,7 +109,7 @@ private:
   ClassifiedStats<BpBreakdown> bpStats;
 
   struct BpPerPC { uint32_t correct{0}; uint32_t wrong{0}; };
-  std::unordered_map<uint32_t, BpPerPC> bpPerPC;
+  mutable std::unordered_map<uint32_t, BpPerPC> bpPerPC;
 
   std::vector<StatsBase*> statslist{&ifcyc,       &lscyc,       &instcyc,
                                     &cycStatus,   &instStatus,  &memRdStatus,
