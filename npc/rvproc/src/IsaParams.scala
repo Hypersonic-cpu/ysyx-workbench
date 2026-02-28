@@ -18,13 +18,19 @@ case object NoPred  extends BrPredType
 case object BTFNT   extends BrPredType
 case object Bimodal extends BrPredType
 
+sealed trait ConfigMode
+case object Tiny     extends ConfigMode
+case object Extended extends ConfigMode
+
 object GlbCtrl {
   var debug     = true
   var sta       = false
-  var sramlib   = false
+  var config    = Extended: ConfigMode
   var bpType    = Bimodal: BrPredType
-  var bpEntries = 64
+  var bpEntries = 128
   var rasSize   = 4
+  def useSram: Boolean   = config == Extended
+  def hasDCache: Boolean = config == Extended
 }
 
 object ISA {

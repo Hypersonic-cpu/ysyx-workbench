@@ -189,15 +189,15 @@ module PMemWriter (
     input int unsigned  waddr,
     input int unsigned  wdata,
     input byte unsigned wmask,
-    // input shortint unsigned id,
     input byte unsigned outstanding
   );
 
-  typedef enum logic [1:0] {
-    IDLE  = 2'h0,
-    RECV  = 2'h1,
-    SERVE = 2'h2,
-    HOLD  = 2'h3
+  typedef enum logic [2:0] {
+    IDLE  = 3'h0,
+    WDATA = 3'h1,
+    RECV  = 3'h2,
+    SERVE = 3'h3,
+    HOLD  = 3'h4
   } state_t;
   state_t state;
   state_t next_state;
@@ -206,16 +206,17 @@ module PMemWriter (
   reg [31:0] waddr_latch;
   reg [31:0] wdata_latch;
   reg [3:0] wstrb_latch;
-
-  aw_w_channel_sync :
-  assert property (@(posedge clock) ~(io_master_awvalid ^ io_master_wvalid));
+  reg wlast_latch;
 
   always_comb begin
     unique case (state)
-      IDLE:  next_state = io_master_awvalid ? RECV : IDLE;
+      IDLE:  next_state = io_master_awvalid ? WDATA : IDLE;
+      WDATA: next_state = io_master_wvalid ? RECV : WDATA;
       RECV:  next_state = SERVE;
-      SERVE: next_state = (delay_remain == 1) ? HOLD : SERVE;
+      SERVE: next_state = (delay_remain == 1)
+               ? (wlast_latch ? HOLD : WDATA) : SERVE;
       HOLD:  next_state = io_master_bready ? IDLE : HOLD;
+      default: next_state = IDLE;
     endcase
   end
 
@@ -223,22 +224,28 @@ module PMemWriter (
     if (reset) begin
       state <= IDLE;
       delay_remain <= 0;
+      wlast_latch <= 0;
     end else begin
       state <= next_state;
       if (state == IDLE && io_master_awvalid) begin
         waddr_latch <= io_master_awaddr;
+        bid_latch   <= io_master_awid;
+        assert (io_master_awburst == 2'b01);
+      end
+      if (state == WDATA && io_master_wvalid) begin
         wdata_latch <= io_master_wdata;
         wstrb_latch <= io_master_wstrb;
-        bid_latch   <= io_master_awid;
-        assert (io_master_awlen == 0);  // No burst write
-      end else if (state == RECV) begin
-        delay_remain <= axi_write(waddr_latch, wdata_latch, 8'(wstrb_latch), 8'(1));
-      end else begin
-        if (state == SERVE) delay_remain <= delay_remain - 1;
+        wlast_latch <= io_master_wlast;
       end
-
-      // if (state == RECV || state == SERVE)
-      //   $strobe("> Writer State %x counter %d req %d", state, delay_remain, io_master_awvalid);
+      if (state == RECV) begin
+        delay_remain <= axi_write(
+          waddr_latch, wdata_latch,
+          8'(wstrb_latch), 8'(wlast_latch)
+        );
+        waddr_latch <= waddr_latch + 32'h4;
+      end
+      if (state == SERVE)
+        delay_remain <= delay_remain - 1;
     end
   end
 
@@ -248,6 +255,6 @@ module PMemWriter (
   assign io_master_bid     = bid_latch;
   assign io_master_bvalid  = state == HOLD;
   assign io_master_awready = state == IDLE;
-  assign io_master_wready  = state == IDLE;
+  assign io_master_wready  = state == WDATA;
   assign io_master_bresp   = 2'b00;
 endmodule
