@@ -107,7 +107,7 @@ class BTFNTPredictor(conf: BrPredConf) extends BrPred(conf) {
 
   val btbHitRaw =
     validArr(qidxR) && tagData === tagOf(qPCR)
-  val btbHit    = if (GlbCtrl.sramlib) {
+  val btbHit    = if (GlbCtrl.useSram) {
     btbHitRaw && !(bypValid && !useByp)
   } else btbHitRaw
   val isRetBit  = Mux(useByp, bypIsRet, typeArr(qidxR))
@@ -142,10 +142,6 @@ class BTFNTPredictor(conf: BrPredConf) extends BrPred(conf) {
   }
 }
 
-// 2-bit saturating counter predictor with CacheArray BTB.
-// BHT updates only when BTB hit or branch taken
-// (prevents aliased not-taken branches from polluting
-// counters owned by other PCs).
 class BimodalPredictor(conf: BrPredConf) extends BrPred(conf) {
 
   val tagArr    = Module(
@@ -185,7 +181,7 @@ class BimodalPredictor(conf: BrPredConf) extends BrPred(conf) {
 
   val btbHitRaw =
     validArr(qidxR) && tagData === tagOf(qPCR)
-  val btbHit    = if (GlbCtrl.sramlib) {
+  val btbHit    = if (GlbCtrl.useSram) {
     btbHitRaw && !(bypValid && !useByp)
   } else btbHitRaw
   val bhtCnt    = bhtArr(qidxR)

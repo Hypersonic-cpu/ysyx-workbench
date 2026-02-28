@@ -44,7 +44,7 @@ case class iCacheConf(
 
 // Readonly, 3-cycle pipeline: recv → tag-compare → word-select
 // Valid bit is a separate DFF array (requires reset).
-// Tag/data backend: SyncReadMem (sramlib=false) or SRAM BlackBox (=true).
+// Tag/data backend: SyncReadMem (Tiny) or SRAM BlackBox (Extended).
 class iCache(conf: iCacheConf) extends Module {
   require(conf.assoc == 1, "Set assoc unimplemented")
   val io = IO(new Bundle {

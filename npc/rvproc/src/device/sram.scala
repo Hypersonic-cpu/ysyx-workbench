@@ -32,7 +32,7 @@ class CacheArray(depth: Int, width: Int) extends Module {
     val wdata = Input(UInt(width.W))
   })
 
-  if (GlbCtrl.sramlib) {
+  if (GlbCtrl.useSram) {
     val sram = Module(new SRAM1RW(width, depth))
     sram.io.clk0  := clock
     sram.io.csb0  := !(io.ren || io.wen)
