@@ -2,7 +2,7 @@ import scala.util.Properties
 import java.nio.file.Paths
 import rvproc.cache.iCacheConf
 import scala.collection.mutable.ArrayBuffer
-import rvproc.{GlbCtrl, NoPred, BTFNT, Bimodal}
+import rvproc.{BTFNT, Bimodal, GlbCtrl, NoPred}
 
 object Elaborate extends App {
   println(s"-> Elaborate Argv: ${args.mkString(":")}")
@@ -35,7 +35,8 @@ object Elaborate extends App {
         case "--bp-none"     => GlbCtrl.bpType = NoPred
         case "--bp-btfnt"    => GlbCtrl.bpType = BTFNT
         case "--bp-bimodal"  => GlbCtrl.bpType = Bimodal
-        case "--bp-entries"  => GlbCtrl.bpEntries = args(i + 1).toInt; i += 1
+        case "--bp-entries"  =>
+          GlbCtrl.bpEntries = args(i + 1).toInt; i += 1
         case other           => rest += other
       }
       i += 1

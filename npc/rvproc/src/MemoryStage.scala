@@ -89,8 +89,8 @@ class MemoryStage extends Module {
   dMem.aw.valid := ioex.memOp.isSt && trigIss
   dMem.w.valid  := ioex.memOp.isSt && trigIss
 
-  dMem.r.ready  := ~ioex.memOp.isSt && io.out.ready
-  dMem.b.ready  := ioex.memOp.isSt && io.out.ready
+  dMem.r.ready := ~ioex.memOp.isSt && io.out.ready
+  dMem.b.ready := ioex.memOp.isSt && io.out.ready
 
   val sext      = ioex.memOp.sExt
   val loadValue = dMem.r.bits.data >> (shamt << 3)

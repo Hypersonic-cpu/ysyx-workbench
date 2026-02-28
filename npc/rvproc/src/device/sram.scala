@@ -10,10 +10,10 @@ class SRAM1RW(wordSize: Int, numWords: Int)
     with HasBlackBoxPath {
   override val desiredName =
     s"sram_1rw_${wordSize}x${numWords}"
-  val io = IO(new Bundle {
-    val clk0 = Input(Clock())
-    val csb0 = Input(Bool())
-    val web0 = Input(Bool())
+  val io                   = IO(new Bundle {
+    val clk0  = Input(Clock())
+    val csb0  = Input(Bool())
+    val web0  = Input(Bool())
     val addr0 =
       Input(UInt(log2Ceil(numWords).W))
     val din0  = Input(UInt(wordSize.W))
@@ -22,8 +22,7 @@ class SRAM1RW(wordSize: Int, numWords: Int)
   addPath(PATH.sram("sram_1rw.sv"))
 }
 
-class CacheArray(depth: Int, width: Int)
-    extends Module {
+class CacheArray(depth: Int, width: Int) extends Module {
   val io = IO(new Bundle {
     val raddr = Input(UInt(log2Ceil(depth).W))
     val ren   = Input(Bool())
