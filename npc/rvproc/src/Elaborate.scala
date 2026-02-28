@@ -37,6 +37,8 @@ object Elaborate extends App {
         case "--bp-bimodal"  => GlbCtrl.bpType = Bimodal
         case "--bp-entries"  =>
           GlbCtrl.bpEntries = args(i + 1).toInt; i += 1
+        case "--ras-size"    =>
+          GlbCtrl.rasSize = args(i + 1).toInt; i += 1
         case other           => rest += other
       }
       i += 1

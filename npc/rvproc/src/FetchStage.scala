@@ -75,6 +75,8 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
         brex.brLPC + brex.brDel
       )
       p.io.updBtbHit := brex.predBtbHit
+      p.io.updIsCall := brex.isCall
+      p.io.updIsRet  := brex.isRet
     case None    =>
   }
 

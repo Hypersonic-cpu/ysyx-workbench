@@ -154,6 +154,8 @@ class ExecuteStage extends Module {
   iobk.isBr       := validCtrl && ioid.brInst.isBr
   iobk.mispred    := mispred
   iobk.predBtbHit := ioid.predBtbHit
+  iobk.isCall     := ioid.isCall
+  iobk.isRet      := ioid.isRet
 
   if (GlbCtrl.debug) {
     val bpPmu = Module(new pmu.BrPredPMU)
