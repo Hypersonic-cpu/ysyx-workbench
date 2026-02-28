@@ -318,22 +318,16 @@ class XBarWrite(N: Int, amap: Seq[UInt => Bool]) extends Module {
   val decodeErr = tarIdxExt(0)
   val xbCyc = RegInit(0.U(32.W))
   xbCyc := xbCyc + 1.U
-  when(io.host.aw.valid && decodeErr) {
+  when(xbCyc > 10647050.U && io.host.aw.valid && decodeErr) {
     printf(
       cf"[XBarW@${xbCyc}] un-mapped write waddr ${io.host.aw.bits.addr}%x data ${io.host.w.bits.data}%x state=${state}\n"
     )
   }
-  when(io.host.aw.valid) {
-    printf(
-      cf"[XBarW-V@${xbCyc}] waddr ${io.host.aw.bits.addr}%x data ${io.host.w.bits.data}%x state=${state} tarIdx=${tarIdx} decErr=${decodeErr}\n"
-    )
-  }
-  // assert temporarily disabled for debugging
-  // assert(
-  //   io.host.aw.valid Implies (!decodeErr),
-  //   cf"Encoutering un-mapped write "
-  //     + cf"waddr ${io.host.aw.bits.addr}%x data ${io.host.w.bits.data}%x "
-  // )
+  assert(
+    io.host.aw.valid Implies (!decodeErr),
+    cf"Encoutering un-mapped write "
+      + cf"waddr ${io.host.aw.bits.addr}%x data ${io.host.w.bits.data}%x "
+  )
   val usingIdx  = Mux(state === idle, tarIdx, serveId)
 
   val pivot = io.devices(usingIdx)
