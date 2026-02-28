@@ -27,11 +27,48 @@ abstract class BrPred(val conf: BrPredConf) extends Module {
     val updTaken  = Input(Bool())
     val updTarget = Input(Tp.AddrType())
     val updBtbHit = Input(Bool())
+    val updIsCall = Input(Bool())
+    val updIsRet  = Input(Bool())
   })
 
   protected def idxOf(pc: UInt): UInt = pc(conf.idxHi, 2)
   protected def tagOf(pc: UInt): UInt =
     pc(ISA.AddrBits - 1, conf.idxHi + 1)
+}
+
+class ReturnAddrStack(depth: Int) extends Module {
+  val io = IO(new Bundle {
+    val push     = Input(Bool())
+    val pushAddr = Input(Tp.AddrType())
+    val pop      = Input(Bool())
+    val top      = Output(Tp.AddrType())
+    val topValid = Output(Bool())
+  })
+
+  val stack = Reg(Vec(depth, Tp.AddrType()))
+  val tos   = RegInit(0.U(log2Ceil(depth).W))
+  val cnt   = RegInit(0.U(log2Ceil(depth + 1).W))
+
+  io.top      := stack(tos)
+  io.topValid := cnt > 0.U
+
+  when(io.push && io.pop) {
+    stack(tos) := io.pushAddr
+  }.elsewhen(io.push) {
+    val nxt = Mux(
+      tos === (depth - 1).U,
+      0.U,
+      tos + 1.U
+    )
+    stack(nxt) := io.pushAddr
+    tos        := nxt
+    when(cnt < depth.U) { cnt := cnt + 1.U }
+  }.elsewhen(io.pop) {
+    when(cnt > 0.U) {
+      tos := Mux(tos === 0.U, (depth - 1).U, tos - 1.U)
+      cnt := cnt - 1.U
+    }
+  }
 }
 
 // Predict taken iff BTB hit AND target < PC (backward branch).
@@ -44,6 +81,8 @@ class BTFNTPredictor(conf: BrPredConf) extends BrPred(conf) {
     new CacheArray(conf.numEntries, 32)
   )
   val validArr  =
+    RegInit(VecInit(Seq.fill(conf.numEntries)(false.B)))
+  val typeArr   =
     RegInit(VecInit(Seq.fill(conf.numEntries)(false.B)))
 
   val qidx  = idxOf(io.queryPC)
@@ -59,17 +98,32 @@ class BTFNTPredictor(conf: BrPredConf) extends BrPred(conf) {
   val bypIdx    = RegNext(idxOf(io.updPC))
   val bypTag    = RegNext(tagOf(io.updPC))
   val bypTarget = RegNext(io.updTarget)
+  val bypIsRet  = RegNext(io.updIsRet)
   val useByp    = bypValid && bypIdx === qidxR
 
   val tagData = Mux(useByp, bypTag, tagArr.io.rdata)
   val tgtData =
     Mux(useByp, bypTarget, targetArr.io.rdata)
 
-  val btbHit =
+  val btbHit   =
     validArr(qidxR) && tagData === tagOf(qPCR)
+  val isRetBit = Mux(useByp, bypIsRet, typeArr(qidxR))
 
-  io.predTaken := btbHit && (tgtData < qPCR)
-  io.targetPC  := tgtData
+  val hasRas   = GlbCtrl.rasSize > 0
+  val rasValid = WireDefault(false.B)
+  val rasTop   = WireDefault(0.U(ISA.AddrBits.W))
+  if (hasRas) {
+    val ras = Module(new ReturnAddrStack(GlbCtrl.rasSize))
+    ras.io.push     := io.updValid && io.updIsCall
+    ras.io.pushAddr := io.updPC + 4.U
+    ras.io.pop      := io.updValid && io.updIsRet
+    rasValid        := ras.io.topValid
+    rasTop          := ras.io.top
+  }
+
+  val useRas = btbHit && isRetBit && rasValid
+  io.predTaken := btbHit && (useRas || (tgtData < qPCR))
+  io.targetPC  := Mux(useRas, rasTop, tgtData)
   io.btbHit    := btbHit
 
   val uidx = idxOf(io.updPC)
@@ -81,6 +135,7 @@ class BTFNTPredictor(conf: BrPredConf) extends BrPred(conf) {
   targetArr.io.wen   := io.updValid && io.updTaken
   when(io.updValid && io.updTaken) {
     validArr(uidx) := true.B
+    typeArr(uidx)  := io.updIsRet
   }
 }
 
@@ -97,6 +152,8 @@ class BimodalPredictor(conf: BrPredConf) extends BrPred(conf) {
     new CacheArray(conf.numEntries, 32)
   )
   val validArr  =
+    RegInit(VecInit(Seq.fill(conf.numEntries)(false.B)))
+  val typeArr   =
     RegInit(VecInit(Seq.fill(conf.numEntries)(false.B)))
 
   val bhtArr = RegInit(
@@ -116,18 +173,33 @@ class BimodalPredictor(conf: BrPredConf) extends BrPred(conf) {
   val bypIdx    = RegNext(idxOf(io.updPC))
   val bypTag    = RegNext(tagOf(io.updPC))
   val bypTarget = RegNext(io.updTarget)
+  val bypIsRet  = RegNext(io.updIsRet)
   val useByp    = bypValid && bypIdx === qidxR
 
   val tagData = Mux(useByp, bypTag, tagArr.io.rdata)
   val tgtData =
     Mux(useByp, bypTarget, targetArr.io.rdata)
 
-  val btbHit =
+  val btbHit   =
     validArr(qidxR) && tagData === tagOf(qPCR)
-  val bhtCnt = bhtArr(qidxR)
+  val bhtCnt   = bhtArr(qidxR)
+  val isRetBit = Mux(useByp, bypIsRet, typeArr(qidxR))
 
-  io.predTaken := btbHit && bhtCnt(1)
-  io.targetPC  := tgtData
+  val hasRas   = GlbCtrl.rasSize > 0
+  val rasValid = WireDefault(false.B)
+  val rasTop   = WireDefault(0.U(ISA.AddrBits.W))
+  if (hasRas) {
+    val ras = Module(new ReturnAddrStack(GlbCtrl.rasSize))
+    ras.io.push     := io.updValid && io.updIsCall
+    ras.io.pushAddr := io.updPC + 4.U
+    ras.io.pop      := io.updValid && io.updIsRet
+    rasValid        := ras.io.topValid
+    rasTop          := ras.io.top
+  }
+
+  val useRas = btbHit && isRetBit && rasValid
+  io.predTaken := btbHit && (useRas || bhtCnt(1))
+  io.targetPC  := Mux(useRas, rasTop, tgtData)
   io.btbHit    := btbHit
 
   val uidx = idxOf(io.updPC)
@@ -139,6 +211,7 @@ class BimodalPredictor(conf: BrPredConf) extends BrPred(conf) {
   targetArr.io.wen   := io.updValid && io.updTaken
   when(io.updValid && io.updTaken) {
     validArr(uidx) := true.B
+    typeArr(uidx)  := io.updIsRet
   }
 
   def incrSat(c: UInt): UInt =
