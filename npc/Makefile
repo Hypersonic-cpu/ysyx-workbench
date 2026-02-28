@@ -147,9 +147,7 @@ verilog: $(SCALA_SOURCES)
 	@if grep -q 'sram_1rw_' $(BUILD_SV_DIR)/*.sv 2>/dev/null; then \
 	  mkdir -p $(SRAM_DIR) && \
 	  python3 scripts/gen_sram_lib.py $(SRAM_LIB) $(BUILD_SV_DIR) && \
-	  cp $(SRAM_WRAP) $(BUILD_SV_DIR)/sram_wrappers.sv && \
-	  cp $(SRAM_BB) $(BUILD_SV_DIR)/sram_blackbox.sv && \
-	  cp $(SRAM_LIB) $(BUILD_SV_DIR)/sram_1rw.lib; \
+	  cp $(SRAM_WRAP) $(BUILD_SV_DIR)/sram_wrappers.sv; \
 	fi
 	@echo "Memory port renaming done"
 
