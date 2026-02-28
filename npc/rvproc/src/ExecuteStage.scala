@@ -167,7 +167,7 @@ class ExecuteStage extends Module {
 
     val dbgCycE = RegInit(0.U(32.W))
     dbgCycE := dbgCycE + 1.U
-    when(dbgCycE > 21290000.U) {
+    when(dbgCycE > 10647050.U) {
       when(validCtrl) {
         printf(cf"[EXU@${dbgCycE}] pc=0x${ioid.pc}%x inst=0x${ioid.foward.inst}%x isBr=${ioid.brInst.isBr} predT=${ioid.predTaken} actT=${actualTaken} mispred=${mispred}\n")
       }

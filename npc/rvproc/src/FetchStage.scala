@@ -188,7 +188,7 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
   if (GlbCtrl.debug) {
     val dbgCyc2 = RegInit(0.U(32.W))
     dbgCyc2 := dbgCyc2 + 1.U
-    when(dbgCyc2 > 21293000.U) {
+    when(dbgCyc2 > 10647050.U) {
       when(bpPredTaken && iMem.ar.fire) {
         printf(cf"[BP@${dbgCyc2}] predTaken pc=0x${pc}%x target=0x${bpTargetPCEff}%x bpRsltV=${bpRsltV}\n")
       }

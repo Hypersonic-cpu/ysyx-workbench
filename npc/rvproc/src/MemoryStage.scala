@@ -92,14 +92,11 @@ class MemoryStage extends Module {
   if (GlbCtrl.debug) {
     val dbgCyc = RegInit(0.U(32.W))
     dbgCyc := dbgCyc + 1.U
-    when(dMem.aw.valid && addr === 0.U) {
+    when(dbgCyc > 10647050.U && dMem.aw.valid) {
       printf(cf"[LSU-AW-ZERO@${dbgCyc}] addr=${addr}%x data=${wrdt}%x pc=${ioex.foward.pc}%x inst=${ioex.foward.inst}%x state=${state}\n")
     }
-    when(dbgCyc > 21290000.U && trigIss) {
+    when(dbgCyc > 10647050.U && trigIss) {
       printf(cf"[LSU-TI@${dbgCyc}] isSt=${ioex.memOp.isSt} addr=${addr}%x data=${wrdt}%x pc=${ioex.foward.pc}%x inst=${ioex.foward.inst}%x\n")
-    }
-    when(trigIss && addr === 0.U) {
-      printf(cf"[LSU-TI-ZERO@${dbgCyc}] isSt=${ioex.memOp.isSt} addr=${addr}%x data=${wrdt}%x pc=${ioex.foward.pc}%x inst=${ioex.foward.inst}%x\n")
     }
   }
   dMem.r.ready  := ~ioex.memOp.isSt && io.out.ready
