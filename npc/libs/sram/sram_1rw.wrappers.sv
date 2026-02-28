@@ -1,88 +1,3 @@
-module sram_1rw_20x128 (
-  input              clk0,
-  input              csb0,
-  input              web0,
-  input  [6:0] addr0,
-  input  [19:0] din0,
-  output [19:0] dout0
-);
-  sram_1rw #(
-    .WORD_SIZE(20),
-    .NUM_WORDS(128)
-  ) u0 (
-    .clk0(clk0), .csb0(csb0), .web0(web0),
-    .addr0(addr0), .din0(din0), .dout0(dout0)
-  );
-endmodule
-
-module sram_1rw_20x256 (
-  input              clk0,
-  input              csb0,
-  input              web0,
-  input  [7:0] addr0,
-  input  [19:0] din0,
-  output [19:0] dout0
-);
-  sram_1rw #(
-    .WORD_SIZE(20),
-    .NUM_WORDS(256)
-  ) u0 (
-    .clk0(clk0), .csb0(csb0), .web0(web0),
-    .addr0(addr0), .din0(din0), .dout0(dout0)
-  );
-endmodule
-
-module sram_1rw_21x64 (
-  input              clk0,
-  input              csb0,
-  input              web0,
-  input  [5:0] addr0,
-  input  [20:0] din0,
-  output [20:0] dout0
-);
-  sram_1rw #(
-    .WORD_SIZE(21),
-    .NUM_WORDS(64)
-  ) u0 (
-    .clk0(clk0), .csb0(csb0), .web0(web0),
-    .addr0(addr0), .din0(din0), .dout0(dout0)
-  );
-endmodule
-
-module sram_1rw_21x128 (
-  input              clk0,
-  input              csb0,
-  input              web0,
-  input  [6:0] addr0,
-  input  [20:0] din0,
-  output [20:0] dout0
-);
-  sram_1rw #(
-    .WORD_SIZE(21),
-    .NUM_WORDS(128)
-  ) u0 (
-    .clk0(clk0), .csb0(csb0), .web0(web0),
-    .addr0(addr0), .din0(din0), .dout0(dout0)
-  );
-endmodule
-
-module sram_1rw_22x32 (
-  input              clk0,
-  input              csb0,
-  input              web0,
-  input  [4:0] addr0,
-  input  [21:0] din0,
-  output [21:0] dout0
-);
-  sram_1rw #(
-    .WORD_SIZE(22),
-    .NUM_WORDS(32)
-  ) u0 (
-    .clk0(clk0), .csb0(csb0), .web0(web0),
-    .addr0(addr0), .din0(din0), .dout0(dout0)
-  );
-endmodule
-
 module sram_1rw_22x64 (
   input              clk0,
   input              csb0,
@@ -100,153 +15,34 @@ module sram_1rw_22x64 (
   );
 endmodule
 
-module sram_1rw_23x16 (
+module sram_1rw_23x128 (
   input              clk0,
   input              csb0,
   input              web0,
-  input  [3:0] addr0,
+  input  [6:0] addr0,
   input  [22:0] din0,
   output [22:0] dout0
 );
   sram_1rw #(
     .WORD_SIZE(23),
-    .NUM_WORDS(16)
+    .NUM_WORDS(128)
   ) u0 (
     .clk0(clk0), .csb0(csb0), .web0(web0),
     .addr0(addr0), .din0(din0), .dout0(dout0)
   );
 endmodule
 
-module sram_1rw_23x32 (
+module sram_1rw_32x128 (
   input              clk0,
   input              csb0,
   input              web0,
-  input  [4:0] addr0,
-  input  [22:0] din0,
-  output [22:0] dout0
+  input  [6:0] addr0,
+  input  [31:0] din0,
+  output [31:0] dout0
 );
   sram_1rw #(
-    .WORD_SIZE(23),
-    .NUM_WORDS(32)
-  ) u0 (
-    .clk0(clk0), .csb0(csb0), .web0(web0),
-    .addr0(addr0), .din0(din0), .dout0(dout0)
-  );
-endmodule
-
-module sram_1rw_24x8 (
-  input              clk0,
-  input              csb0,
-  input              web0,
-  input  [2:0] addr0,
-  input  [23:0] din0,
-  output [23:0] dout0
-);
-  sram_1rw #(
-    .WORD_SIZE(24),
-    .NUM_WORDS(8)
-  ) u0 (
-    .clk0(clk0), .csb0(csb0), .web0(web0),
-    .addr0(addr0), .din0(din0), .dout0(dout0)
-  );
-endmodule
-
-module sram_1rw_24x16 (
-  input              clk0,
-  input              csb0,
-  input              web0,
-  input  [3:0] addr0,
-  input  [23:0] din0,
-  output [23:0] dout0
-);
-  sram_1rw #(
-    .WORD_SIZE(24),
-    .NUM_WORDS(16)
-  ) u0 (
-    .clk0(clk0), .csb0(csb0), .web0(web0),
-    .addr0(addr0), .din0(din0), .dout0(dout0)
-  );
-endmodule
-
-module sram_1rw_25x4 (
-  input              clk0,
-  input              csb0,
-  input              web0,
-  input  [1:0] addr0,
-  input  [24:0] din0,
-  output [24:0] dout0
-);
-  sram_1rw #(
-    .WORD_SIZE(25),
-    .NUM_WORDS(4)
-  ) u0 (
-    .clk0(clk0), .csb0(csb0), .web0(web0),
-    .addr0(addr0), .din0(din0), .dout0(dout0)
-  );
-endmodule
-
-module sram_1rw_25x8 (
-  input              clk0,
-  input              csb0,
-  input              web0,
-  input  [2:0] addr0,
-  input  [24:0] din0,
-  output [24:0] dout0
-);
-  sram_1rw #(
-    .WORD_SIZE(25),
-    .NUM_WORDS(8)
-  ) u0 (
-    .clk0(clk0), .csb0(csb0), .web0(web0),
-    .addr0(addr0), .din0(din0), .dout0(dout0)
-  );
-endmodule
-
-module sram_1rw_128x8 (
-  input              clk0,
-  input              csb0,
-  input              web0,
-  input  [2:0] addr0,
-  input  [127:0] din0,
-  output [127:0] dout0
-);
-  sram_1rw #(
-    .WORD_SIZE(128),
-    .NUM_WORDS(8)
-  ) u0 (
-    .clk0(clk0), .csb0(csb0), .web0(web0),
-    .addr0(addr0), .din0(din0), .dout0(dout0)
-  );
-endmodule
-
-module sram_1rw_128x16 (
-  input              clk0,
-  input              csb0,
-  input              web0,
-  input  [3:0] addr0,
-  input  [127:0] din0,
-  output [127:0] dout0
-);
-  sram_1rw #(
-    .WORD_SIZE(128),
-    .NUM_WORDS(16)
-  ) u0 (
-    .clk0(clk0), .csb0(csb0), .web0(web0),
-    .addr0(addr0), .din0(din0), .dout0(dout0)
-  );
-endmodule
-
-module sram_1rw_128x32 (
-  input              clk0,
-  input              csb0,
-  input              web0,
-  input  [4:0] addr0,
-  input  [127:0] din0,
-  output [127:0] dout0
-);
-  sram_1rw #(
-    .WORD_SIZE(128),
-    .NUM_WORDS(32)
+    .WORD_SIZE(32),
+    .NUM_WORDS(128)
   ) u0 (
     .clk0(clk0), .csb0(csb0), .web0(web0),
     .addr0(addr0), .din0(din0), .dout0(dout0)
@@ -264,142 +60,6 @@ module sram_1rw_128x64 (
   sram_1rw #(
     .WORD_SIZE(128),
     .NUM_WORDS(64)
-  ) u0 (
-    .clk0(clk0), .csb0(csb0), .web0(web0),
-    .addr0(addr0), .din0(din0), .dout0(dout0)
-  );
-endmodule
-
-module sram_1rw_128x128 (
-  input              clk0,
-  input              csb0,
-  input              web0,
-  input  [6:0] addr0,
-  input  [127:0] din0,
-  output [127:0] dout0
-);
-  sram_1rw #(
-    .WORD_SIZE(128),
-    .NUM_WORDS(128)
-  ) u0 (
-    .clk0(clk0), .csb0(csb0), .web0(web0),
-    .addr0(addr0), .din0(din0), .dout0(dout0)
-  );
-endmodule
-
-module sram_1rw_128x256 (
-  input              clk0,
-  input              csb0,
-  input              web0,
-  input  [7:0] addr0,
-  input  [127:0] din0,
-  output [127:0] dout0
-);
-  sram_1rw #(
-    .WORD_SIZE(128),
-    .NUM_WORDS(256)
-  ) u0 (
-    .clk0(clk0), .csb0(csb0), .web0(web0),
-    .addr0(addr0), .din0(din0), .dout0(dout0)
-  );
-endmodule
-
-module sram_1rw_256x4 (
-  input              clk0,
-  input              csb0,
-  input              web0,
-  input  [1:0] addr0,
-  input  [255:0] din0,
-  output [255:0] dout0
-);
-  sram_1rw #(
-    .WORD_SIZE(256),
-    .NUM_WORDS(4)
-  ) u0 (
-    .clk0(clk0), .csb0(csb0), .web0(web0),
-    .addr0(addr0), .din0(din0), .dout0(dout0)
-  );
-endmodule
-
-module sram_1rw_256x8 (
-  input              clk0,
-  input              csb0,
-  input              web0,
-  input  [2:0] addr0,
-  input  [255:0] din0,
-  output [255:0] dout0
-);
-  sram_1rw #(
-    .WORD_SIZE(256),
-    .NUM_WORDS(8)
-  ) u0 (
-    .clk0(clk0), .csb0(csb0), .web0(web0),
-    .addr0(addr0), .din0(din0), .dout0(dout0)
-  );
-endmodule
-
-module sram_1rw_256x16 (
-  input              clk0,
-  input              csb0,
-  input              web0,
-  input  [3:0] addr0,
-  input  [255:0] din0,
-  output [255:0] dout0
-);
-  sram_1rw #(
-    .WORD_SIZE(256),
-    .NUM_WORDS(16)
-  ) u0 (
-    .clk0(clk0), .csb0(csb0), .web0(web0),
-    .addr0(addr0), .din0(din0), .dout0(dout0)
-  );
-endmodule
-
-module sram_1rw_256x32 (
-  input              clk0,
-  input              csb0,
-  input              web0,
-  input  [4:0] addr0,
-  input  [255:0] din0,
-  output [255:0] dout0
-);
-  sram_1rw #(
-    .WORD_SIZE(256),
-    .NUM_WORDS(32)
-  ) u0 (
-    .clk0(clk0), .csb0(csb0), .web0(web0),
-    .addr0(addr0), .din0(din0), .dout0(dout0)
-  );
-endmodule
-
-module sram_1rw_256x64 (
-  input              clk0,
-  input              csb0,
-  input              web0,
-  input  [5:0] addr0,
-  input  [255:0] din0,
-  output [255:0] dout0
-);
-  sram_1rw #(
-    .WORD_SIZE(256),
-    .NUM_WORDS(64)
-  ) u0 (
-    .clk0(clk0), .csb0(csb0), .web0(web0),
-    .addr0(addr0), .din0(din0), .dout0(dout0)
-  );
-endmodule
-
-module sram_1rw_256x128 (
-  input              clk0,
-  input              csb0,
-  input              web0,
-  input  [6:0] addr0,
-  input  [255:0] din0,
-  output [255:0] dout0
-);
-  sram_1rw #(
-    .WORD_SIZE(256),
-    .NUM_WORDS(128)
   ) u0 (
     .clk0(clk0), .csb0(csb0), .web0(web0),
     .addr0(addr0), .din0(din0), .dout0(dout0)
