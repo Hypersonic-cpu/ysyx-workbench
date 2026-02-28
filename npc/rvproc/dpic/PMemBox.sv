@@ -210,7 +210,14 @@ module PMemWriter (
 
   always_comb begin
     unique case (state)
-      IDLE:  next_state = io_master_awvalid ? WDATA : IDLE;
+      IDLE: begin
+        if (io_master_awvalid && io_master_wvalid)
+          next_state = RECV;
+        else if (io_master_awvalid)
+          next_state = WDATA;
+        else
+          next_state = IDLE;
+      end
       WDATA: next_state = io_master_wvalid ? RECV : WDATA;
       RECV:  next_state = SERVE;
       SERVE: next_state = (delay_remain == 1)
@@ -232,7 +239,7 @@ module PMemWriter (
         bid_latch   <= io_master_awid;
         assert (io_master_awburst == 2'b01);
       end
-      if (state == WDATA && io_master_wvalid) begin
+      if ((state == IDLE || state == WDATA) && io_master_wvalid) begin
         wdata_latch <= io_master_wdata;
         wstrb_latch <= io_master_wstrb;
         wlast_latch <= io_master_wlast;
@@ -255,6 +262,6 @@ module PMemWriter (
   assign io_master_bid     = bid_latch;
   assign io_master_bvalid  = state == HOLD;
   assign io_master_awready = state == IDLE;
-  assign io_master_wready  = state == WDATA;
+  assign io_master_wready  = state == IDLE || state == WDATA;
   assign io_master_bresp   = 2'b00;
 endmodule
