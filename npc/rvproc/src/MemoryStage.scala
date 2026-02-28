@@ -88,6 +88,13 @@ class MemoryStage extends Module {
   dMem.ar.valid := ~ioex.memOp.isSt && trigIss
   dMem.aw.valid := ioex.memOp.isSt && trigIss
   dMem.w.valid  := ioex.memOp.isSt && trigIss
+
+  when(ioex.memOp.isSt && trigIss && addr === 0.U) {
+    printf(cf"[BUG] Store to addr 0! pc=${ioex.foward.pc}%x inst=${ioex.foward.inst}%x data=${wrdt}%x aluOut=${ioex.aluOut}%x\n")
+  }
+  when(trigIss && addr < 0x0200_0000L.U) {
+    printf(cf"[BADADDR] pc=${ioex.foward.pc}%x inst=${ioex.foward.inst}%x addr=${addr}%x isSt=${ioex.memOp.isSt}\n")
+  }
   dMem.r.ready  := ~ioex.memOp.isSt && io.out.ready
   dMem.b.ready  := ioex.memOp.isSt && io.out.ready
 
