@@ -64,17 +64,14 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
   val instEmpty = toidPtr === tailPtr
 
   // ── Branch predictor instantiation ───────────────────────────────────────
-  // BTB query address: on flush, query the redirect target so the result is
-  // ready on the very next cycle (when we start fetching from brTarget).
+  // btbRdAddr is forward-declared so bp.io.queryPC can reference it before
+  // the Mux assignment (which depends on bpPredTaken defined below).
+  val btbRdAddr = Wire(Tp.AddrType())
   val bp = BrPred()
-  val btbRdAddr = Mux(flushWire, brTarget, nextPC)
 
   bp match {
     case Some(p) =>
       p.io.queryPC   := btbRdAddr
-      // BP result is valid when pc === RegNext(btbRdAddr):
-      // this holds when ar fired last cycle (pc advanced to nextPC[prev])
-      // or a flush happened last cycle (pc set to brTarget[prev]).
       p.io.updValid  := io.fromEx.valid && brex.isBr
       p.io.updPC     := brex.brLPC
       p.io.updTaken  := brex.take   // actual outcome
@@ -83,13 +80,35 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
   }
 
   // ── BP result validity guard ──────────────────────────────────────────────
-  // At any cycle, the BTB result is for RegNext(btbRdAddr).
-  // It is valid precisely when pc == that registered address.
-  val btbQueryR  = RegNext(btbRdAddr)
-  val bpRsltV    = (pc === btbQueryR)
+  // BTB result is valid precisely when pc == RegNext(btbRdAddr).
+  val btbQueryR      = RegNext(btbRdAddr)
+  val bpRsltV        = (pc === btbQueryR)
+  val bpRawPredTaken = bp.map(_.io.predTaken).getOrElse(false.B)
+  val bpTargetPC     = bp.map(_.io.targetPC).getOrElse(0.U)
 
-  val bpPredTaken  = bp.map(p => p.io.predTaken && bpRsltV).getOrElse(false.B)
-  val bpTargetPC   = bp.map(_.io.targetPC).getOrElse(0.U)
+  // Sticky latch: holds the prediction from when bpRsltV first became true
+  // until ar.fire consumes it.  Needed when the fetch buffer is full
+  // (ar.fire=false) during the single cycle that bpRsltV is true.
+  val bpPredTakenLatch = RegInit(false.B)
+  val bpTargetPCLatch  = RegInit(0.U(ISA.RegBits.W))
+  when(flushWire || iMem.ar.fire) {
+    bpPredTakenLatch := false.B
+  }.elsewhen(bpRsltV) {
+    bpPredTakenLatch := bpRawPredTaken
+    bpTargetPCLatch  := bpTargetPC
+  }
+  // Effective prediction: current BTB result (if valid this cycle) OR latched
+  val bpPredTaken   = (bpRawPredTaken && bpRsltV) || bpPredTakenLatch
+  val bpTargetPCEff = Mux(bpRsltV, bpTargetPC, bpTargetPCLatch)
+
+  // BTB query address:
+  //  - flush        : redirect target (result ready for the post-flush fetch)
+  //  - ar.fire+pred : predicted target (result ready for the target's fetch)
+  //  - otherwise    : nextPC (one cycle ahead, enabling zero-stall prediction)
+  btbRdAddr := Mux(
+    flushWire, brTarget,
+    Mux(bpPredTaken && iMem.ar.fire, bpTargetPCEff, nextPC)
+  )
 
   // ── Recv inst from iCache ─────────────────────────────────────────────────
   when(iMem.r.fire) {
@@ -101,7 +120,7 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
     validBuf(headPtr)      := true.B
     pcBuf(headPtr)         := pc
     predTakenBuf(headPtr)  := bpPredTaken
-    predTargetBuf(headPtr) := bpTargetPC
+    predTargetBuf(headPtr) := bpTargetPCEff
     headPtr                := iotaMod(headPtr)
   }
   // ── Issue to IDU ──────────────────────────────────────────────────────────
@@ -138,11 +157,15 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
     nextPC := brTarget + 4.U
   }.otherwise {
     when(iMem.ar.fire) {
-      pc := nextPC
-      // BP prediction: if taken, redirect nextPC to predicted target
+      // When BP predicts taken, jump directly to the predicted target.
+      // This prevents fetching the wrong-path sequential fallthrough (PC+4),
+      // which would otherwise execute without any flush (correct prediction
+      // never triggers brDet) and corrupt architectural register state.
       when(bpPredTaken) {
-        nextPC := bpTargetPC
+        pc     := bpTargetPCEff
+        nextPC := bpTargetPCEff + 4.U
       }.otherwise {
+        pc     := nextPC
         nextPC := nextPC + 4.U
       }
     }
@@ -156,8 +179,8 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
   ioid.predTarget := Mux(io.out.valid, predTargetBuf(toidPtr), 0.U)
 
   if (GlbCtrl.debug) {
-    when(bpPredTaken) {
-      printf(cf"[BP] predTaken pc=0x${pc}%x target=0x${bpTargetPC}%x bpRsltV=${bpRsltV}\n")
+    when(bpPredTaken && iMem.ar.fire) {
+      printf(cf"[BP] predTaken pc=0x${pc}%x target=0x${bpTargetPCEff}%x bpRsltV=${bpRsltV}\n")
     }
     when(flushWire) {
       printf(
