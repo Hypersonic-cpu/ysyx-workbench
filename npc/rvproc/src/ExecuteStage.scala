@@ -165,6 +165,7 @@ class ExecuteStage extends Module {
     bpPmu.io.predTarget   := ioid.predTarget
     bpPmu.io.actualTarget := actualTarget
     bpPmu.io.btbHit       := ioid.predBtbHit
+    bpPmu.io.brPC         := ioid.pc
   }
 
   /** Back to Decoder */

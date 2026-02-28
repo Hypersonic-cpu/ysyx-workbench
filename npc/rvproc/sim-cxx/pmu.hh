@@ -4,12 +4,15 @@
 #include "rtl_defs.hh"
 #include "stats_template/stats.hpp"
 
+#include <algorithm>
 #include <cassert>
 #include <cstdio>
 #include <format>
 #include <iostream>
 #include <limits>
+#include <unordered_map>
 #include <utility>
+#include <vector>
 
 namespace trace {
 
@@ -105,6 +108,9 @@ private:
 
   ClassifiedStats<BpBreakdown> bpStats;
 
+  struct BpPerPC { uint32_t correct{0}; uint32_t wrong{0}; };
+  std::unordered_map<uint32_t, BpPerPC> bpPerPC;
+
   std::vector<StatsBase*> statslist{&ifcyc,       &lscyc,       &instcyc,
                                     &cycStatus,   &instStatus,  &memRdStatus,
                                     &memWrStatus, &recoverTime, &cacheRates,
@@ -151,6 +157,20 @@ public:
       os << std::format("BrPred Accuracy : {:.2f}% ({:d}/{:d})",
                         100.0 * bp_correct / bp_total, bp_correct, bp_total)
          << std::endl;
+      std::vector<std::pair<uint32_t, uint32_t>> topWrong;
+      for (auto& [pc, s] : bpPerPC)
+        if (s.wrong > 0) topWrong.push_back({pc, s.wrong});
+      std::sort(topWrong.begin(), topWrong.end(),
+                [](auto& a, auto& b){ return a.second > b.second; });
+      os << "Top mispredicting PCs:" << std::endl;
+      for (size_t i = 0; i < std::min(topWrong.size(), size_t(15)); i++) {
+        auto pc = topWrong[i].first;
+        auto& s = bpPerPC[pc];
+        os << std::format("  {:08x} wrong {:6d} correct {:6d} total {:6d} acc {:.1f}%",
+                          pc, s.wrong, s.correct, s.wrong + s.correct,
+                          100.0 * s.correct / (s.wrong + s.correct))
+           << std::endl;
+      }
     }
   }
 
@@ -275,16 +295,23 @@ public:
   void
   notifyBrOutcome(bool pred_taken, bool actual_taken,
                   uint32_t pred_target, uint32_t actual_target,
-                  bool btb_hit) {
+                  bool btb_hit, uint32_t br_pc) {
+    bool is_correct;
     if (!btb_hit && actual_taken) {
       bpStats.sample(BpBtbMiss);
+      is_correct = false;
     } else if (pred_taken != actual_taken) {
       bpStats.sample(BpWrongDir);
+      is_correct = false;
     } else if (pred_taken && actual_taken && pred_target != actual_target) {
       bpStats.sample(BpWrongTarget);
+      is_correct = false;
     } else {
       bpStats.sample(BpCorrect);
+      is_correct = true;
     }
+    auto& s = bpPerPC[br_pc];
+    if (is_correct) s.correct++; else s.wrong++;
   }
 
   void
@@ -292,6 +319,7 @@ public:
     for (auto const& ptr : statslist) {
       ptr->reset_stats();
     }
+    bpPerPC.clear();
   }
 
   size_t

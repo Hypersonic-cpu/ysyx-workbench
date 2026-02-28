@@ -16,6 +16,7 @@ class BrPredPMU extends BlackBox with HasBlackBoxPath {
     val predTarget   = Input(Tp.AddrType())
     val actualTarget = Input(Tp.AddrType())
     val btbHit       = Input(Bool())
+    val brPC         = Input(Tp.AddrType())
   })
   addPath(PATH.dpic("BrPredPMU.sv"))
 }
