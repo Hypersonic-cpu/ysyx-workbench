@@ -96,6 +96,13 @@ class MemoryStage extends Module {
     !(ioex.memOp.isSt && trigIss && addr === 0.U),
     cf"LSU store to addr 0: pc=${ioex.foward.pc}%x inst=${ioex.foward.inst}%x data=${wrdt}%x"
   )
+  if (GlbCtrl.debug) {
+    val dbgCyc = RegInit(0.U(32.W))
+    dbgCyc := dbgCyc + 1.U
+    when(dbgCyc > 21293000.U && trigIss) {
+      printf(cf"[LSU@${dbgCyc}] isSt=${ioex.memOp.isSt} addr=${addr}%x data=${wrdt}%x pc=${ioex.foward.pc}%x inst=${ioex.foward.inst}%x\n")
+    }
+  }
   dMem.r.ready  := ~ioex.memOp.isSt && io.out.ready
   dMem.b.ready  := ioex.memOp.isSt && io.out.ready
 
