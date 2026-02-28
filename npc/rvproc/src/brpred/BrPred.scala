@@ -126,7 +126,7 @@ class BimodalPredictor(conf: BrPredConf) extends BrPred(conf) {
   targetArr.io.ren   := true.B
 
   // Write-after-read bypass for BTB arrays
-  val bypValid  = RegNext(io.updValid)
+  val bypValid  = RegNext(io.updValid && io.updTaken)
   val bypIdx    = RegNext(idxOf(io.updPC))
   val bypTag    = RegNext(tagOf(io.updPC))
   val bypTarget = RegNext(io.updTarget)
@@ -143,15 +143,15 @@ class BimodalPredictor(conf: BrPredConf) extends BrPred(conf) {
   io.targetPC  := tgtData
   io.btbHit    := btbHit
 
-  // ── BTB update (all branches — populate on first encounter) ─────────────
+  // ── BTB update (taken branches only — avoids aliasing pollution) ──────────
   val uidx = idxOf(io.updPC)
   tagArr.io.waddr    := uidx
   tagArr.io.wdata    := tagOf(io.updPC)
-  tagArr.io.wen      := io.updValid
+  tagArr.io.wen      := io.updValid && io.updTaken
   targetArr.io.waddr := uidx
   targetArr.io.wdata := io.updTarget
-  targetArr.io.wen   := io.updValid
-  when(io.updValid) {
+  targetArr.io.wen   := io.updValid && io.updTaken
+  when(io.updValid && io.updTaken) {
     validArr(uidx) := true.B
   }
 
