@@ -316,9 +316,16 @@ class XBarWrite(N: Int, amap: Seq[UInt => Bool]) extends Module {
   )
   val tarIdx    = tarIdxExt(IdxWidth, 1)
   val decodeErr = tarIdxExt(0)
+  val xbCyc = RegInit(0.U(32.W))
+  xbCyc := xbCyc + 1.U
   when(io.host.aw.valid && decodeErr) {
     printf(
-      cf"[XBarW] un-mapped write waddr ${io.host.aw.bits.addr}%x data ${io.host.w.bits.data}%x\n"
+      cf"[XBarW@${xbCyc}] un-mapped write waddr ${io.host.aw.bits.addr}%x data ${io.host.w.bits.data}%x state=${state}\n"
+    )
+  }
+  when(io.host.aw.valid) {
+    printf(
+      cf"[XBarW-V@${xbCyc}] waddr ${io.host.aw.bits.addr}%x data ${io.host.w.bits.data}%x state=${state} tarIdx=${tarIdx} decErr=${decodeErr}\n"
     )
   }
   // assert temporarily disabled for debugging
