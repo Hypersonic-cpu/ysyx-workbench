@@ -1,7 +1,7 @@
 import scala.util.Properties
 import java.nio.file.Paths
 import rvproc.cache.iCacheConf
-import rvproc.GlbCtrl
+import rvproc.{BTFNT, Bimodal, GlbCtrl, NoPred}
 
 object ElaborSta extends App {
   // Defaults for STA: debug=false, sta=true
@@ -26,6 +26,11 @@ object ElaborSta extends App {
       case "--no-sta"      => GlbCtrl.sta = false
       case "--sramlib"     => GlbCtrl.sramlib = true
       case "--no-sramlib"  => GlbCtrl.sramlib = false
+      case "--bp-none"     => GlbCtrl.bpType = NoPred
+      case "--bp-btfnt"    => GlbCtrl.bpType = BTFNT
+      case "--bp-bimodal"  => GlbCtrl.bpType = Bimodal
+      case "--bp-entries"  =>
+        GlbCtrl.bpEntries = args(i + 1).toInt; i += 1
       case other           => rest += other
     }
     i += 1
