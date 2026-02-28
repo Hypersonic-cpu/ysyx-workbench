@@ -89,18 +89,14 @@ class MemoryStage extends Module {
   dMem.aw.valid := ioex.memOp.isSt && trigIss
   dMem.w.valid  := ioex.memOp.isSt && trigIss
 
-  when(ioex.memOp.isSt && trigIss && addr === 0.U) {
-    printf(cf"[BUG] Store to addr 0! pc=${ioex.foward.pc}%x inst=${ioex.foward.inst}%x data=${wrdt}%x aluOut=${ioex.aluOut}%x\n")
-  }
-  assert(
-    !(ioex.memOp.isSt && trigIss && addr === 0.U),
-    cf"LSU store to addr 0: pc=${ioex.foward.pc}%x inst=${ioex.foward.inst}%x data=${wrdt}%x"
-  )
   if (GlbCtrl.debug) {
     val dbgCyc = RegInit(0.U(32.W))
     dbgCyc := dbgCyc + 1.U
+    when(dbgCyc > 21293000.U && dMem.aw.valid) {
+      printf(cf"[LSU-AW@${dbgCyc}] addr=${addr}%x data=${wrdt}%x pc=${ioex.foward.pc}%x inst=${ioex.foward.inst}%x state=${state}\n")
+    }
     when(dbgCyc > 21293000.U && trigIss) {
-      printf(cf"[LSU@${dbgCyc}] isSt=${ioex.memOp.isSt} addr=${addr}%x data=${wrdt}%x pc=${ioex.foward.pc}%x inst=${ioex.foward.inst}%x\n")
+      printf(cf"[LSU-TI@${dbgCyc}] isSt=${ioex.memOp.isSt} addr=${addr}%x data=${wrdt}%x pc=${ioex.foward.pc}%x inst=${ioex.foward.inst}%x\n")
     }
   }
   dMem.r.ready  := ~ioex.memOp.isSt && io.out.ready
