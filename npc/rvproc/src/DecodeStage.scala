@@ -315,6 +315,7 @@ class DecodeStage extends Module {
   ioex.pc         := ioif.pc
   ioex.predTaken  := ioif.predTaken
   ioex.predTarget := ioif.predTarget
+  ioex.predBtbHit := ioif.predBtbHit
 
   val iofw = ioex.foward
   iofw.gprRd  := iDec.io.rd

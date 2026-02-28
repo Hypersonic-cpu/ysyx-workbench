@@ -163,7 +163,7 @@ class ExecuteStage extends Module {
     bpPmu.io.actualTaken  := actualTaken
     bpPmu.io.predTarget   := ioid.predTarget
     bpPmu.io.actualTarget := actualTarget
-    bpPmu.io.btbHit       := ioid.predTaken
+    bpPmu.io.btbHit       := ioid.predBtbHit
   }
 
   /** Back to Decoder */

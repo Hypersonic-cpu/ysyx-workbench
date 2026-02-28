@@ -9,8 +9,9 @@ import chisel3._
 class FetchToDecode extends Bundle {
   val pc         = Tp.RegType()
   val inst       = Tp.RegType()
-  val predTaken  = Bool()         // BP prediction: this PC is a taken branch
-  val predTarget = Tp.AddrType()  // BP predicted target
+  val predTaken  = Bool()
+  val predTarget = Tp.AddrType()
+  val predBtbHit = Bool()
 }
 
 class RegFromIDU extends Bundle {
@@ -147,8 +148,9 @@ class DecodeToExecute extends Bundle {
   val brInst     = new BrInst
   val memOp      = new MemOp
   val aluEn      = Bool()
-  val predTaken  = Bool()         // BP prediction threaded from IFU
-  val predTarget = Tp.AddrType()  // BP predicted target
+  val predTaken  = Bool()
+  val predTarget = Tp.AddrType()
+  val predBtbHit = Bool()
   val foward     = new DecodeFoward
 }
 

@@ -30,15 +30,14 @@ case class BrPredConf(numEntries: Int = 64) {
 // is being fetched that cycle (pc === RegNext(queryPC)).
 abstract class BrPred(val conf: BrPredConf) extends Module {
   val io = IO(new Bundle {
-    // ── Read port (result valid 1 cycle after queryPC) ──
     val queryPC   = Input(Tp.AddrType())
     val predTaken = Output(Bool())
     val targetPC  = Output(Tp.AddrType())
-    // ── Write port (update from EXU, after branch commits) ──
-    val updValid  = Input(Bool())          // update strobe
-    val updPC     = Input(Tp.AddrType())   // branch PC
-    val updTaken  = Input(Bool())          // actual outcome
-    val updTarget = Input(Tp.AddrType())   // actual target
+    val btbHit    = Output(Bool())
+    val updValid  = Input(Bool())
+    val updPC     = Input(Tp.AddrType())
+    val updTaken  = Input(Bool())
+    val updTarget = Input(Tp.AddrType())
   })
 
   // Shared helpers
@@ -82,9 +81,9 @@ class BTFNTPredictor(conf: BrPredConf) extends BrPred(conf) {
   // Tag check
   val btbHit = validArr(qidxR) && tagData === tagOf(qPCR)
 
-  // BTFNT: predict taken only for backward branches (target < branch PC)
   io.predTaken := btbHit && (tgtData < qPCR)
   io.targetPC  := tgtData
+  io.btbHit    := btbHit
 
   // ── BTB update (taken branches only) ────────────────────────────────────
   val uidx = idxOf(io.updPC)
@@ -127,7 +126,7 @@ class BimodalPredictor(conf: BrPredConf) extends BrPred(conf) {
   targetArr.io.ren   := true.B
 
   // Write-after-read bypass for BTB arrays
-  val bypValid  = RegNext(io.updValid && io.updTaken)
+  val bypValid  = RegNext(io.updValid)
   val bypIdx    = RegNext(idxOf(io.updPC))
   val bypTag    = RegNext(tagOf(io.updPC))
   val bypTarget = RegNext(io.updTarget)
@@ -138,22 +137,21 @@ class BimodalPredictor(conf: BrPredConf) extends BrPred(conf) {
 
   // Tag check (parallel with BHT read — both arrive at same cycle)
   val btbHit = validArr(qidxR) && tagData === tagOf(qPCR)
-  // BHT counter: DFF read is combinational; qidxR is the registered index
-  val bhtCnt = bhtArr(qidxR) // 2-bit: 0=SN,1=WN,2=WT,3=ST
+  val bhtCnt = bhtArr(qidxR)
 
-  // Bimodal: predict taken if BTB hit AND counter MSB = 1 (counter >= 2)
   io.predTaken := btbHit && bhtCnt(1)
   io.targetPC  := tgtData
+  io.btbHit    := btbHit
 
-  // ── BTB update (taken branches — store / refresh target) ─────────────────
+  // ── BTB update (all branches — populate on first encounter) ─────────────
   val uidx = idxOf(io.updPC)
   tagArr.io.waddr    := uidx
   tagArr.io.wdata    := tagOf(io.updPC)
-  tagArr.io.wen      := io.updValid && io.updTaken
+  tagArr.io.wen      := io.updValid
   targetArr.io.waddr := uidx
   targetArr.io.wdata := io.updTarget
-  targetArr.io.wen   := io.updValid && io.updTaken
-  when(io.updValid && io.updTaken) {
+  targetArr.io.wen   := io.updValid
+  when(io.updValid) {
     validArr(uidx) := true.B
   }
 

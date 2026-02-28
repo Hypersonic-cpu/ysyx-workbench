@@ -55,6 +55,7 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
   val instBuf       = Reg(Vec(PipeDepth + 1, Tp.InstType()))
   val predTakenBuf  = Reg(Vec(PipeDepth + 1, Bool()))
   val predTargetBuf = Reg(Vec(PipeDepth + 1, Tp.AddrType()))
+  val predBtbHitBuf = Reg(Vec(PipeDepth + 1, Bool()))
   val headPtr       = RegInit(0.U(log2Ceil(PipeDepth + 1).W))
   val tailPtr       = RegInit(0.U(log2Ceil(PipeDepth + 1).W))
   val toidPtr       = RegInit(0.U(log2Ceil(PipeDepth + 1).W))
@@ -85,21 +86,25 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
   val bpRsltV        = (pc === btbQueryR)
   val bpRawPredTaken = bp.map(_.io.predTaken).getOrElse(false.B)
   val bpTargetPC     = bp.map(_.io.targetPC).getOrElse(0.U)
+  val bpRawBtbHit    = bp.map(_.io.btbHit).getOrElse(false.B)
 
   // Sticky latch: holds the prediction from when bpRsltV first became true
   // until ar.fire consumes it.  Needed when the fetch buffer is full
   // (ar.fire=false) during the single cycle that bpRsltV is true.
   val bpPredTakenLatch = RegInit(false.B)
   val bpTargetPCLatch  = RegInit(0.U(ISA.RegBits.W))
+  val bpBtbHitLatch    = RegInit(false.B)
   when(flushWire || iMem.ar.fire) {
     bpPredTakenLatch := false.B
+    bpBtbHitLatch    := false.B
   }.elsewhen(bpRsltV) {
     bpPredTakenLatch := bpRawPredTaken
     bpTargetPCLatch  := bpTargetPC
+    bpBtbHitLatch    := bpRawBtbHit
   }
-  // Effective prediction: current BTB result (if valid this cycle) OR latched
   val bpPredTaken   = (bpRawPredTaken && bpRsltV) || bpPredTakenLatch
   val bpTargetPCEff = Mux(bpRsltV, bpTargetPC, bpTargetPCLatch)
+  val bpBtbHitEff   = (bpRawBtbHit && bpRsltV) || bpBtbHitLatch
 
   // BTB query address:
   //  - flush        : redirect target (result ready for the post-flush fetch)
@@ -121,6 +126,7 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
     pcBuf(headPtr)         := pc
     predTakenBuf(headPtr)  := bpPredTaken
     predTargetBuf(headPtr) := bpTargetPCEff
+    predBtbHitBuf(headPtr) := bpBtbHitEff
     headPtr                := iotaMod(headPtr)
   }
   // ── Issue to IDU ──────────────────────────────────────────────────────────
@@ -177,6 +183,7 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
   ioid.inst       := Mux(io.out.valid, instBuf(toidPtr), 0.U)
   ioid.predTaken  := Mux(io.out.valid, predTakenBuf(toidPtr), false.B)
   ioid.predTarget := Mux(io.out.valid, predTargetBuf(toidPtr), 0.U)
+  ioid.predBtbHit := Mux(io.out.valid, predBtbHitBuf(toidPtr), false.B)
 
   if (GlbCtrl.debug) {
     when(bpPredTaken && iMem.ar.fire) {
