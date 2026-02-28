@@ -105,8 +105,11 @@ class BTFNTPredictor(conf: BrPredConf) extends BrPred(conf) {
   val tgtData =
     Mux(useByp, bypTarget, targetArr.io.rdata)
 
-  val btbHit   =
+  val btbHitRaw =
     validArr(qidxR) && tagData === tagOf(qPCR)
+  val btbHit = if (GlbCtrl.sramlib) {
+    btbHitRaw && !(bypValid && !useByp)
+  } else btbHitRaw
   val isRetBit = Mux(useByp, bypIsRet, typeArr(qidxR))
 
   val hasRas   = GlbCtrl.rasSize > 0
@@ -180,8 +183,11 @@ class BimodalPredictor(conf: BrPredConf) extends BrPred(conf) {
   val tgtData =
     Mux(useByp, bypTarget, targetArr.io.rdata)
 
-  val btbHit   =
+  val btbHitRaw =
     validArr(qidxR) && tagData === tagOf(qPCR)
+  val btbHit = if (GlbCtrl.sramlib) {
+    btbHitRaw && !(bypValid && !useByp)
+  } else btbHitRaw
   val bhtCnt   = bhtArr(qidxR)
   val isRetBit = Mux(useByp, bypIsRet, typeArr(qidxR))
 
