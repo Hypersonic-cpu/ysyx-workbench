@@ -156,6 +156,15 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
   ioid.predTarget := Mux(io.out.valid, predTargetBuf(toidPtr), 0.U)
 
   if (GlbCtrl.debug) {
+    when(bpPredTaken) {
+      printf(cf"[BP] predTaken pc=0x${pc}%x target=0x${bpTargetPC}%x bpRsltV=${bpRsltV}\n")
+    }
+    when(flushWire) {
+      printf(
+        cf"[FLUSH] mispred=${brex.mispred} fenceI=${fenceI} brTarget=0x${brTarget}%x "
+      )
+      printf(cf"brAbs=${brex.brAbs} brRel=${brex.brRel} brLPC=0x${brex.brLPC}%x brDel=0x${brex.brDel}%x\n")
+    }
     val pmu = Module(new FetchPMU)
     pmu.io.clock     := clock
     pmu.io.reset     := reset
