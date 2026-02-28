@@ -248,3 +248,11 @@ void
 notify_cache_req(addr_t addr, uint16_t id) {
   ppmu->notifyCacheReq(addr, id);
 }
+
+void
+notify_bp_outcome(uint8_t pred_taken, uint8_t actual_taken,
+                  uint32_t pred_target, uint32_t actual_target,
+                  uint8_t btb_hit) {
+  ppmu->notifyBrOutcome(pred_taken, actual_taken,
+                        pred_target, actual_target, btb_hit);
+}

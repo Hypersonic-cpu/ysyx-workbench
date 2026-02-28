@@ -90,9 +90,25 @@ private:
 
   ClassifiedStats<CacheBreakdown> cacheRates;
 
+  enum BpBreakdown {
+    BpCorrect = 0,
+    BpBtbMiss,
+    BpWrongDir,
+    BpWrongTarget
+  };
+
+  inline static const std::unordered_map<BpBreakdown, std::string>
+    BpBreakdownName{{BpCorrect, "Correct"},
+                    {BpBtbMiss, "BtbMiss"},
+                    {BpWrongDir, "WrongDir"},
+                    {BpWrongTarget, "WrongTgt"}};
+
+  ClassifiedStats<BpBreakdown> bpStats;
+
   std::vector<StatsBase*> statslist{&ifcyc,       &lscyc,       &instcyc,
                                     &cycStatus,   &instStatus,  &memRdStatus,
-                                    &memWrStatus, &recoverTime, &cacheRates};
+                                    &memWrStatus, &recoverTime, &cacheRates,
+                                    &bpStats};
 
   using iboard_t = std::tuple<addr_t, size_t, uint64_t>;
   std::list<iboard_t> instboard;
@@ -117,17 +133,24 @@ public:
       , cycStatus("BlockedCause", CycBreakdownName)
       , memRdStatus("XBarReadUsage", XBarBreakdownName)
       , memWrStatus("XBarWriteUsage", XBarBreakdownName)
-      , cacheRates("L1ICache", CacheBreakdownName) {}
+      , cacheRates("L1ICache", CacheBreakdownName)
+      , bpStats("BranchPred", BpBreakdownName) {}
 
   void
   dump_stats(std::ostream& os = std::cout) const {
-    // Should commit 1 inst per cycle
     os << std::format("Cycles {:d}\n  InstRet {:d} IPC {:.6f} StallCyc {:d}",
                       get_cycles(), get_instret(), get_ipc(),
                       get_cycles() - get_instret())
        << std::endl;
     for (auto const& ptr : statslist) {
       ptr->dump_stats(os);
+    }
+    auto bp_total = bpStats.get_samples();
+    if (bp_total > 0) {
+      auto bp_correct = bpStats.at(BpCorrect);
+      os << std::format("BrPred Accuracy : {:.2f}% ({:d}/{:d})",
+                        100.0 * bp_correct / bp_total, bp_correct, bp_total)
+         << std::endl;
     }
   }
 
@@ -246,13 +269,23 @@ public:
   void
   notifyCacheReq(addr_t addr, uint16_t id) {
     assert(id == 0);
-    // std::cerr << std::format("Req @{:08x}\n", addr);
     icacheboard.emplace_back(addr, curr_tick());
   }
 
-  // void probeArbiter() {
-  //   memStatus.sample(state);
-  // }
+  void
+  notifyBrOutcome(bool pred_taken, bool actual_taken,
+                  uint32_t pred_target, uint32_t actual_target,
+                  bool btb_hit) {
+    if (!btb_hit && actual_taken) {
+      bpStats.sample(BpBtbMiss);
+    } else if (pred_taken != actual_taken) {
+      bpStats.sample(BpWrongDir);
+    } else if (pred_taken && actual_taken && pred_target != actual_target) {
+      bpStats.sample(BpWrongTarget);
+    } else {
+      bpStats.sample(BpCorrect);
+    }
+  }
 
   void
   reset_stats() {

@@ -154,6 +154,18 @@ class ExecuteStage extends Module {
   iobk.isBr    := validCtrl && ioid.brInst.isBr
   iobk.mispred := mispred
 
+  if (GlbCtrl.debug) {
+    val bpPmu = Module(new pmu.BrPredPMU)
+    bpPmu.io.clock        := clock
+    bpPmu.io.reset        := reset
+    bpPmu.io.valid        := validCtrl && ioid.brInst.isBr
+    bpPmu.io.predTaken    := ioid.predTaken
+    bpPmu.io.actualTaken  := actualTaken
+    bpPmu.io.predTarget   := ioid.predTarget
+    bpPmu.io.actualTarget := actualTarget
+    bpPmu.io.btbHit       := ioid.predTaken
+  }
+
   /** Back to Decoder */
   io.brDet.valid := validCtrl
   io.brDet.bits  := validCtrl && mispred
