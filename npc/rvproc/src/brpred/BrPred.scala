@@ -113,7 +113,7 @@ class BimodalPredictor(conf: BrPredConf) extends BrPred(conf) {
 
   // ── BHT: 2-bit saturating counters (DFF, combinational read) ────────────
   // Initialised to 2 (weakly taken) — standard bimodal initialisation.
-  val bhtArr = RegInit(VecInit(Seq.fill(conf.numEntries)(2.U(2.W))))
+  val bhtArr = RegInit(VecInit(Seq.fill(conf.numEntries)(1.U(2.W))))
 
   // ── Query pipeline ───────────────────────────────────────────────────────
   val qidx  = idxOf(io.queryPC)
