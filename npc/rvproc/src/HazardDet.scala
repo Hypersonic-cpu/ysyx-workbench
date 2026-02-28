@@ -63,7 +63,7 @@ class RAWForward extends Module {
     self:  UInt,
     other: RdBundle
   ) = {
-    other.gprWE && valid && other.gprRd === self && other.valid
+    other.gprWE && valid && self.orR && other.gprRd === self && other.valid
   }
 
   val rawArr = Wire(Vec(3, Bool()))
