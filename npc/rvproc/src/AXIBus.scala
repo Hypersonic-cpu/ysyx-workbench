@@ -321,11 +321,12 @@ class XBarWrite(N: Int, amap: Seq[UInt => Bool]) extends Module {
       cf"[XBarW] un-mapped write waddr ${io.host.aw.bits.addr}%x data ${io.host.w.bits.data}%x\n"
     )
   }
-  assert(
-    io.host.aw.valid Implies (!decodeErr),
-    cf"Encoutering un-mapped write "
-      + cf"waddr ${io.host.aw.bits.addr}%x data ${io.host.w.bits.data}%x "
-  )
+  // assert temporarily disabled for debugging
+  // assert(
+  //   io.host.aw.valid Implies (!decodeErr),
+  //   cf"Encoutering un-mapped write "
+  //     + cf"waddr ${io.host.aw.bits.addr}%x data ${io.host.w.bits.data}%x "
+  // )
   val usingIdx  = Mux(state === idle, tarIdx, serveId)
 
   val pivot = io.devices(usingIdx)

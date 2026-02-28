@@ -164,6 +164,17 @@ class ExecuteStage extends Module {
     bpPmu.io.predTarget   := ioid.predTarget
     bpPmu.io.actualTarget := actualTarget
     bpPmu.io.btbHit       := ioid.predBtbHit
+
+    val dbgCycE = RegInit(0.U(32.W))
+    dbgCycE := dbgCycE + 1.U
+    when(dbgCycE > 21293000.U) {
+      when(validCtrl) {
+        printf(cf"[EXU@${dbgCycE}] pc=0x${ioid.pc}%x inst=0x${ioid.foward.inst}%x isBr=${ioid.brInst.isBr} predT=${ioid.predTaken} actT=${actualTaken} mispred=${mispred}\n")
+      }
+      when(flushed) {
+        printf(cf"[EXU-FL@${dbgCycE}] flushed instruction\n")
+      }
+    }
   }
 
   /** Back to Decoder */

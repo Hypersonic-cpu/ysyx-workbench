@@ -148,16 +148,16 @@ class MemoryStage extends Module {
     iowb.foward.stallT := DontCare
   }
 
-  when(io.out.fire && ioex.memOp.isEn) {
-    printf(
-      cf"Rsp < WR?${ioex.memOp.isSt} Addr ${ioex.aluOut}%x LoadData ${iowb.lsuOut}%x\n"
-    )
-  }
-  when(io.in.fire && ioex.memOp.isEn) {
-    printf(
-      cf"Req > WR?${ioex.memOp.isSt} Addr ${ioex.aluOut}%x wrData ${wrdt}%x\n"
-    )
-  }
+  // when(io.out.fire && ioex.memOp.isEn) {
+  //   printf(
+  //     cf"Rsp < WR?${ioex.memOp.isSt} Addr ${ioex.aluOut}%x LoadData ${iowb.lsuOut}%x\n"
+  //   )
+  // }
+  // when(io.in.fire && ioex.memOp.isEn) {
+  //   printf(
+  //     cf"Req > WR?${ioex.memOp.isSt} Addr ${ioex.aluOut}%x wrData ${wrdt}%x\n"
+  //   )
+  // }
 
   if (GlbCtrl.debug) {
     val pmu = Module(new LoadStorePMU)
