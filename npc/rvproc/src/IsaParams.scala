@@ -13,10 +13,17 @@ object PATH {
     java.nio.file.Paths.get(sramPath, s).toString()
 }
 
+sealed trait BrPredType
+case object NoPred  extends BrPredType
+case object BTFNT   extends BrPredType
+case object Bimodal extends BrPredType
+
 object GlbCtrl {
-  var debug   = true
-  var sta     = false
-  var sramlib = false
+  var debug    = true
+  var sta      = false
+  var sramlib  = false
+  var bpType   = Bimodal: BrPredType
+  var bpEntries = 64
 }
 
 object ISA {

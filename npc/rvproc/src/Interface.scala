@@ -7,8 +7,10 @@ import chisel3.assert.Assert
 import chisel3._
 
 class FetchToDecode extends Bundle {
-  val pc   = Tp.RegType()
-  val inst = Tp.RegType()
+  val pc         = Tp.RegType()
+  val inst       = Tp.RegType()
+  val predTaken  = Bool()         // BP prediction: this PC is a taken branch
+  val predTarget = Tp.AddrType()  // BP predicted target
 }
 
 class RegFromIDU extends Bundle {
@@ -104,12 +106,14 @@ object WbSel extends ChiselEnum {
 // }
 
 class ExecuteBackward extends Bundle {
-  val brRel = Bool()
-  val brDel = Tp.RegType()
-  val brAbs = Bool()
-  val brVal = Tp.RegType()
-  val brLPC = Tp.AddrType()
-  def take  = brRel || brAbs
+  val brRel   = Bool()
+  val brDel   = Tp.RegType()
+  val brAbs   = Bool()
+  val brVal   = Tp.RegType()
+  val brLPC   = Tp.AddrType()
+  val isBr    = Bool()    // is this a branch instruction? (for BP update)
+  val mispred = Bool()    // was the BP prediction wrong? (triggers IFU flush)
+  def take    = brRel || brAbs  // actual outcome (taken?) used for BP update
 }
 
 object StallCause extends ChiselEnum {
@@ -134,17 +138,18 @@ class DecodeFoward extends Bundle {
 }
 
 class DecodeToExecute extends Bundle {
-  val rs1V   = Tp.RegType()
-  val rs2V   = Tp.RegType()
-  val imm    = Tp.RegType()
-  val pc     = Tp.AddrType()
-  val aluOp  = AluOp()
-  val aluSel = new AluSel
-  val brInst = new BrInst
-
-  val memOp  = new MemOp
-  val aluEn  = Bool()
-  val foward = new DecodeFoward
+  val rs1V       = Tp.RegType()
+  val rs2V       = Tp.RegType()
+  val imm        = Tp.RegType()
+  val pc         = Tp.AddrType()
+  val aluOp      = AluOp()
+  val aluSel     = new AluSel
+  val brInst     = new BrInst
+  val memOp      = new MemOp
+  val aluEn      = Bool()
+  val predTaken  = Bool()         // BP prediction threaded from IFU
+  val predTarget = Tp.AddrType()  // BP predicted target
+  val foward     = new DecodeFoward
 }
 
 class ExecuteToMemory extends Bundle {

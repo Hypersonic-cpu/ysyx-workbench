@@ -122,7 +122,7 @@ class ExecuteStage extends Module {
   iExe.io.rs2V  := ioid.rs2V
   iExe.io.csrV  := ioid.foward.csrVal
   iExe.io.imm   := ioid.imm
-  iExe.io.pc    := ioid.foward.pc
+  iExe.io.pc    := ioid.pc      // use pc directly (not foward.pc, which is 0 in non-debug)
   iExe.io.aluEn := ioid.aluEn && validCtrl
   iExe.io.br    := ioid.brInst
 
@@ -138,14 +138,25 @@ class ExecuteStage extends Module {
   iobk.brDel := iExe.io.brDel
   iobk.brAbs := iExe.io.brAbs
   iobk.brVal := iExe.io.brVal
-  iobk.brLPC := ioid.foward.pc
+  iobk.brLPC := ioid.pc   // use pc directly (works in both debug and non-debug)
+
+  // Misprediction detection: actual outcome vs BP prediction
+  val actualTaken  = iExe.io.brRel || iExe.io.brAbs
+  val actualTarget = Mux(
+    iExe.io.brAbs,
+    iExe.io.brVal,
+    ioid.pc + iExe.io.brDel
+  )
+  val mispred = validCtrl && ioid.brInst.isBr && (
+    (actualTaken =/= ioid.predTaken) ||
+      (actualTaken && ioid.predTaken && actualTarget =/= ioid.predTarget)
+  )
+  iobk.isBr    := validCtrl && ioid.brInst.isBr
+  iobk.mispred := mispred
 
   /** Back to Decoder */
   io.brDet.valid := validCtrl
-  // Must add this validCtrl
-  io.brDet.bits  := validCtrl &&
-    io.toFetch.valid && io.toFetch.bits.take
-  // (iExe.io.brRel || iExe.io.brAbs)
+  io.brDet.bits  := validCtrl && mispred
 
   /** To LSU, AluOut = Addr */
   iols.aluOut := Mux(

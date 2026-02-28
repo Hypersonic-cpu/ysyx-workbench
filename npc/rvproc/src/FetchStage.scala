@@ -7,6 +7,7 @@ import rvproc.axi4._
 import rvproc.axi4.AXI.RespStatus._
 import rvproc.axi4.AXI.BurstOpts._
 import rvproc.pmu.FetchPMU
+import rvproc.brpred.BrPred
 import BitMath._
 
 class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
@@ -16,52 +17,94 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
     val fromId = Flipped(Decoupled(Bool())) // fence.i
     val fromEx = Flipped(Decoupled(new ExecuteBackward))
     val fromLs = Input(Bool())              // store buffer empty
-    // val fromWb = Flipped(Decoupled(new InstCommit))
     val iMem   = new AXIBus
   })
-
-  val idle :: serve :: Nil = Enum(2)
 
   val iMem = io.iMem
 
   val brex       = io.fromEx.bits
-  val brPending  = RegInit(false.B)
   val stBufEmpty = io.fromLs
   val fenceI     = io.fromId.valid && io.fromId.bits
   val fenceState = RegInit(false.B)
   fenceState := Mux(fenceState, !io.fromLs, fenceI)
-  val flushWire =
-    (io.fromEx.valid && brex.take) || fenceI
 
   val pc     = RegInit(resetVector.U(ISA.RegBits.W))
   val nextPC = RegInit((resetVector + 4).U(ISA.RegBits.W))
   val lastPC = RegEnable(io.out.bits.pc, io.out.fire)
 
-  val validBuf = Reg(Vec(PipeDepth + 1, Bool()))
-  val pcBuf    = Reg(Vec(PipeDepth + 1, Tp.AddrType()))
-  val instBuf  = Reg(Vec(PipeDepth + 1, Tp.InstType()))
-  val headPtr  = RegInit(0.U(log2Ceil(PipeDepth + 1).W))
-  val tailPtr  = RegInit(0.U(log2Ceil(PipeDepth + 1).W))
-  // 能不能直接通过移动来 Handle 短途跳转?
-  val toidPtr  = RegInit(0.U(log2Ceil(PipeDepth + 1).W))
+  // ── Flush target computation ─────────────────────────────────────────────
+  // Priority: brAbs > brRel > fenceI > mispred-not-taken (default)
+  val brAbs = io.fromEx.valid && brex.brAbs
+  val brRel = io.fromEx.valid && brex.brRel
+  val brTarget = MuxCase(
+    brex.brLPC + 4.U, // mispred not-taken: resume from PC after branch
+    Seq(
+      brAbs  -> brex.brVal,                 // JALR / JAL / ecall
+      brRel  -> (brex.brLPC + brex.brDel),  // taken B-type
+      fenceI -> (lastPC + 4.U)              // fence.i: resume after it
+    )
+  )
+
+  // ── Flush condition: only on MISPREDICTION or fence.i ────────────────────
+  val flushWire =
+    (io.fromEx.valid && brex.mispred) || fenceI
+
+  // ── Fetch buffer ─────────────────────────────────────────────────────────
+  val validBuf      = Reg(Vec(PipeDepth + 1, Bool()))
+  val pcBuf         = Reg(Vec(PipeDepth + 1, Tp.AddrType()))
+  val instBuf       = Reg(Vec(PipeDepth + 1, Tp.InstType()))
+  val predTakenBuf  = Reg(Vec(PipeDepth + 1, Bool()))
+  val predTargetBuf = Reg(Vec(PipeDepth + 1, Tp.AddrType()))
+  val headPtr       = RegInit(0.U(log2Ceil(PipeDepth + 1).W))
+  val tailPtr       = RegInit(0.U(log2Ceil(PipeDepth + 1).W))
+  val toidPtr       = RegInit(0.U(log2Ceil(PipeDepth + 1).W))
   def iotaMod(a: UInt) = Mux(a === PipeDepth.U, 0.U, a + 1.U)
 
   val bufFull   = iotaMod(headPtr) === toidPtr
   val instEmpty = toidPtr === tailPtr
 
-  // Recv inst from iCache
+  // ── Branch predictor instantiation ───────────────────────────────────────
+  // BTB query address: on flush, query the redirect target so the result is
+  // ready on the very next cycle (when we start fetching from brTarget).
+  val bp = BrPred()
+  val btbRdAddr = Mux(flushWire, brTarget, nextPC)
+
+  bp match {
+    case Some(p) =>
+      p.io.queryPC   := btbRdAddr
+      // BP result is valid when pc === RegNext(btbRdAddr):
+      // this holds when ar fired last cycle (pc advanced to nextPC[prev])
+      // or a flush happened last cycle (pc set to brTarget[prev]).
+      p.io.updValid  := io.fromEx.valid && brex.isBr
+      p.io.updPC     := brex.brLPC
+      p.io.updTaken  := brex.take   // actual outcome
+      p.io.updTarget := Mux(brex.brAbs, brex.brVal, brex.brLPC + brex.brDel)
+    case None => // no predictor wired
+  }
+
+  // ── BP result validity guard ──────────────────────────────────────────────
+  // At any cycle, the BTB result is for RegNext(btbRdAddr).
+  // It is valid precisely when pc == that registered address.
+  val btbQueryR  = RegNext(btbRdAddr)
+  val bpRsltV    = (pc === btbQueryR)
+
+  val bpPredTaken  = bp.map(p => p.io.predTaken && bpRsltV).getOrElse(false.B)
+  val bpTargetPC   = bp.map(_.io.targetPC).getOrElse(0.U)
+
+  // ── Recv inst from iCache ─────────────────────────────────────────────────
   when(iMem.r.fire) {
     instBuf(tailPtr) := iMem.r.bits.data
     tailPtr          := iotaMod(tailPtr)
   }
-  // Send fetch to iCache
+  // ── Send fetch to iCache + record prediction for this fetch ───────────────
   when(iMem.ar.fire) {
-    // Overwrite by flushing logic
-    validBuf(headPtr) := true.B
-    pcBuf(headPtr)    := pc
-    headPtr           := iotaMod(headPtr)
+    validBuf(headPtr)      := true.B
+    pcBuf(headPtr)         := pc
+    predTakenBuf(headPtr)  := bpPredTaken
+    predTargetBuf(headPtr) := bpTargetPC
+    headPtr                := iotaMod(headPtr)
   }
-  // Issue to IDU
+  // ── Issue to IDU ──────────────────────────────────────────────────────────
   when(io.out.ready && !instEmpty) {
     validBuf(toidPtr) := false.B
     toidPtr           := iotaMod(toidPtr)
@@ -77,56 +120,40 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
   iMem.ar.bits.burst := INCR
   iMem.ar.bits.id    := 0.U    // iCache
   iMem.ar.bits.len   := 0.U
-  iMem.r.ready       := true.B // io.out.ready
+  iMem.r.ready       := true.B
   iMem.aw.valid      := false.B
   iMem.w.valid       := false.B
   iMem.b.ready       := false.B
   iMem.aw.bits       := DontCare
   iMem.w.bits        := DontCare
-  iMem.w.bits        := DontCare
 
   assert(~(iMem.b.valid), "Read only port")
-  // assert(
-  //   iMem.r.valid Implies (iMem.r.bits.resp === OKAY),
-  //   cf"Inst Fetch Failed, rresp = ${iMem.r.bits.resp}"
-  // )
 
-  val brAbs = io.fromEx.valid && brex.brAbs
-  val brRel = io.fromEx.valid && brex.brRel
+  // ── PC sequencing ─────────────────────────────────────────────────────────
   when(flushWire) {
     for (i <- 0 to PipeDepth) {
-      // override. 需要覆盖head, 因为有效的PC至少
-      // 等到下一个周期.
       validBuf(i) := false.B
     }
-    // brTake in EXU should override fence from IDU
-    val brTarget = MuxCase(
-      // nextPC,
-      lastPC + 4.U, // fence.i: resume from instruction after fence.i
-      Seq(
-        brAbs -> brex.brVal,
-        brRel -> (brex.brLPC + brex.brDel)
-      )
-    )
-    pc := brTarget
+    pc     := brTarget
     nextPC := brTarget + 4.U
   }.otherwise {
     when(iMem.ar.fire) {
-      pc     := nextPC
-      nextPC := nextPC + 4.U
+      pc := nextPC
+      // BP prediction: if taken, redirect nextPC to predicted target
+      when(bpPredTaken) {
+        nextPC := bpTargetPC
+      }.otherwise {
+        nextPC := nextPC + 4.U
+      }
     }
   }
 
+  // ── Output to IDU ─────────────────────────────────────────────────────────
   val ioid = io.out.bits
-  ioid.pc   := Mux(io.out.valid, pcBuf(toidPtr), 0.U)
-  ioid.inst := Mux(io.out.valid, instBuf(toidPtr), 0.U)
-
-  // when(iMem.ar.fire) {
-  //   printf(cf"[  IF  ] Fetch PC = ${io.iMem.ar.bits.addr}%x\n")
-  // }
-  // when(iMem.r.fire) {
-  //   printf(cf"[  IF  ] Recvd PC = ${pcBuf(tailPtr)}%x\n")
-  // }
+  ioid.pc         := Mux(io.out.valid, pcBuf(toidPtr), 0.U)
+  ioid.inst       := Mux(io.out.valid, instBuf(toidPtr), 0.U)
+  ioid.predTaken  := Mux(io.out.valid, predTakenBuf(toidPtr), false.B)
+  ioid.predTarget := Mux(io.out.valid, predTargetBuf(toidPtr), 0.U)
 
   if (GlbCtrl.debug) {
     val pmu = Module(new FetchPMU)
@@ -139,3 +166,4 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
     pmu.io.inst      := io.out.bits.inst
   }
 }
+

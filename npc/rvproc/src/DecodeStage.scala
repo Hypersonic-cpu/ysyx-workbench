@@ -304,15 +304,17 @@ class DecodeStage extends Module {
 
   /** To ExecuteStage */
   val ioex = io.out.bits
-  ioex.imm    := iDec.io.imm
-  ioex.rs1V   := rs1Val
-  ioex.rs2V   := Mux(iDec.io.csralu, csrVal, rs2Val)
-  ioex.aluOp  := iDec.io.aluOp
-  ioex.aluSel := iDec.io.aluSel
-  ioex.memOp  := iDec.io.memAcc
-  ioex.aluEn  := iDec.io.aluEn
-  ioex.brInst := iDec.io.brInst
-  ioex.pc     := ioif.pc
+  ioex.imm        := iDec.io.imm
+  ioex.rs1V       := rs1Val
+  ioex.rs2V       := Mux(iDec.io.csralu, csrVal, rs2Val)
+  ioex.aluOp      := iDec.io.aluOp
+  ioex.aluSel     := iDec.io.aluSel
+  ioex.memOp      := iDec.io.memAcc
+  ioex.aluEn      := iDec.io.aluEn
+  ioex.brInst     := iDec.io.brInst
+  ioex.pc         := ioif.pc
+  ioex.predTaken  := ioif.predTaken
+  ioex.predTarget := ioif.predTarget
 
   val iofw = ioex.foward
   iofw.gprRd  := iDec.io.rd
