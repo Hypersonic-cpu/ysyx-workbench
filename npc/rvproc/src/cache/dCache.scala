@@ -68,6 +68,7 @@ class dCache(conf: iCacheConf) extends Module {
   val evictTag  = Reg(UInt(conf.tagBits.W))
   val evictPtr  = RegInit(0.U(conf.lineTBits.W))
   val awSent    = RegInit(false.B)
+  val wDone     = RegInit(false.B)
   val bRecvd    = RegInit(false.B)
 
   // Tag compare result (valid in lookup cycle)
@@ -221,6 +222,7 @@ class dCache(conf: iCacheConf) extends Module {
     when(needEvict) {
       evictPtr := 0.U
       awSent   := false.B
+      wDone    := false.B
       bRecvd   := false.B
     }.otherwise {
       fillPtr := 0.U
@@ -236,11 +238,13 @@ class dCache(conf: iCacheConf) extends Module {
       when(io.memSide.aw.fire) { awSent := true.B }
       when(io.memSide.w.fire) {
         evictPtr := evictPtr + 1.U
+        when(io.memSide.w.bits.last) { wDone := true.B }
       }
-    }.otherwise {
-      io.memSide.w.valid := !io.memSide.w.bits.last
+    }.elsewhen(!wDone) {
+      io.memSide.w.valid := true.B
       when(io.memSide.w.fire) {
         evictPtr := evictPtr + 1.U
+        when(io.memSide.w.bits.last) { wDone := true.B }
       }
     }
     when(io.memSide.b.fire) {
