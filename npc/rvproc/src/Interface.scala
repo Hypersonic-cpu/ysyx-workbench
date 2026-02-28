@@ -115,6 +115,8 @@ class ExecuteBackward extends Bundle {
   val isBr       = Bool()
   val mispred    = Bool()
   val predBtbHit = Bool()
+  val isCall     = Bool()
+  val isRet      = Bool()
   def take       = brRel || brAbs
 }
 
@@ -152,6 +154,8 @@ class DecodeToExecute extends Bundle {
   val predTaken  = Bool()
   val predTarget = Tp.AddrType()
   val predBtbHit = Bool()
+  val isCall     = Bool()
+  val isRet      = Bool()
   val foward     = new DecodeFoward
 }
 
