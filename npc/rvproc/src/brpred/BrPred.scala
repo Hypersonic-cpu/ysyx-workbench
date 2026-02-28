@@ -105,7 +105,7 @@ class BTFNTPredictor(conf: BrPredConf) extends BrPred(conf) {
   val tgtData =
     Mux(useByp, bypTarget, targetArr.io.rdata)
 
-  val btbHit =
+  val btbHit   =
     validArr(qidxR) && tagData === tagOf(qPCR)
   val isRetBit = Mux(useByp, bypIsRet, typeArr(qidxR))
 
@@ -117,8 +117,8 @@ class BTFNTPredictor(conf: BrPredConf) extends BrPred(conf) {
     ras.io.push     := io.updValid && io.updIsCall
     ras.io.pushAddr := io.updPC + 4.U
     ras.io.pop      := io.updValid && io.updIsRet
-    rasValid := ras.io.topValid
-    rasTop   := ras.io.top
+    rasValid        := ras.io.topValid
+    rasTop          := ras.io.top
   }
 
   val useRas = btbHit && isRetBit && rasValid
@@ -180,7 +180,7 @@ class BimodalPredictor(conf: BrPredConf) extends BrPred(conf) {
   val tgtData =
     Mux(useByp, bypTarget, targetArr.io.rdata)
 
-  val btbHit =
+  val btbHit   =
     validArr(qidxR) && tagData === tagOf(qPCR)
   val bhtCnt   = bhtArr(qidxR)
   val isRetBit = Mux(useByp, bypIsRet, typeArr(qidxR))
@@ -193,8 +193,8 @@ class BimodalPredictor(conf: BrPredConf) extends BrPred(conf) {
     ras.io.push     := io.updValid && io.updIsCall
     ras.io.pushAddr := io.updPC + 4.U
     ras.io.pop      := io.updValid && io.updIsRet
-    rasValid := ras.io.topValid
-    rasTop   := ras.io.top
+    rasValid        := ras.io.topValid
+    rasTop          := ras.io.top
   }
 
   val useRas = btbHit && isRetBit && rasValid
