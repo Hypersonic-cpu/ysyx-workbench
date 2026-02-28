@@ -335,15 +335,6 @@ class DecodeStage extends Module {
       StallCause.RAW,
       Mux(flushed, StallCause.Branch, StallCause.InstFetch)
     )
-
-    val dbgCycD = RegInit(0.U(32.W))
-    dbgCycD := dbgCycD + 1.U
-    when(dbgCycD > 10647050.U && validCtrl) {
-      printf(cf"[IDU@${dbgCycD}] pc=0x${ioif.pc}%x inst=0x${ioif.inst}%x rs1V=0x${rs1Val}%x rs2V=0x${rs2Val}%x fw1=${io.fwdRes.rs1fw} fw2=${io.fwdRes.rs2fw} blk=${io.fwdRes.block} rs1=${iDec.io.rs1} rs2=${iDec.io.rs2} regV=0x${io.fromReg.bits.rs1Val}%x fwDt=0x${io.fwdRes.rs1dt}%x\n")
-    }
-    when(dbgCycD > 10647050.U && flushed) {
-      printf(cf"[IDU-FL@${dbgCycD}] flushed pc=0x${ioif.pc}%x\n")
-    }
   } else {
     iofw.stallT := DontCare
   }

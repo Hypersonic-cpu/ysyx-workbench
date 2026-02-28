@@ -186,22 +186,6 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
   ioid.predBtbHit := Mux(io.out.valid, predBtbHitBuf(toidPtr), false.B)
 
   if (GlbCtrl.debug) {
-    val dbgCyc2 = RegInit(0.U(32.W))
-    dbgCyc2 := dbgCyc2 + 1.U
-    when(dbgCyc2 > 10647050.U) {
-      when(bpPredTaken && iMem.ar.fire) {
-        printf(cf"[BP@${dbgCyc2}] predTaken pc=0x${pc}%x target=0x${bpTargetPCEff}%x bpRsltV=${bpRsltV}\n")
-      }
-      when(flushWire) {
-        printf(
-          cf"[FLUSH@${dbgCyc2}] mispred=${brex.mispred} fenceI=${fenceI} brTarget=0x${brTarget}%x "
-        )
-        printf(cf"brAbs=${brex.brAbs} brRel=${brex.brRel} brLPC=0x${brex.brLPC}%x brDel=0x${brex.brDel}%x\n")
-      }
-      when(io.out.fire) {
-        printf(cf"[IFU-OUT@${dbgCyc2}] pc=0x${pcBuf(toidPtr)}%x inst=0x${instBuf(toidPtr)}%x predTaken=${predTakenBuf(toidPtr)} predTarget=0x${predTargetBuf(toidPtr)}%x\n")
-      }
-    }
     val pmu = Module(new FetchPMU)
     pmu.io.clock     := clock
     pmu.io.reset     := reset

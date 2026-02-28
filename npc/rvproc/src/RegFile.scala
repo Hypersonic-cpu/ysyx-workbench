@@ -105,14 +105,6 @@ class GprFile extends Module {
     gprs(io.rd) := io.data
   }
 
-  if (GlbCtrl.debug) {
-    val dbgCycG = RegInit(0.U(32.W))
-    dbgCycG := dbgCycG + 1.U
-    when(dbgCycG > 10647050.U && io.wrEn && io.rd === 9.U) {
-      printf(cf"[GPR-WR@${dbgCycG}] x9 := 0x${io.data}%x\n")
-    }
-  }
-
   val gpr1V = Mux(io.rs1.orR, gprs(io.rs1), 0.U)
   val gpr2V = Mux(io.rs2.orR, gprs(io.rs2), 0.U)
 

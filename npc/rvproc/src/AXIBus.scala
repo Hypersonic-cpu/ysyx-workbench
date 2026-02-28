@@ -316,13 +316,6 @@ class XBarWrite(N: Int, amap: Seq[UInt => Bool]) extends Module {
   )
   val tarIdx    = tarIdxExt(IdxWidth, 1)
   val decodeErr = tarIdxExt(0)
-  val xbCyc = RegInit(0.U(32.W))
-  xbCyc := xbCyc + 1.U
-  when(xbCyc > 10647050.U && io.host.aw.valid && decodeErr) {
-    printf(
-      cf"[XBarW@${xbCyc}] un-mapped write waddr ${io.host.aw.bits.addr}%x data ${io.host.w.bits.data}%x state=${state}\n"
-    )
-  }
   assert(
     io.host.aw.valid Implies (!decodeErr),
     cf"Encoutering un-mapped write "
