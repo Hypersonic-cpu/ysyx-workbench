@@ -7,8 +7,11 @@ import chisel3.assert.Assert
 import chisel3._
 
 class FetchToDecode extends Bundle {
-  val pc   = Tp.RegType()
-  val inst = Tp.RegType()
+  val pc         = Tp.RegType()
+  val inst       = Tp.RegType()
+  val predTaken  = Bool()
+  val predTarget = Tp.AddrType()
+  val predBtbHit = Bool()
 }
 
 class RegFromIDU extends Bundle {
@@ -104,12 +107,15 @@ object WbSel extends ChiselEnum {
 // }
 
 class ExecuteBackward extends Bundle {
-  val brRel = Bool()
-  val brDel = Tp.RegType()
-  val brAbs = Bool()
-  val brVal = Tp.RegType()
-  val brLPC = Tp.AddrType()
-  def take  = brRel || brAbs
+  val brRel      = Bool()
+  val brDel      = Tp.RegType()
+  val brAbs      = Bool()
+  val brVal      = Tp.RegType()
+  val brLPC      = Tp.AddrType()
+  val isBr       = Bool()
+  val mispred    = Bool()
+  val predBtbHit = Bool()
+  def take       = brRel || brAbs
 }
 
 object StallCause extends ChiselEnum {
@@ -134,17 +140,19 @@ class DecodeFoward extends Bundle {
 }
 
 class DecodeToExecute extends Bundle {
-  val rs1V   = Tp.RegType()
-  val rs2V   = Tp.RegType()
-  val imm    = Tp.RegType()
-  val pc     = Tp.AddrType()
-  val aluOp  = AluOp()
-  val aluSel = new AluSel
-  val brInst = new BrInst
-
-  val memOp  = new MemOp
-  val aluEn  = Bool()
-  val foward = new DecodeFoward
+  val rs1V       = Tp.RegType()
+  val rs2V       = Tp.RegType()
+  val imm        = Tp.RegType()
+  val pc         = Tp.AddrType()
+  val aluOp      = AluOp()
+  val aluSel     = new AluSel
+  val brInst     = new BrInst
+  val memOp      = new MemOp
+  val aluEn      = Bool()
+  val predTaken  = Bool()
+  val predTarget = Tp.AddrType()
+  val predBtbHit = Bool()
+  val foward     = new DecodeFoward
 }
 
 class ExecuteToMemory extends Bundle {

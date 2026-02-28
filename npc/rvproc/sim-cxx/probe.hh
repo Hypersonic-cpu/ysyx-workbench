@@ -186,8 +186,7 @@ read_reg(uint8_t regid) noexcept {
     case 0xd: ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__gpr__DOT__gprs_13; break;
     case 0xe: ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__gpr__DOT__gprs_14; break;
     case 0xf: ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__gpr__DOT__gprs_15; break;
-    // TODO:
-    // case 0x10:ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__ifs__DOT__pc; break;
+    case 0x10:ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__wbs_io_in_bits_rfoward_pc; break;
 #else
     case 0x0: ret = r->rvCore__DOT__reg_0__DOT__gpr__DOT__gprs_0; break;
     case 0x1: ret = r->rvCore__DOT__reg_0__DOT__gpr__DOT__gprs_1; break;

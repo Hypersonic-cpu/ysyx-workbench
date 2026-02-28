@@ -88,8 +88,9 @@ class MemoryStage extends Module {
   dMem.ar.valid := ~ioex.memOp.isSt && trigIss
   dMem.aw.valid := ioex.memOp.isSt && trigIss
   dMem.w.valid  := ioex.memOp.isSt && trigIss
-  dMem.r.ready  := ~ioex.memOp.isSt && io.out.ready
-  dMem.b.ready  := ioex.memOp.isSt && io.out.ready
+
+  dMem.r.ready := ~ioex.memOp.isSt && io.out.ready
+  dMem.b.ready := ioex.memOp.isSt && io.out.ready
 
   val sext      = ioex.memOp.sExt
   val loadValue = dMem.r.bits.data >> (shamt << 3)
@@ -137,16 +138,16 @@ class MemoryStage extends Module {
     iowb.foward.stallT := DontCare
   }
 
-  when(io.out.fire && ioex.memOp.isEn) {
-    printf(
-      cf"Rsp < WR?${ioex.memOp.isSt} Addr ${ioex.aluOut}%x LoadData ${iowb.lsuOut}%x\n"
-    )
-  }
-  when(io.in.fire && ioex.memOp.isEn) {
-    printf(
-      cf"Req > WR?${ioex.memOp.isSt} Addr ${ioex.aluOut}%x wrData ${wrdt}%x\n"
-    )
-  }
+  // when(io.out.fire && ioex.memOp.isEn) {
+  //   printf(
+  //     cf"Rsp < WR?${ioex.memOp.isSt} Addr ${ioex.aluOut}%x LoadData ${iowb.lsuOut}%x\n"
+  //   )
+  // }
+  // when(io.in.fire && ioex.memOp.isEn) {
+  //   printf(
+  //     cf"Req > WR?${ioex.memOp.isSt} Addr ${ioex.aluOut}%x wrData ${wrdt}%x\n"
+  //   )
+  // }
 
   if (GlbCtrl.debug) {
     val pmu = Module(new LoadStorePMU)

@@ -218,16 +218,16 @@ class iCache(conf: iCacheConf) extends Module {
     fillPtr := 0.U
   }
 
-  when(state === flowing && nextState === memreq) {
-    printf(cf"iCache Miss : addr ${reqA2}%x\n")
-  }
+  // when(state === flowing && nextState === memreq) {
+  //   printf(cf"iCache Miss : addr ${reqA2}%x\n")
+  // }
 
-  when(io.cpuSide.r.fire) {
-    printf(
-      cf"iCache Hit : addr ${reqA3}%x"
-        + cf" data ${io.cpuSide.r.bits.data}%x\n"
-    )
-  }
+  // when(io.cpuSide.r.fire) {
+  //   printf(
+  //     cf"iCache Hit : addr ${reqA3}%x"
+  //       + cf" data ${io.cpuSide.r.bits.data}%x\n"
+  //   )
+  // }
 
   io.memSide.r.ready       := true.B
   io.memSide.ar.valid      := state === memreq
