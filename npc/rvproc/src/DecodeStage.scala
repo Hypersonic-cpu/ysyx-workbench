@@ -47,6 +47,8 @@ class IDU extends Module {
     val fenceI = Output(Bool())
 
     val brInst = Output(new BrInst)
+    val isCall = Output(Bool())
+    val isRet  = Output(Bool())
 
     val wbSel  = Output(WbSel())
     val ebreak = Output(Bool())
@@ -203,6 +205,10 @@ class IDU extends Module {
   io.brInst.bIfge := instBr && ((funct3 & "b101".U) === "b101".U)
   io.brInst.isBr  := instBr || io.brInst.isAbs || isJal
 
+  val rs1Idx = io.inst(19, 15)
+  io.isCall := (isJal || isJalr) && io.rd === 1.U
+  io.isRet  := isJalr && rs1Idx === 1.U && io.rd === 0.U
+
   io.wbSel := MuxCase(
     WbSel.fromAlu,
     Seq(
@@ -316,6 +322,8 @@ class DecodeStage extends Module {
   ioex.predTaken  := ioif.predTaken
   ioex.predTarget := ioif.predTarget
   ioex.predBtbHit := ioif.predBtbHit
+  ioex.isCall     := iDec.io.isCall
+  ioex.isRet      := iDec.io.isRet
 
   val iofw = ioex.foward
   iofw.gprRd  := iDec.io.rd

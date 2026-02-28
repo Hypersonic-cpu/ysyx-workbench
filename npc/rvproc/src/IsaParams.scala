@@ -24,6 +24,7 @@ object GlbCtrl {
   var sramlib   = false
   var bpType    = Bimodal: BrPredType
   var bpEntries = 64
+  var rasSize   = 4
 }
 
 object ISA {
