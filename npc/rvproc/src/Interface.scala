@@ -107,14 +107,15 @@ object WbSel extends ChiselEnum {
 // }
 
 class ExecuteBackward extends Bundle {
-  val brRel   = Bool()
-  val brDel   = Tp.RegType()
-  val brAbs   = Bool()
-  val brVal   = Tp.RegType()
-  val brLPC   = Tp.AddrType()
-  val isBr    = Bool()    // is this a branch instruction? (for BP update)
-  val mispred = Bool()    // was the BP prediction wrong? (triggers IFU flush)
-  def take    = brRel || brAbs  // actual outcome (taken?) used for BP update
+  val brRel      = Bool()
+  val brDel      = Tp.RegType()
+  val brAbs      = Bool()
+  val brVal      = Tp.RegType()
+  val brLPC      = Tp.AddrType()
+  val isBr       = Bool()
+  val mispred    = Bool()
+  val predBtbHit = Bool()
+  def take       = brRel || brAbs
 }
 
 object StallCause extends ChiselEnum {

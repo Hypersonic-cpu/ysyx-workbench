@@ -38,6 +38,7 @@ abstract class BrPred(val conf: BrPredConf) extends Module {
     val updPC     = Input(Tp.AddrType())
     val updTaken  = Input(Bool())
     val updTarget = Input(Tp.AddrType())
+    val updBtbHit = Input(Bool())
   })
 
   // Shared helpers
@@ -155,11 +156,14 @@ class BimodalPredictor(conf: BrPredConf) extends BrPred(conf) {
     validArr(uidx) := true.B
   }
 
-  // ── BHT update (every branch, taken or not) ───────────────────────────────
   def incrSat(c: UInt): UInt = Mux(c === 3.U, 3.U, c + 1.U)
   def decrSat(c: UInt): UInt = Mux(c === 0.U, 0.U, c - 1.U)
-  when(io.updValid) {
-    bhtArr(uidx) := Mux(io.updTaken, incrSat(bhtArr(uidx)), decrSat(bhtArr(uidx)))
+  when(io.updValid && (io.updBtbHit || io.updTaken)) {
+    bhtArr(uidx) := Mux(
+      io.updTaken && !io.updBtbHit,
+      2.U,
+      Mux(io.updTaken, incrSat(bhtArr(uidx)), decrSat(bhtArr(uidx)))
+    )
   }
 }
 

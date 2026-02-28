@@ -75,8 +75,9 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
       p.io.queryPC   := btbRdAddr
       p.io.updValid  := io.fromEx.valid && brex.isBr
       p.io.updPC     := brex.brLPC
-      p.io.updTaken  := brex.take   // actual outcome
+      p.io.updTaken  := brex.take
       p.io.updTarget := Mux(brex.brAbs, brex.brVal, brex.brLPC + brex.brDel)
+      p.io.updBtbHit := brex.predBtbHit
     case None => // no predictor wired
   }
 
