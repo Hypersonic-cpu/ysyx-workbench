@@ -78,6 +78,7 @@ class dCache(conf: iCacheConf) extends Module {
   val flushReadPending = RegInit(false.B)
   val flushEvict       = RegInit(false.B)
   val flushAllDone     = RegInit(false.B)
+  val flushPending     = RegInit(false.B)
   val flushDone        = flushAllDone
   io.flushing          := state === flushing
 
@@ -88,9 +89,9 @@ class dCache(conf: iCacheConf) extends Module {
   val cpuLoad  = io.cpuSide.ar.valid && !io.cpuSide.aw.valid
   val cpuStore = io.cpuSide.aw.valid
   val cpuReq   = cpuLoad || cpuStore
-  io.cpuSide.ar.ready := state === idle && !cpuStore && !io.flushAll
-  io.cpuSide.aw.ready := state === idle && !io.flushAll
-  io.cpuSide.w.ready  := state === idle && !io.flushAll
+  io.cpuSide.ar.ready := state === idle && !cpuStore && !io.flushAll && !flushPending
+  io.cpuSide.aw.ready := state === idle && !io.flushAll && !flushPending
+  io.cpuSide.w.ready  := state === idle && !io.flushAll && !flushPending
 
   // Latch request
   when(state === idle && cpuReq) {
@@ -194,11 +195,17 @@ class dCache(conf: iCacheConf) extends Module {
   dataArr.io.waddr := reqIdx
   dataArr.io.wdata := mergedLine.asUInt
 
+  // Latch flushAll pulse so it isn't missed if dCache is busy
+  when(io.flushAll)                       { flushPending := true.B }
+  when(state === idle && flushPending)    { flushPending := false.B }
+
+  val flushTrigger = io.flushAll || flushPending
+
   // FSM
   nextState := MuxLookup(state, idle)(
     Seq(
       idle -> Mux(
-        io.flushAll,
+        flushTrigger,
         flushing,
         Mux(cpuReq, lookup, idle)
       ),
