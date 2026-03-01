@@ -77,7 +77,8 @@ class dCache(conf: iCacheConf) extends Module {
   val flushIdx         = RegInit(0.U(log2Ceil(conf.numSets).W))
   val flushReadPending = RegInit(false.B)
   val flushEvict       = RegInit(false.B)
-  val flushDone        = flushIdx === (conf.numSets - 1).U && !flushEvict && !flushReadPending
+  val flushAllDone     = RegInit(false.B)
+  val flushDone        = flushAllDone
   io.flushing          := state === flushing
 
   // Tag compare result (valid in lookup cycle)
@@ -333,21 +334,22 @@ class dCache(conf: iCacheConf) extends Module {
   when(state === flushing) {
     when(!flushEvict && !flushReadPending) {
       when(validArr(flushIdx) && dirtyArr(flushIdx)) {
-        // Issue array read for this set; data available next cycle
         tagArr.io.raddr  := flushIdx
         tagArr.io.ren    := true.B
         dataArr.io.raddr := flushIdx
         dataArr.io.ren   := true.B
         flushReadPending := true.B
-        // Use flushIdx as reqIdx for AW address computation
-        reqAddr := (flushIdx << conf.offBits).asUInt
+        reqAddr          := (flushIdx << conf.offBits).asUInt
       }.otherwise {
         validArr(flushIdx) := false.B
         dirtyArr(flushIdx) := false.B
-        when(!flushDone) { flushIdx := flushIdx + 1.U }
+        when(flushIdx < (conf.numSets - 1).U) {
+          flushIdx := flushIdx + 1.U
+        }.otherwise {
+          flushAllDone := true.B
+        }
       }
     }.elsewhen(flushReadPending) {
-      // Array read result is now valid; latch for eviction
       evictTag := tagArr.io.rdata
       for (i <- 0 until conf.lineTrans) {
         evictLine(i) := dataArr.io.rdata(
@@ -383,7 +385,11 @@ class dCache(conf: iCacheConf) extends Module {
         validArr(flushIdx) := false.B
         dirtyArr(flushIdx) := false.B
         flushEvict         := false.B
-        when(!flushDone) { flushIdx := flushIdx + 1.U }
+        when(flushIdx < (conf.numSets - 1).U) {
+          flushIdx := flushIdx + 1.U
+        }.otherwise {
+          flushAllDone := true.B
+        }
       }
     }
   }
@@ -392,6 +398,7 @@ class dCache(conf: iCacheConf) extends Module {
     flushIdx         := 0.U
     flushReadPending := false.B
     flushEvict       := false.B
+    flushAllDone     := false.B
   }
 
   if (debug) {
