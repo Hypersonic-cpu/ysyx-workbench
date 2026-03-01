@@ -1,7 +1,7 @@
 import scala.util.Properties
 import java.nio.file.Paths
 import rvproc.cache.iCacheConf
-import rvproc.{BTFNT, Bimodal, GlbCtrl, NoPred, Tiny, Extended}
+import rvproc.{BTFNT, Bimodal, Extended, GlbCtrl, NoPred, Tiny}
 
 object ElaborSta extends App {
   GlbCtrl.debug = false
@@ -58,8 +58,10 @@ object ElaborSta extends App {
   }
   if (l1iSize < 0) l1iSize = cfgL1iSize
   if (l1iBlksize < 0) l1iBlksize = 16
-  if (l1dSize < 0) l1dSize = (if (GlbCtrl.hasDCache) 1024
-                               else 0)
+  if (l1dSize < 0)
+    l1dSize =
+      (if (GlbCtrl.hasDCache) 1024
+       else 0)
   if (l1dBlksize < 0) l1dBlksize = 16
 
   val l1iConf = iCacheConf(32, l1iSize, l1iBlksize, l1iAssoc)

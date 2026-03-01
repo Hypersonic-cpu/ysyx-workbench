@@ -2,7 +2,7 @@ import scala.util.Properties
 import java.nio.file.Paths
 import rvproc.cache.iCacheConf
 import scala.collection.mutable.ArrayBuffer
-import rvproc.{BTFNT, Bimodal, GlbCtrl, NoPred, Tiny, Extended}
+import rvproc.{BTFNT, Bimodal, Extended, GlbCtrl, NoPred, Tiny}
 
 object Elaborate extends App {
   println(s"-> Elaborate Argv: ${args.mkString(":")}")
@@ -23,22 +23,22 @@ object Elaborate extends App {
     var i = 0
     while (i < args.length) {
       args(i) match {
-        case "--soc-mode"       => isSocMode = true
-        case "--l1i-size"       =>
+        case "--soc-mode"        => isSocMode = true
+        case "--l1i-size"        =>
           l1iSize = args(i + 1).toInt; i += 1
-        case "--l1i-blksize"    =>
+        case "--l1i-blksize"     =>
           l1iBlksize = args(i + 1).toInt; i += 1
-        case "--l1i-assoc"      =>
+        case "--l1i-assoc"       =>
           l1iAssoc = args(i + 1).toInt; i += 1
-        case "--l1d-size"       =>
+        case "--l1d-size"        =>
           l1dSize = args(i + 1).toInt; i += 1
-        case "--l1d-blksize"    =>
+        case "--l1d-blksize"     =>
           l1dBlksize = args(i + 1).toInt; i += 1
-        case "--debug"          => GlbCtrl.debug = true
-        case "--no-debug"       => GlbCtrl.debug = false
-        case "--sta"            => GlbCtrl.sta = true
-        case "--no-sta"         => GlbCtrl.sta = false
-        case "--config-tiny"    =>
+        case "--debug"           => GlbCtrl.debug = true
+        case "--no-debug"        => GlbCtrl.debug = false
+        case "--sta"             => GlbCtrl.sta = true
+        case "--no-sta"          => GlbCtrl.sta = false
+        case "--config-tiny"     =>
           GlbCtrl.config = Tiny
           GlbCtrl.bpEntries = 32
           GlbCtrl.rasSize = 0
@@ -46,14 +46,14 @@ object Elaborate extends App {
           GlbCtrl.config = Extended
           GlbCtrl.bpEntries = 128
           GlbCtrl.rasSize = 4
-        case "--bp-none"        => GlbCtrl.bpType = NoPred
-        case "--bp-btfnt"       => GlbCtrl.bpType = BTFNT
-        case "--bp-bimodal"     => GlbCtrl.bpType = Bimodal
-        case "--bp-entries"     =>
+        case "--bp-none"         => GlbCtrl.bpType = NoPred
+        case "--bp-btfnt"        => GlbCtrl.bpType = BTFNT
+        case "--bp-bimodal"      => GlbCtrl.bpType = Bimodal
+        case "--bp-entries"      =>
           GlbCtrl.bpEntries = args(i + 1).toInt; i += 1
-        case "--ras-size"       =>
+        case "--ras-size"        =>
           GlbCtrl.rasSize = args(i + 1).toInt; i += 1
-        case other              => rest += other
+        case other               => rest += other
       }
       i += 1
     }
@@ -62,12 +62,12 @@ object Elaborate extends App {
       case Tiny     => 128
       case Extended => 1024
     }
-    val cfgL1iBlk = 16
+    val cfgL1iBlk  = 16
     val cfgL1dSize = GlbCtrl.config match {
       case Tiny     => 0
       case Extended => 1024
     }
-    val cfgL1dBlk = 16
+    val cfgL1dBlk  = 16
 
     if (l1iSize < 0) l1iSize = cfgL1iSize
     if (l1iBlksize < 0) l1iBlksize = cfgL1iBlk

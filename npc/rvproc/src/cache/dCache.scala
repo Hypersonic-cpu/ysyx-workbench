@@ -24,10 +24,10 @@ class dCache(conf: iCacheConf) extends Module {
 
   conf.printConf()
 
-  val tagArr  = Module(
+  val tagArr   = Module(
     new CacheArray(conf.numSets, conf.tagBits)
   )
-  val dataArr = Module(
+  val dataArr  = Module(
     new CacheArray(conf.numSets, conf.lineBytes * 8)
   )
   val validArr =
@@ -36,8 +36,8 @@ class dCache(conf: iCacheConf) extends Module {
     RegInit(VecInit(Seq.fill(conf.numSets)(false.B)))
 
   val idle :: lookup :: evict :: filling :: Nil = Enum(4)
-  val state     = RegInit(idle)
-  val nextState = WireInit(idle)
+  val state                                     = RegInit(idle)
+  val nextState                                 = WireInit(idle)
 
   def idxOf(x: UInt) = x(conf.idxBitHi, conf.idxBitLo)
   def tagOf(x: UInt) = x(conf.tagBitHi, conf.tagBitLo)
@@ -47,15 +47,15 @@ class dCache(conf: iCacheConf) extends Module {
   def ithOf(x: UInt) = x(conf.offBits - 1, ISA.WordShift)
 
   // Latched CPU request
-  val reqAddr   = Reg(Tp.AddrType())
+  val reqAddr    = Reg(Tp.AddrType())
   val reqIsStore = Reg(Bool())
-  val reqWData  = Reg(Tp.RegType())
-  val reqWStrb  = Reg(UInt(4.W))
-  val reqSize   = Reg(AXI.SizeType())
-  val reqId     = Reg(AXI.IdType())
-  val reqIdx    = idxOf(reqAddr)
-  val reqTag    = tagOf(reqAddr)
-  val reqWord   = ithOf(reqAddr)
+  val reqWData   = Reg(Tp.RegType())
+  val reqWStrb   = Reg(UInt(4.W))
+  val reqSize    = Reg(AXI.SizeType())
+  val reqId      = Reg(AXI.IdType())
+  val reqIdx     = idxOf(reqAddr)
+  val reqTag     = tagOf(reqAddr)
+  val reqWord    = ithOf(reqAddr)
 
   // Fill buffer for burst read
   val fillBuf =
@@ -113,7 +113,7 @@ class dCache(conf: iCacheConf) extends Module {
   val lineRead = dataArr.io.rdata
   tagHit := validArr(reqIdx) && tagRead === reqTag
 
-  val isDirty  = validArr(reqIdx) && dirtyArr(reqIdx)
+  val isDirty   = validArr(reqIdx) && dirtyArr(reqIdx)
   val needEvict = !tagHit && isDirty
 
   // Line data as word vector
@@ -125,7 +125,7 @@ class dCache(conf: iCacheConf) extends Module {
   )
 
   // Merge store data into line for store hit
-  val strbMask = Cat(
+  val strbMask   = Cat(
     Fill(8, reqWStrb(3)),
     Fill(8, reqWStrb(2)),
     Fill(8, reqWStrb(1)),
@@ -177,37 +177,39 @@ class dCache(conf: iCacheConf) extends Module {
   io.memSide.b.ready       := false.B
 
   // Array write defaults
-  tagArr.io.wen   := false.B
-  tagArr.io.waddr := reqIdx
-  tagArr.io.wdata := reqTag
+  tagArr.io.wen    := false.B
+  tagArr.io.waddr  := reqIdx
+  tagArr.io.wdata  := reqTag
   dataArr.io.wen   := false.B
   dataArr.io.waddr := reqIdx
   dataArr.io.wdata := mergedLine.asUInt
 
   // FSM
-  nextState := MuxLookup(state, idle)(Seq(
-    idle    -> Mux(cpuReq, lookup, idle),
-    lookup  -> Mux(
-      tagHit,
-      idle,
-      Mux(needEvict, evict, filling)
-    ),
-    evict   -> Mux(bRecvd, filling, evict),
-    filling -> Mux(
-      io.memSide.r.valid && io.memSide.r.bits.last,
-      idle,
-      filling
+  nextState := MuxLookup(state, idle)(
+    Seq(
+      idle    -> Mux(cpuReq, lookup, idle),
+      lookup  -> Mux(
+        tagHit,
+        idle,
+        Mux(needEvict, evict, filling)
+      ),
+      evict   -> Mux(bRecvd, filling, evict),
+      filling -> Mux(
+        io.memSide.r.valid && io.memSide.r.bits.last,
+        idle,
+        filling
+      )
     )
-  ))
-  state := nextState
+  )
+  state     := nextState
 
   // idle: nothing extra
   // lookup: respond on hit or start eviction/fill
   when(state === lookup && tagHit) {
     when(reqIsStore) {
-      dataArr.io.wen   := true.B
-      dataArr.io.wdata := mergedLine.asUInt
-      dirtyArr(reqIdx) := true.B
+      dataArr.io.wen     := true.B
+      dataArr.io.wdata   := mergedLine.asUInt
+      dirtyArr(reqIdx)   := true.B
       io.cpuSide.b.valid := true.B
     }.otherwise {
       io.cpuSide.r.valid := true.B
@@ -257,7 +259,7 @@ class dCache(conf: iCacheConf) extends Module {
   when(state === filling) {
     io.memSide.ar.valid :=
       fillPtr === 0.U && !RegNext(io.memSide.ar.fire)
-    io.memSide.r.ready := true.B
+    io.memSide.r.ready  := true.B
     when(io.memSide.r.fire) {
       fillBuf(fillPtr) := io.memSide.r.bits.data
       fillPtr          := fillPtr + 1.U
@@ -282,8 +284,10 @@ class dCache(conf: iCacheConf) extends Module {
     val finalLine = Wire(Vec(conf.lineTrans, Tp.RegType()))
     when(reqIsStore) {
       val sm = Cat(
-        Fill(8, reqWStrb(3)), Fill(8, reqWStrb(2)),
-        Fill(8, reqWStrb(1)), Fill(8, reqWStrb(0))
+        Fill(8, reqWStrb(3)),
+        Fill(8, reqWStrb(2)),
+        Fill(8, reqWStrb(1)),
+        Fill(8, reqWStrb(0))
       )
       for (i <- 0 until conf.lineTrans) {
         finalLine(i) := Mux(
