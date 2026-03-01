@@ -18,8 +18,10 @@ class dCache(conf: iCacheConf) extends Module {
   require(conf.assoc == 1, "Set assoc unimplemented")
   require(conf.dataBytes > 0, "dCache size must be > 0")
   val io = IO(new Bundle {
-    val cpuSide = Flipped(new AXIBus)
-    val memSide = new AXIBus
+    val cpuSide  = Flipped(new AXIBus)
+    val memSide  = new AXIBus
+    val flushAll = Input(Bool())
+    val flushing = Output(Bool())
   })
 
   conf.printConf()
@@ -35,7 +37,7 @@ class dCache(conf: iCacheConf) extends Module {
   val dirtyArr =
     RegInit(VecInit(Seq.fill(conf.numSets)(false.B)))
 
-  val idle :: lookup :: evict :: filling :: Nil = Enum(4)
+  val idle :: lookup :: evict :: filling :: flushing :: Nil = Enum(5)
   val state                                     = RegInit(idle)
   val nextState                                 = WireInit(idle)
 
@@ -71,6 +73,13 @@ class dCache(conf: iCacheConf) extends Module {
   val wDone     = RegInit(false.B)
   val bRecvd    = RegInit(false.B)
 
+  // Flush-all state (fence.i): walk all sets, evict dirty lines
+  val flushIdx         = RegInit(0.U(log2Ceil(conf.numSets).W))
+  val flushReadPending = RegInit(false.B)
+  val flushEvict       = RegInit(false.B)
+  val flushDone        = flushIdx === (conf.numSets - 1).U && !flushEvict && !flushReadPending
+  io.flushing          := state === flushing
+
   // Tag compare result (valid in lookup cycle)
   val tagHit = Wire(Bool())
 
@@ -78,9 +87,9 @@ class dCache(conf: iCacheConf) extends Module {
   val cpuLoad  = io.cpuSide.ar.valid && !io.cpuSide.aw.valid
   val cpuStore = io.cpuSide.aw.valid
   val cpuReq   = cpuLoad || cpuStore
-  io.cpuSide.ar.ready := state === idle && !cpuStore
-  io.cpuSide.aw.ready := state === idle
-  io.cpuSide.w.ready  := state === idle
+  io.cpuSide.ar.ready := state === idle && !cpuStore && !io.flushAll
+  io.cpuSide.aw.ready := state === idle && !io.flushAll
+  io.cpuSide.w.ready  := state === idle && !io.flushAll
 
   // Latch request
   when(state === idle && cpuReq) {
@@ -187,21 +196,26 @@ class dCache(conf: iCacheConf) extends Module {
   // FSM
   nextState := MuxLookup(state, idle)(
     Seq(
-      idle    -> Mux(cpuReq, lookup, idle),
-      lookup  -> Mux(
+      idle -> Mux(
+        io.flushAll,
+        flushing,
+        Mux(cpuReq, lookup, idle)
+      ),
+      lookup -> Mux(
         tagHit,
         idle,
         Mux(needEvict, evict, filling)
       ),
-      evict   -> Mux(bRecvd, filling, evict),
-      filling -> Mux(
+      evict    -> Mux(bRecvd, filling, evict),
+      filling  -> Mux(
         io.memSide.r.valid && io.memSide.r.bits.last,
         idle,
         filling
-      )
+      ),
+      flushing -> Mux(flushDone, idle, flushing)
     )
   )
-  state     := nextState
+  state := nextState
 
   // idle: nothing extra
   // lookup: respond on hit or start eviction/fill
@@ -313,6 +327,71 @@ class dCache(conf: iCacheConf) extends Module {
       io.cpuSide.r.valid     := true.B
       io.cpuSide.r.bits.data := filledLine(reqWord)
     }
+  }
+
+  // flushing: walk all sets, evict dirty ones then invalidate
+  when(state === flushing) {
+    when(!flushEvict && !flushReadPending) {
+      when(validArr(flushIdx) && dirtyArr(flushIdx)) {
+        // Issue array read for this set; data available next cycle
+        tagArr.io.raddr  := flushIdx
+        tagArr.io.ren    := true.B
+        dataArr.io.raddr := flushIdx
+        dataArr.io.ren   := true.B
+        flushReadPending := true.B
+        // Use flushIdx as reqIdx for AW address computation
+        reqAddr := (flushIdx << conf.offBits).asUInt
+      }.otherwise {
+        validArr(flushIdx) := false.B
+        dirtyArr(flushIdx) := false.B
+        when(!flushDone) { flushIdx := flushIdx + 1.U }
+      }
+    }.elsewhen(flushReadPending) {
+      // Array read result is now valid; latch for eviction
+      evictTag := tagArr.io.rdata
+      for (i <- 0 until conf.lineTrans) {
+        evictLine(i) := dataArr.io.rdata(
+          (i + 1) * ISA.RegBits - 1,
+          i * ISA.RegBits
+        )
+      }
+      evictPtr         := 0.U
+      awSent           := false.B
+      wDone            := false.B
+      bRecvd           := false.B
+      flushReadPending := false.B
+      flushEvict       := true.B
+    }.otherwise {
+      // flushEvict: burst write dirty line (reuse evict signals)
+      io.memSide.b.ready := true.B
+      when(!awSent) {
+        io.memSide.aw.valid := true.B
+        io.memSide.w.valid  := true.B
+        when(io.memSide.aw.fire) { awSent := true.B }
+        when(io.memSide.w.fire) {
+          evictPtr := evictPtr + 1.U
+          when(io.memSide.w.bits.last) { wDone := true.B }
+        }
+      }.elsewhen(!wDone) {
+        io.memSide.w.valid := true.B
+        when(io.memSide.w.fire) {
+          evictPtr := evictPtr + 1.U
+          when(io.memSide.w.bits.last) { wDone := true.B }
+        }
+      }
+      when(io.memSide.b.fire) {
+        validArr(flushIdx) := false.B
+        dirtyArr(flushIdx) := false.B
+        flushEvict         := false.B
+        when(!flushDone) { flushIdx := flushIdx + 1.U }
+      }
+    }
+  }
+
+  when(io.flushAll && state === idle) {
+    flushIdx         := 0.U
+    flushReadPending := false.B
+    flushEvict       := false.B
   }
 
   if (debug) {
