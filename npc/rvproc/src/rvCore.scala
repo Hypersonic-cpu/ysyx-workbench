@@ -115,18 +115,26 @@ class rvCore(
     lss.io.dMem <> dSplit.io.host
     dSplit.io.devices(2) <> clint.io.port
 
-    ifs.io.fromLs := true.B
-
     if (GlbCtrl.hasDCache) {
-      val l1d     = Module(new dCache(this.l1dConf))
+      val l1d = Module(new dCache(this.l1dConf))
       l1d.io.cpuSide <> dSplit.io.devices(0)
-      val arbiter = Module(new AXIArbiter(4))
+      l1d.io.flushAll := wbs.io.fenceI
+      val fenceOnce = RegInit(false.B)
+      when(ids.io.fenceI.bits && ids.io.fenceI.valid) {
+        fenceOnce := true.B
+      }
+        .elsewhen(
+          fenceOnce && RegNext(l1d.io.flushing) && !l1d.io.flushing
+        ) { fenceOnce := false.B }
+      ifs.io.fromLs := !fenceOnce
+      val arbiter   = Module(new AXIArbiter(4))
       AXIPortPassing(io.master, arbiter.io.device)
       arbiter.io.hosts(0) <> icache.io.memSide
       arbiter.io.hosts(1) <> iSplit.io.devices(1)
       arbiter.io.hosts(2) <> l1d.io.memSide
       arbiter.io.hosts(3) <> dSplit.io.devices(1)
     } else {
+      ifs.io.fromLs := true.B
       val arbiter = Module(new AXIArbiter(4))
       AXIPortPassing(io.master, arbiter.io.device)
       arbiter.io.hosts(0) <> icache.io.memSide
@@ -137,14 +145,12 @@ class rvCore(
   } else {
     println("=== NPC MODE ===".yellow)
 
-    ifs.io.fromLs := true.B
-
     icache.io.cpuSide <> ifs.io.iMem
     icache.io.flushAll :=
       ids.io.fenceI.bits && ids.io.fenceI.valid
 
     if (GlbCtrl.hasDCache) {
-      val dSplit  = Module(
+      val dSplit = Module(
         new AXIXBar(
           3,
           Seq(
@@ -156,16 +162,26 @@ class rvCore(
       )
       dSplit.io.host <> lss.io.dMem
       dSplit.io.devices(2) <> clint.io.port
-      val l1d     = Module(new dCache(this.l1dConf))
+      val l1d    = Module(new dCache(this.l1dConf))
       l1d.io.cpuSide <> dSplit.io.devices(0)
-      val arbiter = Module(new AXIArbiter(3))
+      l1d.io.flushAll := wbs.io.fenceI
+      val fenceOnce = RegInit(false.B)
+      when(ids.io.fenceI.bits && ids.io.fenceI.valid) {
+        fenceOnce := true.B
+      }
+        .elsewhen(
+          fenceOnce && RegNext(l1d.io.flushing) && !l1d.io.flushing
+        ) { fenceOnce := false.B }
+      ifs.io.fromLs := !fenceOnce
+      val arbiter   = Module(new AXIArbiter(3))
       arbiter.io.hosts(0) <> icache.io.memSide
       arbiter.io.hosts(1) <> l1d.io.memSide
       arbiter.io.hosts(2) <> dSplit.io.devices(1)
-      val pMem    = Module(new PMemBox)
+      val pMem      = Module(new PMemBox)
       pMem.io.master <> arbiter.io.device
       io.master := DontCare
     } else {
+      ifs.io.fromLs := true.B
       val dSplit  = Module(
         new AXIXBar(
           2,

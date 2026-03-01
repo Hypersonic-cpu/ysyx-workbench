@@ -31,17 +31,17 @@ class WrBackStage extends Module {
   val io = IO(new Bundle {
     val in     = Flipped(Decoupled(new MemoryToWrBack))
     val toReg  = Decoupled(new RegFromWBU)
-    // val toFetch = Decoupled(new InstCommit)
     val fwdDet = Output(new FwBundle)
+    val fenceI = Output(Bool())
   })
 
   io.in.ready    := true.B
   io.toReg.valid := io.in.valid
-  // io.toFetch.valid := io.in.valid
 
   val iWbu = Module(new WBU)
   val iols = io.in.bits
   val iofw = io.in.bits.foward
+  io.fenceI     := io.in.valid && iofw.fenceI
   iWbu.io.aluV  := iols.aluOut
   iWbu.io.memV  := iols.lsuOut
   iWbu.io.csrV  := iofw.csrVal
