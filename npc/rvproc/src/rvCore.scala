@@ -119,7 +119,12 @@ class rvCore(
       val l1d = Module(new dCache(this.l1dConf))
       l1d.io.cpuSide  <> dSplit.io.devices(0)
       l1d.io.flushAll := wbs.io.fenceI
-      ifs.io.fromLs   := !l1d.io.flushing
+      val fenceOnce = RegInit(false.B)
+      when(ids.io.fenceI.bits && ids.io.fenceI.valid) { fenceOnce := true.B }
+        .elsewhen(
+          fenceOnce && RegNext(l1d.io.flushing) && !l1d.io.flushing
+        ) { fenceOnce := false.B }
+      ifs.io.fromLs := !fenceOnce
       val arbiter = Module(new AXIArbiter(4))
       AXIPortPassing(io.master, arbiter.io.device)
       arbiter.io.hosts(0) <> icache.io.memSide
@@ -160,7 +165,12 @@ class rvCore(
       val l1d = Module(new dCache(this.l1dConf))
       l1d.io.cpuSide  <> dSplit.io.devices(0)
       l1d.io.flushAll := wbs.io.fenceI
-      ifs.io.fromLs   := !l1d.io.flushing
+      val fenceOnce = RegInit(false.B)
+      when(ids.io.fenceI.bits && ids.io.fenceI.valid) { fenceOnce := true.B }
+        .elsewhen(
+          fenceOnce && RegNext(l1d.io.flushing) && !l1d.io.flushing
+        ) { fenceOnce := false.B }
+      ifs.io.fromLs := !fenceOnce
       val arbiter = Module(new AXIArbiter(3))
       arbiter.io.hosts(0) <> icache.io.memSide
       arbiter.io.hosts(1) <> l1d.io.memSide
