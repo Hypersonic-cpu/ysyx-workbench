@@ -115,12 +115,10 @@ class rvCore(
     lss.io.dMem <> dSplit.io.host
     dSplit.io.devices(2) <> clint.io.port
 
-    val fenceIPulse = RegNext(ids.io.fenceI.bits && ids.io.fenceI.valid)
-
     if (GlbCtrl.hasDCache) {
       val l1d = Module(new dCache(this.l1dConf))
       l1d.io.cpuSide  <> dSplit.io.devices(0)
-      l1d.io.flushAll := fenceIPulse
+      l1d.io.flushAll := wbs.io.fenceI
       ifs.io.fromLs   := !l1d.io.flushing
       val arbiter = Module(new AXIArbiter(4))
       AXIPortPassing(io.master, arbiter.io.device)
@@ -161,7 +159,7 @@ class rvCore(
       dSplit.io.devices(2) <> clint.io.port
       val l1d = Module(new dCache(this.l1dConf))
       l1d.io.cpuSide  <> dSplit.io.devices(0)
-      l1d.io.flushAll := ids.io.fenceI.bits && ids.io.fenceI.valid
+      l1d.io.flushAll := wbs.io.fenceI
       ifs.io.fromLs   := !l1d.io.flushing
       val arbiter = Module(new AXIArbiter(3))
       arbiter.io.hosts(0) <> icache.io.memSide

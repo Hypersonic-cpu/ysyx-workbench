@@ -333,6 +333,7 @@ class DecodeStage extends Module {
   iofw.wbSel  := iDec.io.wbSel
   iofw.ebreak := iDec.io.ebreak
   iofw.ecall  := iDec.io.ecall
+  iofw.fenceI := iDec.io.fenceI
   iofw.pc     := ioif.pc
   iofw.inst   := io.in.bits.inst
   iofw.csrVal := csrVal

@@ -132,6 +132,7 @@ class DecodeFoward extends Bundle {
   val csrWE  = Bool()
   val ebreak = Bool()
   val ecall  = Bool()
+  val fenceI = Bool()
   val csrVal = Tp.RegType()
   // PC is debug only...
   val pc     = UInt((if (GlbCtrl.debug) 32 else 0).W)
