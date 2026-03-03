@@ -135,7 +135,6 @@ pmem_write(addr_t awaddr, ureg_t wdata, uint8_t wstrb) {
 
   if (awaddr == SerialAddr) [[unlikely]] {
     putchar(wdata);
-    if (pdiff) pdiff->notifyDeviceWrite();
   } else {
     unifiedMem->writeWord(awaddr & ~3U, wdata, wstrb);
   }
@@ -235,10 +234,8 @@ notify_commit(uint32_t pc, uint32_t inst, unsigned char stalltp) {
     return;
   pccdb->inst_trace(pc, inst);
   if constexpr (options::diff_enable) {
-    pdiff->checkDeviceInst(inst);
     pdiff->upd_dut_pc(pc);
     pdiff->setFire();
-    fprintf(stderr, "[DT] commit pc=%08x inst=%08x\n", pc, inst);
   }
 }
 
