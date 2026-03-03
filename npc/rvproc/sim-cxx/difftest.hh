@@ -151,9 +151,14 @@ public:
 
     iota();
     std::vector<std::tuple<uint16_t, uint32_t, uint32_t>> ret{};
-    if (!skipMatch)
+    if (skipMatch) {
+      uint32_t regbuf[RegNum + 1];
+      ref_regcpy(regbuf, CpyDir::ToDut);
+      std::swap(regbuf[RegNum], delayed_ref_pc);
+      skipMatch = false;
+    } else {
       ret = match();
-    skipMatch = false;
+    }
     copy();
     return std::move(ret);
   }
