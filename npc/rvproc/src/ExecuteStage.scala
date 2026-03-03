@@ -175,11 +175,7 @@ class ExecuteStage extends Module {
   io.brDet.bits  := validCtrl && mispred
 
   /** To LSU, AluOut = Addr */
-  iols.aluOut := Mux(
-    ioid.foward.wbSel === WbSel.fromPC,
-    ioid.pc,
-    iExe.io.aluOut
-  )
+  iols.aluOut := iExe.io.aluOut
   iols.memOp  := ioid.memOp
   iols.rs2Val := ioid.rs2V
 

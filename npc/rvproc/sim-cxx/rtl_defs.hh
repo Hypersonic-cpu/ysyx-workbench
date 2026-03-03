@@ -14,7 +14,11 @@ using addr_t = uint32_t;
 using ureg_t = uint32_t;
 // using blen_t = uint16_t;
 //
+#if SOCMODE
+constexpr addr_t ResetVector{0x3000'0000U};
+#else
 constexpr addr_t ResetVector{0x8000'0000U};
+#endif
 constexpr addr_t SerialAddr{0x1000'0000U};
 
 using handler_t = void (*)();

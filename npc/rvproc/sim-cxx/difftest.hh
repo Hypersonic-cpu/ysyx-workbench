@@ -30,8 +30,8 @@ private:
   intr_t ref_raise_intr;
   // memw_t ref_cpy_memwr_event;
 
-  bool device_access;
   bool fire;
+  bool skipMatch;
   ureg_t delayed_ref_pc;
   ureg_t delayed_dut_pc;
 
@@ -73,8 +73,8 @@ private:
 
 public:
   DiffTester(const std::vector<ureg_t>& image)
-      : device_access{false}
-      , fire{false}
+      : fire{false}
+      , skipMatch{false}
       , delayed_dut_pc{0xffff'ffffU}
       , delayed_ref_pc{ResetVector} {
     init(image);
@@ -88,31 +88,30 @@ public:
   static constexpr char NEMU_SO[] = "build/riscv32-nemu-interpreter-so";
   static constexpr int NEMUPort{1234};
 
-  // TODO: Add Device Check back
-  // bool is_csr =
-  //   bits(inst, 6, 2) == 0b11100 && bits(inst, 14, 12) != 0b000;
-  // uint16_t csrid = bits(inst, 31, 20);
-  // bool diff_csrs =
-  //   (csrid == 0xB00 || csrid == 0xB80 || csrid == 0xF11 || csrid ==
-  //   0xF12);
-  // if (is_csr && diff_csrs) {
-  //   device_access = true;
-  // }
+  static inline uint32_t
+  bits(uint32_t v, int hi, int lo) {
+    return (v >> lo) & ((1U << (hi - lo + 1)) - 1);
+  }
+
+  void
+  checkSkipMatch(uint32_t inst) {
+    bool is_csr =
+      bits(inst, 6, 2) == 0b11100 && bits(inst, 14, 12) != 0b000;
+    if (!is_csr) return;
+    uint16_t csrid = bits(inst, 31, 20);
+    if (csrid == 0xB00 || csrid == 0xB80)
+      skipMatch = true;
+  }
 
   auto
   match() noexcept -> std::vector<std::tuple<uint16_t, uint32_t, uint32_t>> {
     if constexpr (!options::diff_enable) {
       return {};
     }
-    if (device_access) [[unlikely]]
-      return {};
     std::vector<std::tuple<uint16_t, uint32_t, uint32_t>> ret{};
     uint32_t regbuf[RegNum + 1];
     ref_regcpy(regbuf, CpyDir::ToDut);
     std::swap(regbuf[RegNum], delayed_ref_pc);
-
-    // printf("Matching : REF PC %08x DUT PC %08x\n", regbuf[RegNum],
-    //        delayed_dut_pc);
 
     size_t i = 0;
     for (i = 0; i < RegNum + 1; ++i) {
@@ -128,7 +127,6 @@ public:
   copy() noexcept {
     if constexpr (!options::diff_enable)
       return;
-    device_access = false;
     uint32_t regbuf[RegNum + 1];
     for (size_t i = 0; i < RegNum + 1; ++i) {
       regbuf[i] = trace::read_reg(i);
@@ -152,7 +150,15 @@ public:
     fire = false;
 
     iota();
-    auto ret = match();
+    std::vector<std::tuple<uint16_t, uint32_t, uint32_t>> ret{};
+    if (skipMatch) {
+      uint32_t regbuf[RegNum + 1];
+      ref_regcpy(regbuf, CpyDir::ToDut);
+      std::swap(regbuf[RegNum], delayed_ref_pc);
+      skipMatch = false;
+    } else {
+      ret = match();
+    }
     copy();
     return std::move(ret);
   }

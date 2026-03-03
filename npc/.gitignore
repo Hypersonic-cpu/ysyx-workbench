@@ -41,3 +41,4 @@ formal/**/*.sv
 !*.md
 *_bmc/
 formal/*/
+local/

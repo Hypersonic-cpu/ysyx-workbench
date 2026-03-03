@@ -45,7 +45,7 @@ class WrBackStage extends Module {
   iWbu.io.aluV  := iols.aluOut
   iWbu.io.memV  := iols.lsuOut
   iWbu.io.csrV  := iofw.csrVal
-  iWbu.io.pc    := iols.aluOut // iofw.pc
+  iWbu.io.pc    := iofw.pc
   iWbu.io.wbSel := iofw.wbSel
 
   // when(io.in.valid) {
@@ -53,12 +53,15 @@ class WrBackStage extends Module {
   // }
 
   val ioreg = io.toReg.bits
-  ioreg.csrWE := iofw.csrWE
-  ioreg.csrIn := iols.aluOut
-  ioreg.csrRd := iofw.csrRd
-  ioreg.gprWE := iofw.gprWE
-  ioreg.gprIn := iWbu.io.gprdt
-  ioreg.gprRd := iofw.gprRd
+  ioreg.csrWE     := iofw.csrWE
+  ioreg.csrIn     := iols.aluOut
+  ioreg.csrRd     := iofw.csrRd
+  ioreg.gprWE     := iofw.gprWE
+  ioreg.gprIn     := iWbu.io.gprdt
+  ioreg.gprRd     := iofw.gprRd
+  ioreg.excpValid := iofw.ecall
+  ioreg.excpPC    := iofw.pc
+  ioreg.excpCause := iofw.mcause
 
   /** Forward */
   io.fwdDet.valid := io.in.valid

@@ -23,6 +23,9 @@
 #define RISCV_CSR_MTVEC   0x305
 #define RISCV_CSR_MCAUSE  0x342
 #define RISCV_CSR_MEPC    0x341
+#define RISCV_CSR_MCYCLE  0xB00
+#define RISCV_CSR_MVENDORID 0xF11
+#define RISCV_CSR_MARCHID 0xF12
 
 static inline int check_reg_idx(int idx) {
   IFDEF(CONFIG_RT_CHECK, 
@@ -38,7 +41,10 @@ static inline int check_csr_idx(int idx) {
         idx == RISCV_CSR_MSTATUS ||
         idx == RISCV_CSR_MTVEC   ||
         idx == RISCV_CSR_MCAUSE  || 
-        idx == RISCV_CSR_MEPC,
+        idx == RISCV_CSR_MEPC    ||
+        idx == RISCV_CSR_MCYCLE  ||
+        idx == RISCV_CSR_MVENDORID ||
+        idx == RISCV_CSR_MARCHID,
         "Csr index 0x%x not implemented", idx)
   );
   return idx;
