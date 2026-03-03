@@ -47,6 +47,8 @@ static void restart() {
   cpu.gpr[0] = 0;
 
   cpu.csr[RISCV_CSR_MSTATUS] = 0x1800;
+  cpu.csr[RISCV_CSR_MVENDORID] = 0x79737978;
+  cpu.csr[RISCV_CSR_MARCHID] = 25100264;
 }
 
 void init_isa() {
