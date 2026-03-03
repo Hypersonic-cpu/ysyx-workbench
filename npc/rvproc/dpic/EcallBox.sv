@@ -23,10 +23,6 @@ module EcallBox (
         call_ebreak(pcin, a0in, a5in);
         // $finish;
       end
-
-      // if (isEcall) begin
-      //   $display("Ecall @ pc %x\n", pcin);
-      // end
     end
   end
 

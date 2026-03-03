@@ -29,10 +29,13 @@ class WBU extends Module {
 
 class WrBackStage extends Module {
   val io = IO(new Bundle {
-    val in     = Flipped(Decoupled(new MemoryToWrBack))
-    val toReg  = Decoupled(new RegFromWBU)
-    val fwdDet = Output(new FwBundle)
-    val fenceI = Output(Bool())
+    val in           = Flipped(Decoupled(new MemoryToWrBack))
+    val toReg        = Decoupled(new RegFromWBU)
+    val fwdDet       = Output(new FwBundle)
+    val fenceI       = Output(Bool())
+    val excpFlushOut = Output(Bool())
+    val excpTarget   = Output(Tp.AddrType())
+    val mtvecIn      = Input(Tp.RegType())
   })
 
   io.in.ready    := true.B
@@ -59,9 +62,13 @@ class WrBackStage extends Module {
   ioreg.gprWE     := iofw.gprWE
   ioreg.gprIn     := iWbu.io.gprdt
   ioreg.gprRd     := iofw.gprRd
-  ioreg.excpValid := iofw.ecall
+  ioreg.excpValid := iofw.excpValid
   ioreg.excpPC    := iofw.pc
   ioreg.excpCause := iofw.mcause
+
+  io.excpFlushOut :=
+    io.in.valid && iofw.excpNeedsFlush
+  io.excpTarget   := io.mtvecIn
 
   /** Forward */
   io.fwdDet.valid := io.in.valid

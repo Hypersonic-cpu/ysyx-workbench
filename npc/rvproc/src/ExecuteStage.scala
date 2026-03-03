@@ -97,12 +97,13 @@ class EXU extends Module {
 
 class ExecuteStage extends Module {
   val io = IO(new Bundle {
-    val in      = Flipped(Decoupled(new DecodeToExecute))
-    val flush   = Flipped(Decoupled(Bool()))
-    val out     = Decoupled(new ExecuteToMemory)
-    val toFetch = Decoupled(new ExecuteBackward)
-    val brDet   = Decoupled(Bool())
-    val fwdDet  = Output(new FwBundle)
+    val in        = Flipped(Decoupled(new DecodeToExecute))
+    val flush     = Flipped(Decoupled(Bool()))
+    val out       = Decoupled(new ExecuteToMemory)
+    val toFetch   = Decoupled(new ExecuteBackward)
+    val brDet     = Decoupled(Bool())
+    val fwdDet    = Output(new FwBundle)
+    val excpFlush = Input(Bool())
   })
 
   val flushed = io.flush.valid && io.flush.bits
@@ -111,7 +112,7 @@ class ExecuteStage extends Module {
   val validCtrl = io.in.valid && !flushed
 
   io.in.ready  := io.out.ready
-  io.out.valid := validCtrl
+  io.out.valid := validCtrl && !io.excpFlush
 
   val iExe = Module(new EXU)
   val ioid = io.in.bits
@@ -132,7 +133,7 @@ class ExecuteStage extends Module {
   io.fwdDet.gprDt := 0.U     // iExe.io.aluOut
 
   /** Back to Fetch */
-  io.toFetch.valid := validCtrl
+  io.toFetch.valid := validCtrl && !io.excpFlush
   val iobk = io.toFetch.bits
   iobk.brRel := iExe.io.brRel
   iobk.brDel := iExe.io.brDel
@@ -171,8 +172,8 @@ class ExecuteStage extends Module {
   }
 
   /** Back to Decoder */
-  io.brDet.valid := validCtrl
-  io.brDet.bits  := validCtrl && mispred
+  io.brDet.valid := validCtrl && !io.excpFlush
+  io.brDet.bits  := validCtrl && !io.excpFlush && mispred
 
   /** To LSU, AluOut = Addr */
   iols.aluOut := iExe.io.aluOut
@@ -189,6 +190,36 @@ class ExecuteStage extends Module {
     )
   } else {
     iols.foward.stallT := DontCare
+  }
+
+  // Misalignment detection (causes 4, 6)
+  val aluOut        = iExe.io.aluOut
+  val isLoad        =
+    ioid.memOp.isEn && !ioid.memOp.isSt
+  val isStore       =
+    ioid.memOp.isEn && ioid.memOp.isSt
+  val wordMis       =
+    aluOut(1, 0) =/= 0.U && ioid.memOp.len === MemLen.Word
+  val halfMis       =
+    aluOut(0) =/= 0.U && ioid.memOp.len === MemLen.Half
+  val loadMisalign  =
+    validCtrl && isLoad && (wordMis || halfMis)
+  val storeMisalign =
+    validCtrl && isStore && (wordMis || halfMis)
+  val excpMisalign  = loadMisalign || storeMisalign
+
+  when(excpMisalign) {
+    iobk.brAbs            := true.B
+    iobk.brVal            := ioid.foward.mtvecVal
+    iobk.brRel            := false.B
+    iobk.mispred          := true.B
+    iobk.isBr             := true.B
+    iols.memOp.len        := MemLen.None
+    iols.foward.excpValid := true.B
+    iols.foward.mcause    :=
+      Mux(loadMisalign, 4.U, 6.U)
+    iols.foward.gprWE     := false.B
+    iols.foward.csrWE     := false.B
   }
 
   /** Interrupt */

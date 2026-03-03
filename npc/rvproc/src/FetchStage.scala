@@ -13,11 +13,13 @@ import BitMath._
 class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
     extends Module {
   val io = IO(new Bundle {
-    val out    = Decoupled(new FetchToDecode)
-    val fromId = Flipped(Decoupled(Bool()))
-    val fromEx = Flipped(Decoupled(new ExecuteBackward))
-    val fromLs = Input(Bool())
-    val iMem   = new AXIBus
+    val out          = Decoupled(new FetchToDecode)
+    val fromId       = Flipped(Decoupled(Bool()))
+    val fromEx       = Flipped(Decoupled(new ExecuteBackward))
+    val fromLs       = Input(Bool())
+    val iMem         = new AXIBus
+    val wbExcp       = Input(Bool())
+    val wbExcpTarget = Input(Tp.AddrType())
   })
 
   val iMem = io.iMem
@@ -37,18 +39,21 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
   val brTarget = MuxCase(
     brex.brLPC + 4.U,
     Seq(
-      brAbs  -> brex.brVal,
-      brRel  -> (brex.brLPC + brex.brDel),
-      fenceI -> (lastPC + 4.U)
+      io.wbExcp -> io.wbExcpTarget,
+      brAbs     -> brex.brVal,
+      brRel     -> (brex.brLPC + brex.brDel),
+      fenceI    -> (lastPC + 4.U)
     )
   )
 
   val flushWire =
-    (io.fromEx.valid && brex.mispred) || fenceI
+    (io.fromEx.valid && brex.mispred) || fenceI || io.wbExcp
 
   val validBuf      = Reg(Vec(PipeDepth + 1, Bool()))
   val pcBuf         = Reg(Vec(PipeDepth + 1, Tp.AddrType()))
   val instBuf       = Reg(Vec(PipeDepth + 1, Tp.InstType()))
+  val respBuf       =
+    Reg(Vec(PipeDepth + 1, AXI.RespStatus()))
   val predTakenBuf  = Reg(Vec(PipeDepth + 1, Bool()))
   val predTargetBuf = Reg(Vec(PipeDepth + 1, Tp.AddrType()))
   val predBtbHitBuf = Reg(Vec(PipeDepth + 1, Bool()))
@@ -118,6 +123,7 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
 
   when(iMem.r.fire) {
     instBuf(tailPtr) := iMem.r.bits.data
+    respBuf(tailPtr) := iMem.r.bits.resp
     tailPtr          := iotaMod(tailPtr)
   }
   when(iMem.ar.fire) {
@@ -173,15 +179,22 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
   }
 
   val ioid = io.out.bits
-  ioid.pc         := Mux(io.out.valid, pcBuf(toidPtr), 0.U)
-  ioid.inst       :=
+  ioid.pc           := Mux(io.out.valid, pcBuf(toidPtr), 0.U)
+  ioid.inst         :=
     Mux(io.out.valid, instBuf(toidPtr), 0.U)
-  ioid.predTaken  :=
+  ioid.predTaken    :=
     Mux(io.out.valid, predTakenBuf(toidPtr), false.B)
-  ioid.predTarget :=
+  ioid.predTarget   :=
     Mux(io.out.valid, predTargetBuf(toidPtr), 0.U)
-  ioid.predBtbHit :=
+  ioid.predBtbHit   :=
     Mux(io.out.valid, predBtbHitBuf(toidPtr), false.B)
+  ioid.ifuExcp      :=
+    Mux(io.out.valid, respBuf(toidPtr) =/= OKAY, false.B)
+  ioid.ifuExcpCause := Mux(
+    io.out.valid,
+    Mux(respBuf(toidPtr) === SLVERR, 1.U, 12.U),
+    0.U
+  )
 
   if (GlbCtrl.debug) {
     val pmu = Module(new FetchPMU)

@@ -14,10 +14,11 @@ import rvproc.GlbCtrl.debug
 
 class MemoryStage extends Module {
   val io   = IO(new Bundle {
-    val in     = Flipped(Decoupled(new ExecuteToMemory))
-    val out    = Decoupled(new MemoryToWrBack)
-    val dMem   = new AXIBus
-    val fwdDet = Output(new FwBundle)
+    val in        = Flipped(Decoupled(new ExecuteToMemory))
+    val out       = Decoupled(new MemoryToWrBack)
+    val dMem      = new AXIBus
+    val fwdDet    = Output(new FwBundle)
+    val excpFlush = Input(Bool())
   })
   val iowb = io.out.bits
   val ioex = io.in.bits
@@ -29,7 +30,9 @@ class MemoryStage extends Module {
   val idle :: serve :: Nil = Enum(2)
 
   val state     = RegInit(idle)
-  val trigIss   = state === idle && io.in.valid && ioex.memOp.isEn
+  val trigIss   =
+    state === idle && io.in.valid && ioex.memOp.isEn &&
+      !io.excpFlush
   val reqReady  = Mux(!ioex.memOp.isSt, dMem.ar.ready, dMem.aw.ready)
   val respValid = Mux(!ioex.memOp.isSt, dMem.r.valid, dMem.b.valid)
 
@@ -43,7 +46,8 @@ class MemoryStage extends Module {
 
   // WARN: WBU如果需要等待, 则这里会出问题(respValid仅有1cyc高)
   // val delay1Trig = RegNext(trigIss)
-  io.out.valid := io.in.valid && (!ioex.memOp.isEn || respValid)
+  io.out.valid := io.in.valid &&
+    (!ioex.memOp.isEn || respValid) && !io.excpFlush
   io.in.ready  := io.out.ready && ((!trigIss && state === idle) || io.out.valid)
 
   dMem.ar.bits.addr  := addr // & Tp.AddrAligner()
@@ -115,6 +119,32 @@ class MemoryStage extends Module {
 
   iowb.aluOut <> io.in.bits.aluOut
   iowb.foward <> io.in.bits.foward
+
+  // LSU exception detection (causes 5, 7, 13, 15)
+  val lsuExcp      = Wire(Bool())
+  val lsuExcpCause = Wire(UInt(4.W))
+  when(ioex.memOp.isEn && respValid && !ioex.memOp.isSt) {
+    lsuExcp      := dMem.r.bits.resp =/= OKAY
+    lsuExcpCause :=
+      Mux(dMem.r.bits.resp === SLVERR, 5.U, 13.U)
+  }.elsewhen(
+    ioex.memOp.isEn && respValid && ioex.memOp.isSt
+  ) {
+    lsuExcp      := dMem.b.bits.resp =/= OKAY
+    lsuExcpCause :=
+      Mux(dMem.b.bits.resp === SLVERR, 7.U, 15.U)
+  }.otherwise {
+    lsuExcp      := false.B
+    lsuExcpCause := 0.U
+  }
+
+  when(lsuExcp) {
+    iowb.foward.excpValid      := true.B
+    iowb.foward.excpNeedsFlush := true.B
+    iowb.foward.mcause         := lsuExcpCause
+    iowb.foward.gprWE          := false.B
+    iowb.foward.csrWE          := false.B
+  }
 
   /** Forward */
   io.fwdDet.valid := io.in.valid

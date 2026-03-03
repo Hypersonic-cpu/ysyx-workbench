@@ -15,6 +15,7 @@ class CsrFile extends Module {
     val excpValid = Input(Bool())
     val excpPC    = Input(Tp.AddrType())
     val excpCause = Input(UInt(4.W))
+    val mtvecOut  = Output(Tp.RegType())
   })
 
   val mcycle  = RegInit(0.U(ISA.RegBits.W))
@@ -54,6 +55,8 @@ class CsrFile extends Module {
     csrMap.map { case (idx, reg, _) => idx -> reg }
   )
   io.out := csrVal
+
+  io.mtvecOut := mtvec
   // printf(cf"CSR Read ${io.idxr}%x = ${io.out}%x M${io.wrEn}\n")
   //
   // Input
@@ -122,9 +125,10 @@ class GprFile extends Module {
 
 class RegFile extends Module {
   val io = IO(new Bundle {
-    val fromWb = Flipped(Decoupled(new RegFromWBU))
-    val fromId = Flipped(Decoupled(new RegFromIDU))
-    val toId   = Decoupled(new RegToIDU)
+    val fromWb   = Flipped(Decoupled(new RegFromWBU))
+    val fromId   = Flipped(Decoupled(new RegFromIDU))
+    val toId     = Decoupled(new RegToIDU)
+    val mtvecOut = Output(Tp.RegType())
   })
 
   io.toId.valid   := true.B
@@ -156,4 +160,6 @@ class RegFile extends Module {
   csr.io.excpCause := iowb.excpCause
   csr.io.instRet   := wbValid
   out.csrVal       := csr.io.out
+  out.mtvecVal     := csr.io.mtvecOut
+  io.mtvecOut      := csr.io.mtvecOut
 }

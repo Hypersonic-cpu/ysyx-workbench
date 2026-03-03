@@ -97,7 +97,6 @@ class iCache(conf: iCacheConf) extends Module {
   ) // 4 Bytes
   resp.bits.id   := 0.U
   resp.bits.last := true.B
-  resp.bits.resp := OKAY
 
   val tagHit     = Wire(Bool())
   val fillBuf    =
@@ -115,6 +114,7 @@ class iCache(conf: iCacheConf) extends Module {
   val hitRespV  = RegNext(tagHit)
   val missServe = RegInit(false.B)
   val missData  = RegInit(0.U(32.W))
+  val fillError = RegInit(OKAY)
 
   assert(
     resp.valid Implies resp.ready,
@@ -163,6 +163,7 @@ class iCache(conf: iCacheConf) extends Module {
 
   resp.valid     := missServe || hitRespV
   resp.bits.data := Mux(missServe, missData, wordSel)
+  resp.bits.resp := Mux(missServe, fillError, OKAY)
 
   // FSM
   val flushPending = RegInit(false.B)
@@ -202,10 +203,9 @@ class iCache(conf: iCacheConf) extends Module {
   when(state === waiting && io.memSide.r.valid) {
     fillBuf(fillPtr) := io.memSide.r.bits.data
     fillPtr          := fillPtr + 1.U
-    assert(
-      io.memSide.r.bits.resp === OKAY,
-      "Memory error during cache fill"
-    )
+    when(io.memSide.r.bits.resp =/= OKAY) {
+      fillError := io.memSide.r.bits.resp
+    }
     when(io.memSide.r.bits.last) {
       val goldenPtr = (conf.lineTrans - 1).U
       assert(
@@ -215,7 +215,8 @@ class iCache(conf: iCacheConf) extends Module {
       )
     }
   }.elsewhen(state === memreq && io.memSide.ar.fire) {
-    fillPtr := 0.U
+    fillPtr   := 0.U
+    fillError := OKAY
   }
 
   // when(state === flowing && nextState === memreq) {
@@ -244,17 +245,17 @@ class iCache(conf: iCacheConf) extends Module {
   val catData = fillBuf.asUInt
 
   // Tag: fill completion only (flush uses validArr DFF)
-  tagArr.io.wen   := fillFinish
+  tagArr.io.wen   := fillFinish && fillError === OKAY
   tagArr.io.waddr := idxOf(reqA2)
   tagArr.io.wdata := tagOf(reqA2)
 
   // Valid: set on fill, cleared on flush (above)
-  when(fillFinish) {
+  when(fillFinish && fillError === OKAY) {
     validArr(idxOf(reqA2)) := true.B
   }
 
   // Data: fill completion only
-  dataArr.io.wen   := fillFinish
+  dataArr.io.wen   := fillFinish && fillError === OKAY
   dataArr.io.waddr := idxOf(reqA2)
   dataArr.io.wdata := catData
 
