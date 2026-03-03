@@ -6,13 +6,15 @@ import chisel3.assert.Assert
 
 class CsrFile extends Module {
   val io = IO(new Bundle {
-    val ecall   = Input(Bool())
-    val idxr    = Input(Tp.CsrIdxType())
-    val idxw    = Input(Tp.CsrIdxType())
-    val wrEn    = Input(Bool())
-    val instRet = Input(Bool())
-    val data    = Input(Tp.RegType())
-    val out     = Output(Tp.RegType())
+    val idxr      = Input(Tp.CsrIdxType())
+    val idxw      = Input(Tp.CsrIdxType())
+    val wrEn      = Input(Bool())
+    val instRet   = Input(Bool())
+    val data      = Input(Tp.RegType())
+    val out       = Output(Tp.RegType())
+    val excpValid = Input(Bool())
+    val excpPC    = Input(Tp.AddrType())
+    val excpCause = Input(UInt(4.W))
   })
 
   val mcycle  = RegInit(0.U(ISA.RegBits.W))
@@ -72,8 +74,9 @@ class CsrFile extends Module {
   //     + cf" C[${io.idxw}%x] <${io.wrEn} ${io.data}%x\n"
   // )
 
-  when(io.ecall) {
-    mcause := 11.U
+  when(io.excpValid) {
+    mepc   := io.excpPC
+    mcause := io.excpCause
   }
 
   if (GlbCtrl.debug) {
@@ -144,12 +147,13 @@ class RegFile extends Module {
   out.rs1Val  := gpr.io.rs1V
   out.rs2Val  := gpr.io.rs2V
 
-  csr.io.idxr    := ioid.csrr
-  csr.io.idxw    := iowb.csrRd
-  csr.io.wrEn    := iowb.csrWE && wbValid
-  csr.io.data    := iowb.csrIn
-  csr.io.ecall   := ioid.ecall && io.fromId.valid
-  // WBU would not stall, thus # of valid == # of inst
-  csr.io.instRet := wbValid
-  out.csrVal     := csr.io.out
+  csr.io.idxr      := ioid.csrr
+  csr.io.idxw      := iowb.csrRd
+  csr.io.wrEn      := iowb.csrWE && wbValid
+  csr.io.data      := iowb.csrIn
+  csr.io.excpValid := iowb.excpValid && wbValid
+  csr.io.excpPC    := iowb.excpPC
+  csr.io.excpCause := iowb.excpCause
+  csr.io.instRet   := wbValid
+  out.csrVal       := csr.io.out
 }

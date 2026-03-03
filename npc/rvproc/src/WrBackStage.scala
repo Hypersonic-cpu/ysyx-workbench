@@ -53,12 +53,15 @@ class WrBackStage extends Module {
   // }
 
   val ioreg = io.toReg.bits
-  ioreg.csrWE := iofw.csrWE
-  ioreg.csrIn := iols.aluOut
-  ioreg.csrRd := iofw.csrRd
-  ioreg.gprWE := iofw.gprWE
-  ioreg.gprIn := iWbu.io.gprdt
-  ioreg.gprRd := iofw.gprRd
+  ioreg.csrWE     := iofw.csrWE
+  ioreg.csrIn     := iols.aluOut
+  ioreg.csrRd     := iofw.csrRd
+  ioreg.gprWE     := iofw.gprWE
+  ioreg.gprIn     := iWbu.io.gprdt
+  ioreg.gprRd     := iofw.gprRd
+  ioreg.excpValid := iofw.ecall
+  ioreg.excpPC    := iofw.pc
+  ioreg.excpCause := iofw.mcause
 
   /** Forward */
   io.fwdDet.valid := io.in.valid

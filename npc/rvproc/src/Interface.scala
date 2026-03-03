@@ -15,10 +15,9 @@ class FetchToDecode extends Bundle {
 }
 
 class RegFromIDU extends Bundle {
-  val rs1   = Tp.RegIdxType()
-  val rs2   = Tp.RegIdxType()
-  val csrr  = Tp.CsrIdxType()
-  val ecall = Bool()
+  val rs1  = Tp.RegIdxType()
+  val rs2  = Tp.RegIdxType()
+  val csrr = Tp.CsrIdxType()
 }
 
 class RegToIDU extends Bundle {
@@ -35,6 +34,10 @@ class RegFromWBU extends Bundle {
   val csrRd = Tp.CsrIdxType()
   val csrWE = Bool()
   val csrIn = Tp.RegType()
+
+  val excpValid = Bool()
+  val excpPC    = Tp.AddrType()
+  val excpCause = UInt(4.W)
 }
 
 object AluOp extends ChiselEnum {

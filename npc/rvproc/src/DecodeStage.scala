@@ -104,7 +104,7 @@ class IDU extends Module {
       isMret  -> 0x341.U  // mepc
     )
   )
-  io.csriw := Mux(isEcall, 0x341.U, csrid12)
+  io.csriw := csrid12
 
   val immU = io.inst(31, 12) << 12
   val immS =
@@ -134,8 +134,8 @@ class IDU extends Module {
     opName === InstOp.OpReg || opName === InstOp.OpImm
   val instBr    = opName === InstOp.Branch
   val instSys   = opName === InstOp.System
-  val sysOp     = Mux(isEcall, CsrOp.CsrRW, CsrOp(funct3(1, 0)))
-  val instCsr   = instSys && (sysOp =/= CsrOp.None)
+  val sysOp   = CsrOp(funct3(1, 0))
+  val instCsr = instSys && (sysOp =/= CsrOp.None)
   io.csralu := instCsr && sysOp =/= CsrOp.CsrRW
 
   /** ALU commands -> EXU */
@@ -154,8 +154,7 @@ class IDU extends Module {
   io.aluEn            := aluEn
   io.aluSel.rs1SelPC  :=
     opName === InstOp.Auipc ||
-      opName === InstOp.Jal ||
-      isEcall
+      opName === InstOp.Jal
   io.aluSel.rs2SelImm := instTp =/= ITYPE.tR && instTp =/= ITYPE.tB
   io.aluSel.brSelCsr  := isEcall || isMret
 
@@ -291,11 +290,10 @@ class DecodeStage extends Module {
   io.fenceI.bits := iDec.io.fenceI
 
   /** Reg Read */
-  io.toReg.valid      := io.in.valid
-  io.toReg.bits.rs1   := iDec.io.rs1
-  io.toReg.bits.rs2   := iDec.io.rs2
-  io.toReg.bits.csrr  := iDec.io.csrir
-  io.toReg.bits.ecall := iDec.io.ecall
+  io.toReg.valid     := io.in.valid
+  io.toReg.bits.rs1  := iDec.io.rs1
+  io.toReg.bits.rs2  := iDec.io.rs2
+  io.toReg.bits.csrr := iDec.io.csrir
   io.fromReg.ready    := true.B
   val rs1Val =
     Mux(io.fwdRes.rs1fw, io.fwdRes.rs1dt, io.fromReg.bits.rs1Val)
