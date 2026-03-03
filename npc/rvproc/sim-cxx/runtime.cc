@@ -135,6 +135,7 @@ pmem_write(addr_t awaddr, ureg_t wdata, uint8_t wstrb) {
 
   if (awaddr == SerialAddr) [[unlikely]] {
     putchar(wdata);
+    if (pdiff) pdiff->markDeviceAccess();
   } else {
     unifiedMem->writeWord(awaddr & ~3U, wdata, wstrb);
   }

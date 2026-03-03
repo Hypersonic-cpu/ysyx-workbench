@@ -151,6 +151,10 @@ public:
     }
     fire = false;
 
+    if (device_access) {
+      copy();
+      return {};
+    }
     iota();
     auto ret = match();
     copy();
@@ -165,6 +169,11 @@ public:
   void
   setFire() {
     fire = true;
+  }
+
+  void
+  markDeviceAccess() {
+    device_access = true;
   }
 };
 } // namespace trace
