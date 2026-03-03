@@ -15,10 +15,9 @@ class FetchToDecode extends Bundle {
 }
 
 class RegFromIDU extends Bundle {
-  val rs1   = Tp.RegIdxType()
-  val rs2   = Tp.RegIdxType()
-  val csrr  = Tp.CsrIdxType()
-  val ecall = Bool()
+  val rs1  = Tp.RegIdxType()
+  val rs2  = Tp.RegIdxType()
+  val csrr = Tp.CsrIdxType()
 }
 
 class RegToIDU extends Bundle {
@@ -35,6 +34,10 @@ class RegFromWBU extends Bundle {
   val csrRd = Tp.CsrIdxType()
   val csrWE = Bool()
   val csrIn = Tp.RegType()
+
+  val excpValid = Bool()
+  val excpPC    = Tp.AddrType()
+  val excpCause = UInt(4.W)
 }
 
 object AluOp extends ChiselEnum {
@@ -134,8 +137,8 @@ class DecodeFoward extends Bundle {
   val ecall  = Bool()
   val fenceI = Bool()
   val csrVal = Tp.RegType()
-  // PC is debug only...
-  val pc     = UInt((if (GlbCtrl.debug) 32 else 0).W)
+  val mcause = UInt(4.W)
+  val pc     = Tp.AddrType()
   val inst   = UInt((if (GlbCtrl.debug) 32 else 0).W)
 
   // Removed by compiler when not debugging.
