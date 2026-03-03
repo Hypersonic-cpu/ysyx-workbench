@@ -127,7 +127,10 @@ private:
     }
     cs_insn* insn;
     size_t count = cs_disasm_dl(handle, code, nbyte, pc, 0, &insn);
-    v_assert(count == 1, "Failed to disassemble `", str, "'");
+    if (count != 1) {
+      snprintf(str, size, "<illegal>");
+      return;
+    }
     int ret = snprintf(str, size, "%s", insn->mnemonic);
     if (insn->op_str[0] != '\0') {
       snprintf(str + ret, size - ret, "\t%s", insn->op_str);
