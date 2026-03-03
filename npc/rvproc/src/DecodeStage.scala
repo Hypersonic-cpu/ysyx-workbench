@@ -232,7 +232,10 @@ class IDU extends Module {
     * 0 + csr We directly pass 0 + src1 to ALU and use ALU result as
     * csrdt.
     */
-  io.csrWE := instCsr
+  // RISC-V spec: CSRRS/CSRRC (and CSRRSI/CSRRCI) with rs1/uimm=0 must NOT write CSR
+  val csrNoWrite =
+    (sysOp === CsrOp.CsrRS || sysOp === CsrOp.CsrRC) && io.rs1 === 0.U
+  io.csrWE := instCsr && !csrNoWrite
 }
 
 class DecodeStage extends Module {
