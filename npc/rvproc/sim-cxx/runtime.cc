@@ -238,6 +238,7 @@ notify_commit(uint32_t pc, uint32_t inst, unsigned char stalltp) {
     pdiff->checkDeviceInst(inst);
     pdiff->upd_dut_pc(pc);
     pdiff->setFire();
+    fprintf(stderr, "[DT] commit pc=%08x inst=%08x\n", pc, inst);
   }
 }
 

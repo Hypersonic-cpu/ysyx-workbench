@@ -107,12 +107,16 @@ public:
     if ((inst & 0x7f) == STORE_OPCODE && device_writes_pending > 0) {
       device_access = true;
       device_writes_pending--;
+      fprintf(stderr, "[DT] Skip store inst %08x (pending=%d)\n",
+              inst, device_writes_pending);
     }
   }
 
   void
   notifyDeviceWrite() {
     device_writes_pending++;
+    fprintf(stderr, "[DT] Device write (pending=%d)\n",
+            device_writes_pending);
   }
 
   auto
