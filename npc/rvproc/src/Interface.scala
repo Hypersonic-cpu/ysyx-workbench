@@ -134,8 +134,7 @@ class DecodeFoward extends Bundle {
   val ecall  = Bool()
   val fenceI = Bool()
   val csrVal = Tp.RegType()
-  // PC is debug only...
-  val pc     = UInt((if (GlbCtrl.debug) 32 else 0).W)
+  val pc     = Tp.AddrType()
   val inst   = UInt((if (GlbCtrl.debug) 32 else 0).W)
 
   // Removed by compiler when not debugging.

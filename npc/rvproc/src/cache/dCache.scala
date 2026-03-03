@@ -38,8 +38,8 @@ class dCache(conf: iCacheConf) extends Module {
     RegInit(VecInit(Seq.fill(conf.numSets)(false.B)))
 
   val idle :: lookup :: evict :: filling :: flushing :: Nil = Enum(5)
-  val state                                     = RegInit(idle)
-  val nextState                                 = WireInit(idle)
+  val state                                                 = RegInit(idle)
+  val nextState                                             = WireInit(idle)
 
   def idxOf(x: UInt) = x(conf.idxBitHi, conf.idxBitLo)
   def tagOf(x: UInt) = x(conf.tagBitHi, conf.tagBitLo)
@@ -80,7 +80,7 @@ class dCache(conf: iCacheConf) extends Module {
   val flushAllDone     = RegInit(false.B)
   val flushPending     = RegInit(false.B)
   val flushDone        = flushAllDone
-  io.flushing          := state === flushing
+  io.flushing := state === flushing
 
   // Tag compare result (valid in lookup cycle)
   val tagHit = Wire(Bool())
@@ -196,20 +196,20 @@ class dCache(conf: iCacheConf) extends Module {
   dataArr.io.wdata := mergedLine.asUInt
 
   // Latch flushAll pulse so it isn't missed if dCache is busy
-  when(io.flushAll)                       { flushPending := true.B }
-  when(state === idle && flushPending)    { flushPending := false.B }
+  when(io.flushAll) { flushPending := true.B }
+  when(state === idle && flushPending) { flushPending := false.B }
 
   val flushTrigger = io.flushAll || flushPending
 
   // FSM
   nextState := MuxLookup(state, idle)(
     Seq(
-      idle -> Mux(
+      idle     -> Mux(
         flushTrigger,
         flushing,
         Mux(cpuReq, lookup, idle)
       ),
-      lookup -> Mux(
+      lookup   -> Mux(
         tagHit,
         idle,
         Mux(needEvict, evict, filling)
@@ -223,7 +223,7 @@ class dCache(conf: iCacheConf) extends Module {
       flushing -> Mux(flushDone, idle, flushing)
     )
   )
-  state := nextState
+  state     := nextState
 
   // idle: nothing extra
   // lookup: respond on hit or start eviction/fill
@@ -364,7 +364,7 @@ class dCache(conf: iCacheConf) extends Module {
           i * ISA.RegBits
         )
       }
-      evictPtr         := 0.U
+      evictPtr := 0.U
       awSent           := false.B
       wDone            := false.B
       bRecvd           := false.B

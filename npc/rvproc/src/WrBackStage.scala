@@ -45,7 +45,7 @@ class WrBackStage extends Module {
   iWbu.io.aluV  := iols.aluOut
   iWbu.io.memV  := iols.lsuOut
   iWbu.io.csrV  := iofw.csrVal
-  iWbu.io.pc    := iols.aluOut // iofw.pc
+  iWbu.io.pc    := iofw.pc
   iWbu.io.wbSel := iofw.wbSel
 
   // when(io.in.valid) {

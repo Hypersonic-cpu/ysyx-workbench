@@ -117,15 +117,17 @@ class rvCore(
 
     if (GlbCtrl.hasDCache) {
       val l1d = Module(new dCache(this.l1dConf))
-      l1d.io.cpuSide  <> dSplit.io.devices(0)
+      l1d.io.cpuSide <> dSplit.io.devices(0)
       l1d.io.flushAll := wbs.io.fenceI
       val fenceOnce = RegInit(false.B)
-      when(ids.io.fenceI.bits && ids.io.fenceI.valid) { fenceOnce := true.B }
+      when(ids.io.fenceI.bits && ids.io.fenceI.valid) {
+        fenceOnce := true.B
+      }
         .elsewhen(
           fenceOnce && RegNext(l1d.io.flushing) && !l1d.io.flushing
         ) { fenceOnce := false.B }
       ifs.io.fromLs := !fenceOnce
-      val arbiter = Module(new AXIArbiter(4))
+      val arbiter   = Module(new AXIArbiter(4))
       AXIPortPassing(io.master, arbiter.io.device)
       arbiter.io.hosts(0) <> icache.io.memSide
       arbiter.io.hosts(1) <> iSplit.io.devices(1)
@@ -153,41 +155,39 @@ class rvCore(
           3,
           Seq(
             (x: UInt) => (x >= 0x8000_0000L.U),
-            (x: UInt) =>
-              (x >= 0x0f00_0000L.U && x < 0x8000_0000L.U),
-            (x: UInt) =>
-              (x >= 0x0200_0000L.U && x <= 0x0201_0000L.U)
+            (x: UInt) => (x >= 0x0f00_0000L.U && x < 0x8000_0000L.U),
+            (x: UInt) => (x >= 0x0200_0000L.U && x <= 0x0201_0000L.U)
           )
         )
       )
       dSplit.io.host <> lss.io.dMem
       dSplit.io.devices(2) <> clint.io.port
-      val l1d = Module(new dCache(this.l1dConf))
-      l1d.io.cpuSide  <> dSplit.io.devices(0)
+      val l1d    = Module(new dCache(this.l1dConf))
+      l1d.io.cpuSide <> dSplit.io.devices(0)
       l1d.io.flushAll := wbs.io.fenceI
       val fenceOnce = RegInit(false.B)
-      when(ids.io.fenceI.bits && ids.io.fenceI.valid) { fenceOnce := true.B }
+      when(ids.io.fenceI.bits && ids.io.fenceI.valid) {
+        fenceOnce := true.B
+      }
         .elsewhen(
           fenceOnce && RegNext(l1d.io.flushing) && !l1d.io.flushing
         ) { fenceOnce := false.B }
       ifs.io.fromLs := !fenceOnce
-      val arbiter = Module(new AXIArbiter(3))
+      val arbiter   = Module(new AXIArbiter(3))
       arbiter.io.hosts(0) <> icache.io.memSide
       arbiter.io.hosts(1) <> l1d.io.memSide
       arbiter.io.hosts(2) <> dSplit.io.devices(1)
-      val pMem = Module(new PMemBox)
+      val pMem      = Module(new PMemBox)
       pMem.io.master <> arbiter.io.device
       io.master := DontCare
     } else {
       ifs.io.fromLs := true.B
-      val dSplit = Module(
+      val dSplit  = Module(
         new AXIXBar(
           2,
           Seq(
-            (x: UInt) =>
-              (x >= 0x0f00_0000L.U && x <= 0xffff_ffffL.U),
-            (x: UInt) =>
-              (x >= 0x0200_0000L.U && x <= 0x0201_0000L.U)
+            (x: UInt) => (x >= 0x0f00_0000L.U && x <= 0xffff_ffffL.U),
+            (x: UInt) => (x >= 0x0200_0000L.U && x <= 0x0201_0000L.U)
           )
         )
       )
@@ -196,7 +196,7 @@ class rvCore(
       val arbiter = Module(new AXIArbiter(2))
       arbiter.io.hosts(0) <> icache.io.memSide
       arbiter.io.hosts(1) <> dSplit.io.devices(0)
-      val pMem = Module(new PMemBox)
+      val pMem    = Module(new PMemBox)
       pMem.io.master <> arbiter.io.device
       io.master := DontCare
     }
