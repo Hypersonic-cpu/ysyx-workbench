@@ -7,11 +7,13 @@ import chisel3.assert.Assert
 import chisel3._
 
 class FetchToDecode extends Bundle {
-  val pc         = Tp.RegType()
-  val inst       = Tp.RegType()
-  val predTaken  = Bool()
-  val predTarget = Tp.AddrType()
-  val predBtbHit = Bool()
+  val pc           = Tp.RegType()
+  val inst         = Tp.RegType()
+  val predTaken    = Bool()
+  val predTarget   = Tp.AddrType()
+  val predBtbHit   = Bool()
+  val ifuExcp      = Bool()
+  val ifuExcpCause = UInt(4.W)
 }
 
 class RegFromIDU extends Bundle {
@@ -21,9 +23,10 @@ class RegFromIDU extends Bundle {
 }
 
 class RegToIDU extends Bundle {
-  val rs1Val = Tp.RegType()
-  val rs2Val = Tp.RegType()
-  val csrVal = Tp.RegType()
+  val rs1Val   = Tp.RegType()
+  val rs2Val   = Tp.RegType()
+  val csrVal   = Tp.RegType()
+  val mtvecVal = Tp.RegType()
 }
 
 class RegFromWBU extends Bundle {
@@ -140,6 +143,10 @@ class DecodeFoward extends Bundle {
   val mcause = UInt(4.W)
   val pc     = Tp.AddrType()
   val inst   = UInt((if (GlbCtrl.debug) 32 else 0).W)
+
+  val excpValid      = Bool()
+  val excpNeedsFlush = Bool()
+  val mtvecVal       = Tp.RegType()
 
   // Removed by compiler when not debugging.
   val stallT = StallCause()

@@ -246,10 +246,6 @@ class XBarRead(N: Int, amap: Seq[UInt => Bool]) extends Module {
   )
   val tarIdx    = tarIdxExt(IdxWidth, 1)
   val decodeErr = tarIdxExt(0)
-  assert(
-    io.host.ar.valid Implies (!decodeErr),
-    cf"Encoutering un-mapped read @ raddr ${io.host.ar.bits.addr}%x"
-  )
   val usingIdx  = Mux(state === idle, tarIdx, serveId)
 
   val pivot = io.devices(usingIdx)
@@ -316,11 +312,6 @@ class XBarWrite(N: Int, amap: Seq[UInt => Bool]) extends Module {
   )
   val tarIdx    = tarIdxExt(IdxWidth, 1)
   val decodeErr = tarIdxExt(0)
-  assert(
-    io.host.aw.valid Implies (!decodeErr),
-    cf"Encoutering un-mapped write "
-      + cf"waddr ${io.host.aw.bits.addr}%x data ${io.host.w.bits.data}%x "
-  )
   val usingIdx  = Mux(state === idle, tarIdx, serveId)
 
   val pivot = io.devices(usingIdx)

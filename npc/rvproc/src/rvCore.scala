@@ -50,6 +50,15 @@ class rvCore(
   wbs.io.toReg <> reg.io.fromWb
   // wbs.io.toFetch <> ifs.io.fromWb
 
+  // Exception flush wiring
+  val mtvecWire = reg.io.mtvecOut
+  wbs.io.mtvecIn      := mtvecWire
+  ifs.io.wbExcp       := wbs.io.excpFlushOut
+  ifs.io.wbExcpTarget := mtvecWire
+  ids.io.excpFlush    := wbs.io.excpFlushOut
+  exs.io.excpFlush    := wbs.io.excpFlushOut
+  lss.io.excpFlush    := wbs.io.excpFlushOut
+
   ids.io.toReg <> reg.io.fromId
   ids.io.fenceI.ready := true.B
   reg.io.toId <> ids.io.fromReg
@@ -150,19 +159,23 @@ class rvCore(
       ids.io.fenceI.bits && ids.io.fenceI.valid
 
     if (GlbCtrl.hasDCache) {
-      val dSplit = Module(
+      val faultSlverr =
+        Module(new device.FaultBox(slverr = true))
+      val dSplit      = Module(
         new AXIXBar(
-          3,
+          4,
           Seq(
             (x: UInt) => (x >= 0x8000_0000L.U),
             (x: UInt) => (x >= 0x0f00_0000L.U && x < 0x8000_0000L.U),
-            (x: UInt) => (x >= 0x0200_0000L.U && x <= 0x0201_0000L.U)
+            (x: UInt) => (x >= 0x0200_0000L.U && x <= 0x0201_0000L.U),
+            (x: UInt) => (x(31, 16) === 0x0a00.U)
           )
         )
       )
       dSplit.io.host <> lss.io.dMem
       dSplit.io.devices(2) <> clint.io.port
-      val l1d    = Module(new dCache(this.l1dConf))
+      dSplit.io.devices(3) <> faultSlverr.io.port
+      val l1d         = Module(new dCache(this.l1dConf))
       l1d.io.cpuSide <> dSplit.io.devices(0)
       l1d.io.flushAll := wbs.io.fenceI
       val fenceOnce = RegInit(false.B)
@@ -170,34 +183,84 @@ class rvCore(
         fenceOnce := true.B
       }
         .elsewhen(
-          fenceOnce && RegNext(l1d.io.flushing) && !l1d.io.flushing
+          fenceOnce && RegNext(
+            l1d.io.flushing
+          ) && !l1d.io.flushing
         ) { fenceOnce := false.B }
       ifs.io.fromLs := !fenceOnce
-      val arbiter   = Module(new AXIArbiter(3))
+
+      val locXbar      = Module(
+        new AXIXBar(
+          3,
+          Seq(
+            (x: UInt) =>
+              (x(31, 16) =/= 0x0a00.U &&
+                x(31, 16) =/= 0x0b00.U),
+            (x: UInt) => (x(31, 16) === 0x0a00.U),
+            (x: UInt) => (x(31, 16) === 0x0b00.U)
+          )
+        )
+      )
+      val iFaultSlverr =
+        Module(new device.FaultBox(slverr = true))
+      val iFaultDecerr =
+        Module(new device.FaultBox(slverr = false))
+      locXbar.io.devices(1) <> iFaultSlverr.io.port
+      locXbar.io.devices(2) <> iFaultDecerr.io.port
+
+      val arbiter = Module(new AXIArbiter(3))
       arbiter.io.hosts(0) <> icache.io.memSide
       arbiter.io.hosts(1) <> l1d.io.memSide
       arbiter.io.hosts(2) <> dSplit.io.devices(1)
-      val pMem      = Module(new PMemBox)
-      pMem.io.master <> arbiter.io.device
+      locXbar.io.host <> arbiter.io.device
+
+      val pMem = Module(new PMemBox)
+      pMem.io.master <> locXbar.io.devices(0)
       io.master := DontCare
     } else {
       ifs.io.fromLs := true.B
-      val dSplit  = Module(
+      val faultSlverr =
+        Module(new device.FaultBox(slverr = true))
+      val dSplit      = Module(
         new AXIXBar(
-          2,
+          3,
           Seq(
             (x: UInt) => (x >= 0x0f00_0000L.U && x <= 0xffff_ffffL.U),
-            (x: UInt) => (x >= 0x0200_0000L.U && x <= 0x0201_0000L.U)
+            (x: UInt) => (x >= 0x0200_0000L.U && x <= 0x0201_0000L.U),
+            (x: UInt) => (x(31, 16) === 0x0a00.U)
           )
         )
       )
       dSplit.io.host <> lss.io.dMem
       dSplit.io.devices(1) <> clint.io.port
+      dSplit.io.devices(2) <> faultSlverr.io.port
+
+      val locXbar      = Module(
+        new AXIXBar(
+          3,
+          Seq(
+            (x: UInt) =>
+              (x(31, 16) =/= 0x0a00.U &&
+                x(31, 16) =/= 0x0b00.U),
+            (x: UInt) => (x(31, 16) === 0x0a00.U),
+            (x: UInt) => (x(31, 16) === 0x0b00.U)
+          )
+        )
+      )
+      val iFaultSlverr =
+        Module(new device.FaultBox(slverr = true))
+      val iFaultDecerr =
+        Module(new device.FaultBox(slverr = false))
+      locXbar.io.devices(1) <> iFaultSlverr.io.port
+      locXbar.io.devices(2) <> iFaultDecerr.io.port
+
       val arbiter = Module(new AXIArbiter(2))
       arbiter.io.hosts(0) <> icache.io.memSide
       arbiter.io.hosts(1) <> dSplit.io.devices(0)
-      val pMem    = Module(new PMemBox)
-      pMem.io.master <> arbiter.io.device
+      locXbar.io.host <> arbiter.io.device
+
+      val pMem = Module(new PMemBox)
+      pMem.io.master <> locXbar.io.devices(0)
       io.master := DontCare
     }
   }

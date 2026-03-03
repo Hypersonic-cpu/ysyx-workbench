@@ -60,7 +60,8 @@ class IDU extends Module {
     val csrir = Output(Tp.CsrIdxType())
 
     // for PMU
-    val opname = Output(InstOp())
+    val opname  = Output(InstOp())
+    val opValid = Output(Bool())
   })
 
   val opcode  = io.inst(6, 0)
@@ -70,7 +71,8 @@ class IDU extends Module {
   val csrid12 = io.inst(31, 20)
 
   val (opName, opValid) = InstOp.safe(opcode(6, 2))
-  io.opname := Mux(opValid, opName, InstOp.Reserve);
+  io.opname  := Mux(opValid, opName, InstOp.Reserve);
+  io.opValid := opValid
   val sysRel   =
     (opName === InstOp.System) && ~io.inst(19, 7).orR
   val isEbreak = sysRel && csrid12 === 1.U
@@ -134,8 +136,8 @@ class IDU extends Module {
     opName === InstOp.OpReg || opName === InstOp.OpImm
   val instBr    = opName === InstOp.Branch
   val instSys   = opName === InstOp.System
-  val sysOp   = CsrOp(funct3(1, 0))
-  val instCsr = instSys && (sysOp =/= CsrOp.None)
+  val sysOp     = CsrOp(funct3(1, 0))
+  val instCsr   = instSys && (sysOp =/= CsrOp.None)
   io.csralu := instCsr && sysOp =/= CsrOp.CsrRW
 
   /** ALU commands -> EXU */
@@ -231,21 +233,6 @@ class IDU extends Module {
     * csrdt.
     */
   io.csrWE := instCsr
-
-  if (GlbCtrl.debug) {
-    val lastBr = RegNext(io.brInst.isBr)
-    when(io.valid) {
-      assert(
-        !opValid Implies lastBr,
-        cf"Invalid opcode encountered: pc ${io.pc}%x : inst ${io.inst}%x"
-      )
-      assert(
-        io.valid Implies (lastBr || rvBase),
-        cf"Inst[1:0] is not 0b11: opcode=${opcode}%x"
-      )
-    }
-  }
-
 }
 
 class DecodeStage extends Module {
@@ -256,11 +243,12 @@ class DecodeStage extends Module {
     val fromReg = Flipped(Decoupled(new RegToIDU))
     val toReg   = Decoupled(new RegFromIDU)
 
-    val fenceI = Decoupled(Bool())
-    val flush  = Flipped(Decoupled(Bool()))
-    val rawSrc = new DecodeHazard
+    val fenceI    = Decoupled(Bool())
+    val flush     = Flipped(Decoupled(Bool()))
+    val rawSrc    = new DecodeHazard
     // val rawRes = Input(Bool())
-    val fwdRes = Input(new SourceFoward)
+    val fwdRes    = Input(new SourceFoward)
+    val excpFlush = Input(Bool())
   })
 
   val flushed = io.flush.bits
@@ -281,8 +269,8 @@ class DecodeStage extends Module {
 
   io.in.ready     := io.out.ready && !waitRAW
   // Flush IF and ID when brAbs (result on )
-  io.out.valid    := validCtrl && !waitRAW
-  io.fenceI.valid := validCtrl && !waitRAW
+  io.out.valid    := validCtrl && !waitRAW && !io.excpFlush
+  io.fenceI.valid := validCtrl && !waitRAW && !io.excpFlush
 
   iDec.io.valid := validCtrl
 
@@ -294,7 +282,7 @@ class DecodeStage extends Module {
   io.toReg.bits.rs1  := iDec.io.rs1
   io.toReg.bits.rs2  := iDec.io.rs2
   io.toReg.bits.csrr := iDec.io.csrir
-  io.fromReg.ready    := true.B
+  io.fromReg.ready   := true.B
   val rs1Val =
     Mux(io.fwdRes.rs1fw, io.fwdRes.rs1dt, io.fromReg.bits.rs1Val)
   val rs2Val =
@@ -332,10 +320,44 @@ class DecodeStage extends Module {
   iofw.ebreak := iDec.io.ebreak
   iofw.ecall  := iDec.io.ecall
   iofw.fenceI := iDec.io.fenceI
-  iofw.mcause := Mux(iDec.io.ecall, 11.U, 0.U)
   iofw.pc     := ioif.pc
   iofw.inst   := io.in.bits.inst
   iofw.csrVal := csrVal
+
+  // Exception detection
+  val mtvecVal     = io.fromReg.bits.mtvecVal
+  val pcMisaligned = ioif.pc(1, 0).orR
+  val ifuExcp      = ioif.ifuExcp
+  val rvBase       = ioif.inst(1, 0) === "b11".U(2.W)
+  val isIllegal    = !iDec.io.opValid || !rvBase
+  val isIdExcp     =
+    validCtrl && (pcMisaligned || ifuExcp || isIllegal)
+  val isEcall      = iDec.io.ecall
+  val isExcp       = isIdExcp || isEcall
+
+  iofw.excpValid      := isExcp
+  iofw.excpNeedsFlush := false.B
+  iofw.mtvecVal       := mtvecVal
+  iofw.mcause         := MuxCase(
+    0.U,
+    Seq(
+      pcMisaligned -> 0.U,
+      ifuExcp      -> ioif.ifuExcpCause,
+      isIllegal    -> 2.U,
+      isEcall      -> 11.U
+    )
+  )
+
+  // Override decode for non-ecall IDU exceptions
+  when(isIdExcp) {
+    ioex.aluSel.brSelCsr := true.B
+    ioex.brInst.isAbs    := true.B
+    ioex.brInst.isBr     := true.B
+    ioex.memOp.len       := MemLen.None
+    iofw.gprWE           := false.B
+    iofw.csrWE           := false.B
+    iofw.csrVal          := mtvecVal
+  }
 
   if (GlbCtrl.debug) {
     iofw.stallT := Mux(
