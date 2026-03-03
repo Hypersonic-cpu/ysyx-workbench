@@ -32,6 +32,7 @@ private:
 
   bool device_access;
   bool fire;
+  int device_writes_pending;
   ureg_t delayed_ref_pc;
   ureg_t delayed_dut_pc;
 
@@ -75,6 +76,7 @@ public:
   DiffTester(const std::vector<ureg_t>& image)
       : device_access{false}
       , fire{false}
+      , device_writes_pending{0}
       , delayed_dut_pc{0xffff'ffffU}
       , delayed_ref_pc{ResetVector} {
     init(image);
@@ -98,6 +100,20 @@ public:
   // if (is_csr && diff_csrs) {
   //   device_access = true;
   // }
+
+  void
+  checkDeviceInst(uint32_t inst) {
+    constexpr uint32_t STORE_OPCODE = 0b0100011;
+    if ((inst & 0x7f) == STORE_OPCODE && device_writes_pending > 0) {
+      device_access = true;
+      device_writes_pending--;
+    }
+  }
+
+  void
+  notifyDeviceWrite() {
+    device_writes_pending++;
+  }
 
   auto
   match() noexcept -> std::vector<std::tuple<uint16_t, uint32_t, uint32_t>> {
@@ -169,11 +185,6 @@ public:
   void
   setFire() {
     fire = true;
-  }
-
-  void
-  markDeviceAccess() {
-    device_access = true;
   }
 };
 } // namespace trace
