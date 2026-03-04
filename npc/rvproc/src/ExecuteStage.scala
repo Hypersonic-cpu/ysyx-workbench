@@ -173,7 +173,6 @@ class ExecuteStage extends Module {
 
   /** Back to Decoder */
   io.brDet.valid := validCtrl && !io.excpFlush
-  io.brDet.bits  := validCtrl && !io.excpFlush && mispred
 
   /** To LSU, AluOut = Addr */
   iols.aluOut := iExe.io.aluOut
@@ -207,6 +206,10 @@ class ExecuteStage extends Module {
   val storeMisalign =
     validCtrl && isStore && (wordMis || halfMis)
   val excpMisalign  = loadMisalign || storeMisalign
+
+  // Flush IDU/EXU on misprediction OR misalignment exception
+  io.brDet.bits :=
+    validCtrl && !io.excpFlush && (mispred || excpMisalign)
 
   when(excpMisalign) {
     iobk.brAbs            := true.B
