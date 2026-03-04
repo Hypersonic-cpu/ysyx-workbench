@@ -165,7 +165,7 @@ main(int argc, char* argv[]) {
   vmem = vmemBin.get();
 #else
   auto uMem = std::make_unique<RuntimeBin>(
-    options::binary_img, (4U << 20) / 4, 0x8000'0000LLU, "UnifiedMem");
+    options::binary_img, (128U << 20) / 4, 0x8000'0000LLU, "UnifiedMem");
   unifiedMem = uMem.get();
 #endif
 
