@@ -4,7 +4,11 @@ import java.nio.file.Paths
 object Elaborate extends App {
   println(s"-> Elaborate Argv: ${args.mkString(":")}")
 
-  val cfg = ElaborConfig.parseArgs(args, debugDefault = true, staDefault = false)
+  val cfg = ElaborConfig.parseArgs(
+    args,
+    debugDefault = true,
+    staDefault = false
+  )
 
   cfg.l1iConfig.printConf()
 
@@ -25,7 +29,11 @@ object Elaborate extends App {
   )
 
   circt.stage.ChiselStage.emitSystemVerilogFile(
-    new rvproc.rvCoreWrapper(cfg.isSocMode, cfg.l1iConfig, cfg.l1dConfig),
+    new rvproc.rvCoreWrapper(
+      cfg.isSocMode,
+      cfg.l1iConfig,
+      cfg.l1dConfig
+    ),
     cfg.restArgs,
     firtoolOptions
   )

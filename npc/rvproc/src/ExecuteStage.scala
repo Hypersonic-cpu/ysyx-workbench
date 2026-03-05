@@ -140,7 +140,7 @@ class ExecuteStage extends Module {
 
   /** Back to Fetch */
   io.toFetch.valid := validCtrl && !io.excpFlush
-  val iobk = io.toFetch.bits
+  val iobk         = io.toFetch.bits
   val actualTaken  = iExe.io.brRel || iExe.io.brAbs
   val actualTarget = Mux(
     iExe.io.brAbs,
@@ -151,7 +151,7 @@ class ExecuteStage extends Module {
   iobk.brTarget := actualTarget
   iobk.brLPC    := ioid.pc
 
-  val mispred      = validCtrl && ioid.brInst.isBr && (
+  val mispred = validCtrl && ioid.brInst.isBr && (
     (actualTaken =/= ioid.predTaken) ||
       (actualTaken && ioid.predTaken &&
         actualTarget =/= ioid.predTarget)
