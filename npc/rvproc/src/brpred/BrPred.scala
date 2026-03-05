@@ -5,7 +5,7 @@ import chisel3.util._
 import rvproc.{BTFNT, Bimodal, GlbCtrl, ISA, NoPred, Tp}
 import rvproc.device.CacheArray
 
-case class BrPredConf(numEntries: Int = 64) {
+case class BrPredConf(numEntries: Int = 64, numBtbEnt: Int = 64) {
   require(
     numEntries > 0 && (numEntries & (numEntries - 1)) == 0,
     s"BrPredConf: numEntries must be power of 2, got $numEntries"
@@ -94,7 +94,7 @@ class BTFNTPredictor(conf: BrPredConf) extends BrPred(conf) {
   targetArr.io.raddr := qidx
   targetArr.io.ren   := true.B
 
-  val tagData = if (GlbCtrl.useSram) {
+  val tagData                                     = if (GlbCtrl.useSram) {
     val bypValid  = RegNext(io.updValid && io.updTaken)
     val bypIdx    = RegNext(idxOf(io.updPC))
     val bypTag    = RegNext(tagOf(io.updPC))
@@ -158,15 +158,15 @@ class BTFNTPredictor(conf: BrPredConf) extends BrPred(conf) {
 class BimodalPredictor(conf: BrPredConf) extends BrPred(conf) {
 
   val tagArr    = Module(
-    new CacheArray(conf.numEntries, conf.tagBits)
+    new CacheArray(conf.numBtbEnt, conf.tagBits)
   )
   val targetArr = Module(
-    new CacheArray(conf.numEntries, 32)
+    new CacheArray(conf.numBtbEnt, ISA.AddrBits)
   )
   val validArr  =
-    RegInit(VecInit(Seq.fill(conf.numEntries)(false.B)))
+    RegInit(VecInit(Seq.fill(conf.numBtbEnt)(false.B)))
   val typeArr   =
-    RegInit(VecInit(Seq.fill(conf.numEntries)(false.B)))
+    RegInit(VecInit(Seq.fill(conf.numBtbEnt)(false.B)))
 
   val bhtArr = RegInit(
     VecInit(Seq.fill(conf.numEntries)(1.U(2.W)))
@@ -181,7 +181,7 @@ class BimodalPredictor(conf: BrPredConf) extends BrPred(conf) {
   targetArr.io.raddr := qidx
   targetArr.io.ren   := true.B
 
-  val tagData = if (GlbCtrl.useSram) {
+  val tagData                                     = if (GlbCtrl.useSram) {
     val bypValid  = RegNext(io.updValid && io.updTaken)
     val bypIdx    = RegNext(idxOf(io.updPC))
     val bypTag    = RegNext(tagOf(io.updPC))
@@ -261,7 +261,7 @@ class BimodalPredictor(conf: BrPredConf) extends BrPred(conf) {
 
 object BrPred {
   def apply(): Option[BrPred] = {
-    val conf = BrPredConf(GlbCtrl.bpEntries)
+    val conf = BrPredConf(GlbCtrl.bpEntries, GlbCtrl.btbEntries)
     GlbCtrl.bpType match {
       case NoPred  => None
       case BTFNT   =>

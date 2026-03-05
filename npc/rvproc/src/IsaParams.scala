@@ -23,12 +23,13 @@ case object Tiny     extends ConfigMode
 case object Extended extends ConfigMode
 
 object GlbCtrl {
-  var debug     = true
-  var sta       = false
-  var config    = Extended: ConfigMode
-  var bpType    = Bimodal:  BrPredType
-  var bpEntries = 128
-  var rasSize   = 4
+  var debug      = true
+  var sta        = false
+  var config     = Extended: ConfigMode
+  var bpType     = Bimodal:  BrPredType
+  var bpEntries  = 256
+  var btbEntries = 128
+  var rasSize    = 8
   def useSram:   Boolean = config == Extended
   def hasDCache: Boolean = config == Extended
 }

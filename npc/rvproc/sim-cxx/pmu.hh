@@ -123,6 +123,37 @@ private:
   using icache_t = std::tuple<addr_t, tick_t>;
   std::list<icache_t> icacheboard;
 
+  // Debug ring buffer for ifetch events
+  struct IFEvent {
+    char type; // 'F' = fetch, 'R' = recv
+    addr_t pc;
+    uint64_t tick;
+  };
+  static constexpr size_t kIFRingSz = 64;
+  std::array<IFEvent, kIFRingSz> ifRing{};
+  size_t ifRingIdx{0};
+  void ifRingPush(char t, addr_t pc, uint64_t tk) {
+    ifRing[ifRingIdx % kIFRingSz] = {t, pc, tk};
+    ++ifRingIdx;
+  }
+  void ifRingDump() const {
+    std::cerr << "=== IFetch Event Ring ===\n";
+    size_t start =
+      ifRingIdx > kIFRingSz ? ifRingIdx - kIFRingSz : 0;
+    for (size_t i = start; i < ifRingIdx; ++i) {
+      auto& e = ifRing[i % kIFRingSz];
+      std::cerr << std::format(
+        "  [{}] {} pc={:08x} tick={}\n",
+        i, e.type, e.pc, e.tick);
+    }
+    std::cerr << "=== ifetchboard contents ===\n";
+    for (auto& [a, t] : ifetchboard) {
+      std::cerr << std::format(
+        "  pc={:08x} tick={}\n", a, t);
+    }
+    std::cerr << std::flush;
+  }
+
 public:
   SoftPerfUnit()
       : instboard{}
@@ -186,18 +217,27 @@ public:
 
   void
   notifyIFRecvd(addr_t pc) {
-    v_assert(!ifetchboard.empty(), "Cannot find pc @", pc, "in IF Pipeline");
+    ifRingPush('R', pc, curr_tick());
+    if (ifetchboard.empty()
+        || std::get<0>(ifetchboard.front()) != pc) {
+      ifRingDump();
+    }
+    v_assert(!ifetchboard.empty(),
+             "Cannot find pc @", pc, "in IF Pipeline");
     while (std::get<0>(ifetchboard.front()) != pc) {
       ifetchboard.pop_front();
-      v_assert(!ifetchboard.empty(), "Cannot find pc @", pc,
-               "in IF Pipeline");
+      if (ifetchboard.empty()) { ifRingDump(); }
+      v_assert(!ifetchboard.empty(),
+               "Cannot find pc @", pc, "in IF Pipeline");
     }
-    ifcyc.sample(curr_tick() - std::get<1>(ifetchboard.front()));
+    ifcyc.sample(
+      curr_tick() - std::get<1>(ifetchboard.front()));
     ifetchboard.pop_front();
   }
 
   void
   notifyIFFetch(addr_t pc) {
+    ifRingPush('F', pc, curr_tick());
     ifetchboard.emplace_back(pc, curr_tick());
   }
 

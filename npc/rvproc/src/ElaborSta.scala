@@ -2,7 +2,11 @@ import scala.util.Properties
 import java.nio.file.Paths
 
 object ElaborSta extends App {
-  val cfg = ElaborConfig.parseArgs(args, debugDefault = false, staDefault = true)
+  val cfg = ElaborConfig.parseArgs(
+    args,
+    debugDefault = false,
+    staDefault = true
+  )
 
   val (l1iConf, l1dConf) = (cfg.l1iConfig, cfg.l1dConfig)
   l1iConf.printConf()

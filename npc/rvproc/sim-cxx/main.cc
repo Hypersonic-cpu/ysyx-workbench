@@ -202,7 +202,7 @@ main(int argc, char* argv[]) {
   /** CONFIG BEGIN */
 #if SOCMODE
   auto const diff =
-    std::make_unique<trace::DiffTester>(mrom->dataVec());
+    std::make_unique<trace::DiffTester>(flash->dataVec());
   pdiff = diff.get();
 #else
   auto const diff =

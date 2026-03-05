@@ -34,5 +34,19 @@ config SOC_MROM_SIZE
   default 0x1000
 endif # MROM
 
+menuconfig HAS_FLASH
+  bool "Enable FLASH"
+  default y
+
+if HAS_FLASH
+config SOC_FLASH_MMIO
+  hex "MMIO address of Flash"
+  default 0x30000000
+
+config SOC_FLASH_SIZE
+  hex "Flash size (bytes)"
+  default 0x8000
+endif # Flash
+
 endif # SOC
 

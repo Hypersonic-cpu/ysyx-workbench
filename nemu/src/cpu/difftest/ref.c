@@ -75,7 +75,6 @@ __EXPORT void difftest_init(int port) {
   init_mem();
 #if CONFIG_SOC
   void init_soc();
-  assert(CONFIG_SOC);
   init_soc();
 #endif
   /* Perform ISA dependent initialization. */

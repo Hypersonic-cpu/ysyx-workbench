@@ -202,6 +202,7 @@ notify_recvd(uint32_t pc, uint32_t inst) {
 
 void
 notify_fetch(uint32_t pc) {
+  v_assert(pc >= ResetVector, "Invalid PC @", pc);
   // std::cerr << std::format(ANSI_YELLOW "IFetch Req @ pc {:8x}" ANSI_NONE,
   // pc) << std::endl;
   ppmu->notifyIFFetch(pc);
@@ -210,6 +211,13 @@ notify_fetch(uint32_t pc) {
 void
 notify_ls_req(uint32_t a) {
   ppmu->notifyLSReq(a);
+#if DIFFENA
+  if ((a >= 0x1000'0000 && a < 0x1000'1000)
+      || (a >= 0x0200'0000 && a < 0x0201'0000)) {
+    std::cerr << std::format("SET DEVICE ACCESS!") << std::endl;
+    // pdiff->setDeviceAccess();
+  }
+#endif
 }
 
 void
@@ -254,6 +262,6 @@ void
 notify_bp_outcome(uint8_t pred_taken, uint8_t actual_taken,
                   uint32_t pred_target, uint32_t actual_target,
                   uint8_t btb_hit, uint32_t br_pc) {
-  ppmu->notifyBrOutcome(pred_taken, actual_taken,
-                        pred_target, actual_target, btb_hit, br_pc);
+  ppmu->notifyBrOutcome(pred_taken, actual_taken, pred_target, actual_target,
+                        btb_hit, br_pc);
 }

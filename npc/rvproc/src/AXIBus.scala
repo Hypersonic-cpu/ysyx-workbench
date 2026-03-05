@@ -257,11 +257,22 @@ class XBarRead(N: Int, amap: Seq[UInt => Bool]) extends Module {
   )
   io.host.r.valid     := Mux(state === error, true.B, pivot.r.valid)
 
+  // Decode error: accept from host, don't forward
+  val inDecErr =
+    state === idle && decodeErr && inputVa
+  val devGate  = !inDecErr && state =/= error
+  when(inDecErr) { io.host.ar.ready := true.B }
+  when(state === error) {
+    io.host.ar.ready := false.B
+  }
+
   for (i <- 0 until N) {
     val selectThis = i.U === usingIdx;
-    io.devices(i).ar.valid := selectThis && io.host.ar.valid
+    io.devices(i).ar.valid :=
+      selectThis && io.host.ar.valid && devGate
     io.devices(i).ar.bits  := io.host.ar.bits
-    io.devices(i).r.ready  := selectThis && io.host.r.ready
+    io.devices(i).r.ready  :=
+      selectThis && io.host.r.ready && devGate
   }
 
   when(state === idle && inputVa) {
@@ -323,13 +334,28 @@ class XBarWrite(N: Int, amap: Seq[UInt => Bool]) extends Module {
   )
   io.host.b.valid     := Mux(state === error, true.B, pivot.b.valid)
 
+  val inDecErr =
+    state === idle && decodeErr && inputVa
+  val devGate  = !inDecErr && state =/= error
+  when(inDecErr) {
+    io.host.aw.ready := true.B
+    io.host.w.ready  := true.B
+  }
+  when(state === error) {
+    io.host.aw.ready := false.B
+    io.host.w.ready  := true.B
+  }
+
   for (i <- 0 until N) {
     val selectThis = i.U === usingIdx;
-    io.devices(i).aw.valid := selectThis && io.host.aw.valid
+    io.devices(i).aw.valid :=
+      selectThis && io.host.aw.valid && devGate
     io.devices(i).aw.bits  := io.host.aw.bits
-    io.devices(i).w.valid  := selectThis && io.host.w.valid
+    io.devices(i).w.valid  :=
+      selectThis && io.host.w.valid && devGate
     io.devices(i).w.bits   := io.host.w.bits
-    io.devices(i).b.ready  := selectThis && io.host.b.ready
+    io.devices(i).b.ready  :=
+      selectThis && io.host.b.ready && devGate
   }
 
   when(state === idle && inputVa) {

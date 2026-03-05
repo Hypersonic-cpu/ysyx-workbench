@@ -3,14 +3,17 @@ import scala.collection.mutable.ArrayBuffer
 import rvproc.{BTFNT, Bimodal, Extended, GlbCtrl, NoPred, Tiny}
 
 case class ElaborConfig(
-    isSocMode: Boolean,
-    l1iConfig: iCacheConf,
-    l1dConfig: iCacheConf,
-    restArgs: Array[String]
-)
+  isSocMode: Boolean,
+  l1iConfig: iCacheConf,
+  l1dConfig: iCacheConf,
+  restArgs:  Array[String])
 
 object ElaborConfig {
-  def parseArgs(args: Array[String], debugDefault: Boolean, staDefault: Boolean): ElaborConfig = {
+  def parseArgs(
+    args:         Array[String],
+    debugDefault: Boolean,
+    staDefault:   Boolean
+  ): ElaborConfig = {
     var isSocMode  = false
     var l1iSize    = -1
     var l1iBlksize = -1
@@ -40,16 +43,20 @@ object ElaborConfig {
         case "--config-tiny"     =>
           GlbCtrl.config = Tiny
           GlbCtrl.bpEntries = 16
+          GlbCtrl.btbEntries = 8
           GlbCtrl.rasSize = 0
         case "--config-extended" =>
           GlbCtrl.config = Extended
-          GlbCtrl.bpEntries = 128
+          GlbCtrl.bpEntries = 256
+          GlbCtrl.btbEntries = 128
           GlbCtrl.rasSize = 8
         case "--bp-none"         => GlbCtrl.bpType = NoPred
         case "--bp-btfnt"        => GlbCtrl.bpType = BTFNT
         case "--bp-bimodal"      => GlbCtrl.bpType = Bimodal
         case "--bp-entries"      =>
           GlbCtrl.bpEntries = args(i + 1).toInt; i += 1
+        case "--btb-entries"     =>
+          GlbCtrl.btbEntries = args(i + 1).toInt; i += 1
         case "--ras-size"        =>
           GlbCtrl.rasSize = args(i + 1).toInt; i += 1
         case other               => rest += other
