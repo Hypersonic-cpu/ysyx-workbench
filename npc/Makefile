@@ -99,7 +99,14 @@ NVB_ARCHIVE=$(NVBOARD_ARCHIVE)
 CSRCS += $(SRC_AUTO_BIND)
 endif
 
-$(SIM_BIN): $(CSRCS) $(NVB_ARCHIVE)
+# When MHZ changes, rebuild the sim binary (it embeds SIM_MHZ at compile time)
+SIM_MHZ_STAMP = $(BUILD_SIM_DIR)/.sim_mhz_$(MHZ)
+$(SIM_MHZ_STAMP): prebuild
+	@rm -f $(BUILD_SIM_DIR)/.sim_mhz_*
+	@rm -f $(SIM_BIN)
+	@touch $@
+
+$(SIM_BIN): $(SIM_MHZ_STAMP) $(CSRCS) $(NVB_ARCHIVE)
 	@rm -rf $(BUILD_OBJ_DIR)
 	$(VERILATOR) -j$(nproc) $(VERILATOR_CFLAGS) \
 		$(VSRCS) \
@@ -132,6 +139,7 @@ SOC_MHZ_STAMP = $(SOC_HOME)/build/.soc_mhz_$(MHZ)
 compile: prebuild $(SOC_MHZ_STAMP) verilog $(SIM_BIN)
 $(SOC_MHZ_STAMP):
 	@rm -f $(SOC_HOME)/build/.soc_mhz_*
+	@rm -f $(SOC_HOME)/build/ysyxSoCFull.v
 	$(MAKE) -C $(SOC_HOME) verilog MHZ=$(MHZ)
 	@touch $(SOC_MHZ_STAMP)
 	@rm -f $(SIM_BIN)
