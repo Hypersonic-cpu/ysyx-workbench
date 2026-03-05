@@ -44,7 +44,7 @@ object ElaborConfig {
         case "--config-extended" =>
           GlbCtrl.config = Extended
           GlbCtrl.bpEntries = 128
-          GlbCtrl.rasSize = 4
+          GlbCtrl.rasSize = 8
         case "--bp-none"         => GlbCtrl.bpType = NoPred
         case "--bp-btfnt"        => GlbCtrl.bpType = BTFNT
         case "--bp-bimodal"      => GlbCtrl.bpType = Bimodal

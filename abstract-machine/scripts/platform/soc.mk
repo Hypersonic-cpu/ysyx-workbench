@@ -15,7 +15,15 @@ LDFLAGS   += --gc-sections -e _start
 
 # Core clock frequency (MHz). Override with MHZ=<value> on make command line.
 MHZ ?= 500
+export MHZ
 CFLAGS += -DSOC_CYC_PER_US=$(MHZ)
+
+# Rebuild AM objects when MHZ changes (SOC_CYC_PER_US is a compile-time constant)
+SOC_AM_MHZ_STAMP := $(WORK_DIR)/.soc_mhz$(MHZ).stamp
+$(SOC_AM_MHZ_STAMP):
+	@rm -f $(WORK_DIR)/.soc_mhz*.stamp
+	@rm -rf $(DST_DIR) $(AM_HOME)/am/build/$(ARCH)
+	@touch $@
 
 MAINARGS_MAX_LEN = 64
 MAINARGS_PLACEHOLDER = the_insert-arg_rule_in_Makefile_will_insert_mainargs_here
@@ -24,7 +32,7 @@ CFLAGS += -DMAINARGS_MAX_LEN=$(MAINARGS_MAX_LEN) -DMAINARGS_PLACEHOLDER=$(MAINAR
 insert-arg: image
 	@python3 $(AM_HOME)/tools/insert-arg.py $(IMAGE).bin $(MAINARGS_MAX_LEN) $(MAINARGS_PLACEHOLDER) "$(mainargs)"
 
-image: image-dep
+image: $(SOC_AM_MHZ_STAMP) image-dep
 	@$(OBJDUMP) -d $(IMAGE).elf > $(IMAGE).txt
 	@echo + OBJCOPY "->" $(IMAGE_REL).bin
 	@$(OBJCOPY) -S \
