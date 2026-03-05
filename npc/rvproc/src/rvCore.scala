@@ -28,7 +28,7 @@ class rvCore(
 
   val resetVector = if (isSoc) 0x3000_0000L else 0x8000_0000L
 
-  val ifs = Module(new FetchStage(resetVector))
+  val ifs = Module(new FetchStage(resetVector, 2))
   val ids = Module(new DecodeStage)
   val exs = Module(new ExecuteStage)
   val lss = Module(new MemoryStage)
@@ -57,6 +57,7 @@ class rvCore(
   ifs.io.wbExcpTarget := mtvecWire
   ids.io.excpFlush    := wbs.io.excpFlushOut
   exs.io.excpFlush    := wbs.io.excpFlushOut
+  exs.io.mtvecVal     := mtvecWire
   lss.io.excpFlush    := wbs.io.excpFlushOut
 
   ids.io.toReg <> reg.io.fromId

@@ -51,7 +51,7 @@ object Tp {
   // Now it equals RegType() so no padding is needed.
   def AddrType()    = UInt(ISA.AddrBits.W)
   def AddrAligner() = ~((ISA.AddrBits / 8 - 1).U(ISA.AddrBits.W))
-  def TimeType()    = UInt(64.W)
+  def TimeType()    = UInt(32.W)
 }
 
 object ITYPE extends ChiselEnum {

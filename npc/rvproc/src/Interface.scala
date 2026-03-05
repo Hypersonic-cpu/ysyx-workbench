@@ -113,17 +113,14 @@ object WbSel extends ChiselEnum {
 // }
 
 class ExecuteBackward extends Bundle {
-  val brRel      = Bool()
-  val brDel      = Tp.RegType()
-  val brAbs      = Bool()
-  val brVal      = Tp.RegType()
+  val brTaken    = Bool()
+  val brTarget   = Tp.AddrType()
   val brLPC      = Tp.AddrType()
   val isBr       = Bool()
   val mispred    = Bool()
   val predBtbHit = Bool()
   val isCall     = Bool()
   val isRet      = Bool()
-  def take       = brRel || brAbs
 }
 
 object StallCause extends ChiselEnum {
@@ -146,7 +143,6 @@ class DecodeFoward extends Bundle {
 
   val excpValid      = Bool()
   val excpNeedsFlush = Bool()
-  val mtvecVal       = Tp.RegType()
 
   // Removed by compiler when not debugging.
   val stallT = StallCause()
