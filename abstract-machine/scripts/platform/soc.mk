@@ -13,6 +13,10 @@ LDSCRIPTS += $(AM_HOME)/scripts/platform/soc-linker.ld
 LDFLAGS   += --defsym=_pmem_start=0x20000000 --defsym=_entry_offset=0x0
 LDFLAGS   += --gc-sections -e _start
 
+# Core clock frequency (MHz). Override with MHZ=<value> on make command line.
+MHZ ?= 500
+CFLAGS += -DSOC_CYC_PER_US=$(MHZ)
+
 MAINARGS_MAX_LEN = 64
 MAINARGS_PLACEHOLDER = the_insert-arg_rule_in_Makefile_will_insert_mainargs_here
 CFLAGS += -DMAINARGS_MAX_LEN=$(MAINARGS_MAX_LEN) -DMAINARGS_PLACEHOLDER=$(MAINARGS_PLACEHOLDER)
@@ -30,10 +34,10 @@ image: image-dep
 	
 
 run: insert-arg cleancc
-	@$(MAKE) -C $(NPC_HOME) run SOCMODE=1 mrombin=$(abspath $(IMAGE).bin)
+	@$(MAKE) -C $(NPC_HOME) run SOCMODE=1 mrombin=$(abspath $(IMAGE).bin) MHZ=$(MHZ)
 
 runonly: insert-arg
-	@$(MAKE) -C $(NPC_HOME) runonly SOCMODE=1 mrombin=$(abspath $(IMAGE).bin)
+	@$(MAKE) -C $(NPC_HOME) runonly SOCMODE=1 mrombin=$(abspath $(IMAGE).bin) MHZ=$(MHZ)
 
 buildsv: 
 	@$(MAKE) -C $(NPC_HOME) verilog

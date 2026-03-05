@@ -5,6 +5,7 @@ import chisel3.util._
 import chisel3.assert.Assert
 
 import BitMath._
+import rvproc.AnsiColor.ColorString
 
 class EXU extends Module {
   val io = IO(new Bundle {
@@ -79,7 +80,11 @@ class EXU extends Module {
       (io.br.bIflt && cmpLT) || (io.br.bIfge && ~cmpLT)
   io.brAbs := io.br.isAbs && io.br.isBr
   io.brDel := io.imm
-  io.brVal := Mux(io.sel.brSelCsr, io.csrV, io.aluOut)
+  io.brVal := Mux(
+    io.sel.brSelCsr,
+    io.csrV,
+    esum(ISA.RegBits - 1, 0)
+  )
 
   // when(io.aluEn) {
   //   printf(
@@ -104,6 +109,7 @@ class ExecuteStage extends Module {
     val brDet     = Decoupled(Bool())
     val fwdDet    = Output(new FwBundle)
     val excpFlush = Input(Bool())
+    val mtvecVal  = Input(Tp.RegType())
   })
 
   val flushed = io.flush.valid && io.flush.bits
@@ -135,18 +141,16 @@ class ExecuteStage extends Module {
   /** Back to Fetch */
   io.toFetch.valid := validCtrl && !io.excpFlush
   val iobk = io.toFetch.bits
-  iobk.brRel := iExe.io.brRel
-  iobk.brDel := iExe.io.brDel
-  iobk.brAbs := iExe.io.brAbs
-  iobk.brVal := iExe.io.brVal
-  iobk.brLPC := ioid.pc
-
   val actualTaken  = iExe.io.brRel || iExe.io.brAbs
   val actualTarget = Mux(
     iExe.io.brAbs,
     iExe.io.brVal,
     ioid.pc + iExe.io.brDel
   )
+  iobk.brTaken  := actualTaken
+  iobk.brTarget := actualTarget
+  iobk.brLPC    := ioid.pc
+
   val mispred      = validCtrl && ioid.brInst.isBr && (
     (actualTaken =/= ioid.predTaken) ||
       (actualTaken && ioid.predTaken &&
@@ -212,9 +216,8 @@ class ExecuteStage extends Module {
     validCtrl && !io.excpFlush && (mispred || excpMisalign)
 
   when(excpMisalign) {
-    iobk.brAbs            := true.B
-    iobk.brVal            := ioid.foward.mtvecVal
-    iobk.brRel            := false.B
+    iobk.brTaken          := true.B
+    iobk.brTarget         := io.mtvecVal
     iobk.mispred          := true.B
     iobk.isBr             := true.B
     iols.memOp.len        := MemLen.None
@@ -226,12 +229,17 @@ class ExecuteStage extends Module {
   }
 
   /** Interrupt */
-  val iInt = Module(new EcallBox)
-  iInt.io.clock    := clock
-  iInt.io.reset    := reset
-  iInt.io.a0in     := ioid.rs1V
-  iInt.io.a5in     := ioid.rs2V
-  iInt.io.pcin     := ioid.foward.pc
-  iInt.io.isEbreak := validCtrl && ioid.foward.ebreak
-  iInt.io.isEcall  := validCtrl && ioid.foward.ecall
+  if (!GlbCtrl.sta) {
+    val iInt = Module(new EcallBox)
+    iInt.io.clock    := clock
+    iInt.io.reset    := reset
+    iInt.io.a0in     := ioid.rs1V
+    iInt.io.a5in     := ioid.rs2V
+    iInt.io.pcin     := ioid.foward.pc
+    iInt.io.isEbreak := validCtrl && ioid.foward.ebreak
+    iInt.io.isEcall  := validCtrl && ioid.foward.ecall
+    println("== Sim - EcallBox ===".green)
+  } else {
+    println("== STA - Fake Ecall ===".yellow)
+  }
 }

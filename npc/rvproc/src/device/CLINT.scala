@@ -55,8 +55,8 @@ class CLINT extends Module {
     val gotRet = MuxCase(
       0xbadc0de.U ## 0.U,
       Seq(
-        (addr === CLINTAddr.OffClk.U)       -> mtime(31, 0) ## 1.U,
-        (addr === (CLINTAddr.OffClk + 4).U) -> mtime(63, 32) ## 1.U
+        (addr === CLINTAddr.OffClk.U)       -> mtime ## 1.U,
+        (addr === (CLINTAddr.OffClk + 4).U) -> 0.U(32.W) ## 1.U
       )
     )
     // assert(addr(3, 0)===0xc.U, cf"CLINT DEBUG: mt${mtime}%x addr${addr}%x ret${gotRet >> 1.U}%x\n")

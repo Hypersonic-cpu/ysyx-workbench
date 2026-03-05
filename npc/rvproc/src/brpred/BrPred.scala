@@ -94,23 +94,36 @@ class BTFNTPredictor(conf: BrPredConf) extends BrPred(conf) {
   targetArr.io.raddr := qidx
   targetArr.io.ren   := true.B
 
-  val bypValid  = RegNext(io.updValid && io.updTaken)
-  val bypIdx    = RegNext(idxOf(io.updPC))
-  val bypTag    = RegNext(tagOf(io.updPC))
-  val bypTarget = RegNext(io.updTarget)
-  val bypIsRet  = RegNext(io.updIsRet)
-  val useByp    = bypValid && bypIdx === qidxR
-
-  val tagData = Mux(useByp, bypTag, tagArr.io.rdata)
-  val tgtData =
-    Mux(useByp, bypTarget, targetArr.io.rdata)
+  val tagData = if (GlbCtrl.useSram) {
+    val bypValid  = RegNext(io.updValid && io.updTaken)
+    val bypIdx    = RegNext(idxOf(io.updPC))
+    val bypTag    = RegNext(tagOf(io.updPC))
+    val bypTarget = RegNext(io.updTarget)
+    val bypIsRet  = RegNext(io.updIsRet)
+    val useByp    = bypValid && bypIdx === qidxR
+    (
+      Mux(useByp, bypTag, tagArr.io.rdata),
+      Mux(useByp, bypTarget, targetArr.io.rdata),
+      Mux(useByp, bypIsRet, typeArr(qidxR)),
+      bypValid,
+      useByp
+    )
+  } else {
+    (
+      tagArr.io.rdata,
+      targetArr.io.rdata,
+      typeArr(qidxR),
+      false.B,
+      false.B
+    )
+  }
+  val (tagD, tgtData, isRetBit, bypValid, useByp) = tagData
 
   val btbHitRaw =
-    validArr(qidxR) && tagData === tagOf(qPCR)
+    validArr(qidxR) && tagD === tagOf(qPCR)
   val btbHit    = if (GlbCtrl.useSram) {
     btbHitRaw && !(bypValid && !useByp)
   } else btbHitRaw
-  val isRetBit  = Mux(useByp, bypIsRet, typeArr(qidxR))
 
   val hasRas   = GlbCtrl.rasSize > 0
   val rasValid = WireDefault(false.B)
@@ -168,24 +181,37 @@ class BimodalPredictor(conf: BrPredConf) extends BrPred(conf) {
   targetArr.io.raddr := qidx
   targetArr.io.ren   := true.B
 
-  val bypValid  = RegNext(io.updValid && io.updTaken)
-  val bypIdx    = RegNext(idxOf(io.updPC))
-  val bypTag    = RegNext(tagOf(io.updPC))
-  val bypTarget = RegNext(io.updTarget)
-  val bypIsRet  = RegNext(io.updIsRet)
-  val useByp    = bypValid && bypIdx === qidxR
-
-  val tagData = Mux(useByp, bypTag, tagArr.io.rdata)
-  val tgtData =
-    Mux(useByp, bypTarget, targetArr.io.rdata)
+  val tagData = if (GlbCtrl.useSram) {
+    val bypValid  = RegNext(io.updValid && io.updTaken)
+    val bypIdx    = RegNext(idxOf(io.updPC))
+    val bypTag    = RegNext(tagOf(io.updPC))
+    val bypTarget = RegNext(io.updTarget)
+    val bypIsRet  = RegNext(io.updIsRet)
+    val useByp    = bypValid && bypIdx === qidxR
+    (
+      Mux(useByp, bypTag, tagArr.io.rdata),
+      Mux(useByp, bypTarget, targetArr.io.rdata),
+      Mux(useByp, bypIsRet, typeArr(qidxR)),
+      bypValid,
+      useByp
+    )
+  } else {
+    (
+      tagArr.io.rdata,
+      targetArr.io.rdata,
+      typeArr(qidxR),
+      false.B,
+      false.B
+    )
+  }
+  val (tagD, tgtData, isRetBit, bypValid, useByp) = tagData
 
   val btbHitRaw =
-    validArr(qidxR) && tagData === tagOf(qPCR)
+    validArr(qidxR) && tagD === tagOf(qPCR)
   val btbHit    = if (GlbCtrl.useSram) {
     btbHitRaw && !(bypValid && !useByp)
   } else btbHitRaw
   val bhtCnt    = bhtArr(qidxR)
-  val isRetBit  = Mux(useByp, bypIsRet, typeArr(qidxR))
 
   val hasRas   = GlbCtrl.rasSize > 0
   val rasValid = WireDefault(false.B)

@@ -40,16 +40,15 @@ make rtlsta  RTL_SCALA_ARG="--l1i-size 512 --l1i-blksize 16 --sramlib"
 | `SOCMODE` | `0` | 1=SoC topology, 0=standalone PMemBox |
 
 ### STA with yosys
-
 ```bash
 cd $YOSYS_HOME
 # DFF mode (no --sramlib):
-make syn O=out/dff-512-16 \
+make sta O=out/dff-512-16 \
   RTL_FILES="$(find $NPC_HOME/build-sv/rvproc -name '*.sv')" \
   DESIGN=rvCore CLK_FREQ_MHZ=5000 CLK_PORT_NAME=clock
 
 # SRAM mode (--sramlib): set SRAM_BB_V and SRAM_LIB
-make syn O=out/sram-512-16 \
+make sta O=out/sram-512-16 \
   RTL_FILES="$(find $NPC_HOME/build-sv/rvproc -name '*.sv')" \
   DESIGN=rvCore CLK_FREQ_MHZ=5000 CLK_PORT_NAME=clock \
   SRAM_BB_V=$NPC_HOME/build-sv/rvproc/sram_blackbox.sv \

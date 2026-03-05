@@ -3,6 +3,7 @@ package rvproc
 import chisel3._
 import chisel3.util._
 import chisel3.util.HasBlackBoxPath
+import rvproc.AnsiColor.ColorString
 
 class EcallBox extends BlackBox with HasBlackBoxPath {
   val io = IO(new Bundle {
@@ -14,10 +15,5 @@ class EcallBox extends BlackBox with HasBlackBoxPath {
     val a0in     = Input(Tp.RegType())
     val a5in     = Input(Tp.RegType())
   })
-
-  if (GlbCtrl.debug) {
-    addPath(PATH.dpic("EcallBox.sv"))
-  } else {
-    addPath(PATH.dpic("FakeEcallBox.sv"))
-  }
+  addPath(PATH.dpic("EcallBox.sv"))
 }

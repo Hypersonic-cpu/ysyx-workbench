@@ -1,6 +1,8 @@
 # soc or npc mode
 SOCMODE?=0
 RTL_SCALA_ARG?=
+# Core frequency in MHz — sets SIM_MHZ in simulator and drives ysyxSoC delayers
+MHZ ?= 1000
 
 NPSIM_ACTIVE=0
 ifeq ($(SOCMODE),1)
@@ -59,7 +61,7 @@ INCFLAGS = $(addprefix -I, $(INC_PATH))
 VINCFLAGS = $(addprefix -I, $(VINC_PATH))
 CXXFLAGS += $(INCFLAGS) -DTOP_NAME="\"V$(TOPNAME)\"" -std=c++23 -g
 CXXFLAGS += -DLOGENA=$(LOGENA) -DDIFFENA=$(DIFFENA) -DDBGENA=$(DBGENA) -DNVBENA=$(NVBENA)
-CXXFLAGS += -DSOCMODE=$(SOCMODE)
+CXXFLAGS += -DSOCMODE=$(SOCMODE) -DSIM_MHZ=$(MHZ)
 
 #json
 CXXFLAGS += -I$(NPC_HOME)/libs/json/include
@@ -123,7 +125,19 @@ runam:
 	# $(call git_commit, "run with AM")
 	mill -i $(PRJ).test.testOnly $(PRJ).test.$(TOPNAME)Am
 
+ifeq ($(SOCMODE),1)
+# For SOC mode: rebuild ysyxSoCFull.v when MHZ changes (affects delayer timing).
+# A stamp file named after the frequency tracks when the SoC was last elaborated.
+SOC_MHZ_STAMP = $(SOC_HOME)/build/.soc_mhz_$(MHZ)
+compile: prebuild $(SOC_MHZ_STAMP) verilog $(SIM_BIN)
+$(SOC_MHZ_STAMP):
+	@rm -f $(SOC_HOME)/build/.soc_mhz_*
+	$(MAKE) -C $(SOC_HOME) verilog MHZ=$(MHZ)
+	@touch $(SOC_MHZ_STAMP)
+	@rm -f $(SIM_BIN)
+else
 compile: prebuild verilog $(SIM_BIN)
+endif
 	@echo "Compiled:" $(SIM_BIN)
 
 run: printhook $(LIBCAPSTONE) compile

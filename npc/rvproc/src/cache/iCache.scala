@@ -106,9 +106,12 @@ class iCache(conf: iCacheConf) extends Module {
     io.memSide.r.bits.last
       && io.memSide.r.fire && state === waiting
   )
-  // Accept C1 requests only in steady-state flowing.
-  val willShift  =
-    state === flowing && nextState === flowing && !fillFinish
+
+  val flushPending = RegInit(false.B)
+  when(io.flushAll) { flushPending := true.B }
+
+  // Direct computation bypasses MuxLookup for nextState.
+  val willShift = Wire(Bool())
   req.ready := willShift
 
   val hitRespV  = RegNext(tagHit)
@@ -146,6 +149,11 @@ class iCache(conf: iCacheConf) extends Module {
   tagHit := tagRead === tagOf(reqA2) &&
     validArr(idxOf(reqA2)) && reqV2
 
+  // Accept C1 requests only in steady-state flowing.
+  willShift :=
+    state === flowing && !fillFinish &&
+      !flushPending && (tagHit || !reqV2)
+
   // Register line data for cycle 3 (breaks SRAM→mux path).
   val lineRead  = dataArr.io.rdata
   val lineReadR = RegNext(lineRead)
@@ -166,9 +174,6 @@ class iCache(conf: iCacheConf) extends Module {
   resp.bits.resp := Mux(missServe, fillError, OKAY)
 
   // FSM
-  val flushPending = RegInit(false.B)
-  when(io.flushAll) { flushPending := true.B }
-
   nextState := MuxLookup(state, waiting)(
     Seq(
       flowing  -> Mux(

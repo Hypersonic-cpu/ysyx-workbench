@@ -340,7 +340,6 @@ class DecodeStage extends Module {
 
   iofw.excpValid      := isExcp
   iofw.excpNeedsFlush := false.B
-  iofw.mtvecVal       := mtvecVal
   iofw.mcause         := MuxCase(
     0.U,
     Seq(

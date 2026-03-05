@@ -143,6 +143,14 @@ main(int argc, char* argv[]) {
   options::binary_img = std::string(argv[1]);
   options::parse_args(argc, argv);
 
+  std::cerr << std::format(ANSI_YELLOW
+#if SOCMODE
+                           "== SOC Mode  | Core {:d} MHz ==" ANSI_NONE "\n",
+#else
+                           "== NPC Mode  | Core {:d} MHz ==" ANSI_NONE "\n",
+#endif
+                           SIM_MHZ);
+
 #if SOCMODE
   auto mromBin = std::make_shared<RuntimeBin>(
     std::vector<ureg_t>(10U, 0xbadc0de), 0x2000'0000U, "MROM");

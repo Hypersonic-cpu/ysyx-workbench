@@ -18,17 +18,37 @@ class CsrFile extends Module {
     val mtvecOut  = Output(Tp.RegType())
   })
 
-  val mcycle  = RegInit(0.U(ISA.RegBits.W))
-  val mcycleh = RegInit(0.U(ISA.RegBits.W))
-  mcycleh := Mux(mcycle.andR, mcycleh + 1.U, mcycleh)
-  mcycle  := mcycle + 1.U
-  val minstret  = RegInit(0.U(ISA.RegBits.W))
-  val minstreth = RegInit(0.U(ISA.RegBits.W))
-  minstreth := Mux(minstret.andR, minstreth + 1.U, minstreth)
-  minstret  := Mux(io.instRet, minstret + 1.U, minstret)
+  val mcycle    = if (GlbCtrl.debug)
+    RegInit(0.U(ISA.RegBits.W))
+  else WireDefault(0.U(ISA.RegBits.W))
+  val mcycleh   = if (GlbCtrl.debug)
+    RegInit(0.U(ISA.RegBits.W))
+  else WireDefault(0.U(ISA.RegBits.W))
+  if (GlbCtrl.debug) {
+    mcycleh := Mux(mcycle.andR, mcycleh + 1.U, mcycleh)
+    mcycle  := mcycle + 1.U
+  }
+  val minstret  = if (GlbCtrl.debug)
+    RegInit(0.U(ISA.RegBits.W))
+  else WireDefault(0.U(ISA.RegBits.W))
+  val minstreth = if (GlbCtrl.debug)
+    RegInit(0.U(ISA.RegBits.W))
+  else WireDefault(0.U(ISA.RegBits.W))
+  if (GlbCtrl.debug) {
+    minstreth := Mux(
+      minstret.andR,
+      minstreth + 1.U,
+      minstreth
+    )
+    minstret := Mux(
+      io.instRet,
+      minstret + 1.U,
+      minstret
+    )
+  }
 
-  val mvendorid = RegInit(0x79737978L.U)
-  val marchid   = RegInit(2510_0264.U)
+  val mvendorid = WireDefault(0x79737978L.U(ISA.RegBits.W))
+  val marchid   = WireDefault(2510_0264.U(ISA.RegBits.W))
 
   val mstatus = RegInit(0x1800.U(ISA.RegBits.W))
   val mepc    = RegInit(0.U(ISA.RegBits.W))

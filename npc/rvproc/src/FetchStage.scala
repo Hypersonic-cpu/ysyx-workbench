@@ -31,17 +31,14 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
   fenceState := Mux(fenceState, !io.fromLs, fenceI)
 
   val pc     = RegInit(resetVector.U(ISA.RegBits.W))
-  val nextPC = RegInit((resetVector + 4).U(ISA.RegBits.W))
   val lastPC = RegEnable(io.out.bits.pc, io.out.fire)
 
-  val brAbs    = io.fromEx.valid && brex.brAbs
-  val brRel    = io.fromEx.valid && brex.brRel
+  val brTaken  = io.fromEx.valid && brex.brTaken
   val brTarget = MuxCase(
     brex.brLPC + 4.U,
     Seq(
       io.wbExcp -> io.wbExcpTarget,
-      brAbs     -> brex.brVal,
-      brRel     -> (brex.brLPC + brex.brDel),
+      brTaken   -> brex.brTarget,
       fenceI    -> (lastPC + 4.U)
     )
   )
@@ -73,21 +70,18 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
       p.io.queryPC   := btbRdAddr
       p.io.updValid  := io.fromEx.valid && brex.isBr
       p.io.updPC     := brex.brLPC
-      p.io.updTaken  := brex.take
-      p.io.updTarget := Mux(
-        brex.brAbs,
-        brex.brVal,
-        brex.brLPC + brex.brDel
-      )
+      p.io.updTaken  := brex.brTaken
+      p.io.updTarget := brex.brTarget
       p.io.updBtbHit := brex.predBtbHit
       p.io.updIsCall := brex.isCall
       p.io.updIsRet  := brex.isRet
     case None    =>
   }
 
-  // BTB result valid when pc == RegNext(btbRdAddr)
-  val btbQueryR      = RegNext(btbRdAddr)
-  val bpRsltV        = (pc === btbQueryR)
+  // BTB result valid when the previous cycle issued a fetch or flush
+  // (pc advanced to match btbRdAddr, so btbQueryR == new pc).
+  val bpRsltV        =
+    RegNext(iMem.ar.fire || flushWire, false.B)
   val bpRawPredTaken = bp.map(_.io.predTaken).getOrElse(false.B)
   val bpTargetPC     = bp.map(_.io.targetPC).getOrElse(0.U)
   val bpRawBtbHit    = bp.map(_.io.btbHit).getOrElse(false.B)
@@ -115,9 +109,9 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
     flushWire,
     brTarget,
     Mux(
-      bpPredTaken && iMem.ar.fire,
+      bpPredTaken,
       bpTargetPCEff,
-      nextPC
+      pc + 4.U
     )
   )
 
@@ -165,15 +159,12 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
       validBuf(i) := false.B
     }
     pc := brTarget
-    nextPC := brTarget + 4.U
   }.otherwise {
     when(iMem.ar.fire) {
       when(bpPredTaken) {
-        pc     := bpTargetPCEff
-        nextPC := bpTargetPCEff + 4.U
+        pc := bpTargetPCEff
       }.otherwise {
-        pc     := nextPC
-        nextPC := nextPC + 4.U
+        pc := pc + 4.U
       }
     }
   }
