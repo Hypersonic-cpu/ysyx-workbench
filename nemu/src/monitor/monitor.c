@@ -14,8 +14,11 @@
 ***************************************************************************************/
 
 #include "macro.h"
+#include <assert.h>
 #include <isa.h>
 #include <memory/paddr.h>
+#include <stdlib.h>
+#include <string.h>
 
 void init_rand();
 void init_log(const char *log_file);
@@ -65,8 +68,30 @@ static long load_img() {
   Log("The image is %s, size = %ld", img_file, size);
 
   fseek(fp, 0, SEEK_SET);
+#ifdef CONFIG_SOC
+  // SoC mode: RESET_VECTOR may be in flash/MMIO, not pmem.
+  // Load via paddr_write so address routing works correctly.
+  uint8_t *buf = (uint8_t *)malloc(size);
+  Assert(buf, "malloc failed for image load");
+  int ret = fread(buf, size, 1, fp);
+  assert(ret == 1);
+  for (long i = 0; i + 3 < size; i += 4) {
+    uint32_t word;
+    memcpy(&word, buf + i, 4);
+    paddr_write(RESET_VECTOR + i, 4, word);
+  }
+  // Handle trailing bytes
+  if (size % 4) {
+    long tail = size - (size % 4);
+    uint32_t word = 0;
+    memcpy(&word, buf + tail, size % 4);
+    paddr_write(RESET_VECTOR + tail, size % 4, word);
+  }
+  free(buf);
+#else
   int ret = fread(guest_to_host(RESET_VECTOR), size, 1, fp);
   assert(ret == 1);
+#endif
 
   fclose(fp);
   return size;

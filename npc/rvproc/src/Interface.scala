@@ -12,6 +12,7 @@ class FetchToDecode extends Bundle {
   val predTaken    = Bool()
   val predTarget   = Tp.AddrType()
   val predBtbHit   = Bool()
+  val predBhtCnt   = UInt(2.W)
   val ifuExcp      = Bool()
   val ifuExcpCause = UInt(4.W)
 }
@@ -116,9 +117,11 @@ class ExecuteBackward extends Bundle {
   val brTaken    = Bool()
   val brTarget   = Tp.AddrType()
   val brLPC      = Tp.AddrType()
+  val brLPC4     = Tp.AddrType() // pre-computed brLPC + 4
   val isBr       = Bool()
   val mispred    = Bool()
   val predBtbHit = Bool()
+  val predBhtCnt = UInt(2.W)
   val isCall     = Bool()
   val isRet      = Bool()
 }
@@ -161,6 +164,7 @@ class DecodeToExecute extends Bundle {
   val predTaken  = Bool()
   val predTarget = Tp.AddrType()
   val predBtbHit = Bool()
+  val predBhtCnt = UInt(2.W)
   val isCall     = Bool()
   val isRet      = Bool()
   val foward     = new DecodeFoward

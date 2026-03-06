@@ -54,7 +54,7 @@ static void restart() {
 
 void init_isa() {
   /* Load built-in image. */
-#if CONFIG_TARGET_SHARE
+#if CONFIG_TARGET_SHARE || CONFIG_SOC
 #else
   memcpy(guest_to_host(RESET_VECTOR), img, sizeof(img));
 #endif
