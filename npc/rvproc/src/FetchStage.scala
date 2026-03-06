@@ -35,7 +35,7 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
 
   val brTaken  = io.fromEx.valid && brex.brTaken
   val brTarget = MuxCase(
-    brex.brLPC + 4.U,
+    brex.brLPC4,
     Seq(
       io.wbExcp -> io.wbExcpTarget,
       brTaken   -> brex.brTarget,
@@ -54,6 +54,7 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
   val predTakenBuf  = Reg(Vec(PipeDepth + 1, Bool()))
   val predTargetBuf = Reg(Vec(PipeDepth + 1, Tp.AddrType()))
   val predBtbHitBuf = Reg(Vec(PipeDepth + 1, Bool()))
+  val predBhtCntBuf = Reg(Vec(PipeDepth + 1, UInt(2.W)))
   val headPtr       = RegInit(0.U(log2Ceil(PipeDepth + 1).W))
   val tailPtr       = RegInit(0.U(log2Ceil(PipeDepth + 1).W))
   val toidPtr       = RegInit(0.U(log2Ceil(PipeDepth + 1).W))
@@ -73,6 +74,7 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
       p.io.updTaken  := brex.brTaken
       p.io.updTarget := brex.brTarget
       p.io.updBtbHit := brex.predBtbHit
+      p.io.updOldCnt := brex.predBhtCnt
       p.io.updIsCall := brex.isCall
       p.io.updIsRet  := brex.isRet
     case None    =>
@@ -85,11 +87,13 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
   val bpRawPredTaken = bp.map(_.io.predTaken).getOrElse(false.B)
   val bpTargetPC     = bp.map(_.io.targetPC).getOrElse(0.U)
   val bpRawBtbHit    = bp.map(_.io.btbHit).getOrElse(false.B)
+  val bpRawBhtCnt    = bp.map(_.io.bhtCnt).getOrElse(0.U)
 
   // Sticky latch: holds prediction when ar.fire is blocked
   val bpPredTakenLatch = RegInit(false.B)
   val bpTargetPCLatch  = RegInit(0.U(ISA.RegBits.W))
   val bpBtbHitLatch    = RegInit(false.B)
+  val bpBhtCntLatch    = RegInit(0.U(2.W))
   when(flushWire || iMem.ar.fire) {
     bpPredTakenLatch := false.B
     bpBtbHitLatch    := false.B
@@ -97,6 +101,7 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
     bpPredTakenLatch := bpRawPredTaken
     bpTargetPCLatch  := bpTargetPC
     bpBtbHitLatch    := bpRawBtbHit
+    bpBhtCntLatch    := bpRawBhtCnt
   }
   val bpPredTaken      =
     (bpRawPredTaken && bpRsltV) || bpPredTakenLatch
@@ -104,6 +109,8 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
     Mux(bpRsltV, bpTargetPC, bpTargetPCLatch)
   val bpBtbHitEff      =
     (bpRawBtbHit && bpRsltV) || bpBtbHitLatch
+  val bpBhtCntEff      =
+    Mux(bpRsltV, bpRawBhtCnt, bpBhtCntLatch)
 
   btbRdAddr := Mux(
     flushWire,
@@ -126,6 +133,7 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
     predTakenBuf(headPtr)  := bpPredTaken
     predTargetBuf(headPtr) := bpTargetPCEff
     predBtbHitBuf(headPtr) := bpBtbHitEff
+    predBhtCntBuf(headPtr) := bpBhtCntEff
     headPtr                := iotaMod(headPtr)
   }
   when(io.out.ready && !instEmpty) {
@@ -179,6 +187,8 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
     Mux(io.out.valid, predTargetBuf(toidPtr), 0.U)
   ioid.predBtbHit   :=
     Mux(io.out.valid, predBtbHitBuf(toidPtr), false.B)
+  ioid.predBhtCnt   :=
+    Mux(io.out.valid, predBhtCntBuf(toidPtr), 0.U)
   ioid.ifuExcp      :=
     Mux(io.out.valid, respBuf(toidPtr) =/= OKAY, false.B)
   ioid.ifuExcpCause := Mux(

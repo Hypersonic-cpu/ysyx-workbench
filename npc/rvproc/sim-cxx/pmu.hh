@@ -92,6 +92,7 @@ private:
   ClassifiedStats<XBarBreakdown> memWrStatus;
 
   ClassifiedStats<CacheBreakdown> cacheRates;
+  ClassifiedStats<CacheBreakdown> dcacheRates;
 
   enum BpBreakdown {
     BpCorrect = 0,
@@ -114,7 +115,7 @@ private:
   std::vector<StatsBase*> statslist{&ifcyc,       &lscyc,       &instcyc,
                                     &cycStatus,   &instStatus,  &memRdStatus,
                                     &memWrStatus, &recoverTime, &cacheRates,
-                                    &bpStats};
+                                    &dcacheRates, &bpStats};
 
   using iboard_t = std::tuple<addr_t, size_t, uint64_t>;
   std::list<iboard_t> instboard;
@@ -171,6 +172,7 @@ public:
       , memRdStatus("XBarReadUsage", XBarBreakdownName)
       , memWrStatus("XBarWriteUsage", XBarBreakdownName)
       , cacheRates("L1ICache", CacheBreakdownName)
+      , dcacheRates("L1DCache", CacheBreakdownName)
       , bpStats("BranchPred", BpBreakdownName) {}
 
   void
@@ -311,8 +313,13 @@ public:
 
   void
   notifyCacheResp(addr_t addr, bool is_hit, uint16_t id) {
-    // std::cerr << std::format("Resp @{:08x} Hit {:d}\n", addr, is_hit);
-    assert(id == 0);
+    if (id == 1) {
+      if (is_hit)
+        dcacheRates.sample(CacheBreakdown::Hit);
+      else
+        dcacheRates.sample(CacheBreakdown::Miss);
+      return;
+    }
     auto& front = icacheboard.front();
     auto [f_addr, f_tick] = front;
     v_assert(f_addr == addr, "Cache access queue front", f_addr,
@@ -321,14 +328,13 @@ public:
       cacheRates.sample(CacheBreakdown::Hit);
     } else {
       cacheRates.sample(CacheBreakdown::Miss);
-      // TODO: Sample miss penalty
     }
     icacheboard.pop_front();
   }
 
   void
   notifyCacheReq(addr_t addr, uint16_t id) {
-    assert(id == 0);
+    if (id == 1) return;
     icacheboard.emplace_back(addr, curr_tick());
   }
 

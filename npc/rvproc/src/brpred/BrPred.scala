@@ -22,11 +22,13 @@ abstract class BrPred(val conf: BrPredConf) extends Module {
     val predTaken = Output(Bool())
     val targetPC  = Output(Tp.AddrType())
     val btbHit    = Output(Bool())
+    val bhtCnt    = Output(UInt(2.W))
     val updValid  = Input(Bool())
     val updPC     = Input(Tp.AddrType())
     val updTaken  = Input(Bool())
     val updTarget = Input(Tp.AddrType())
     val updBtbHit = Input(Bool())
+    val updOldCnt = Input(UInt(2.W))
     val updIsCall = Input(Bool())
     val updIsRet  = Input(Bool())
   })
@@ -141,6 +143,7 @@ class BTFNTPredictor(conf: BrPredConf) extends BrPred(conf) {
   io.predTaken := btbHit && (useRas || (tgtData < qPCR))
   io.targetPC  := Mux(useRas, rasTop, tgtData)
   io.btbHit    := btbHit
+  io.bhtCnt    := 0.U
 
   val uidx = idxOf(io.updPC)
   tagArr.io.waddr    := uidx
@@ -168,11 +171,13 @@ class BimodalPredictor(conf: BrPredConf) extends BrPred(conf) {
   val typeArr   =
     RegInit(VecInit(Seq.fill(conf.numBtbEnt)(false.B)))
 
-  val bhtArr = RegInit(
-    VecInit(Seq.fill(conf.numEntries)(1.U(2.W)))
-  )
+  // BHT: SyncReadMem eliminates the wide combinational
+  // MUX of a DFF Vec, breaking the timing-critical path
+  // through the saturating counter read.
+  val bhtMem = SyncReadMem(conf.numEntries, UInt(2.W))
+  val qidx   = idxOf(io.queryPC)
+  val bhtRd  = bhtMem.read(qidx)
 
-  val qidx  = idxOf(io.queryPC)
   val qPCR  = RegNext(io.queryPC)
   val qidxR = idxOf(qPCR)
 
@@ -180,6 +185,33 @@ class BimodalPredictor(conf: BrPredConf) extends BrPred(conf) {
   tagArr.io.ren      := true.B
   targetArr.io.raddr := qidx
   targetArr.io.ren   := true.B
+
+  // BHT write + bypass (defined early so bhtCnt
+  // is available for predTaken computation below)
+  val uidx = idxOf(io.updPC)
+  def incrSat(c: UInt): UInt =
+    Mux(c === 3.U, 3.U, c + 1.U)
+  def decrSat(c: UInt): UInt =
+    Mux(c === 0.U, 0.U, c - 1.U)
+  val bhtWen   =
+    io.updValid && (io.updBtbHit || io.updTaken)
+  val bhtWdata = Mux(
+    io.updTaken && !io.updBtbHit,
+    2.U,
+    Mux(
+      io.updTaken,
+      incrSat(io.updOldCnt),
+      decrSat(io.updOldCnt)
+    )
+  )
+  when(bhtWen) { bhtMem.write(uidx, bhtWdata) }
+  // Bypass: concurrent read+write at same index
+  val bypBhtV   = RegNext(bhtWen, false.B)
+  val bypBhtI   = RegNext(uidx)
+  val bypBhtD   = RegNext(bhtWdata)
+  val useBhtByp =
+    bypBhtV && bypBhtI === qidxR
+  val bhtCnt = Mux(useBhtByp, bypBhtD, bhtRd)
 
   val tagData                                     = if (GlbCtrl.useSram) {
     val bypValid  = RegNext(io.updValid && io.updTaken)
@@ -211,7 +243,6 @@ class BimodalPredictor(conf: BrPredConf) extends BrPred(conf) {
   val btbHit    = if (GlbCtrl.useSram) {
     btbHitRaw && !(bypValid && !useByp)
   } else btbHitRaw
-  val bhtCnt    = bhtArr(qidxR)
 
   val hasRas   = GlbCtrl.rasSize > 0
   val rasValid = WireDefault(false.B)
@@ -229,8 +260,8 @@ class BimodalPredictor(conf: BrPredConf) extends BrPred(conf) {
   io.predTaken := btbHit && (useRas || bhtCnt(1))
   io.targetPC  := Mux(useRas, rasTop, tgtData)
   io.btbHit    := btbHit
+  io.bhtCnt    := bhtCnt
 
-  val uidx = idxOf(io.updPC)
   tagArr.io.waddr    := uidx
   tagArr.io.wdata    := tagOf(io.updPC)
   tagArr.io.wen      := io.updValid && io.updTaken
@@ -240,22 +271,6 @@ class BimodalPredictor(conf: BrPredConf) extends BrPred(conf) {
   when(io.updValid && io.updTaken) {
     validArr(uidx) := true.B
     typeArr(uidx)  := io.updIsRet
-  }
-
-  def incrSat(c: UInt): UInt =
-    Mux(c === 3.U, 3.U, c + 1.U)
-  def decrSat(c: UInt): UInt =
-    Mux(c === 0.U, 0.U, c - 1.U)
-  when(io.updValid && (io.updBtbHit || io.updTaken)) {
-    bhtArr(uidx) := Mux(
-      io.updTaken && !io.updBtbHit,
-      2.U,
-      Mux(
-        io.updTaken,
-        incrSat(bhtArr(uidx)),
-        decrSat(bhtArr(uidx))
-      )
-    )
   }
 }
 

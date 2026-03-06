@@ -27,6 +27,28 @@ class EXU extends Module {
     val brVal = Output(Tp.RegType())
   })
 
+  // Tree comparator: O(log n) depth, no carry chain
+  private def treeLTEq(
+      a: UInt,
+      b: UInt
+  ): (Bool, Bool) = {
+    val n = a.getWidth
+    if (n == 1) {
+      val lt = !a(0) && b(0)
+      val eq = !(a(0) ^ b(0))
+      (lt, eq)
+    } else {
+      val h  = n / 2
+      val (hL, hE) =
+        treeLTEq(a(n - 1, h), b(n - 1, h))
+      val (lL, lE) =
+        treeLTEq(a(h - 1, 0), b(h - 1, 0))
+      (hL || (hE && lL), hE && lE)
+    }
+  }
+  private def treeLTU(a: UInt, b: UInt): Bool =
+    treeLTEq(a, b)._1
+
   val cmpSlt =
     io.op === AluOp.Sltu || io.op === AluOp.Slt
 
@@ -75,15 +97,30 @@ class EXU extends Module {
 
   io.aluOut := Mux(cmpSlt, cmpLT.asUInt, aout)
 
+  // Tree comparator for branch conditions only,
+  // bypassing the carry chain entirely.
+  val brLTU = treeLTU(io.rs1V, io.rs2V)
+  val msb   = ISA.RegBits - 1
+  val brLTS = Mux(
+    io.rs1V(msb) =/= io.rs2V(msb),
+    io.rs1V(msb).asBool,
+    brLTU
+  )
+  val brLT = Mux(io.sel.cmpUsgn, brLTU, brLTS)
+
   io.brRel :=
-    (io.br.bIfeq && cmpEQ) || (io.br.bIfne && ~cmpEQ) ||
-      (io.br.bIflt && cmpLT) || (io.br.bIfge && ~cmpLT)
+    (io.br.bIfeq && cmpEQ) ||
+      (io.br.bIfne && ~cmpEQ) ||
+      (io.br.bIflt && brLT) ||
+      (io.br.bIfge && ~brLT)
   io.brAbs := io.br.isAbs && io.br.isBr
   io.brDel := io.imm
+  // Dedicated JALR adder bypasses ALU MUX/inversion
+  val jalrTarget = io.rs1V + io.imm
   io.brVal := Mux(
     io.sel.brSelCsr,
     io.csrV,
-    esum(ISA.RegBits - 1, 0)
+    jalrTarget(ISA.RegBits - 1, 0)
   )
 
   // when(io.aluEn) {
@@ -115,9 +152,15 @@ class ExecuteStage extends Module {
   val flushed = io.flush.valid && io.flush.bits
   io.flush.ready := io.out.ready
 
-  val validCtrl = io.in.valid && !flushed
+  // Registered flush: squash the instruction following
+  // one that actually fired with a mispred/exception.
+  val regBrFlush = Wire(Bool())
+  val validCtrl  =
+    io.in.valid && !flushed && !regBrFlush
 
   io.in.ready  := io.out.ready
+  val outFire   = validCtrl && !io.excpFlush &&
+    io.out.ready
   io.out.valid := validCtrl && !io.excpFlush
 
   val iExe = Module(new EXU)
@@ -139,17 +182,12 @@ class ExecuteStage extends Module {
   io.fwdDet.gprDt := 0.U     // iExe.io.aluOut
 
   /** Back to Fetch */
-  io.toFetch.valid := validCtrl && !io.excpFlush
-  val iobk         = io.toFetch.bits
   val actualTaken  = iExe.io.brRel || iExe.io.brAbs
   val actualTarget = Mux(
     iExe.io.brAbs,
     iExe.io.brVal,
     ioid.pc + iExe.io.brDel
   )
-  iobk.brTaken  := actualTaken
-  iobk.brTarget := actualTarget
-  iobk.brLPC    := ioid.pc
 
   val mispred = validCtrl && (
     (ioid.brInst.isBr && (
@@ -159,11 +197,6 @@ class ExecuteStage extends Module {
     )) ||
       (!ioid.brInst.isBr && ioid.predTaken)
   )
-  iobk.isBr       := validCtrl && ioid.brInst.isBr
-  iobk.mispred    := mispred
-  iobk.predBtbHit := ioid.predBtbHit
-  iobk.isCall     := ioid.isCall
-  iobk.isRet      := ioid.isRet
 
   if (GlbCtrl.debug) {
     val bpPmu = Module(new pmu.BrPredPMU)
@@ -178,8 +211,18 @@ class ExecuteStage extends Module {
     bpPmu.io.brPC         := ioid.pc
   }
 
-  /** Back to Decoder */
-  io.brDet.valid := validCtrl && !io.excpFlush
+  /** Back to Fetch — combinational wire, registered below */
+  val toFWire = Wire(new ExecuteBackward)
+  toFWire.brTaken    := actualTaken
+  toFWire.brTarget   := actualTarget
+  toFWire.brLPC      := ioid.pc
+  toFWire.brLPC4     := ioid.pc + 4.U
+  toFWire.isBr       := validCtrl && ioid.brInst.isBr
+  toFWire.mispred    := mispred
+  toFWire.predBtbHit := ioid.predBtbHit
+  toFWire.predBhtCnt := ioid.predBhtCnt
+  toFWire.isCall     := ioid.isCall
+  toFWire.isRet      := ioid.isRet
 
   /** To LSU, AluOut = Addr */
   iols.aluOut := iExe.io.aluOut
@@ -190,7 +233,7 @@ class ExecuteStage extends Module {
   ioid.foward <> iols.foward
   if (GlbCtrl.debug) {
     iols.foward.stallT := Mux(
-      flushed,
+      flushed || regBrFlush,
       StallCause.Branch,
       ioid.foward.stallT
     )
@@ -198,38 +241,26 @@ class ExecuteStage extends Module {
     iols.foward.stallT := DontCare
   }
 
-  // Misalignment detection (causes 4, 6)
-  val aluOut        = iExe.io.aluOut
-  val isLoad        =
-    ioid.memOp.isEn && !ioid.memOp.isSt
-  val isStore       =
-    ioid.memOp.isEn && ioid.memOp.isSt
-  val wordMis       =
-    aluOut(1, 0) =/= 0.U && ioid.memOp.len === MemLen.Word
-  val halfMis       =
-    aluOut(0) =/= 0.U && ioid.memOp.len === MemLen.Half
-  val loadMisalign  =
-    validCtrl && isLoad && (wordMis || halfMis)
-  val storeMisalign =
-    validCtrl && isStore && (wordMis || halfMis)
-  val excpMisalign  = loadMisalign || storeMisalign
+  // Misalignment detection moved to MemoryStage
 
-  // Flush IDU/EXU on misprediction OR misalignment exception
-  io.brDet.bits :=
-    validCtrl && !io.excpFlush && (mispred || excpMisalign)
+  // Flush IDU/EXU on misprediction
+  val needFlush = mispred
+  val brDetV    = validCtrl && !io.excpFlush
+  val brDetB    = brDetV && needFlush
 
-  when(excpMisalign) {
-    iobk.brTaken          := true.B
-    iobk.brTarget         := io.mtvecVal
-    iobk.mispred          := true.B
-    iobk.isBr             := true.B
-    iols.memOp.len        := MemLen.None
-    iols.foward.excpValid := true.B
-    iols.foward.mcause    :=
-      Mux(loadMisalign, 4.U, 6.U)
-    iols.foward.gprWE     := false.B
-    iols.foward.csrWE     := false.B
-  }
+  io.brDet.valid  := brDetV
+  io.brDet.bits   := brDetB
+  io.toFetch.valid := brDetV
+  io.toFetch.bits  := toFWire
+
+  // regBrFlush: squash the instruction following
+  // one that actually fired with a misprediction.
+  val regNeedFlush =
+    RegNext(needFlush, false.B)
+  val regOutFire =
+    RegNext(outFire, false.B)
+  regBrFlush := regNeedFlush && regOutFire
+  // Misalignment is now detected in LS stage
 
   /** Interrupt */
   if (!GlbCtrl.sta) {

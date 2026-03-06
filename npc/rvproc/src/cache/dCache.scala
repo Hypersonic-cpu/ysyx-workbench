@@ -10,6 +10,7 @@ import rvproc.axi4.AXI.RespStatus.OKAY
 import rvproc.axi4.AXI.BurstOpts._
 import rvproc.GlbCtrl.debug
 import rvproc.device.CacheArray
+import rvproc.pmu.iCacheSwPMU
 
 // Write-back, direct-mapped, non-pipelined data cache.
 // Dirty bits in DFF. Tag/data via CacheArray (DFF or SRAM).
@@ -414,5 +415,22 @@ class dCache(conf: iCacheConf) extends Module {
     dontTouch(needEvict)
     dontTouch(reqAddr)
     dontTouch(reqIsStore)
+
+    val pmu = Module(new iCacheSwPMU)
+    pmu.io.clock   := clock
+    pmu.io.reset   := reset
+    pmu.io.req     := state === idle && cpuReq
+    pmu.io.reqAddr := Mux(
+      cpuStore,
+      io.cpuSide.aw.bits.addr,
+      io.cpuSide.ar.bits.addr
+    )
+    val respFire =
+      io.cpuSide.r.valid || io.cpuSide.b.valid
+    pmu.io.resp     := respFire
+    pmu.io.respHit  := respFire &&
+      (state === lookup && tagHit)
+    pmu.io.respAddr := reqAddr
+    pmu.io.id       := 1.U
   }
 }

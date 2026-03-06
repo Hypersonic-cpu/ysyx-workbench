@@ -26,13 +26,24 @@ class MemoryStage extends Module {
   val wrdt = ioex.rs2Val
   val dMem = io.dMem
 
+  // Misalignment detection (moved from EXU for timing)
+  val wordMis =
+    addr(1, 0) =/= 0.U &&
+      ioex.memOp.len === MemLen.Word
+  val halfMis =
+    addr(0) =/= 0.U &&
+      ioex.memOp.len === MemLen.Half
+  val excpMisalign =
+    io.in.valid && ioex.memOp.isEn &&
+      (wordMis || halfMis)
+
   // val idle :: serve :: hold :: Nil = Enum(3)
   val idle :: serve :: Nil = Enum(2)
 
   val state     = RegInit(idle)
   val trigIss   =
     state === idle && io.in.valid && ioex.memOp.isEn &&
-      !io.excpFlush
+      !io.excpFlush && !excpMisalign
   val reqReady  = Mux(!ioex.memOp.isSt, dMem.ar.ready, dMem.aw.ready)
   val respValid = Mux(!ioex.memOp.isSt, dMem.r.valid, dMem.b.valid)
 
@@ -47,7 +58,8 @@ class MemoryStage extends Module {
   // WARN: WBU如果需要等待, 则这里会出问题(respValid仅有1cyc高)
   // val delay1Trig = RegNext(trigIss)
   io.out.valid := io.in.valid &&
-    (!ioex.memOp.isEn || respValid) && !io.excpFlush
+    (!ioex.memOp.isEn || excpMisalign || respValid) &&
+    !io.excpFlush
   io.in.ready  := io.out.ready && ((!trigIss && state === idle) || io.out.valid)
 
   dMem.ar.bits.addr  := addr // & Tp.AddrAligner()
@@ -78,16 +90,7 @@ class MemoryStage extends Module {
       MemLen.Word -> 0xf.U
     )
   ) << shamt
-  assert(
-    (io.in.valid && ioex.memOp.len === Word)
-      Implies (addr(1, 0) === 0.U),
-    "Unaligned word access"
-  )
-  assert(
-    (io.in.valid && ioex.memOp.len === Half)
-      Implies (addr(0, 0) === 0.U),
-    "Unaligned half access"
-  )
+  // Misalignment is now handled as exception above
 
   dMem.ar.valid := ~ioex.memOp.isSt && trigIss
   dMem.aw.valid := ioex.memOp.isSt && trigIss
@@ -142,6 +145,18 @@ class MemoryStage extends Module {
     iowb.foward.excpValid      := true.B
     iowb.foward.excpNeedsFlush := true.B
     iowb.foward.mcause         := lsuExcpCause
+    iowb.foward.gprWE          := false.B
+    iowb.foward.csrWE          := false.B
+  }
+
+  // Misalignment exception (causes 4, 6)
+  val isLoad =
+    ioex.memOp.isEn && !ioex.memOp.isSt
+  when(excpMisalign) {
+    iowb.foward.excpValid      := true.B
+    iowb.foward.excpNeedsFlush := true.B
+    iowb.foward.mcause         :=
+      Mux(isLoad, 4.U, 6.U)
     iowb.foward.gprWE          := false.B
     iowb.foward.csrWE          := false.B
   }

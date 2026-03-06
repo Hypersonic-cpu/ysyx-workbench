@@ -311,6 +311,7 @@ class DecodeStage extends Module {
   ioex.predTaken  := ioif.predTaken
   ioex.predTarget := ioif.predTarget
   ioex.predBtbHit := ioif.predBtbHit
+  ioex.predBhtCnt := ioif.predBhtCnt
   ioex.isCall     := iDec.io.isCall
   ioex.isRet      := iDec.io.isRet
 
