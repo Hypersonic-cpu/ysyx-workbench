@@ -49,8 +49,7 @@ __EXPORT void difftest_regcpy(void *dut, bool direction) {
     for (i = 0; i < MUXDEF(CONFIG_RVE, 16, 32); i++) {
       cpu.gpr[i] = *((word_t *)dut + i);
     }
-    // TODO: 得想办法处理PC. commit 的时候下一条PC肯定已经出来了
-    // cpu.pc = *((word_t *)dut + i);
+    cpu.pc = *((word_t *)dut + i);
   } else {
     size_t i = 0;
     for (i = 0; i < MUXDEF(CONFIG_RVE, 16, 32); i++) {

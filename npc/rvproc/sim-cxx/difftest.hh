@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <dlfcn.h>
 #include <format>
+#include <queue>
 #include <string>
 #include <unistd.h>
 #include <utility>
@@ -20,7 +21,6 @@ class DiffTester {
   using exec_t = void (*)(uint64_t n);
   using intr_t = void (*)(uint64_t no);
   using init_t = void (*)(int port);
-  using memw_t = void (*)(void* dst);
 
 private:
   init_t ref_init;
@@ -28,12 +28,16 @@ private:
   mcpy_t ref_memcpy;
   rcpy_t ref_regcpy;
   intr_t ref_raise_intr;
-  // memw_t ref_cpy_memwr_event;
 
   bool fire;
   bool skipMatch;
   ureg_t delayed_ref_pc;
   ureg_t delayed_dut_pc;
+  uint64_t commitCount;
+
+  // FIFO of cycle numbers when device accesses were detected.
+  // A commit on a LATER cycle than the front entry is the device access.
+  std::queue<tick_t> devAccessCycles;
 
 private:
   void
@@ -55,14 +59,12 @@ private:
     ref_memcpy = (mcpy_t)dlsym(dl, "difftest_memcpy");
     ref_regcpy = (rcpy_t)dlsym(dl, "difftest_regcpy");
     ref_raise_intr = (intr_t)dlsym(dl, "difftest_raise_intr");
-    // ref_cpy_memwr_event = (memw_t)dlsym(dl, "difftest_get_memwr_event");
 
     assert(ref_init && "difftest_init");
     assert(ref_exec && "difftest_exec");
     assert(ref_memcpy && "difftest_memcpy");
     assert(ref_regcpy && "difftest_regcpy");
     assert(ref_raise_intr && "difftest_raise_intr");
-    // assert(ref_cpy_memwr_event && "difftest_get_memwr_event");
 
     ref_init(port);
 
@@ -76,7 +78,9 @@ public:
       : fire{false}
       , skipMatch{false}
       , delayed_dut_pc{0xffff'ffffU}
-      , delayed_ref_pc{ResetVector} {
+      , delayed_ref_pc{ResetVector}
+      , commitCount{0}
+      , devAccessCycles{} {
     init(image);
   }
 
@@ -128,9 +132,12 @@ public:
     if constexpr (!options::diff_enable)
       return;
     uint32_t regbuf[RegNum + 1];
-    for (size_t i = 0; i < RegNum + 1; ++i) {
+    for (size_t i = 0; i < RegNum; ++i) {
       regbuf[i] = trace::read_reg(i);
     }
+    // Preserve NEMU's PC (delayed_ref_pc), don't overwrite with DUT's
+    // committed PC which is the current instruction, not the next.
+    regbuf[RegNum] = delayed_ref_pc;
     ref_regcpy(regbuf, CpyDir::ToRef);
   }
 
@@ -148,16 +155,40 @@ public:
       return {};
     }
     fire = false;
+    commitCount++;
+
+    // Device access skip: notify_ls_req fires in MEM stage on the
+    // SAME cycle as a different instruction's commit in WB. The
+    // device access instruction commits on a LATER cycle. Use the
+    // cycle timestamp to distinguish.
+    bool skipDevice = false;
+    if (!devAccessCycles.empty()
+        && devAccessCycles.front() < curr_tick()) {
+      skipDevice = true;
+      devAccessCycles.pop();
+    }
+
+    if (skipDevice || skipMatch) {
+      // Execute NEMU (it won't crash — NEMU mmio handles unmapped
+      // addresses gracefully). Then skip comparison and sync DUT
+      // state to NEMU.
+      iota();
+      uint32_t regbuf[RegNum + 1];
+      ref_regcpy(regbuf, CpyDir::ToDut);
+      delayed_ref_pc = regbuf[RegNum];
+      skipMatch = false;
+      copy();
+      return {};
+    }
 
     iota();
     std::vector<std::tuple<uint16_t, uint32_t, uint32_t>> ret{};
-    if (skipMatch) {
-      uint32_t regbuf[RegNum + 1];
-      ref_regcpy(regbuf, CpyDir::ToDut);
-      std::swap(regbuf[RegNum], delayed_ref_pc);
-      skipMatch = false;
-    } else {
-      ret = match();
+    ret = match();
+    if (!ret.empty()) {
+      std::cerr << std::format(
+        "Commit #{}: dut_pc={:08x} ref_pc_delayed={:08x}",
+        commitCount, delayed_dut_pc, delayed_ref_pc)
+                << std::endl;
     }
     copy();
     return std::move(ret);
@@ -171,6 +202,11 @@ public:
   void
   setFire() {
     fire = true;
+  }
+
+  void
+  setDeviceAccess() {
+    devAccessCycles.push(curr_tick());
   }
 };
 } // namespace trace

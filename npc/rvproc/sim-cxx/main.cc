@@ -251,12 +251,18 @@ main(int argc, char* argv[]) {
     single_cycle(top, contextp, tfp);
 
     if (auto mismatch = diff->test_on_commit(); !mismatch.empty()) {
+      std::cerr << std::format("DiffTest mismatch at cycle {}", curr_tick())
+                << std::endl;
       for (auto const& [id, golden, real] : mismatch) {
         std::cerr << std::format(
           "Reg {:>2d} mismatch: golden {:>8x} real {:>8x}", id, golden, real)
                   << std::endl;
       }
-
+      std::cerr << "=== DUT Registers ===" << std::endl;
+      for (size_t i = 0; i < trace::RegNum; ++i) {
+        std::cerr << std::format("  x{:>2d} = {:08x}", i, trace::read_reg(i))
+                  << std::endl;
+      }
       ccdb.dump_print();
 
       retCause = "DiffTest failed";
