@@ -21,8 +21,8 @@ NPSIM_BIN = NPSIM_HOME / "build" / "npsim.elf"
 TRACE = NPSIM_HOME / "tests" / "coremark-soc-cal.nptr.zst"
 
 SOC_DEFAULTS = {
-    "sdram-lat": "51",
-    "sdram-burst": "24",
+    "sdram-lat-us": "0.047", "axi-ovhd-cyc": "4",
+    "sdram-burst-us": "0.024",
     "sram-lat": "1",
     "ifq": "3",
     "br-pen": "1",
