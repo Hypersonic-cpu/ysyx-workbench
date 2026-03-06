@@ -70,7 +70,7 @@ object ElaborConfig {
 
     val cfgL1iSize = GlbCtrl.config match {
       case Tiny     => 64
-      case Extended => 1024
+      case Extended => 2048
     }
     val cfgL1iBlk  = 16
     val cfgL1dSize = GlbCtrl.config match {
