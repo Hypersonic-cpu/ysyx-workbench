@@ -151,10 +151,13 @@ class ExecuteStage extends Module {
   iobk.brTarget := actualTarget
   iobk.brLPC    := ioid.pc
 
-  val mispred = validCtrl && ioid.brInst.isBr && (
-    (actualTaken =/= ioid.predTaken) ||
-      (actualTaken && ioid.predTaken &&
-        actualTarget =/= ioid.predTarget)
+  val mispred = validCtrl && (
+    (ioid.brInst.isBr && (
+      (actualTaken =/= ioid.predTaken) ||
+        (actualTaken && ioid.predTaken &&
+          actualTarget =/= ioid.predTarget)
+    )) ||
+      (!ioid.brInst.isBr && ioid.predTaken)
   )
   iobk.isBr       := validCtrl && ioid.brInst.isBr
   iobk.mispred    := mispred

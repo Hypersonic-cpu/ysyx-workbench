@@ -68,7 +68,7 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
   bp match {
     case Some(p) =>
       p.io.queryPC   := btbRdAddr
-      p.io.updValid  := io.fromEx.valid && brex.isBr
+      p.io.updValid  := io.fromEx.valid && (brex.isBr || brex.mispred)
       p.io.updPC     := brex.brLPC
       p.io.updTaken  := brex.brTaken
       p.io.updTarget := brex.brTarget

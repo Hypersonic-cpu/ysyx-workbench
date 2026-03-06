@@ -111,6 +111,19 @@ vga_read(uint32_t addr) {
   return vmem->readWord(addr);
 }
 
+// PMemBox DPI-C stubs — PMemBox.sv is copied into build-sv
+// unconditionally but not instantiated in SoC mode.
+tint_t
+axi_read(addr_t, ureg_t* prdata, bool) {
+  *prdata = 0;
+  return 0;
+}
+
+tint_t
+axi_write(addr_t, ureg_t, uint8_t, bool) {
+  return 0;
+}
+
 #else
 
 RuntimeBin* unifiedMem = nullptr;
@@ -214,8 +227,7 @@ notify_ls_req(uint32_t a) {
 #if DIFFENA
   if ((a >= 0x1000'0000 && a < 0x1000'1000)
       || (a >= 0x0200'0000 && a < 0x0201'0000)) {
-    std::cerr << std::format("SET DEVICE ACCESS!") << std::endl;
-    // pdiff->setDeviceAccess();
+    pdiff->setDeviceAccess();
   }
 #endif
 }
