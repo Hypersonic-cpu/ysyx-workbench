@@ -41,10 +41,9 @@ object ElaborConfig {
         case "--sta"             => GlbCtrl.sta = true
         case "--no-sta"          => GlbCtrl.sta = false
         case "--config-tiny"     =>
-          GlbCtrl.config = Tiny
-          GlbCtrl.bpEntries = 16
-          GlbCtrl.btbEntries = 8
-          GlbCtrl.rasSize = 0
+          throw new IllegalArgumentException(
+            "--config-tiny is removed; only Extended is supported"
+          )
         case "--config-extended" =>
           GlbCtrl.config = Extended
           GlbCtrl.bpEntries = 256
@@ -68,15 +67,9 @@ object ElaborConfig {
     GlbCtrl.debug = debugDefault
     GlbCtrl.sta = staDefault
 
-    val cfgL1iSize = GlbCtrl.config match {
-      case Tiny     => 64
-      case Extended => 2048
-    }
+    val cfgL1iSize = 2048
     val cfgL1iBlk  = 16
-    val cfgL1dSize = GlbCtrl.config match {
-      case Tiny     => 0
-      case Extended => 1024
-    }
+    val cfgL1dSize = 1024
     val cfgL1dBlk  = 16
 
     if (l1iSize < 0) l1iSize = cfgL1iSize

@@ -115,11 +115,14 @@ struct WriteEvent {
 // TODO: Merge with MemRingBuffer
 extern WriteEvent mem_write_buf;
 
-constexpr unsigned RegNum{16U};
+constexpr unsigned RegNum{32U};
 constexpr unsigned FunctArgs{6U};
 constexpr std::array<std::string, RegNum + 1> RegName{
-  "$0", "ra", "sp", "gp", "tp", "t0", "t1", "t2", "s0",
-  "s1", "a0", "a1", "a2", "a3", "a4", "a5", "pc"};
+  "$0",  "ra",  "sp",  "gp",  "tp",  "t0",  "t1",  "t2",
+  "s0",  "s1",  "a0",  "a1",  "a2",  "a3",  "a4",  "a5",
+  "a6",  "a7",  "s2",  "s3",  "s4",  "s5",  "s6",  "s7",
+  "s8",  "s9",  "s10", "s11", "t3",  "t4",  "t5",  "t6",
+  "pc"};
 
 struct ElfSymEnt {
   std::string name;
@@ -204,7 +207,23 @@ read_reg(uint8_t regid) noexcept {
     case 0xd: ret = r->rvCore__DOT__reg_0__DOT__gpr__DOT__gprs_13; break;
     case 0xe: ret = r->rvCore__DOT__reg_0__DOT__gpr__DOT__gprs_14; break;
     case 0xf: ret = r->rvCore__DOT__reg_0__DOT__gpr__DOT__gprs_15; break;
-    case 0x10:ret = r->rvCore__DOT__wbs_io_in_bits_rfoward_pc ; break;
+    case 0x10: ret = r->rvCore__DOT__reg_0__DOT__gpr__DOT__gprs_16; break;
+    case 0x11: ret = r->rvCore__DOT__reg_0__DOT__gpr__DOT__gprs_17; break;
+    case 0x12: ret = r->rvCore__DOT__reg_0__DOT__gpr__DOT__gprs_18; break;
+    case 0x13: ret = r->rvCore__DOT__reg_0__DOT__gpr__DOT__gprs_19; break;
+    case 0x14: ret = r->rvCore__DOT__reg_0__DOT__gpr__DOT__gprs_20; break;
+    case 0x15: ret = r->rvCore__DOT__reg_0__DOT__gpr__DOT__gprs_21; break;
+    case 0x16: ret = r->rvCore__DOT__reg_0__DOT__gpr__DOT__gprs_22; break;
+    case 0x17: ret = r->rvCore__DOT__reg_0__DOT__gpr__DOT__gprs_23; break;
+    case 0x18: ret = r->rvCore__DOT__reg_0__DOT__gpr__DOT__gprs_24; break;
+    case 0x19: ret = r->rvCore__DOT__reg_0__DOT__gpr__DOT__gprs_25; break;
+    case 0x1a: ret = r->rvCore__DOT__reg_0__DOT__gpr__DOT__gprs_26; break;
+    case 0x1b: ret = r->rvCore__DOT__reg_0__DOT__gpr__DOT__gprs_27; break;
+    case 0x1c: ret = r->rvCore__DOT__reg_0__DOT__gpr__DOT__gprs_28; break;
+    case 0x1d: ret = r->rvCore__DOT__reg_0__DOT__gpr__DOT__gprs_29; break;
+    case 0x1e: ret = r->rvCore__DOT__reg_0__DOT__gpr__DOT__gprs_30; break;
+    case 0x1f: ret = r->rvCore__DOT__reg_0__DOT__gpr__DOT__gprs_31; break;
+    case 0x20:ret = r->rvCore__DOT___wbs_io_toReg_bits_excpPC ; break;
 #endif
     default: v_assert(false, "Invalid GPR read @ regid =", std::to_string(regid));
       break;

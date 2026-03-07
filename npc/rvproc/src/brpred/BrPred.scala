@@ -193,9 +193,9 @@ class BimodalPredictor(conf: BrPredConf) extends BrPred(conf) {
     Mux(c === 3.U, 3.U, c + 1.U)
   def decrSat(c: UInt): UInt =
     Mux(c === 0.U, 0.U, c - 1.U)
-  val bhtWen   =
+  val bhtWen    =
     io.updValid && (io.updBtbHit || io.updTaken)
-  val bhtWdata = Mux(
+  val bhtWdata  = Mux(
     io.updTaken && !io.updBtbHit,
     2.U,
     Mux(
@@ -211,7 +211,7 @@ class BimodalPredictor(conf: BrPredConf) extends BrPred(conf) {
   val bypBhtD   = RegNext(bhtWdata)
   val useBhtByp =
     bypBhtV && bypBhtI === qidxR
-  val bhtCnt = Mux(useBhtByp, bypBhtD, bhtRd)
+  val bhtCnt    = Mux(useBhtByp, bypBhtD, bhtRd)
 
   val tagData                                     = if (GlbCtrl.useSram) {
     val bypValid  = RegNext(io.updValid && io.updTaken)

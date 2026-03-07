@@ -55,6 +55,18 @@ object AluOp extends ChiselEnum {
   val And  = Value("b111".U)
 }
 
+/** M-extension operation, encoded as funct3[2:0]. */
+object MulDivOp extends ChiselEnum {
+  val Mul    = Value("b000".U)
+  val Mulh   = Value("b001".U)
+  val Mulhsu = Value("b010".U)
+  val Mulhu  = Value("b011".U)
+  val Div    = Value("b100".U)
+  val Divu   = Value("b101".U)
+  val Rem    = Value("b110".U)
+  val Remu   = Value("b111".U)
+}
+
 class AluSel extends Bundle {
   val rs1SelPC  = Bool()
   val rs2SelImm = Bool()
@@ -167,6 +179,9 @@ class DecodeToExecute extends Bundle {
   val predBhtCnt = UInt(2.W)
   val isCall     = Bool()
   val isRet      = Bool()
+  val isMul      = Bool()
+  val isDiv      = Bool()
+  val mulDivOp   = MulDivOp()
   val foward     = new DecodeFoward
 }
 

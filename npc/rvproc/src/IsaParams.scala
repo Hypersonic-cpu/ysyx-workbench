@@ -32,13 +32,17 @@ object GlbCtrl {
   var rasSize    = 8
   def useSram:   Boolean = config == Extended
   def hasDCache: Boolean = config == Extended
+  assert(
+    config == Extended,
+    "Only Extended config is supported in RV32IM"
+  )
 }
 
 object ISA {
   val InstBits   = 32
   val RegBits    = 32
-  val RegNum     = 16
-  val RegIdxBits = 4
+  val RegNum     = 32
+  val RegIdxBits = 5
   val CsrIdxBits = 12
   val AddrBits   = 32 // Also bus bits
   val WordShift  = 2

@@ -29,8 +29,8 @@ class EXU extends Module {
 
   // Tree comparator: O(log n) depth, no carry chain
   private def treeLTEq(
-      a: UInt,
-      b: UInt
+    a: UInt,
+    b: UInt
   ): (Bool, Bool) = {
     val n = a.getWidth
     if (n == 1) {
@@ -38,7 +38,7 @@ class EXU extends Module {
       val eq = !(a(0) ^ b(0))
       (lt, eq)
     } else {
-      val h  = n / 2
+      val h        = n / 2
       val (hL, hE) =
         treeLTEq(a(n - 1, h), b(n - 1, h))
       val (lL, lE) =
@@ -106,7 +106,7 @@ class EXU extends Module {
     io.rs1V(msb).asBool,
     brLTU
   )
-  val brLT = Mux(io.sel.cmpUsgn, brLTU, brLTS)
+  val brLT  = Mux(io.sel.cmpUsgn, brLTU, brLTS)
 
   io.brRel :=
     (io.br.bIfeq && cmpEQ) ||
@@ -158,8 +158,8 @@ class ExecuteStage extends Module {
   val validCtrl  =
     io.in.valid && !flushed && !regBrFlush
 
-  io.in.ready  := io.out.ready
-  val outFire   = validCtrl && !io.excpFlush &&
+  io.in.ready := io.out.ready
+  val outFire = validCtrl && !io.excpFlush &&
     io.out.ready
   io.out.valid := validCtrl && !io.excpFlush
 
@@ -248,8 +248,8 @@ class ExecuteStage extends Module {
   val brDetV    = validCtrl && !io.excpFlush
   val brDetB    = brDetV && needFlush
 
-  io.brDet.valid  := brDetV
-  io.brDet.bits   := brDetB
+  io.brDet.valid   := brDetV
+  io.brDet.bits    := brDetB
   io.toFetch.valid := brDetV
   io.toFetch.bits  := toFWire
 
@@ -257,7 +257,7 @@ class ExecuteStage extends Module {
   // one that actually fired with a misprediction.
   val regNeedFlush =
     RegNext(needFlush, false.B)
-  val regOutFire =
+  val regOutFire   =
     RegNext(outFire, false.B)
   regBrFlush := regNeedFlush && regOutFire
   // Misalignment is now detected in LS stage

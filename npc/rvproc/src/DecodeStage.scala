@@ -46,9 +46,12 @@ class IDU extends Module {
     val aluSel = Output(new AluSel)
     val fenceI = Output(Bool())
 
-    val brInst = Output(new BrInst)
-    val isCall = Output(Bool())
-    val isRet  = Output(Bool())
+    val brInst   = Output(new BrInst)
+    val isCall   = Output(Bool())
+    val isRet    = Output(Bool())
+    val isMul    = Output(Bool())
+    val isDiv    = Output(Bool())
+    val mulDivOp = Output(MulDivOp())
 
     val wbSel  = Output(WbSel())
     val ebreak = Output(Bool())
@@ -140,8 +143,18 @@ class IDU extends Module {
   val instCsr   = instSys && (sysOp =/= CsrOp.None)
   io.csralu := instCsr && sysOp =/= CsrOp.CsrRW
 
+  // M-extension: OpReg with funct7 = 0000001
+  val instMext =
+    opName === InstOp.OpReg && funct7 === "b0000001".U
+  val mulDivOp = MulDivOp(funct3)
+  val instMul  = instMext && !funct3(2)
+  val instDiv  = instMext && funct3(2)
+  io.isMul    := instMul
+  io.isDiv    := instDiv
+  io.mulDivOp := mulDivOp
+
   /** ALU commands -> EXU */
-  val aluEn = !isFenceI
+  val aluEn = !isFenceI && !instMext
   val aluOp = MuxCase(
     AluOp.Add,
     Seq(
@@ -252,6 +265,8 @@ class DecodeStage extends Module {
     // val rawRes = Input(Bool())
     val fwdRes    = Input(new SourceFoward)
     val excpFlush = Input(Bool())
+    // Scoreboard: stall if rs1/rs2 has in-flight MUL/DIV
+    val sbBusy    = Input(UInt(ISA.RegNum.W))
   })
 
   val flushed = io.flush.bits
@@ -261,7 +276,15 @@ class DecodeStage extends Module {
 
   val iDec = Module(new IDU)
 
-  val waitRAW = io.fwdRes.block
+  val waitRAW  = io.fwdRes.block
+  // Scoreboard stall: stall if any used source is in-flight
+  val sbHitRs1 = io.sbBusy(iDec.io.rs1) && validCtrl &&
+    !iDec.io.aluSel.rs1SelPC && iDec.io.rs1.orR
+  val sbHitRs2 = io.sbBusy(iDec.io.rs2) && validCtrl &&
+    (!iDec.io.aluSel.rs2SelImm ||
+      iDec.io.memAcc.isSt || iDec.io.ebreak) &&
+    iDec.io.rs2.orR
+  val waitSB   = sbHitRs1 || sbHitRs2
   io.rawSrc.rs1  := iDec.io.rs1
   io.rawSrc.rs2  := iDec.io.rs2
   io.rawSrc.csr  := iDec.io.csrir
@@ -270,10 +293,10 @@ class DecodeStage extends Module {
   io.rawSrc.useC := validCtrl &&
     (iDec.io.wbSel === WbSel.fromCsr || iDec.io.aluSel.brSelCsr)
 
-  io.in.ready     := io.out.ready && !waitRAW
+  io.in.ready     := io.out.ready && !waitRAW && !waitSB
   // Flush IF and ID when brAbs (result on )
-  io.out.valid    := validCtrl && !waitRAW && !io.excpFlush
-  io.fenceI.valid := validCtrl && !waitRAW && !io.excpFlush
+  io.out.valid    := validCtrl && !waitRAW && !waitSB && !io.excpFlush
+  io.fenceI.valid := validCtrl && !waitRAW && !waitSB && !io.excpFlush
 
   iDec.io.valid := validCtrl
 
@@ -314,6 +337,9 @@ class DecodeStage extends Module {
   ioex.predBhtCnt := ioif.predBhtCnt
   ioex.isCall     := iDec.io.isCall
   ioex.isRet      := iDec.io.isRet
+  ioex.isMul      := iDec.io.isMul
+  ioex.isDiv      := iDec.io.isDiv
+  ioex.mulDivOp   := iDec.io.mulDivOp
 
   val iofw = ioex.foward
   iofw.gprRd  := iDec.io.rd

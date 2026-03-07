@@ -35,20 +35,176 @@ class rvCore(
   val wbs = Module(new WrBackStage)
   val reg = Module(new RegFile)
   val raw = Module(new RAWDet)
+  val mul = Module(new IntMultiplier)
+  val div = Module(new IntDivider)
 
-  // exs.io.toFetch <> ifs.io.fromEx
-  // exs.io.toDec <> ids.io.isFlush
-  // TODO: brDet 和 exs.toFetch 功能类似, 考虑合并
+  // ── Scoreboard (tracks in-flight MUL/DIV rd) ────
+  val scoreboard = RegInit(0.U(ISA.RegNum.W))
+
+  // ── Pipeline connections (IF → ID → EX → LS) ───
   BusConnect(exs.io.brDet, exs.io.flush, Pipeline)
   BusConnect(exs.io.brDet, ids.io.flush, Pipeline)
   BusConnect(ids.io.fenceI, ifs.io.fromId, Pipeline)
   BusConnect(exs.io.toFetch, ifs.io.fromEx, Pipeline)
   BusConnect(ifs.io.out, ids.io.in, Pipeline)
-  BusConnect(ids.io.out, exs.io.in, Pipeline)
+
+  // ── Dispatch: IDU → EXU / MUL / DIV ─────────
+  // Single pipeline register replacing the original
+  // BusConnect(ids.io.out, exs.io.in, Pipeline)
+  val dispValid = RegInit(false.B)
+  val dispBits  = Reg(new DecodeToExecute)
+
+  // Flush from EXU misprediction or WBU exception
+  val exFlushWire =
+    RegNext(exs.io.brDet.valid && exs.io.brDet.bits, false.B)
+  val wbExcpFlush = wbs.io.excpFlushOut
+  val pipeFlush   = exFlushWire || wbExcpFlush
+
+  // Dispatch accepts when target is ready
+  val isMulDisp = dispBits.isMul
+  val isDivDisp = dispBits.isDiv
+  val isMD      = isMulDisp || isDivDisp
+  // When MUL/DIV is in-flight, block ALL dispatch so no
+  // younger instruction can commit out of order.
+  // Only one M-ext instruction may be in-flight at a time.
+  val sbAnyBusy = scoreboard.orR
+  val unitReady = Mux(
+    isMulDisp,
+    mul.io.in.ready,
+    Mux(isDivDisp, div.io.in.ready, exs.io.in.ready)
+  )
+  val tgtReady  = unitReady && !sbAnyBusy
+
+  // IDU → dispatch register (replaces BusConnect Pipeline)
+  // Matches BusConnect semantics: register only updates when
+  // downstream accepts (ids.io.out.ready). Never externally
+  // flushed — EXU's internal self-loop flush (flushed /
+  // regBrFlush) kills wrong-path instructions when they
+  // eventually reach EXU, just like the original design.
+  ids.io.out.ready := !dispValid || tgtReady
+  when(ids.io.out.ready) {
+    dispValid := ids.io.out.valid
+    when(ids.io.out.valid) {
+      dispBits := ids.io.out.bits
+    }
+  }
+
+  // Dispatch → EXU (only non-M instructions)
+  // No pipeFlush gate: EXU handles flush internally via
+  // self-loop BusConnect(brDet → flush) and regBrFlush.
+  // sbAnyBusy blocks younger EXU instructions from entering
+  // the pipeline while MUL/DIV is in flight (in-order commit).
+  exs.io.in.valid := dispValid && !isMD && !sbAnyBusy
+  exs.io.in.bits  := dispBits
+
+  // Dispatch → MUL (blocked when another M-ext in-flight)
+  mul.io.in.valid       := dispValid && isMulDisp &&
+    !pipeFlush && !sbAnyBusy
+  mul.io.in.bits.rs1    := dispBits.rs1V
+  mul.io.in.bits.rs2    := dispBits.rs2V
+  mul.io.in.bits.op     := dispBits.mulDivOp
+  mul.io.in.bits.rd     := dispBits.foward.gprRd
+  mul.io.in.bits.foward := dispBits.foward
+  mul.io.flush          := pipeFlush
+
+  // Dispatch → DIV (blocked when another M-ext in-flight)
+  div.io.in.valid       := dispValid && isDivDisp &&
+    !pipeFlush && !sbAnyBusy
+  div.io.in.bits.rs1    := dispBits.rs1V
+  div.io.in.bits.rs2    := dispBits.rs2V
+  div.io.in.bits.op     := dispBits.mulDivOp
+  div.io.in.bits.rd     := dispBits.foward.gprRd
+  div.io.in.bits.foward := dispBits.foward
+  div.io.flush          := pipeFlush
+
+  // ── Scoreboard set/clear ────────────────────────
+  val sbSet   = Wire(UInt(ISA.RegNum.W))
+  val sbClear = Wire(UInt(ISA.RegNum.W))
+
+  // Set when MUL/DIV dispatched
+  val dispFire = dispValid && isMD && tgtReady && !pipeFlush
+  val dispRd   = dispBits.foward.gprRd
+  sbSet := Mux(
+    dispFire && dispRd.orR,
+    1.U(ISA.RegNum.W) << dispRd,
+    0.U
+  )
+
+  // ── EXU → LSU → (registered) → WBU merge ────
   BusConnect(exs.io.out, lss.io.in, Pipeline)
-  BusConnect(lss.io.out, wbs.io.in, Pipeline)
+
+  // Pipeline register from LSU output
+  val lsWbValid = Wire(Bool())
+  val lsWbBits  = Wire(new MemoryToWrBack)
+  val lsWbReady = Wire(Bool())
+  lss.io.out.ready := lsWbReady
+  lsWbValid        := RegEnable(lss.io.out.valid, lsWbReady)
+  lsWbBits         := RegEnable(lss.io.out.bits, lsWbReady)
+
+  // ── Writeback merge: DIV > MUL > EXU(LSU) ──────
+  // Priority: DIV > MUL > LSU
+  val divWins = div.io.out.valid
+  val mulWins = mul.io.out.valid && !divWins
+  val mdValid = divWins || mulWins
+
+  // Construct MemoryToWrBack from MUL/DIV result
+  val mdWbBits = Wire(new MemoryToWrBack)
+  val mdFoward =
+    Mux(divWins, div.io.out.bits.foward, mul.io.out.bits.foward)
+  val mdResult =
+    Mux(divWins, div.io.out.bits.result, mul.io.out.bits.result)
+  mdWbBits.aluOut := mdResult
+  mdWbBits.lsuOut := 0.U
+  mdWbBits.foward := mdFoward
+  // M-ext results use wbSel=fromAlu (gprdt = aluOut)
+
+  // ── Writeback merge: LSU-path (older) > MUL/DIV ──────
+  // In-order dispatch guarantees any instruction in lsWbValid
+  // was dispatched before the in-flight MUL/DIV, so it must
+  // commit first.  MUL/DIV result waits until the LSU path
+  // drains.
+  when(lsWbValid) {
+    // Older EXU-path instruction commits first
+    wbs.io.in.valid := true.B
+    wbs.io.in.bits  := lsWbBits
+    lsWbReady       := wbs.io.in.ready
+  }.elsewhen(mdValid) {
+    // MUL/DIV result commits (pipeline drained)
+    wbs.io.in.valid := true.B
+    wbs.io.in.bits  := mdWbBits
+    lsWbReady       := false.B // stall LSU pipeline
+  }.otherwise {
+    wbs.io.in.valid := false.B
+    wbs.io.in.bits  := lsWbBits
+    lsWbReady       := wbs.io.in.ready
+  }
+
+  // MUL/DIV output handshake — wait for older LSU-path
+  // instruction to drain before consuming MUL/DIV result.
+  div.io.out.ready := divWins && wbs.io.in.ready && !lsWbValid
+  mul.io.out.ready := mulWins && wbs.io.in.ready && !lsWbValid
+
+  // Clear scoreboard on MUL/DIV writeback
+  val mdWbFire = mdValid && wbs.io.in.ready
+  val mdWbRd   =
+    Mux(divWins, div.io.out.bits.rd, mul.io.out.bits.rd)
+  sbClear := Mux(
+    mdWbFire && mdWbRd.orR,
+    1.U(ISA.RegNum.W) << mdWbRd,
+    0.U
+  )
+
+  // Scoreboard update
+  when(pipeFlush) {
+    scoreboard := 0.U
+  }.otherwise {
+    scoreboard := (scoreboard | sbSet) & ~sbClear
+  }
+  // Include sbSet so IDU sees the scoreboard update on the
+  // *same cycle* a MUL/DIV dispatches (register lags 1 cycle).
+  ids.io.sbBusy := scoreboard | sbSet
+
   wbs.io.toReg <> reg.io.fromWb
-  // wbs.io.toFetch <> ifs.io.fromWb
 
   // Exception flush wiring
   val mtvecWire = reg.io.mtvecOut
@@ -64,11 +220,9 @@ class rvCore(
   ids.io.fenceI.ready := true.B
   reg.io.toId <> ids.io.fromReg
 
-  // To ID
+  // ── RAW hazard detection ───────────────────────
   raw.io.srcfw <> ids.io.fwdRes
-  // Sources
   raw.io.decode <> ids.io.rawSrc
-  // raw.io.raw <> ids.io.rawRes
   RdPacket(exs.io.fwdDet, exs.io.in.bits.foward, raw.io.exsrd)
   RdPacket(lss.io.fwdDet, lss.io.in.bits.foward, raw.io.lssrd)
   RdPacket(wbs.io.fwdDet, wbs.io.in.bits.foward, raw.io.wbsrd)
@@ -273,8 +427,11 @@ class rvCore(
     dontTouch(lss.io)
     dontTouch(wbs.io)
     dontTouch(reg.io)
+    dontTouch(mul.io)
+    dontTouch(div.io)
     dontTouch(io.master)
     dontTouch(io)
+    dontTouch(scoreboard)
   }
 
   io.slave := DontCare

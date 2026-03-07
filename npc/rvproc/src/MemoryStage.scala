@@ -27,10 +27,10 @@ class MemoryStage extends Module {
   val dMem = io.dMem
 
   // Misalignment detection (moved from EXU for timing)
-  val wordMis =
+  val wordMis      =
     addr(1, 0) =/= 0.U &&
       ioex.memOp.len === MemLen.Word
-  val halfMis =
+  val halfMis      =
     addr(0) =/= 0.U &&
       ioex.memOp.len === MemLen.Half
   val excpMisalign =
