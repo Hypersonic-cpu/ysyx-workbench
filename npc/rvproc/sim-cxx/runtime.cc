@@ -253,11 +253,9 @@ notify_commit(uint32_t pc, uint32_t inst, unsigned char stalltp) {
   if (stalltp != 0)
     return;
   pccdb->inst_trace(pc, inst);
-  if constexpr (options::diff_enable) {
-    pdiff->checkSkipMatch(inst);
-    pdiff->upd_dut_pc(pc);
-    pdiff->setFire();
-  }
+  pdiff->checkSkipMatch(inst);
+  pdiff->updateDutPC(pc);
+  pdiff->setFire();
 }
 
 void

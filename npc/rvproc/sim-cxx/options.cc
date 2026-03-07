@@ -1,5 +1,6 @@
 #include "options.hh"
 #include "probe.hh"
+#include "rtl_defs.hh"
 
 #include <csignal>
 #include <cstddef>
@@ -25,9 +26,6 @@ std::string wave_file = "";
 std::string elf_file = "";
 bool fast = false;
 size_t max_cycles = ~0ULL;
-
-// std::unordered_map<ArchConfig, size_t> arch_config_val{
-//   {ICacheSize, 1024}, {ICacheAssoc, 1}, {ICacheBlock, 16}};
 
 static size_t
 parse_size(std::string s) {
@@ -70,25 +68,15 @@ parse_args(int argc, char* argv[]) {
     {"fast-mode", no_argument, NULL, 'F'},
     {"max-cycle", required_argument, NULL, 'M'},
     {"rec-outdir", required_argument, NULL, 'R'},
-    // {"record-perf", no_argument, NULL, 'R'},
     {"log", required_argument, NULL, 'l'},
     {"elf", required_argument, NULL, 'e'},
     {"help", no_argument, NULL, 'h'},
-    // {"l1i-size", required_argument, NULL, ArchConfig::ICacheSize},
-    // {"l1i-blksize", required_argument, NULL, ArchConfig::ICacheBlock},
-    // {"l1i-assoc", required_argument, NULL, ArchConfig::ICacheAssoc},
     {0, 0, NULL, 0},
   };
 
   std::string custom_dir = "null";
-  // { /** Default dir */
-  //   auto now = std::chrono::system_clock::now();
-  //   auto in_time_t = std::chrono::system_clock::to_time_t(now);
-  //   std::stringstream ss;
-  //   ss << std::put_time(std::localtime(&in_time_t), "%Y%m%d-%H%M%S");
-  //   custom_dir = ss.str();
-  // }
 
+  // argv[1] is workload image path
   optind = 2;
   int o;
   while ((o = getopt_long(argc, argv, "-hmidfFcTR:M:l:e:", table, NULL))
@@ -97,7 +85,6 @@ parse_args(int argc, char* argv[]) {
     case 'm':
       runtime_dump_opt.mem_buf = true;
       break;
-      // case 'd': ccdb::runtime_dump_opt. = true; break;
     case 'f':
       runtime_dump_opt.frame_stk = true;
       break;
@@ -106,8 +93,9 @@ parse_args(int argc, char* argv[]) {
       break;
     case 'l':
       wave_file = std::string(optarg);
-      v_warn(options::wave_enable,
-             "Fst wave not enabled. Recompile with LOGENA=1");
+#ifdef LOGENA
+      v_warn(true, "Fst wave not enabled. Recompile with LOGENA=1");
+#endif
       break;
     case 'e':
       elf_file = optarg;
@@ -118,9 +106,6 @@ parse_args(int argc, char* argv[]) {
     case 'M':
       max_cycles = std::atoi(optarg);
       break;
-    // case 'R':
-    //   record_perf = true;
-    //   break;
     case 'R':
       record_perf = true;
       custom_dir = std::string(optarg);
@@ -128,18 +113,10 @@ parse_args(int argc, char* argv[]) {
     case 'c':
       runtime_dump_opt.cycle_no = true;
       break;
-    // case ArchConfig::ICacheSize:
-    //   arch_config_val.insert_or_assign(ICacheSize, parse_size(optarg));
-    //   break;
-    // case ArchConfig::ICacheAssoc:
-    //   arch_config_val.insert_or_assign(ICacheAssoc, atoi(optarg));
-    //   break;
-    // case ArchConfig::ICacheBlock:
-    //   arch_config_val.insert_or_assign(ICacheBlock, atoi(optarg));
-    //   break;
     default:
-      std::cerr << ANSI_RED << "Invalid Argument 0x" << std::hex << o << "\n"
-                << ANSI_NONE << std::endl;
+      std::cerr << std::format(
+        ANSI_RED "Invalid Argc[{:d}]: 0x{:x} '{:c}'" ANSI_NONE, optind, o, o)
+                << std::endl;
       exit(1);
     }
   }

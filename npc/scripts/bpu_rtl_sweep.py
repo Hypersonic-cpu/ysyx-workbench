@@ -61,7 +61,7 @@ def build_and_run(cfg, coremark_bin):
     print(f"[{tag}] Running CoreMark...", flush=True)
     run_cmd = (
         f"make -C {NPC_HOME} runonly SOCMODE=1 "
-        f"mrombin={coremark_bin} simccargs=\"-M 100000000\""
+        f"imagebin={coremark_bin} simccargs=\"-M 100000000\""
     )
     r = subprocess.run(run_cmd, shell=True, capture_output=True, text=True)
     output = r.stdout + r.stderr

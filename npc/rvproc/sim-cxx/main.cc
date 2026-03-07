@@ -3,6 +3,7 @@
 #include "rtl_defs.hh"
 
 #include <cassert>
+#include <chrono>
 #include <cstdio>
 #include <filesystem>
 #include <format>
@@ -12,7 +13,10 @@
 #include <ostream>
 #include <string>
 #include <verilated.h>
+
+#if LOGENA
 #include <verilated_fst_c.h>
+#endif
 
 #if SOCMODE
 #include "VysyxSoCFull.h"
@@ -177,10 +181,6 @@ main(int argc, char* argv[]) {
   unifiedMem = uMem.get();
 #endif
 
-  if (options::wave_enable) {
-    assert(!options::wave_file.empty());
-  }
-
   const std::unique_ptr<VerilatedContext> contextp{new VerilatedContext};
   contextp->commandArgs(argc, argv);
 
@@ -188,11 +188,11 @@ main(int argc, char* argv[]) {
   trace::ptop = top.get();
   trace::FstTracer tfp(options::wave_file);
   pwave = &tfp;
-  if constexpr (options::wave_enable) {
-    Verilated::traceEverOn(true);
-    top->trace(tfp.get(), 99);
-    tfp.open();
-  }
+#if LOGENA
+  Verilated::traceEverOn(true);
+  top->trace(tfp.get(), 99);
+  tfp.open();
+#endif
 
 #if NVBENA
   nvboard_bind_all_pins(top.get());
@@ -201,8 +201,7 @@ main(int argc, char* argv[]) {
 
   /** CONFIG BEGIN */
 #if SOCMODE
-  auto const diff =
-    std::make_unique<trace::DiffTester>(flash->dataVec());
+  auto const diff = std::make_unique<trace::DiffTester>(flash->dataVec());
   pdiff = diff.get();
 #else
   auto const diff =
@@ -236,6 +235,7 @@ main(int argc, char* argv[]) {
   int retBad = 0;
 
   /** RESET SIMULATOR */
+  auto sim_start = std::chrono::high_resolution_clock::now();
   single_reset(top, contextp, tfp);
   diff->copy();
 
@@ -288,6 +288,7 @@ final:
 
   // auto const lastPC{trace::read_reg(trace::RegNum)};
   top->final();
+  auto sim_finish = std::chrono::high_resolution_clock::now();
 
   std::cerr << std::format(ANSI_YELLOW
                            "== Exit @ cyc #{:>12d} : {:s} ==" ANSI_NONE,
@@ -296,14 +297,6 @@ final:
   auto instNum = spmu->get_instret();
   auto cycleNum = spmu->get_cycles();
   auto ipc = static_cast<double>(instNum) / static_cast<double>(cycleNum);
-  std::cout << std::format(ANSI_YELLOW
-                           "== #cyc {:d} #inst {:d} IPC {:6f} ==" ANSI_NONE,
-                           cycleNum, instNum, ipc)
-            << std::endl;
-  std::cout << std::format(ANSI_YELLOW "== CSR: InstRet {:d} ==" ANSI_NONE,
-                           trace::read_double_csr(trace::CsrSel::MInstreth,
-                                                  trace::CsrSel::MInstret))
-            << std::endl;
 
   print_stats();
 
@@ -314,5 +307,22 @@ final:
 #if NVBENA
   nvboard_quit();
 #endif
+
+  auto sim_time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                       sim_finish - sim_start)
+                       .count();
+  auto sim_clk_rate = static_cast<double>(curr_tick())
+                      / static_cast<double>(sim_time_ms) * 1000.0;
+  auto sim_inst_rate =
+    static_cast<double>(instNum) / static_cast<double>(sim_time_ms) * 1000.0;
+
+  std::cout << std::format(ANSI_YELLOW
+                           "== #cyc {:d} #inst {:d} IPC {:6f} ==" ANSI_NONE,
+                           cycleNum, instNum, ipc)
+            << std::endl;
+  std::cout << std::format(
+    ANSI_YELLOW " > HostSec {:.3f} \tClkRate {:.3f} \tInstRate {:.3f}" ANSI_NONE,
+    static_cast<double>(sim_time_ms) / 1000.0, sim_clk_rate, sim_inst_rate)
+            << std::endl;
   return retBad;
 }

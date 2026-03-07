@@ -1,5 +1,4 @@
 #pragma once
-#include "options.hh"
 #include "probe.hh"
 
 #include <cstddef>
@@ -15,6 +14,16 @@
 namespace trace {
 
 class DiffTester {
+public:
+  static constexpr char NEMU_SO[] = "build/riscv32-nemu-interpreter-so";
+  static constexpr int NEMUPort{1234};
+
+  struct CpyDir {
+    constexpr static bool ToDut = 0;
+    constexpr static bool ToRef = 1;
+  };
+
+private:
   using mcpy_t = void (*)(uint32_t addr, void* buf, size_t n,
                           bool direction);
   using rcpy_t = void (*)(void* dut, bool direction);
@@ -22,7 +31,6 @@ class DiffTester {
   using intr_t = void (*)(uint64_t no);
   using init_t = void (*)(int port);
 
-private:
   init_t ref_init;
   exec_t ref_exec;
   mcpy_t ref_memcpy;
@@ -40,173 +48,44 @@ private:
   std::queue<tick_t> devAccessCycles;
 
 private:
-  void
-  init(const std::vector<ureg_t>& image, const char* so = NEMU_SO,
-       int port = NEMUPort) {
-    if constexpr (!options::diff_enable)
-      return;
-    auto nemu_path = getenv("NEMU_HOME");
-    std::string so_file =
-      (so[0] == '/')
-        ? (std::string(so))
-        : (std::string(nemu_path) + std::string("/") + std::string(so));
-    void* dl = dlopen(so_file.c_str(), RTLD_NOW | RTLD_GLOBAL);
-    v_assert(dl, "DiffTest .so", so_file, "open failed:", dlerror());
-    std::cerr << std::format("Using difftest .so {}", so_file) << std::endl;
-
-    ref_init = (init_t)dlsym(dl, "difftest_init");
-    ref_exec = (exec_t)dlsym(dl, "difftest_exec");
-    ref_memcpy = (mcpy_t)dlsym(dl, "difftest_memcpy");
-    ref_regcpy = (rcpy_t)dlsym(dl, "difftest_regcpy");
-    ref_raise_intr = (intr_t)dlsym(dl, "difftest_raise_intr");
-
-    assert(ref_init && "difftest_init");
-    assert(ref_exec && "difftest_exec");
-    assert(ref_memcpy && "difftest_memcpy");
-    assert(ref_regcpy && "difftest_regcpy");
-    assert(ref_raise_intr && "difftest_raise_intr");
-
-    ref_init(port);
-
-    auto imgsz = image.size() * 4;
-    ref_memcpy(ResetVector, (void*)const_cast<ureg_t*>(image.data()), imgsz,
-               CpyDir::ToRef);
-  }
-
-public:
-  DiffTester(const std::vector<ureg_t>& image)
-      : fire{false}
-      , skipMatch{false}
-      , delayed_dut_pc{0xffff'ffffU}
-      , delayed_ref_pc{ResetVector}
-      , commitCount{0}
-      , devAccessCycles{} {
-    init(image);
-  }
-
-  struct CpyDir {
-    constexpr static bool ToDut = 0;
-    constexpr static bool ToRef = 1;
-  };
-
-  static constexpr char NEMU_SO[] = "build/riscv32-nemu-interpreter-so";
-  static constexpr int NEMUPort{1234};
-
   static inline uint32_t
   bits(uint32_t v, int hi, int lo) {
     return (v >> lo) & ((1U << (hi - lo + 1)) - 1);
   }
 
-  void
-  checkSkipMatch(uint32_t inst) {
-    bool is_csr =
-      bits(inst, 6, 2) == 0b11100 && bits(inst, 14, 12) != 0b000;
-    if (!is_csr) return;
-    uint16_t csrid = bits(inst, 31, 20);
-    if (csrid == 0xB00 || csrid == 0xB80)
-      skipMatch = true;
+  void init(const std::vector<ureg_t>& image, const char* so = NEMU_SO,
+            int port = NEMUPort);
+
+public:
+  DiffTester(const std::vector<ureg_t>& image)
+#if DIFFENA
+      : fire{false}
+      , skipMatch{false}
+      , delayed_dut_pc{0xffff'ffffU}
+      , delayed_ref_pc{ResetVector}
+      , commitCount{0}
+      , devAccessCycles{}
+#endif
+  {
+#if DIFFENA
+    init(image);
+#endif
   }
 
-  auto
-  match() noexcept -> std::vector<std::tuple<uint16_t, uint32_t, uint32_t>> {
-    if constexpr (!options::diff_enable) {
-      return {};
-    }
-    std::vector<std::tuple<uint16_t, uint32_t, uint32_t>> ret{};
-    uint32_t regbuf[RegNum + 1];
-    ref_regcpy(regbuf, CpyDir::ToDut);
-    std::swap(regbuf[RegNum], delayed_ref_pc);
+  void checkSkipMatch(uint32_t inst);
 
-    size_t i = 0;
-    for (i = 0; i < RegNum + 1; ++i) {
-      auto dut = (i == RegNum) ? delayed_dut_pc : trace::read_reg(i);
-      if (regbuf[i] != dut) {
-        ret.emplace_back(i, regbuf[i], dut);
-      }
-    }
-    return std::move(ret);
-  }
+  auto match() noexcept
+    -> std::vector<std::tuple<uint16_t, uint32_t, uint32_t>>;
 
-  void
-  copy() noexcept {
-    if constexpr (!options::diff_enable)
-      return;
-    uint32_t regbuf[RegNum + 1];
-    for (size_t i = 0; i < RegNum; ++i) {
-      regbuf[i] = trace::read_reg(i);
-    }
-    // Preserve NEMU's PC (delayed_ref_pc), don't overwrite with DUT's
-    // committed PC which is the current instruction, not the next.
-    regbuf[RegNum] = delayed_ref_pc;
-    ref_regcpy(regbuf, CpyDir::ToRef);
-  }
+  void copy() const noexcept;
 
-  void
-  iota(uint64_t n = 1) noexcept {
-    if constexpr (!options::diff_enable)
-      return;
-    ref_exec(n);
-  }
+  void iota(uint64_t n = 1) const noexcept;
 
-  auto
-  test_on_commit() noexcept
-    -> std::vector<std::tuple<uint16_t, uint32_t, uint32_t>> {
-    if (!fire) {
-      return {};
-    }
-    fire = false;
-    commitCount++;
+  auto test_on_commit() noexcept
+    -> std::vector<std::tuple<uint16_t, uint32_t, uint32_t>>;
 
-    // Device access skip: notify_ls_req fires in MEM stage on the
-    // SAME cycle as a different instruction's commit in WB. The
-    // device access instruction commits on a LATER cycle. Use the
-    // cycle timestamp to distinguish.
-    bool skipDevice = false;
-    if (!devAccessCycles.empty()
-        && devAccessCycles.front() < curr_tick()) {
-      skipDevice = true;
-      devAccessCycles.pop();
-    }
-
-    if (skipDevice || skipMatch) {
-      // Execute NEMU (it won't crash — NEMU mmio handles unmapped
-      // addresses gracefully). Then skip comparison and sync DUT
-      // state to NEMU.
-      iota();
-      uint32_t regbuf[RegNum + 1];
-      ref_regcpy(regbuf, CpyDir::ToDut);
-      delayed_ref_pc = regbuf[RegNum];
-      skipMatch = false;
-      copy();
-      return {};
-    }
-
-    iota();
-    std::vector<std::tuple<uint16_t, uint32_t, uint32_t>> ret{};
-    ret = match();
-    if (!ret.empty()) {
-      std::cerr << std::format(
-        "Commit #{}: dut_pc={:08x} ref_pc_delayed={:08x}",
-        commitCount, delayed_dut_pc, delayed_ref_pc)
-                << std::endl;
-    }
-    copy();
-    return std::move(ret);
-  }
-
-  void
-  upd_dut_pc(ureg_t pc) {
-    delayed_dut_pc = pc;
-  }
-
-  void
-  setFire() {
-    fire = true;
-  }
-
-  void
-  setDeviceAccess() {
-    devAccessCycles.push(curr_tick());
-  }
+  void updateDutPC(ureg_t pc);
+  void setFire();
+  void setDeviceAccess();
 };
 } // namespace trace

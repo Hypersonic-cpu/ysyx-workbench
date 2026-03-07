@@ -4,22 +4,22 @@ RTL_SCALA_ARG?=
 # Core frequency in MHz — sets SIM_MHZ in simulator and drives ysyxSoC delayers
 MHZ ?= 1000
 
-NPSIM_ACTIVE=0
+# WARN: `--soc-mode` should not be specified manually
 ifeq ($(SOCMODE),1)
 override RTL_SCALA_ARG += --soc-mode
-else
-include ../npsim/Makefile
 endif
+
 # if this build involve NV Board
 NVBENA ?= 0
 DPRINTF?=0
 LOGENA?=0
 DIFFENA?=1
 DBGENA?=1
+# Simulation threads, not build threads
 NTHREADS?=1
 
 simccargs ?=
-mrombin ?=
+imagebin ?=
 
 PRJ=rvproc
 TOPNAME=INVALID_NAME
@@ -53,7 +53,11 @@ export OBJCACHE := ccache
 ## Verilator related
 VERILATOR = verilator
 VERILATOR_COVERAGE = verilator_coverage
+ifeq ($(LOGENA),1)
 VERILATOR_TRACE ?= --trace --trace-fst --trace-depth 99
+else
+VERILATOR_TRACE :=
+endif
 VERILATOR_CFLAGS += $(VERILATOR_TRACE) -DPRINTF_COND=$(DPRINTF)
 VERILATOR_CFLAGS += -MMD -cc  --threads $(NTHREADS) --threads-dpi none \
 										-O3 --x-assign fast --x-initial fast \
@@ -163,13 +167,11 @@ endif
 	@echo "Compiled:" $(SIM_BIN)
 
 run: printhook $(LIBCAPSTONE) compile
-	# $(call git_commit, "run with AM via verilator cc")
-	@echo "MROMBIN = $(mrombin)"
-	$(SIM_BIN) $(mrombin) $(simccargs)
+	@echo "imagebin = $(imagebin)"
+	$(SIM_BIN) $(imagebin) $(simccargs)
 
 runonly: prebuild $(SIM_BIN)
-	# $(call git_commit, "run with AM via verilator cc")
-	$(SIM_BIN) $(mrombin) $(simccargs)
+	$(SIM_BIN) $(imagebin) $(simccargs)
 
 verilog: $(SCALA_SOURCES)
 	$(call git_commit, "generate verilog")
@@ -188,7 +190,7 @@ verilog: $(SCALA_SOURCES)
 	@echo "Memory port renaming done"
 
 rtlsta: $(SCALA_SOURCES)
-	$(call git_commit, "generate verilog") # WARN: Only allow tracking here
+	$(call git_commit, "generate verilog")
 	rm -rf $(BUILD_SV_DIR)
 	mkdir -p $(BUILD_SV_DIR)
 	mill -i $(PRJ).runMain ElaborSta --no-debug --sta $(RTL_SCALA_ARG)
@@ -252,13 +254,5 @@ sramlib:
 prebuild:
 	@mkdir -p $(BUILD_OBJ_DIR)
 	@mkdir -p $(BUILD_SIM_DIR)
-
-# WARN: DO NOT AUTO-CHANGE TO ANY OTHER BRANCHES!
-# THAT INVOLVES UNPREDICTABLE.
-commit:
-	@git commit -am "npc: commit by Makefile script"
-
-tracer:
-	$(call git_commit, "manual trace") # WARN: Only allow tracking here
 
 -include ../Makefile

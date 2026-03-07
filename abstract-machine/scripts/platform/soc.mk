@@ -42,10 +42,10 @@ image: $(SOC_AM_MHZ_STAMP) image-dep
 	
 
 run: insert-arg cleancc
-	@$(MAKE) -C $(NPC_HOME) run SOCMODE=1 mrombin=$(abspath $(IMAGE).bin) MHZ=$(MHZ)
+	@$(MAKE) -C $(NPC_HOME) run SOCMODE=1 imagebin=$(abspath $(IMAGE).bin) MHZ=$(MHZ)
 
 runonly: insert-arg
-	@$(MAKE) -C $(NPC_HOME) runonly SOCMODE=1 mrombin=$(abspath $(IMAGE).bin) MHZ=$(MHZ)
+	@$(MAKE) -C $(NPC_HOME) runonly SOCMODE=1 imagebin=$(abspath $(IMAGE).bin) MHZ=$(MHZ)
 
 buildsv: 
 	@$(MAKE) -C $(NPC_HOME) verilog
