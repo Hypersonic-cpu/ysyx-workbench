@@ -41,10 +41,10 @@ runam: insert-arg
 	@$(MAKE) -C $(NPC_HOME) runam
 
 run: insert-arg cleancc
-	@$(MAKE) -C $(NPC_HOME) run SOCMODE=0 mrombin=$(abspath $(IMAGE).bin) MHZ=$(MHZ)
+	@$(MAKE) -C $(NPC_HOME) run SOCMODE=0 imagebin=$(abspath $(IMAGE).bin) MHZ=$(MHZ)
 
 runonly: insert-arg
-	@$(MAKE) -C $(NPC_HOME) runonly SOCMODE=0 mrombin=$(abspath $(IMAGE).bin) MHZ=$(MHZ)
+	@$(MAKE) -C $(NPC_HOME) runonly SOCMODE=0 imagebin=$(abspath $(IMAGE).bin) MHZ=$(MHZ)
 
 buildsv: 
 	@$(MAKE) -C $(NPC_HOME) verilog

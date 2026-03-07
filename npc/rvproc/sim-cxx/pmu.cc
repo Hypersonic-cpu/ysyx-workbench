@@ -14,8 +14,7 @@ SoftPerfUnit::SoftPerfUnit()
     , lscyc(0, 100, 10, std::numeric_limits<int64_t>::max(),
             "Load Store Cycles")
     , instcyc(InstOpName.size(), 0, 100, 10,
-              std::numeric_limits<int64_t>::max(), "Inst Cats",
-              InstOpName)
+              std::numeric_limits<int64_t>::max(), "Inst Cats", InstOpName)
     , recoverTime(0, 60, 3, "BrRecover Time")
     , instStatus("InstBreakdown", InstBreakdownName)
     , cycStatus("BlockedCause", CycBreakdownName)
@@ -27,10 +26,9 @@ SoftPerfUnit::SoftPerfUnit()
 
 void
 SoftPerfUnit::dump_stats(std::ostream& os) const {
-  os << std::format(
-       "Cycles {:d}\n  InstRet {:d} IPC {:.6f} StallCyc {:d}",
-       get_cycles(), get_instret(), get_ipc(),
-       get_cycles() - get_instret())
+  os << std::format("Cycles {:d}\n  InstRet {:d} IPC {:.6f} StallCyc {:d}",
+                    get_cycles(), get_instret(), get_ipc(),
+                    get_cycles() - get_instret())
      << std::endl;
   for (auto const& ptr : statslist) {
     ptr->dump_stats(os);
@@ -38,29 +36,27 @@ SoftPerfUnit::dump_stats(std::ostream& os) const {
   auto bp_total = bpStats.get_samples();
   if (bp_total > 0) {
     auto bp_correct = bpStats.at(BpCorrect);
-    os << std::format(
-         "BrPred Accuracy : {:.2f}% ({:d}/{:d})",
-         100.0 * bp_correct / bp_total, bp_correct, bp_total)
+    os << std::format("BrPred Accuracy : {:.2f}% ({:d}/{:d})",
+                      100.0 * bp_correct / bp_total, bp_correct, bp_total)
        << std::endl;
     std::vector<std::pair<uint32_t, uint32_t>> topWrong;
     for (auto& [pc, s] : bpPerPC)
       if (s.wrong > 0)
         topWrong.push_back({pc, s.wrong});
-    std::sort(
-      topWrong.begin(), topWrong.end(),
-      [](auto& a, auto& b) { return a.second > b.second; });
-    os << "Top mispredicting PCs:" << std::endl;
-    for (size_t i = 0;
-         i < std::min(topWrong.size(), size_t(15)); i++) {
-      auto pc = topWrong[i].first;
-      auto& s = bpPerPC[pc];
-      os << std::format(
-           "  {:08x} wrong {:6d} correct {:6d} "
-           "total {:6d} acc {:.1f}%",
-           pc, s.wrong, s.correct, s.wrong + s.correct,
-           100.0 * s.correct / (s.wrong + s.correct))
-         << std::endl;
-    }
+    std::sort(topWrong.begin(), topWrong.end(),
+              [](auto& a, auto& b) { return a.second > b.second; });
+    // os << "Top mispredicting PCs:" << std::endl;
+    // for (size_t i = 0;
+    //      i < std::min(topWrong.size(), size_t(15)); i++) {
+    //   auto pc = topWrong[i].first;
+    //   auto& s = bpPerPC[pc];
+    //   os << std::format(
+    //        "  {:08x} wrong {:6d} correct {:6d} "
+    //        "total {:6d} acc {:.1f}%",
+    //        pc, s.wrong, s.correct, s.wrong + s.correct,
+    //        100.0 * s.correct / (s.wrong + s.correct))
+    //      << std::endl;
+    // }
   }
 }
 
@@ -74,25 +70,22 @@ SoftPerfUnit::stats_json() const {
   return ret;
 }
 
+#if DBGENA
 void
 SoftPerfUnit::notifyIFRecvd(addr_t pc) {
   ifRingPush('R', pc, curr_tick());
-  if (ifetchboard.empty()
-      || std::get<0>(ifetchboard.front()) != pc) {
+  if (ifetchboard.empty() || std::get<0>(ifetchboard.front()) != pc) {
     ifRingDump();
   }
-  v_assert(!ifetchboard.empty(), "Cannot find pc @", pc,
-           "in IF Pipeline");
+  v_assert(!ifetchboard.empty(), "Cannot find pc @", pc, "in IF Pipeline");
   while (std::get<0>(ifetchboard.front()) != pc) {
     ifetchboard.pop_front();
     if (ifetchboard.empty()) {
       ifRingDump();
     }
-    v_assert(!ifetchboard.empty(), "Cannot find pc @", pc,
-             "in IF Pipeline");
+    v_assert(!ifetchboard.empty(), "Cannot find pc @", pc, "in IF Pipeline");
   }
-  ifcyc.sample(
-    curr_tick() - std::get<1>(ifetchboard.front()));
+  ifcyc.sample(curr_tick() - std::get<1>(ifetchboard.front()));
   ifetchboard.pop_front();
 }
 
@@ -134,42 +127,13 @@ SoftPerfUnit::notifyMemXBar(bool is_write, uint64_t last_time,
   if (last_time < curr_time) {
     sel.sample(XBarBreakdown::XBarIdle, curr_time - last_time);
   } else if (last_time >= curr_time) {
-    sel.sample(XBarBreakdown::XBarBlocking,
-               last_time - curr_time);
+    sel.sample(XBarBreakdown::XBarBlocking, last_time - curr_time);
   }
   sel.sample(XBarBreakdown::XBarServing, time_usage);
 }
 
 void
-SoftPerfUnit::notifyCommit(addr_t pc, unsigned char stalltp) {
-  auto cause = static_cast<CycBreakdown>(stalltp);
-  cycStatus.sample(cause);
-  if (cause != CycBreakdown::NoStall)
-    return;
-
-  auto it = std::find_if(
-    instboard.begin(), instboard.end(),
-    [&pc](const iboard_t& ib) {
-      return std::get<0>(ib) == pc;
-    });
-  v_assert(it != instboard.end(), "Cannot find pc", pc,
-           "in instboard");
-  auto const [pc_, tp, t0] = *it;
-  auto const deltat = curr_tick() - t0;
-  instcyc.sample(tp, deltat);
-  instboard.erase(it);
-
-  auto const remove_cnt = std::erase_if(
-    instboard,
-    [&t0](const iboard_t& ib) { return std::get<2>(ib) < t0; });
-
-  instStatus.sample(Commit, 1);
-  instStatus.sample(NotUsed, remove_cnt);
-}
-
-void
-SoftPerfUnit::notifyCacheResp(addr_t addr, bool is_hit,
-                              uint16_t id) {
+SoftPerfUnit::notifyCacheResp(addr_t addr, bool is_hit, uint16_t id) {
   if (id == 1) {
     if (is_hit)
       dcacheRates.sample(CacheBreakdown::Hit);
@@ -179,8 +143,8 @@ SoftPerfUnit::notifyCacheResp(addr_t addr, bool is_hit,
   }
   auto& front = icacheboard.front();
   auto [f_addr, f_tick] = front;
-  v_assert(f_addr == addr, "Cache access queue front",
-           f_addr, "!= resp. addr", addr);
+  v_assert(f_addr == addr, "Cache access queue front", f_addr,
+           "!= resp. addr", addr);
   if (is_hit) {
     cacheRates.sample(CacheBreakdown::Hit);
   } else {
@@ -197,10 +161,8 @@ SoftPerfUnit::notifyCacheReq(addr_t addr, uint16_t id) {
 }
 
 void
-SoftPerfUnit::notifyBrOutcome(bool pred_taken,
-                              bool actual_taken,
-                              uint32_t pred_target,
-                              uint32_t actual_target,
+SoftPerfUnit::notifyBrOutcome(bool pred_taken, bool actual_taken,
+                              uint32_t pred_target, uint32_t actual_target,
                               bool btb_hit, uint32_t br_pc) {
   bool is_correct;
   if (!btb_hit && actual_taken) {
@@ -209,8 +171,7 @@ SoftPerfUnit::notifyBrOutcome(bool pred_taken,
   } else if (pred_taken != actual_taken) {
     bpStats.sample(BpWrongDir);
     is_correct = false;
-  } else if (pred_taken && actual_taken
-             && pred_target != actual_target) {
+  } else if (pred_taken && actual_taken && pred_target != actual_target) {
     bpStats.sample(BpWrongTarget);
     is_correct = false;
   } else {
@@ -225,6 +186,63 @@ SoftPerfUnit::notifyBrOutcome(bool pred_taken,
 }
 
 void
+SoftPerfUnit::notifyCommit(addr_t pc, unsigned char stalltp) {
+  auto cause = static_cast<CycBreakdown>(stalltp);
+  cycStatus.sample(cause);
+  if (cause != CycBreakdown::NoStall)
+    return;
+
+  auto it = std::find_if(
+    instboard.begin(), instboard.end(),
+    [&pc](const iboard_t& ib) { return std::get<0>(ib) == pc; });
+  v_assert(it != instboard.end(), "Cannot find pc", pc, "in instboard");
+  auto const [pc_, tp, t0] = *it;
+  auto const deltat = curr_tick() - t0;
+  instcyc.sample(tp, deltat);
+  instboard.erase(it);
+
+  auto const remove_cnt = std::erase_if(
+    instboard, [&t0](const iboard_t& ib) { return std::get<2>(ib) < t0; });
+
+  instStatus.sample(Commit, 1);
+  instStatus.sample(NotUsed, remove_cnt);
+}
+
+#else
+void
+SoftPerfUnit::notifyIFRecvd(addr_t pc) {}
+void
+SoftPerfUnit::notifyIFFetch(addr_t pc) {}
+void
+SoftPerfUnit::notifyDecode(addr_t pc, unsigned char op) {}
+void
+SoftPerfUnit::notifyLSReq(addr_t a) {}
+void
+SoftPerfUnit::notifyLSResp(addr_t a) {}
+void
+SoftPerfUnit::notifyFlush() {}
+void
+SoftPerfUnit::notifyMemXBar(bool is_write, uint64_t last_time,
+                            uint32_t time_usage) {}
+void
+SoftPerfUnit::notifyCacheResp(addr_t addr, bool is_hit, uint16_t id) {}
+void
+SoftPerfUnit::notifyCacheReq(addr_t addr, uint16_t id) {}
+void
+SoftPerfUnit::notifyBrOutcome(bool pred_taken, bool actual_taken,
+                              uint32_t pred_target, uint32_t actual_target,
+                              bool btb_hit, uint32_t br_pc) {}
+void
+SoftPerfUnit::notifyCommit(addr_t pc, unsigned char stalltp) {
+  auto cause = static_cast<CycBreakdown>(stalltp);
+  cycStatus.sample(cause);
+  if (cause != CycBreakdown::NoStall)
+    return;
+  instStatus.sample(Commit, 1);
+}
+#endif // DBGENA
+
+void
 SoftPerfUnit::reset_stats() {
   for (auto const& ptr : statslist) {
     ptr->reset_stats();
@@ -235,12 +253,11 @@ SoftPerfUnit::reset_stats() {
 void
 SoftPerfUnit::ifRingDump() const {
   std::cerr << "=== IFetch Event Ring ===\n";
-  size_t start =
-    ifRingIdx > kIFRingSz ? ifRingIdx - kIFRingSz : 0;
+  size_t start = ifRingIdx > kIFRingSz ? ifRingIdx - kIFRingSz : 0;
   for (size_t i = start; i < ifRingIdx; ++i) {
     auto& e = ifRing[i % kIFRingSz];
-    std::cerr << std::format("  [{}] {} pc={:08x} tick={}\n",
-                             i, e.type, e.pc, e.tick);
+    std::cerr << std::format("  [{}] {} pc={:08x} tick={}\n", i, e.type,
+                             e.pc, e.tick);
   }
   std::cerr << "=== ifetchboard contents ===\n";
   for (auto& [a, t] : ifetchboard) {
