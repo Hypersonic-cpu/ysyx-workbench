@@ -47,29 +47,37 @@ NXDC_FILES = $(PRJ)/constr/$(TOPNAME).nxdc
 INC_PATH  += $(abspath $(PRJ))/dpic $(abspath $(PRJ))/sim-cxx
 VINC_PATH += $(SOC_HOME)/perip/uart16550/rtl $(SOC_HOME)/perip/spi/rtl $(SOC_HOME)/perip/psram
 
+# Enable ccache for C++ compilation (verilated.mk reads OBJCACHE)
+export OBJCACHE := ccache
+
 ## Verilator related
 VERILATOR = verilator
 VERILATOR_COVERAGE = verilator_coverage
 VERILATOR_TRACE ?= --trace --trace-fst --trace-depth 99
 VERILATOR_CFLAGS += $(VERILATOR_TRACE) -DPRINTF_COND=$(DPRINTF)
-VERILATOR_CFLAGS += -MMD --build -cc  --threads $(NTHREADS) --threads-dpi none \
-										-O3 --x-assign fast --x-initial fast
+VERILATOR_CFLAGS += -MMD -cc  --threads $(NTHREADS) --threads-dpi none \
+										-O3 --x-assign fast --x-initial fast \
+										--output-split 10000
 										# --noassert
 VERILATOR_CFLAGS += --timescale "1ns/1ns" --no-timing
 VERILATOR_CFLAGS += --autoflush
 INCFLAGS = $(addprefix -I, $(INC_PATH))
 VINCFLAGS = $(addprefix -I, $(VINC_PATH))
-CXXFLAGS += $(INCFLAGS) -DTOP_NAME="\"V$(TOPNAME)\"" -std=c++23 -g
-CXXFLAGS += -DLOGENA=$(LOGENA) -DDIFFENA=$(DIFFENA) -DDBGENA=$(DBGENA) -DNVBENA=$(NVBENA)
-CXXFLAGS += -DSOCMODE=$(SOCMODE) -DSIM_MHZ=$(MHZ)
+
+# Stable flags (passed to Verilator, shared by generated + user files)
+CXXFLAGS_BASE = $(INCFLAGS) -DTOP_NAME="\"V$(TOPNAME)\"" -std=c++23 -g
+# Flags that change with build options (only compiled into user files)
+CXXFLAGS_USER = -DLOGENA=$(LOGENA) -DDIFFENA=$(DIFFENA) -DDBGENA=$(DBGENA) -DNVBENA=$(NVBENA) \
+								-DSOCMODE=$(SOCMODE) -DSIM_MHZ=$(MHZ)
+CXXFLAGS += $(CXXFLAGS_BASE) $(CXXFLAGS_USER)
 
 #json
-CXXFLAGS += -I$(NPC_HOME)/libs/json/include
+CXXFLAGS_BASE += -I$(NPC_HOME)/libs/json/include
 
 # capstone
 LIBCAPSTONE = $(NEMU_HOME)/tools/capstone/repo/libcapstone.so.5
 # LIBNEMU = $(NEMU_HOME)/build/build/riscv32-nemu-interpreter-so
-CXXFLAGS += -I$(NEMU_HOME)/tools/capstone/repo/include
+CXXFLAGS_BASE += -I$(NEMU_HOME)/tools/capstone/repo/include
 $(LIBCAPSTONE):
 	$(MAKE) -C tools/capstone
 
@@ -93,27 +101,33 @@ ifeq ($(NVBENA),0)
 NVB_ARCHIVE=
 LDFLAGS=
 else
-CXXFLAGS += -I$(NVBOARD_HOME)/include
+CXXFLAGS_BASE += -I$(NVBOARD_HOME)/include
 include $(NVBOARD_HOME)/scripts/nvboard.mk
 NVB_ARCHIVE=$(NVBOARD_ARCHIVE)
 CSRCS += $(SRC_AUTO_BIND)
 endif
 
-# When MHZ changes, rebuild the sim binary (it embeds SIM_MHZ at compile time)
-SIM_MHZ_STAMP = $(BUILD_SIM_DIR)/.sim_mhz_$(MHZ)
-$(SIM_MHZ_STAMP): prebuild
-	@rm -f $(BUILD_SIM_DIR)/.sim_mhz_*
+# When compilation flags change, invalidate user object files only.
+# Verilator-generated objects use only CXXFLAGS_BASE (stable) so ccache
+# handles them without invalidation.
+SIM_FLAGS_STAMP = $(BUILD_SIM_DIR)/.sim_flags_$(LOGENA)_$(DIFFENA)_$(DBGENA)_$(NVBENA)_$(SOCMODE)_$(MHZ)
+USER_OBJ_NAMES = $(notdir $(patsubst %.cc,%.o,$(filter %.cc,$(CSRCS))) \
+                          $(patsubst %.cpp,%.o,$(filter %.cpp,$(CSRCS))))
+$(SIM_FLAGS_STAMP): prebuild
+	@rm -f $(BUILD_SIM_DIR)/.sim_flags_* $(BUILD_SIM_DIR)/.sim_mhz_*
+	@cd $(BUILD_OBJ_DIR) && rm -f $(USER_OBJ_NAMES) 2>/dev/null; true
 	@rm -f $(SIM_BIN)
 	@touch $@
 
-$(SIM_BIN): $(SIM_MHZ_STAMP) $(CSRCS) $(NVB_ARCHIVE)
-	@rm -rf $(BUILD_OBJ_DIR)
-	$(VERILATOR) -j$(nproc) $(VERILATOR_CFLAGS) \
+$(SIM_BIN): $(SIM_FLAGS_STAMP) $(CSRCS) $(NVB_ARCHIVE)
+	$(VERILATOR) -j $(VERILATOR_CFLAGS) \
 		$(VSRCS) \
 		--top-module $(TOPNAME) \
-		$^ $(VINCFLAGS) \
-		$(addprefix -CFLAGS , $(CXXFLAGS)) $(addprefix -LDFLAGS , $(LDFLAGS)) \
+		$(CSRCS) $(NVB_ARCHIVE) $(VINCFLAGS) \
+		$(addprefix -CFLAGS , $(CXXFLAGS_BASE)) $(addprefix -LDFLAGS , $(LDFLAGS)) \
 		--Mdir $(BUILD_OBJ_DIR) --exe -o $(abspath $(SIM_BIN))
+	@echo '$(USER_OBJ_NAMES): CPPFLAGS += $(CXXFLAGS_USER)' > $(BUILD_OBJ_DIR)/user_flags.mk
+	+$(MAKE) -C $(BUILD_OBJ_DIR) -f V$(TOPNAME).mk -f user_flags.mk -j OBJCACHE=ccache
 
 printhook:
 
