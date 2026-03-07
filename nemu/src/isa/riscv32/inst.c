@@ -219,7 +219,7 @@ static void decode_operand(Decode *s, int *rd, word_t *src1, word_t *src2, word_
     s->nptrace.is_branch  = false;
     s->nptrace.br_taken   = false;
     s->nptrace.sys_op     = SysNone;
-    s->nptrace.dummy      = 0x73;
+    s->nptrace.ext_op     = ExtNone;
   );
   int rs1 = BITS(i, 19, 15);
   int rs2 = BITS(i, 24, 20);
@@ -363,23 +363,32 @@ static int decode_exec(Decode *s) {
 
   /** RV32M Extension */
   INSTPAT("0000001 ????? ????? 000 ????? 01100 11",
-          mul    , R, R(rd) = src1 * src2);
+          mul    , R, 
+          R(rd) = src1 * src2;
+          IFDEF(CONFIG_NPSIM_TRACE, s->nptrace.ext_op = IntMulL);
+          );
   INSTPAT("0000001 ????? ????? 001 ????? 01100 11",
           mulh   , R,
           R(rd) = (word_t) (
               ((int64_t)((sword_t)src1) * (int64_t)((sword_t)src2))
               >> 32
-          ));
+          );
+          IFDEF(CONFIG_NPSIM_TRACE, s->nptrace.ext_op = IntMulH);
+          );
   INSTPAT("0000001 ????? ????? 010 ????? 01100 11",
           mulhsu , R,
           R(rd) = (word_t) (
               ((int64_t)((sword_t)src1) * (uint64_t)src2) >> 32
-          ));
+          );
+          IFDEF(CONFIG_NPSIM_TRACE, s->nptrace.ext_op = IntMulH);
+          );
   INSTPAT("0000001 ????? ????? 011 ????? 01100 11",
           mulhu  , R,
               R(rd) = (word_t) (
               ((uint64_t)src1 * (uint64_t)src2) >> 32
-          ));
+          );
+          IFDEF(CONFIG_NPSIM_TRACE, s->nptrace.ext_op = IntMulH);
+          );
   INSTPAT("0000001 ????? ????? 100 ????? 01100 11",
           div    , R,
           if ((sword_t)src2 == 0) {
@@ -388,9 +397,14 @@ static int decode_exec(Decode *s) {
               R(rd) = (word_t) INT32_MIN;
           } else {
               R(rd) = (word_t) ((sword_t)src1 / (sword_t)src2);
-          });
+          }
+          IFDEF(CONFIG_NPSIM_TRACE, s->nptrace.ext_op = IntDiv);
+          );
   INSTPAT("0000001 ????? ????? 101 ????? 01100 11",
-          divu   , R, R(rd) = (src2==0) ? (word_t)(-1) : src1/src2);
+          divu   , R, 
+          R(rd) = (src2==0) ? (word_t)(-1) : src1/src2;
+          IFDEF(CONFIG_NPSIM_TRACE, s->nptrace.ext_op = IntDiv);
+          );
   INSTPAT("0000001 ????? ????? 110 ????? 01100 11",
           rem    , R,
           // Assert(false, "ON PURPOSE");
@@ -400,10 +414,14 @@ static int decode_exec(Decode *s) {
               R(rd) = 0;
           } else {
               R(rd) = (word_t) ((sword_t)src1 % (sword_t)src2);
-          });
+          }
+          IFDEF(CONFIG_NPSIM_TRACE, s->nptrace.ext_op = IntRem);
+          );
   INSTPAT("0000001 ????? ????? 111 ????? 01100 11",
           remu   , R,
-          R(rd) = (src2 == 0U) ? src1 : (src1 % src2));
+          R(rd) = (src2 == 0U) ? src1 : (src1 % src2);
+          IFDEF(CONFIG_NPSIM_TRACE, s->nptrace.ext_op = IntRem);
+          );
   INSTPAT("??????? ????? ????? 001 ????? 11100 11",
           csrrw  , I, do {
             int csrid = BITS(imm, 11, 0);

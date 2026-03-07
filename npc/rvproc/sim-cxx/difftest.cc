@@ -114,14 +114,7 @@ DiffTester::test_on_commit() noexcept
   }
 
   iota();
-  std::vector<std::tuple<uint16_t, uint32_t, uint32_t>> ret{};
-  ret = match();
-  if (!ret.empty()) {
-    std::cerr << std::format(
-      "Commit #{}: dut_pc={:08x} ref_pc_delayed={:08x}", commitCount,
-      delayed_dut_pc, delayed_ref_pc)
-              << std::endl;
-  }
+  auto ret = match();
   copy();
   return std::move(ret);
 }

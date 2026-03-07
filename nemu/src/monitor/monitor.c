@@ -159,8 +159,6 @@ void init_monitor(int argc, char *argv[]) {
   /* Initialize devices. */
   IFDEF(CONFIG_DEVICE, init_device());
 
-  IFDEF(CONFIG_SOC, init_soc());
-
   IFDEF(CONFIG_NPSIM_TRACE, void init_npsim_trace(void); init_npsim_trace();)
 
   /* Perform ISA dependent initialization. */

@@ -29,6 +29,9 @@ void init_audio();
 void init_disk();
 void init_sdcard();
 void init_alarm();
+#ifdef CONFIG_SOC
+void init_soc();
+#endif
 
 void send_key(uint8_t, bool);
 void vga_update_screen();
@@ -86,4 +89,6 @@ void init_device() {
   IFDEF(CONFIG_HAS_SDCARD, init_sdcard());
 
   IFNDEF(CONFIG_TARGET_AM, init_alarm());
+
+  IFDEF(CONFIG_SOC, init_soc();)
 }
