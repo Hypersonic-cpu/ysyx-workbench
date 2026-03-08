@@ -37,14 +37,14 @@ class rvCore(
   val raw      = Module(new RAWDet)
   val mul      = Module(new IntMultiplier)
   val div      = Module(new IntDivider)
-  val dispatch = Module(new Dispatcher)
-  val collect  = Module(new Collector)
+  val dispatch = Module(new Dispatcher) // Timing
+  val collect  = Module(new Collector)  // Comb
   val flush    = Module(new FlushCtrl)
 
   /** Flush wiring */
 
   // EXU -> FlushCtrl
-  exs.io.brDet  <> flush.io.brDet
+  exs.io.brDet <> flush.io.brDet
   exs.io.brInfo <> flush.io.brInfo
   flush.io.exFired := exs.io.outFire
 
@@ -54,7 +54,7 @@ class rvCore(
   flush.io.wbExcpTarget := mtvecWire
 
   // FlushCtrl -> IFU
-  flush.io.toFetch  <> ifs.io.fromEx
+  flush.io.toFetch <> ifs.io.fromEx
   ifs.io.wbExcp       := flush.io.ifWbExcp
   ifs.io.wbExcpTarget := flush.io.ifWbExcpTarget
 
@@ -62,7 +62,7 @@ class rvCore(
   flush.io.toIDU.ready := true.B
   ids.io.flush         :=
     flush.io.toIDU.valid && flush.io.toIDU.bits
-  ids.io.excpFlush := flush.io.excpFlush
+  ids.io.excpFlush     := flush.io.excpFlush
 
   // FlushCtrl -> EXU
   exs.io.flush     := flush.io.exFlush
@@ -89,19 +89,18 @@ class rvCore(
 
   // ID -> Dispatcher -> {ALU, MUL, DIV}
   ids.io.out <> dispatch.io.decodeSide
-  dispatch.io.aluSide <> exs.io.in
-  dispatch.io.mulSide <> mul.io.in
-  dispatch.io.divSide <> div.io.in
+  BusConnect(dispatch.io.aluSide, exs.io.in, MultiCyc)
+  BusConnect(dispatch.io.mulSide, mul.io.in, MultiCyc)
+  BusConnect(dispatch.io.divSide, div.io.in, MultiCyc)
 
   // EX -> LS (registered pipeline)
   BusConnect(exs.io.out, lss.io.in, Pipeline)
 
   // LS -> Collector.aluSide (registered pipeline)
-  BusConnect(lss.io.out, collect.io.aluSide, Pipeline)
-
   // MUL / DIV -> Collector (direct)
-  mul.io.out <> collect.io.mulSide
-  div.io.out <> collect.io.divSide
+  BusConnect(lss.io.out, collect.io.aluSide, Pipeline)
+  BusConnect(mul.io.out, collect.io.mulSide, MultiCyc)
+  BusConnect(div.io.out, collect.io.divSide, MultiCyc)
 
   // Collector -> WBU
   collect.io.wbSide <> wbs.io.in
@@ -119,17 +118,17 @@ class rvCore(
   // RAW hazard detection
   raw.io.srcfw <> ids.io.fwdRes
   raw.io.decode <> ids.io.rawSrc
-  RdPacket(
+  RegDstPacket(
     exs.io.fwdDet,
     exs.io.in.bits.foward,
     raw.io.exsrd
   )
-  RdPacket(
+  RegDstPacket(
     lss.io.fwdDet,
     lss.io.in.bits.foward,
     raw.io.lssrd
   )
-  RdPacket(
+  RegDstPacket(
     wbs.io.fwdDet,
     wbs.io.in.bits.foward,
     raw.io.wbsrd

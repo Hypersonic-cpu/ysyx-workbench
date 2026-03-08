@@ -19,7 +19,7 @@ class FwBundle extends Bundle {
   val gprDt = Tp.RegType()
 }
 
-class RdBundle extends FwBundle {
+class RegDstBundle extends FwBundle {
   // val valid = Bool()
   val gprWE = Bool()
   // val gprFw = Bool() // forward avaiable
@@ -50,9 +50,9 @@ class RAWForward extends Module {
   val io = IO(new Bundle {
     val valid = Input(Bool())
     val reqid = Input(Tp.RegIdxType())
-    val exsrd = Input(new RdBundle)
-    val lssrd = Input(new RdBundle)
-    val wbsrd = Input(new RdBundle)
+    val exsrd = Input(new RegDstBundle)
+    val lssrd = Input(new RegDstBundle)
+    val wbsrd = Input(new RegDstBundle)
     val reqdt = Output(Tp.RegType())
     val reqfw = Output(Bool())
     val reqbl = Output(Bool())
@@ -61,7 +61,7 @@ class RAWForward extends Module {
   def conflictWith(
     valid: Bool,
     self:  UInt,
-    other: RdBundle
+    other: RegDstBundle
   ) = {
     other.gprWE && valid && self.orR && other.gprRd === self && other.valid
   }
@@ -98,9 +98,9 @@ class RAWDet extends Module {
   val io = IO(new Bundle {
     val srcfw  = Output(new SourceFoward)
     val decode = Input(new DecodeHazard)
-    val exsrd  = Input(new RdBundle)
-    val lssrd  = Input(new RdBundle)
-    val wbsrd  = Input(new RdBundle)
+    val exsrd  = Input(new RegDstBundle)
+    val lssrd  = Input(new RegDstBundle)
+    val wbsrd  = Input(new RegDstBundle)
   })
 
   val rs1ctl = Module(new RAWForward)
@@ -118,7 +118,7 @@ class RAWDet extends Module {
   rs2ctl.io.lssrd := io.lssrd
   rs2ctl.io.wbsrd := io.wbsrd
 
-  def conflictCsr(valid: Bool, self: UInt, other: RdBundle) = {
+  def conflictCsr(valid: Bool, self: UInt, other: RegDstBundle) = {
     other.csrWE && valid && other.csrRd === self && other.valid
   }
 

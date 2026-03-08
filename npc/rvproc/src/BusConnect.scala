@@ -32,11 +32,11 @@ object BusConnect {
   }
 }
 
-object RdPacket {
+object RegDstPacket {
   def apply[T <: Data](
     fwdsrc: FwBundle,
     signal: DecodeFoward,
-    output: RdBundle
+    output: RegDstBundle
   ): Unit = {
     output.valid := fwdsrc.valid
     output.gprFw := fwdsrc.gprFw
