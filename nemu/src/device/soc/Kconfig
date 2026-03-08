@@ -48,5 +48,18 @@ config SOC_FLASH_SIZE
   default 0x8000
 endif # Flash
 
+# Serial device for SoC UART — enabled when DEVICE (which has its own
+# serial) is unavailable (e.g. TARGET_SHARE / DiffTest ref mode).
+menuconfig HAS_SERIAL
+  bool "Enable serial (SoC UART)"
+  default y
+  depends on !DEVICE
+
+if HAS_SERIAL && !DEVICE
+config SERIAL_MMIO
+  hex "MMIO address of SoC UART (serial)"
+  default 0x10000000
+endif # HAS_SERIAL && !DEVICE
+
 endif # SOC
 

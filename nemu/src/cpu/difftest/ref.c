@@ -73,6 +73,8 @@ __EXPORT void difftest_init(int port) {
   void init_mem();
   init_mem();
 #if CONFIG_SOC
+  void init_map();
+  init_map();
   void init_soc();
   init_soc();
 #endif
