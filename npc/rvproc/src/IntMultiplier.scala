@@ -13,18 +13,8 @@ import chisel3.util._
   */
 class IntMultiplier extends Module {
   val io = IO(new Bundle {
-    val in    = Flipped(Decoupled(new Bundle {
-      val rs1    = Tp.RegType()
-      val rs2    = Tp.RegType()
-      val op     = MulDivOp()
-      val rd     = Tp.RegIdxType()
-      val foward = new DecodeFoward
-    }))
-    val out   = Decoupled(new Bundle {
-      val result = Tp.RegType()
-      val rd     = Tp.RegIdxType()
-      val foward = new DecodeFoward
-    })
+    val in    = Flipped(Decoupled(new IntMulIn))
+    val out   = Decoupled(new IntMulOut)
     val flush = Input(Bool())
   })
 
@@ -33,13 +23,11 @@ class IntMultiplier extends Module {
   val s1Rs1    = Reg(Tp.RegType())
   val s1Rs2    = Reg(Tp.RegType())
   val s1Op     = Reg(MulDivOp())
-  val s1Rd     = Reg(Tp.RegIdxType())
   val s1Foward = Reg(new DecodeFoward)
 
   // Pipeline stage 2: result
   val s2Valid  = RegInit(false.B)
   val s2Result = Reg(Tp.RegType())
-  val s2Rd     = Reg(Tp.RegIdxType())
   val s2Foward = Reg(new DecodeFoward)
 
   // Stage 1 accepts when stage 2 can accept or is empty
@@ -47,7 +35,7 @@ class IntMultiplier extends Module {
   val s0Ready = !s1Valid || s1Ready
   io.in.ready := s0Ready
 
-  // Stage 0 → Stage 1
+  // Stage 0 -> Stage 1
   when(io.flush) {
     s1Valid := false.B
   }.elsewhen(s0Ready) {
@@ -56,13 +44,11 @@ class IntMultiplier extends Module {
       s1Rs1    := io.in.bits.rs1
       s1Rs2    := io.in.bits.rs2
       s1Op     := io.in.bits.op
-      s1Rd     := io.in.bits.rd
       s1Foward := io.in.bits.foward
     }
   }
 
-  // Compute 64-bit product in stage 1→2 transition
-  // Sign handling: extend to 33 bits based on op
+  // 64-bit product: sign-extend to 33 bits based on op
   val isMulh   = s1Op === MulDivOp.Mulh
   val isMulhsu = s1Op === MulDivOp.Mulhsu
   val isMulhu  = s1Op === MulDivOp.Mulhu
@@ -85,14 +71,13 @@ class IntMultiplier extends Module {
   val result  =
     Mux(selHigh, product(63, 32), product(31, 0))
 
-  // Stage 1 → Stage 2
+  // Stage 1 -> Stage 2
   when(io.flush) {
     s2Valid := false.B
   }.elsewhen(s1Ready) {
     s2Valid := s1Valid
     when(s1Valid) {
       s2Result := result
-      s2Rd     := s1Rd
       s2Foward := s1Foward
     }
   }
@@ -100,6 +85,5 @@ class IntMultiplier extends Module {
   // Output
   io.out.valid       := s2Valid
   io.out.bits.result := s2Result
-  io.out.bits.rd     := s2Rd
   io.out.bits.foward := s2Foward
 }

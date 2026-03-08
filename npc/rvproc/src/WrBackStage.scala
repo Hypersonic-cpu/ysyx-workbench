@@ -67,7 +67,7 @@ class WrBackStage extends Module {
   ioreg.excpCause := iofw.mcause
 
   io.excpFlushOut :=
-    io.in.valid && iofw.excpNeedsFlush
+    io.in.valid && iofw.excpFlush
   io.excpTarget   := io.mtvecIn
 
   /** Forward */

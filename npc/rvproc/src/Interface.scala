@@ -156,8 +156,8 @@ class DecodeFoward extends Bundle {
   val pc     = Tp.AddrType()
   val inst   = UInt((if (GlbCtrl.debug) 32 else 0).W)
 
-  val excpValid      = Bool()
-  val excpNeedsFlush = Bool()
+  val excpValid = Bool()
+  val excpFlush = Bool()
 
   // Removed by compiler when not debugging.
   val stallT = StallCause()
@@ -201,4 +201,45 @@ class MemoryToWrBack extends Bundle {
   val foward = new DecodeFoward
 }
 
-// class InstCommit extends Bundle {}
+class IntAluIn extends Bundle {
+  val rs1V       = Tp.RegType()
+  val rs2V       = Tp.RegType()
+  val imm        = Tp.RegType()
+  val pc         = Tp.AddrType()
+  val aluOp      = AluOp()
+  val aluSel     = new AluSel
+  val brInst     = new BrInst
+  val memOp      = new MemOp
+  val aluEn      = Bool()
+  val predTaken  = Bool()
+  val predTarget = Tp.AddrType()
+  val predBtbHit = Bool()
+  val predBhtCnt = UInt(2.W)
+  val isCall     = Bool()
+  val isRet      = Bool()
+  val foward     = new DecodeFoward
+}
+
+class IntMulIn extends Bundle {
+  val rs1    = Tp.RegType()
+  val rs2    = Tp.RegType()
+  val op     = MulDivOp()
+  val foward = new DecodeFoward
+}
+
+class IntMulOut extends Bundle {
+  val result = Tp.RegType()
+  val foward = new DecodeFoward
+}
+
+class IntDivIn extends Bundle {
+  val rs1    = Tp.RegType()
+  val rs2    = Tp.RegType()
+  val op     = MulDivOp()
+  val foward = new DecodeFoward
+}
+
+class IntDivOut extends Bundle {
+  val result = Tp.RegType()
+  val foward = new DecodeFoward
+}

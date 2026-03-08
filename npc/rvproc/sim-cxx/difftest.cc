@@ -101,7 +101,7 @@ DiffTester::test_on_commit() noexcept
   }
 
   if (skipDevice || skipMatch) {
-    // Execute NEMU (it won't crash — NEMU mmio handles unmapped
+    // Execute NEMU (it won't crash - NEMU mmio handles unmapped
     // addresses gracefully). Then skip comparison and sync DUT
     // state to NEMU.
     iota();

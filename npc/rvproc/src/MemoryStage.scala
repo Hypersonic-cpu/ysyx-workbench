@@ -123,6 +123,7 @@ class MemoryStage extends Module {
   iowb.aluOut <> io.in.bits.aluOut
   iowb.foward <> io.in.bits.foward
 
+  /** Exception handling */
   // LSU exception detection (causes 5, 7, 13, 15)
   val lsuExcp      = Wire(Bool())
   val lsuExcpCause = Wire(UInt(4.W))
@@ -142,36 +143,29 @@ class MemoryStage extends Module {
   }
 
   when(lsuExcp) {
-    iowb.foward.excpValid      := true.B
-    iowb.foward.excpNeedsFlush := true.B
-    iowb.foward.mcause         := lsuExcpCause
-    iowb.foward.gprWE          := false.B
-    iowb.foward.csrWE          := false.B
+    iowb.foward.excpValid := true.B
+    iowb.foward.excpFlush := true.B
+    iowb.foward.mcause    := lsuExcpCause
+    iowb.foward.gprWE     := false.B
+    iowb.foward.csrWE     := false.B
   }
 
   // Misalignment exception (causes 4, 6)
   val isLoad =
     ioex.memOp.isEn && !ioex.memOp.isSt
   when(excpMisalign) {
-    iowb.foward.excpValid      := true.B
-    iowb.foward.excpNeedsFlush := true.B
-    iowb.foward.mcause         :=
+    iowb.foward.excpValid := true.B
+    iowb.foward.excpFlush := true.B
+    iowb.foward.mcause    :=
       Mux(isLoad, 4.U, 6.U)
-    iowb.foward.gprWE          := false.B
-    iowb.foward.csrWE          := false.B
+    iowb.foward.gprWE     := false.B
+    iowb.foward.csrWE     := false.B
   }
 
   /** Forward */
   io.fwdDet.valid := io.in.valid
-  io.fwdDet.gprFw := ioex.foward.wbSel === WbSel.fromAlu // !ioex.memOp.isEn
+  io.fwdDet.gprFw := ioex.foward.wbSel === WbSel.fromAlu
   io.fwdDet.gprDt := ioex.aluOut
-  // io.fwdDet.gprFw := io.out.valid &&
-  //   io.in.bits.foward.wbSel =/= WbSel.fromCsr
-  // io.fwdDet.gprDt := Mux(
-  //   ioex.memOp.isEn,
-  //   /* fromMem */ iowb.lsuOut,
-  //   /* fromAlu|PC */ ioex.aluOut
-  // )
 
   if (GlbCtrl.debug) {
     iowb.foward.stallT := Mux(
@@ -182,17 +176,6 @@ class MemoryStage extends Module {
   } else {
     iowb.foward.stallT := DontCare
   }
-
-  // when(io.out.fire && ioex.memOp.isEn) {
-  //   printf(
-  //     cf"Rsp < WR?${ioex.memOp.isSt} Addr ${ioex.aluOut}%x LoadData ${iowb.lsuOut}%x\n"
-  //   )
-  // }
-  // when(io.in.fire && ioex.memOp.isEn) {
-  //   printf(
-  //     cf"Req > WR?${ioex.memOp.isSt} Addr ${ioex.aluOut}%x wrData ${wrdt}%x\n"
-  //   )
-  // }
 
   if (GlbCtrl.debug) {
     val pmu = Module(new LoadStorePMU)

@@ -122,45 +122,31 @@ class EXU extends Module {
     io.csrV,
     jalrTarget(ISA.RegBits - 1, 0)
   )
-
-  // when(io.aluEn) {
-  //   printf(
-  //     cf"[ EXU ] rs1 ${io.rs1V}%x rs2 ${io.rs2V}%x imm ${io.imm}%x Out ${io.aluOut}%x"
-  //   )
-  //   printf(cf" op ${io.op} sel ${io.sel}")
-  //   printf(
-  //     cf" (Br,Res) =!<G (${io.br.bIfeq}${io.br.bIfne}${io.br.bIflt}${io.br.bIfge},"
-  //   )
-  //   printf(
-  //     cf"${cmpEQ}${!cmpEQ}${cmpLT}${!cmpLT}) usgn ${io.sel.cmpUsgn} abs ${io.br.isAbs}\n"
-  //   )
-  // }
 }
 
 class ExecuteStage extends Module {
   val io = IO(new Bundle {
-    val in        = Flipped(Decoupled(new DecodeToExecute))
-    val flush     = Flipped(Decoupled(Bool()))
+    val in        = Flipped(Decoupled(new IntAluIn))
     val out       = Decoupled(new ExecuteToMemory)
-    val toFetch   = Decoupled(new ExecuteBackward)
+    // To FlushCtrl
     val brDet     = Decoupled(Bool())
-    val fwdDet    = Output(new FwBundle)
+    val brInfo    = Decoupled(new ExecuteBackward)
+    val outFire   = Output(Bool())
+    // From FlushCtrl
+    val flush     = Input(Bool())
     val excpFlush = Input(Bool())
-    val mtvecVal  = Input(Tp.RegType())
+    // Forwarding
+    val fwdDet    = Output(new FwBundle)
   })
 
-  val flushed = io.flush.valid && io.flush.bits
-  io.flush.ready := io.out.ready
-
-  // Registered flush: squash the instruction following
-  // one that actually fired with a mispred/exception.
-  val regBrFlush = Wire(Bool())
+  val flushed    = io.flush
   val validCtrl  =
-    io.in.valid && !flushed && !regBrFlush
+    io.in.valid && !flushed
 
   io.in.ready := io.out.ready
   val outFire = validCtrl && !io.excpFlush &&
     io.out.ready
+  io.outFire   := outFire
   io.out.valid := validCtrl && !io.excpFlush
 
   val iExe = Module(new EXU)
@@ -176,10 +162,10 @@ class ExecuteStage extends Module {
   iExe.io.aluEn := ioid.aluEn && validCtrl
   iExe.io.br    := ioid.brInst
 
-  /** Forward */
+  /** Forward: disabled. Only used for RAW hazard */
   io.fwdDet.valid := validCtrl
-  io.fwdDet.gprFw := false.B // !ioid.memOp.isEn
-  io.fwdDet.gprDt := 0.U     // iExe.io.aluOut
+  io.fwdDet.gprFw := false.B
+  io.fwdDet.gprDt := 0.U
 
   /** Back to Fetch */
   val actualTaken  = iExe.io.brRel || iExe.io.brAbs
@@ -220,7 +206,7 @@ class ExecuteStage extends Module {
   toFWire.isBr       := validCtrl && ioid.brInst.isBr
   toFWire.mispred    := mispred
   toFWire.predBtbHit := ioid.predBtbHit
-  toFWire.predBhtCnt := ioid.predBhtCnt
+  toFWire.predBhtCnt := ioid.predBhtCnt // FIXME: 当时为什么要写这个?
   toFWire.isCall     := ioid.isCall
   toFWire.isRet      := ioid.isRet
 
@@ -233,7 +219,7 @@ class ExecuteStage extends Module {
   ioid.foward <> iols.foward
   if (GlbCtrl.debug) {
     iols.foward.stallT := Mux(
-      flushed || regBrFlush,
+      flushed,
       StallCause.Branch,
       ioid.foward.stallT
     )
@@ -250,17 +236,10 @@ class ExecuteStage extends Module {
 
   io.brDet.valid   := brDetV
   io.brDet.bits    := brDetB
-  io.toFetch.valid := brDetV
-  io.toFetch.bits  := toFWire
+  io.brInfo.valid  := brDetV
+  io.brInfo.bits   := toFWire
 
-  // regBrFlush: squash the instruction following
-  // one that actually fired with a misprediction.
-  val regNeedFlush =
-    RegNext(needFlush, false.B)
-  val regOutFire   =
-    RegNext(outFire, false.B)
-  regBrFlush := regNeedFlush && regOutFire
-  // Misalignment is now detected in LS stage
+  // Flush handled by FlushCtrl; regBrFlush removed
 
   /** Interrupt */
   if (!GlbCtrl.sta) {

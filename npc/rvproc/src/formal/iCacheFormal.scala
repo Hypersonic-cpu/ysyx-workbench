@@ -15,18 +15,18 @@ import rvproc.cache.{iCache, iCacheConf}
 //       (the "golden model") for every completed read transaction.
 //
 // Architecture:
-//   ┌─────────────┐       ┌──────────┐
-//   │  symbolic    │──ar──▶│  iCache  │──memSide──▶┌──────────┐
-//   │  requestor   │◀──r───│  (DUT)   │◀───────────│  AXI mem │
-//   └─────────────┘       └──────────┘             │  model   │
-//                                                  └──────────┘
-//                                                       │
-//                 golden lookup ◀────────────────────────┘
+//   +-------------+       +----------+
+//   |  symbolic    |--ar->|  iCache  |--memSide->+----------+
+//   |  requestor   |<--r--|  (DUT)   |<----------|  AXI mem |
+//   +-------------+       +----------+           |  model   |
+//                                                 +----------+
+//                                                      |
+//                 golden lookup <-----------------------+
 //
 // Key insight for formal: we can't use a Chisel Mem for the golden model
 // because CIRCT optimises away Mems with no writes (they're dead logic).
 // Instead, we *record* each AXI burst response into a golden register file
-// as it flows through — both the DUT and our checker see the same data.
+// as it flows through - both the DUT and our checker see the same data.
 // When the DUT responds to the CPU, we compare against what was stored.
 // ---------------------------------------------------------------------------
 
@@ -41,17 +41,17 @@ class iCacheFormal extends Module {
   val io = IO(new Bundle {
     val cpuReqAddr  = Input(Tp.AddrType())
     val cpuReqValid = Input(Bool())
-    // AXI memory model data input — driven symbolically by the solver.
+    // AXI memory model data input - driven symbolically by the solver.
     // Each cycle during a burst, this provides the next word.
     val memRData    = Input(Tp.RegType())
     val cpuRespFire = Output(Bool())
     val cpuRespData = Output(Tp.RegType())
   })
 
-  // ── DUT ──────────────────────────────────────────────────────────────
+  // === DUT ===================================================================
   val dut = Module(new iCache(conf))
 
-  // ── CPU-side stimulus ────────────────────────────────────────────────
+  // === CPU-side stimulus ====================================================
   chisel3.assume(io.cpuReqAddr(1, 0) === 0.U)
   chisel3.assume(io.cpuReqAddr < conf.dataBytes.U)
 
@@ -64,7 +64,7 @@ class iCacheFormal extends Module {
   dut.io.cpuSide.b.ready      := false.B
   dut.io.flushAll             := false.B
 
-  // ── AXI memory model ────────────────────────────────────────────────
+  // === AXI memory model =====================================================
   val sIdle :: sBurst :: Nil = Enum(2)
   val memState               = RegInit(sIdle)
   val burstBase              = Reg(UInt(32.W))
@@ -108,8 +108,8 @@ class iCacheFormal extends Module {
     }
   }
 
-  // ── Golden snapshot ─────────────────────────────────────────────────
-  // Record each AXI beat's (address → data) into a golden register file.
+  // === Golden snapshot ======================================================
+  // Record each AXI beat's (address -> data) into a golden register file.
   // We store only the current cache-line worth of words (4 words for 16B).
   // On a fill, we record which word each beat goes to and what data it
   // carried. Later, when the DUT responds, we look up the word.
@@ -125,13 +125,13 @@ class iCacheFormal extends Module {
     goldenRF(curWordAddr(WAddrW - 1, 0)) := io.memRData
   }
 
-  // ── Track request addresses ─────────────────────────────────────────
+  // === Track request addresses ===============================================
   val addrFifo = Module(new Queue(Tp.AddrType(), 4))
   addrFifo.io.enq.valid := dut.io.cpuSide.ar.fire
   addrFifo.io.enq.bits  := io.cpuReqAddr
   addrFifo.io.deq.ready := dut.io.cpuSide.r.fire
 
-  // ── Core property ───────────────────────────────────────────────────
+  // === Core property ========================================================
   // When the DUT delivers a cpu-side response, data must match the
   // golden register file at the corresponding word address.
   when(dut.io.cpuSide.r.fire) {

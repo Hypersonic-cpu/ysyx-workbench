@@ -111,7 +111,7 @@ vga_read(uint32_t addr) {
   return vmem->readWord(addr);
 }
 
-// PMemBox DPI-C stubs — PMemBox.sv is copied into build-sv
+// PMemBox DPI-C stubs - PMemBox.sv is copied into build-sv
 // unconditionally but not instantiated in SoC mode.
 tint_t
 axi_read(addr_t, ureg_t* prdata, bool) {
@@ -215,7 +215,8 @@ notify_recvd(uint32_t pc, uint32_t inst) {
 
 void
 notify_fetch(uint32_t pc) {
-  v_assert(pc >= ResetVector, "Invalid PC @", pc);
+  // Allow fault-injection fetch addresses (tests 8, 9 in exception.c)
+  v_assert(pc != 0, "Invalid PC @", pc);
   // std::cerr << std::format(ANSI_YELLOW "IFetch Req @ pc {:8x}" ANSI_NONE,
   // pc) << std::endl;
   ppmu->notifyIFFetch(pc);

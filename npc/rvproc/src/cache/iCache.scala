@@ -42,7 +42,7 @@ case class iCacheConf(
   }
 }
 
-// Readonly, 3-cycle pipeline: recv → tag-compare → word-select
+// Readonly, 3-cycle pipeline: recv -> tag-compare -> word-select
 // Valid bit is a separate DFF array (requires reset).
 // Tag/data backend: SyncReadMem (Tiny) or SRAM BlackBox (Extended).
 class iCache(conf: iCacheConf) extends Module {
@@ -57,7 +57,7 @@ class iCache(conf: iCacheConf) extends Module {
 
   import rvproc.device.CacheArray
 
-  // Arrays — CacheArray selects SyncReadMem or SRAM
+  // Arrays - CacheArray selects SyncReadMem or SRAM
   val tagArr  = Module(
     new CacheArray(conf.numSets, conf.tagBits)
   )
@@ -131,7 +131,7 @@ class iCache(conf: iCacheConf) extends Module {
     x(conf.tagBitHi, conf.offBits) ## 0.U(conf.offBits.W)
   def ithOf(x: UInt) = x(conf.offBits - 1, ISA.WordShift)
 
-  // Cycle 1 (recv) — issue array reads
+  // Cycle 1 (recv) - issue array reads
   val reqA1 = req.bits.addr
   val reqV1 = req.valid
 
@@ -154,7 +154,7 @@ class iCache(conf: iCacheConf) extends Module {
     state === flowing && !fillFinish &&
       !flushPending && (tagHit || !reqV2)
 
-  // Register line data for cycle 3 (breaks SRAM→mux path).
+  // Register line data for cycle 3 (breaks SRAM->mux path).
   val lineRead  = dataArr.io.rdata
   val lineReadR = RegNext(lineRead)
   val reqA3     = RegNext(reqA2)

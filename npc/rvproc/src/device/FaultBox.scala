@@ -16,7 +16,7 @@ class FaultBox(slverr: Boolean) extends Module {
   val resp =
     if (slverr) SLVERR else DECERR
 
-  // Read channel — handles bursts
+  // Read channel - handles bursts
   val rIdle :: rServe :: Nil = Enum(2)
   val rState                 = RegInit(rIdle)
   val rLen                   = Reg(UInt(8.W))
@@ -50,7 +50,7 @@ class FaultBox(slverr: Boolean) extends Module {
     }
   }
 
-  // Write channel — single beat
+  // Write channel - single beat
   val wIdle :: wResp :: Nil = Enum(2)
   val wState                = RegInit(wIdle)
   val wId                   = Reg(UInt(4.W))

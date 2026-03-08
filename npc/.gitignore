@@ -42,3 +42,4 @@ formal/**/*.sv
 *_bmc/
 formal/*/
 local/
+visual/plots/

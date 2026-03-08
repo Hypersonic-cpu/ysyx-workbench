@@ -260,18 +260,15 @@ class DecodeStage extends Module {
     val toReg   = Decoupled(new RegFromIDU)
 
     val fenceI    = Decoupled(Bool())
-    val flush     = Flipped(Decoupled(Bool()))
+    val flush     = Input(Bool())
     val rawSrc    = new DecodeHazard
-    // val rawRes = Input(Bool())
     val fwdRes    = Input(new SourceFoward)
     val excpFlush = Input(Bool())
-    // Scoreboard: stall if rs1/rs2 has in-flight MUL/DIV
     val sbBusy    = Input(UInt(ISA.RegNum.W))
   })
 
-  val flushed = io.flush.bits
+  val flushed = io.flush
 
-  io.flush.ready := io.out.ready
   val validCtrl = io.in.valid && !flushed
 
   val iDec = Module(new IDU)
@@ -366,7 +363,7 @@ class DecodeStage extends Module {
   val isExcp       = isIdExcp || isEcall
 
   iofw.excpValid      := isExcp
-  iofw.excpNeedsFlush := false.B
+  iofw.excpFlush := false.B
   iofw.mcause         := MuxCase(
     0.U,
     Seq(
