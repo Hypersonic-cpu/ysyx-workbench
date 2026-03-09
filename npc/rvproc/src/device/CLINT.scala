@@ -34,7 +34,7 @@ class CLINT extends Module {
   io.port.w.ready     := false.B
   io.port.b.valid     := false.B
   io.port.b.bits.resp := SLVERR
-  io.port.b.bits.id   := io.port.aw.bits.id // FIXME:
+  io.port.b.bits.id   := io.port.aw.bits.id
   assert(
     !reset.asBool || io.port.aw.valid,
     "Attemping to write CLINT timer"
@@ -44,10 +44,10 @@ class CLINT extends Module {
   io.port.r.bits.data := retExt >> 1.U
   io.port.r.bits.resp := Mux(retExt(0), OKAY, SLVERR)
   io.port.r.bits.last := (state === proc) && io.port.r.ready
-  io.port.r.bits.id   := io.port.ar.bits.id // FIXME:
+  io.port.r.bits.id   := io.port.ar.bits.id
   assert(io.port.ar.valid Implies (io.port.ar.bits.addr(1, 0) === 0.U))
 
-  val mtime = RegInit(Tp.TimeType(), 0x0L.U)
+  val mtime = RegInit(UInt(64.W), 0x0L.U)
   mtime := mtime + 1.U
 
   when(io.port.ar.valid) {
@@ -55,8 +55,8 @@ class CLINT extends Module {
     val gotRet = MuxCase(
       0xbadc0de.U ## 0.U,
       Seq(
-        (addr === CLINTAddr.OffClk.U)       -> mtime ## 1.U,
-        (addr === (CLINTAddr.OffClk + 4).U) -> 0.U(32.W) ## 1.U
+        (addr === CLINTAddr.OffClk.U)       -> mtime(31, 0) ## 1.U,
+        (addr === (CLINTAddr.OffClk + 4).U) -> mtime(63, 32) ## 1.U
       )
     )
     // assert(addr(3, 0)===0xc.U, cf"CLINT DEBUG: mt${mtime}%x addr${addr}%x ret${gotRet >> 1.U}%x\n")
