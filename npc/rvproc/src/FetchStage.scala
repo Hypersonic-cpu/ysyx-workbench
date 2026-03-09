@@ -53,6 +53,7 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
 
   val validBuf      = Reg(Vec(PipeDepth + 1, Bool()))
   val pcBuf         = Reg(Vec(PipeDepth + 1, Tp.AddrType()))
+  val snpcBuf       = Reg(Vec(PipeDepth + 1, Tp.AddrType()))
   val instBuf       = Reg(Vec(PipeDepth + 1, Tp.InstType()))
   val respBuf       =
     Reg(Vec(PipeDepth + 1, AXI.RespStatus()))
@@ -63,6 +64,7 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
   val headPtr       = RegInit(0.U(log2Ceil(PipeDepth + 1).W))
   val tailPtr       = RegInit(0.U(log2Ceil(PipeDepth + 1).W))
   val toidPtr       = RegInit(0.U(log2Ceil(PipeDepth + 1).W))
+  val discardCnt    = RegInit(0.U(log2Ceil(PipeDepth + 1).W))
   def iotaMod(a: UInt) = Mux(a === PipeDepth.U, 0.U, a + 1.U)
 
   val bufFull   = iotaMod(headPtr) === toidPtr
@@ -130,13 +132,18 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
   )
 
   when(iMem.r.fire) {
-    instBuf(tailPtr) := iMem.r.bits.data
-    respBuf(tailPtr) := iMem.r.bits.resp
-    tailPtr          := iotaMod(tailPtr)
+    when(discardCnt > 0.U) {
+      discardCnt := discardCnt - 1.U
+    }.otherwise {
+      instBuf(tailPtr) := iMem.r.bits.data
+      respBuf(tailPtr) := iMem.r.bits.resp
+      tailPtr          := iotaMod(tailPtr)
+    }
   }
   when(iMem.ar.fire) {
     validBuf(headPtr)      := true.B
     pcBuf(headPtr)         := pc
+    snpcBuf(headPtr)       := pc + 4.U
     predTakenBuf(headPtr)  := bpPredTaken
     predTargetBuf(headPtr) := bpTargetPCEff
     predBtbHitBuf(headPtr) := bpBtbHitEff
@@ -170,6 +177,14 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
   assert(~(iMem.b.valid), "Read only port")
 
   when(flushWire) {
+    // Count in-flight requests that will arrive after flush.
+    // Subtract r.fire if a response arrives this cycle.
+    val inFlight = headPtr - tailPtr
+    discardCnt := inFlight + discardCnt -
+      (iMem.r.fire).asUInt
+    headPtr := 0.U
+    tailPtr := 0.U
+    toidPtr := 0.U
     for (i <- 0 to PipeDepth) {
       validBuf(i) := false.B
     }
@@ -199,7 +214,7 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
     io.out.fire && !isBranchPD && predTakenBuf(toidPtr)
   when(nonBrPredTaken) {
     pdFlushPending := true.B
-    pdFlushPCReg   := pcBuf(toidPtr) + 4.U
+    pdFlushPCReg   := snpcBuf(toidPtr)
   }.otherwise {
     pdFlushPending := false.B
   }
@@ -232,7 +247,7 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
     pmu.io.clock     := clock
     pmu.io.reset     := reset
     pmu.io.trigFetch := iMem.ar.fire
-    pmu.io.trigRecvd := iMem.r.fire
+    pmu.io.trigRecvd := iMem.r.fire && discardCnt === 0.U
     pmu.io.pcFetch   := pc
     pmu.io.pcRecvd   := pcBuf(tailPtr)
     pmu.io.inst      := io.out.bits.inst

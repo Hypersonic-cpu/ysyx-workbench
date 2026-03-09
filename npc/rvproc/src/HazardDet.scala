@@ -48,14 +48,15 @@ class SourceFoward extends Bundle {
 
 class RAWForward extends Module {
   val io = IO(new Bundle {
-    val valid = Input(Bool())
-    val reqid = Input(Tp.RegIdxType())
-    val exsrd = Input(new RegDstBundle)
-    val lssrd = Input(new RegDstBundle)
-    val wbsrd = Input(new RegDstBundle)
-    val reqdt = Output(Tp.RegType())
-    val reqfw = Output(Bool())
-    val reqbl = Output(Bool())
+    val valid  = Input(Bool())
+    val reqid  = Input(Tp.RegIdxType())
+    val exsrd  = Input(new RegDstBundle)
+    val skidrd = Input(new RegDstBundle)
+    val lssrd  = Input(new RegDstBundle)
+    val wbsrd  = Input(new RegDstBundle)
+    val reqdt  = Output(Tp.RegType())
+    val reqfw  = Output(Bool())
+    val reqbl  = Output(Bool())
   })
 
   def conflictWith(
@@ -66,19 +67,20 @@ class RAWForward extends Module {
     other.gprWE && valid && self.orR && other.gprRd === self && other.valid
   }
 
-  val rawArr = Wire(Vec(3, Bool()))
+  val stages     = Seq(io.exsrd, io.skidrd, io.lssrd, io.wbsrd)
+  val rawArr     = Wire(Vec(4, Bool()))
   rawArr(0) := conflictWith(io.valid, io.reqid, io.exsrd)
-  rawArr(1) := conflictWith(io.valid, io.reqid, io.lssrd)
-  rawArr(2) := conflictWith(io.valid, io.reqid, io.wbsrd)
-  // [0] EX, [1] LS, [2] WB
-  val fwdArr     = VecInit(Seq(io.exsrd, io.lssrd, io.wbsrd).map(_.gprFw))
-  val fwdSrc     = VecInit(Seq(io.exsrd, io.lssrd, io.wbsrd).map(_.gprDt))
-  val rawBlocked = rawArr.asUInt               // conflict, not stall
-  // val rawForward = rawArr.asUInt & fwdArr.asUInt
+  rawArr(1) := conflictWith(io.valid, io.reqid, io.skidrd)
+  rawArr(2) := conflictWith(io.valid, io.reqid, io.lssrd)
+  rawArr(3) := conflictWith(io.valid, io.reqid, io.wbsrd)
+  // [0] EX, [1] SKID, [2] LS, [3] WB
+  val fwdArr     = VecInit(stages.map(_.gprFw))
+  val fwdSrc     = VecInit(stages.map(_.gprDt))
+  val rawBlocked = rawArr.asUInt
   val rawStall   = rawArr.asUInt & ~fwdArr.asUInt
-  val fwdIndex   = PriorityEncoder(rawBlocked) // rawForward)
-  io.reqbl := rawStall.orR                    // rawBlocked.orR && !(rawForward.orR)
-  io.reqfw := rawBlocked.orR && !rawStall.orR // block but not stall
+  val fwdIndex   = PriorityEncoder(rawBlocked)
+  io.reqbl := rawStall.orR
+  io.reqfw := rawBlocked.orR && !rawStall.orR
   io.reqdt := fwdSrc(fwdIndex)
 
   if (GlbCtrl.debug) {
@@ -99,6 +101,7 @@ class RAWDet extends Module {
     val srcfw  = Output(new SourceFoward)
     val decode = Input(new DecodeHazard)
     val exsrd  = Input(new RegDstBundle)
+    val skidrd = Input(new RegDstBundle)
     val lssrd  = Input(new RegDstBundle)
     val wbsrd  = Input(new RegDstBundle)
   })
@@ -106,24 +109,26 @@ class RAWDet extends Module {
   val rs1ctl = Module(new RAWForward)
   val rs2ctl = Module(new RAWForward)
 
-  rs1ctl.io.valid := io.decode.use1
-  rs1ctl.io.reqid := io.decode.rs1
-  rs1ctl.io.exsrd := io.exsrd
-  rs1ctl.io.lssrd := io.lssrd
-  rs1ctl.io.wbsrd := io.wbsrd
+  rs1ctl.io.valid  := io.decode.use1
+  rs1ctl.io.reqid  := io.decode.rs1
+  rs1ctl.io.exsrd  := io.exsrd
+  rs1ctl.io.skidrd := io.skidrd
+  rs1ctl.io.lssrd  := io.lssrd
+  rs1ctl.io.wbsrd  := io.wbsrd
 
-  rs2ctl.io.valid := io.decode.use2
-  rs2ctl.io.reqid := io.decode.rs2
-  rs2ctl.io.exsrd := io.exsrd
-  rs2ctl.io.lssrd := io.lssrd
-  rs2ctl.io.wbsrd := io.wbsrd
+  rs2ctl.io.valid  := io.decode.use2
+  rs2ctl.io.reqid  := io.decode.rs2
+  rs2ctl.io.exsrd  := io.exsrd
+  rs2ctl.io.skidrd := io.skidrd
+  rs2ctl.io.lssrd  := io.lssrd
+  rs2ctl.io.wbsrd  := io.wbsrd
 
   def conflictCsr(valid: Bool, self: UInt, other: RegDstBundle) = {
     other.csrWE && valid && other.csrRd === self && other.valid
   }
 
   val csrraw = VecInit(
-    Seq(io.exsrd, io.lssrd, io.wbsrd).map(r =>
+    Seq(io.exsrd, io.skidrd, io.lssrd, io.wbsrd).map(r =>
       conflictCsr(io.decode.useC, io.decode.csr, r)
     )
   ).asUInt.orR

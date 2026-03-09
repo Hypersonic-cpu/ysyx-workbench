@@ -28,7 +28,7 @@ class rvCore(
 
   val resetVector = if (isSoc) 0x3000_0000L else 0x8000_0000L
 
-  val ifs      = Module(new FetchStage(resetVector, 3))
+  val ifs      = Module(new FetchStage(resetVector, 7))
   val ids      = Module(new DecodeStage)
   val exs      = Module(new ExecuteStage)
   val lss      = Module(new MemoryStage)
@@ -81,24 +81,71 @@ class rvCore(
 
   /** Data paths */
 
-  // IF -> ID (registered pipeline)
-  BusConnect(ifs.io.out, ids.io.in, Pipeline)
+  // IF -> ID (registered pipeline, pass-through ready)
+  // Must flush PipeReg when IDU is flushed, otherwise a
+  // speculative instruction held during RAW stall survives
+  // the 1-cycle flush pulse and commits on the next cycle.
+  val iduFlush =
+    (flush.io.toIDU.valid && flush.io.toIDU.bits) ||
+      flush.io.excpFlush
+  BusConnect(ifs.io.out, ids.io.in, PipeReg, iduFlush)
 
-  // fence.I flush
-  BusConnect(ids.io.fenceI, ifs.io.fromId, Pipeline)
+  // fence.I: registered, always-accept (rare, not perf-critical)
+  ids.io.fenceI.ready    := true.B
+  ifs.io.fromId.valid    := RegNext(ids.io.fenceI.fire, false.B)
+  ifs.io.fromId.bits     := RegEnable(
+    ids.io.fenceI.bits, ids.io.fenceI.fire
+  )
 
   // ID -> Dispatcher -> {ALU, MUL, DIV}
   ids.io.out <> dispatch.io.decodeSide
   BusConnect(dispatch.io.aluSide, exs.io.in, MultiCyc)
-  BusConnect(dispatch.io.mulSide, mul.io.in, MultiCyc)
-  BusConnect(dispatch.io.divSide, div.io.in, MultiCyc)
 
-  // EX -> LS (registered pipeline)
-  BusConnect(exs.io.out, lss.io.in, Pipeline)
+  // Register MUL/DIV input ready to break the
+  // critical path from mul/div state registers
+  // through scoreboard to dispatch.dispValid.
+  // sbAnyBusy already prevents double-dispatch so
+  // 1-cycle stale ready is safe.
+  mul.io.in.valid := dispatch.io.mulSide.valid
+  mul.io.in.bits  := dispatch.io.mulSide.bits
+  dispatch.io.mulSide.ready :=
+    RegNext(mul.io.in.ready, true.B)
+
+  div.io.in.valid := dispatch.io.divSide.valid
+  div.io.in.bits  := dispatch.io.divSide.bits
+  dispatch.io.divSide.ready :=
+    RegNext(div.io.in.ready, true.B)
+
+  // EX -> LS (skid buffer, breaks backward ready chain)
+  val skidV = RegInit(false.B)
+  val skidB = Reg(new ExecuteToMemory)
+  locally {
+    val mainV = RegInit(false.B)
+    val mainB = Reg(new ExecuteToMemory)
+    exs.io.out.ready := !skidV
+    lss.io.in.valid  := mainV
+    lss.io.in.bits   := mainB
+    when(flush.io.excpFlush) {
+      mainV := false.B
+      skidV := false.B
+    }.elsewhen(lss.io.in.fire) {
+      when(exs.io.out.fire) { mainB := exs.io.out.bits }
+        .elsewhen(skidV) { mainB := skidB; skidV := false.B }
+        .otherwise { mainV := false.B }
+    }.elsewhen(exs.io.out.fire) {
+      when(!mainV) { mainV := true.B; mainB := exs.io.out.bits }
+        .otherwise { skidV := true.B; skidB := exs.io.out.bits }
+    }
+  }
 
   // LS -> Collector.aluSide (registered pipeline)
   // MUL / DIV -> Collector (direct)
-  BusConnect(lss.io.out, collect.io.aluSide, Pipeline)
+  BusConnect(
+    lss.io.out,
+    collect.io.aluSide,
+    PipeReg,
+    flush.io.excpFlush
+  )
   BusConnect(mul.io.out, collect.io.mulSide, MultiCyc)
   BusConnect(div.io.out, collect.io.divSide, MultiCyc)
 
@@ -123,6 +170,14 @@ class rvCore(
     exs.io.in.bits.foward,
     raw.io.exsrd
   )
+  // Skid buffer overflow between EXU and LSU
+  locally {
+    val fw = Wire(new FwBundle)
+    fw.valid := skidV
+    fw.gprFw := skidB.foward.wbSel === WbSel.fromAlu
+    fw.gprDt := skidB.aluOut
+    RegDstPacket(fw, skidB.foward, raw.io.skidrd)
+  }
   RegDstPacket(
     lss.io.fwdDet,
     lss.io.in.bits.foward,
@@ -346,6 +401,35 @@ class rvCore(
   }
 
   if (GlbCtrl.debug) {
+    // Centralized per-cycle stall cause for PMU.
+    // StallCause enum: NoStall=0 IfuStall=1 LsuStall=2 Branch=3 RAW=4
+    val recovering = RegInit(false.B)
+    when(
+      ids.io.out.fire &&
+        !(iduFlush || flush.io.excpFlush)
+    ) { recovering := false.B }
+    when(iduFlush || flush.io.excpFlush) {
+      recovering := true.B
+    }
+
+    val iduRawStall = ids.io.rawStall.get
+    val lsuStall    =
+      skidV || (lss.io.in.valid && !lss.io.in.ready)
+
+    val stallCause = Wire(UInt(8.W))
+    when(wbs.io.in.fire) {
+      stallCause := 0.U // NoStall
+    }.elsewhen(lsuStall) {
+      stallCause := 2.U // LsuStall
+    }.elsewhen(iduRawStall) {
+      stallCause := 4.U // RAW
+    }.elsewhen(recovering) {
+      stallCause := 3.U // BranchMispred
+    }.otherwise {
+      stallCause := 1.U // NoInst
+    }
+    wbs.io.stallCauseIn.get := stallCause
+
     dontTouch(ifs.io)
     dontTouch(ids.io)
     dontTouch(exs.io)

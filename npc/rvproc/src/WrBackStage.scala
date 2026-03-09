@@ -9,20 +9,19 @@ import rvproc.pmu.WrBackPMU
 class WBU extends Module {
   val io = IO(new Bundle {
     val wbSel = Input(WbSel())
-    val pc    = Input(Tp.RegType())
+    val snpc  = Input(Tp.RegType())
     val csrV  = Input(Tp.RegType())
     val aluV  = Input(Tp.RegType())
     val memV  = Input(Tp.RegType())
     val gprdt = Output(Tp.RegType())
   })
 
-  val snpc = io.pc + 4.U
   io.gprdt := MuxLookup(io.wbSel, 0.U)(
     Seq(
       WbSel.fromAlu -> io.aluV,
       WbSel.fromMem -> io.memV,
       WbSel.fromCsr -> io.csrV,
-      WbSel.fromPC  -> snpc
+      WbSel.fromPC  -> io.snpc
     )
   )
 }
@@ -36,6 +35,8 @@ class WrBackStage extends Module {
     val excpFlushOut = Output(Bool())
     val excpTarget   = Output(Tp.AddrType())
     val mtvecIn      = Input(Tp.RegType())
+    val stallCauseIn =
+      if (GlbCtrl.debug) Some(Input(UInt(8.W))) else None
   })
 
   io.in.ready    := true.B
@@ -48,7 +49,7 @@ class WrBackStage extends Module {
   iWbu.io.aluV  := iols.aluOut
   iWbu.io.memV  := iols.lsuOut
   iWbu.io.csrV  := iofw.csrVal
-  iWbu.io.pc    := iofw.pc
+  iWbu.io.snpc  := iofw.snpc
   iWbu.io.wbSel := iofw.wbSel
 
   // when(io.in.valid) {
@@ -84,6 +85,6 @@ class WrBackStage extends Module {
     pmu.io.pc        := iofw.pc
     pmu.io.inst      := iofw.inst
     pmu.io.isNewInst := io.in.valid
-    pmu.io.stallTp   := iofw.stallT.asUInt.pad(8)
+    pmu.io.stallTp   := io.stallCauseIn.get
   }
 }

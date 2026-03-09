@@ -20,7 +20,7 @@ case class BrPredConf(numEntries: Int = 64, numBtbEnt: Int = 64) {
   // BTB index/tag (for tag + target arrays)
   def btbIdxBits = log2Ceil(numBtbEnt)
   def btbIdxHi   = btbIdxBits + 2 - 1
-  def btbTagBits = ISA.AddrBits - btbIdxBits - 2
+  def btbTagBits = math.min(ISA.AddrBits - btbIdxBits - 2, 16)
 }
 
 // predTaken/targetPC valid ONE cycle after queryPC changes.
@@ -48,7 +48,7 @@ abstract class BrPred(val conf: BrPredConf) extends Module {
   protected def btbIdxOf(pc: UInt): UInt =
     pc(conf.btbIdxHi, 2)
   protected def btbTagOf(pc: UInt): UInt =
-    pc(ISA.AddrBits - 1, conf.btbIdxHi + 1)
+    pc(conf.btbIdxHi + conf.btbTagBits, conf.btbIdxHi + 1)
 }
 
 class ReturnAddrStack(depth: Int) extends Module {
@@ -89,14 +89,13 @@ class ReturnAddrStack(depth: Int) extends Module {
 // Predict taken iff BTB hit AND target < PC (backward branch).
 class BTFNTPredictor(conf: BrPredConf) extends BrPred(conf) {
 
+  // Valid bit merged into tag MSB to avoid DFF Vec MUX
   val tagArr    = Module(
-    new CacheArray(conf.numBtbEnt, conf.btbTagBits)
+    new CacheArray(conf.numBtbEnt, conf.btbTagBits + 1)
   )
   val targetArr = Module(
     new CacheArray(conf.numBtbEnt, 32)
   )
-  val validArr  =
-    RegInit(VecInit(Seq.fill(conf.numBtbEnt)(false.B)))
   val typeArr   =
     RegInit(VecInit(Seq.fill(conf.numBtbEnt)(false.B)))
 
@@ -109,10 +108,20 @@ class BTFNTPredictor(conf: BrPredConf) extends BrPred(conf) {
   targetArr.io.raddr := qidx
   targetArr.io.ren   := true.B
 
+  val uidx       = btbIdxOf(io.updPC)
+  val btbUpdWen  =
+    io.updValid && (io.updTaken ||
+      (!io.updIsBranch && io.updBtbHit))
+  val btbUpdWdata = Mux(
+    io.updTaken,
+    Cat(true.B, btbTagOf(io.updPC)),
+    0.U((conf.btbTagBits + 1).W)
+  )
+
   val tagData                                     = if (GlbCtrl.useSram) {
-    val bypValid  = RegNext(io.updValid && io.updTaken)
-    val bypIdx    = RegNext(btbIdxOf(io.updPC))
-    val bypTag    = RegNext(btbTagOf(io.updPC))
+    val bypValid  = RegNext(btbUpdWen)
+    val bypIdx    = RegNext(uidx)
+    val bypTag    = RegNext(btbUpdWdata)
     val bypTarget = RegNext(io.updTarget)
     val bypIsRet  = RegNext(io.updIsRet)
     val useByp    = bypValid && bypIdx === qidxR
@@ -132,10 +141,12 @@ class BTFNTPredictor(conf: BrPredConf) extends BrPred(conf) {
       false.B
     )
   }
-  val (tagD, tgtData, isRetBit, bypValid, useByp) = tagData
+  val (tagDRaw, tgtData, isRetBit, bypValid, useByp) = tagData
 
+  val tagValid  = tagDRaw(conf.btbTagBits)
+  val tagD      = tagDRaw(conf.btbTagBits - 1, 0)
   val btbHitRaw =
-    validArr(qidxR) && tagD === btbTagOf(qPCR)
+    tagValid && tagD === btbTagOf(qPCR)
   val btbHit    = if (GlbCtrl.useSram) {
     btbHitRaw && !(bypValid && !useByp)
   } else btbHitRaw
@@ -154,36 +165,30 @@ class BTFNTPredictor(conf: BrPredConf) extends BrPred(conf) {
 
   val useRas = btbHit && isRetBit && rasValid
   io.predTaken := btbHit && (useRas || (tgtData < qPCR))
-  io.targetPC  := Mux(useRas, rasTop, tgtData)
+  io.targetPC  := Mux(isRetBit && rasValid, rasTop, tgtData)
   io.btbHit    := btbHit
   io.bhtCnt    := 0.U
 
-  val uidx = btbIdxOf(io.updPC)
   tagArr.io.waddr    := uidx
-  tagArr.io.wdata    := btbTagOf(io.updPC)
-  tagArr.io.wen      := io.updValid && io.updTaken
+  tagArr.io.wdata    := btbUpdWdata
+  tagArr.io.wen      := btbUpdWen
   targetArr.io.waddr := uidx
   targetArr.io.wdata := io.updTarget
   targetArr.io.wen   := io.updValid && io.updTaken
   when(io.updValid && io.updTaken) {
-    validArr(uidx) := true.B
-    typeArr(uidx)  := io.updIsRet
-  }
-  when(io.updValid && !io.updIsBranch && io.updBtbHit) {
-    validArr(uidx) := false.B
+    typeArr(uidx) := io.updIsRet
   }
 }
 
 class BimodalPredictor(conf: BrPredConf) extends BrPred(conf) {
 
+  // Valid bit merged into tag MSB to avoid DFF Vec MUX
   val tagArr    = Module(
-    new CacheArray(conf.numBtbEnt, conf.btbTagBits)
+    new CacheArray(conf.numBtbEnt, conf.btbTagBits + 1)
   )
   val targetArr = Module(
     new CacheArray(conf.numBtbEnt, ISA.AddrBits)
   )
-  val validArr  =
-    RegInit(VecInit(Seq.fill(conf.numBtbEnt)(false.B)))
   val typeArr   =
     RegInit(VecInit(Seq.fill(conf.numBtbEnt)(false.B)))
 
@@ -232,11 +237,20 @@ class BimodalPredictor(conf: BrPredConf) extends BrPred(conf) {
     bypBhtV && bypBhtI === bhtQidxR
   val bhtCnt    = Mux(useBhtByp, bypBhtD, bhtRd)
 
-  val btbUidx                                     = btbIdxOf(io.updPC)
+  val btbUidx    = btbIdxOf(io.updPC)
+  val btbUpdWen  =
+    io.updValid && (io.updTaken ||
+      (!io.updIsBranch && io.updBtbHit))
+  val btbUpdWdata = Mux(
+    io.updTaken,
+    Cat(true.B, btbTagOf(io.updPC)),
+    0.U((conf.btbTagBits + 1).W)
+  )
+
   val tagData                                     = if (GlbCtrl.useSram) {
-    val bypValid  = RegNext(io.updValid && io.updTaken)
-    val bypIdx    = RegNext(btbIdxOf(io.updPC))
-    val bypTag    = RegNext(btbTagOf(io.updPC))
+    val bypValid  = RegNext(btbUpdWen)
+    val bypIdx    = RegNext(btbUidx)
+    val bypTag    = RegNext(btbUpdWdata)
     val bypTarget = RegNext(io.updTarget)
     val bypIsRet  = RegNext(io.updIsRet)
     val useByp    = bypValid && bypIdx === btbQidxR
@@ -256,10 +270,12 @@ class BimodalPredictor(conf: BrPredConf) extends BrPred(conf) {
       false.B
     )
   }
-  val (tagD, tgtData, isRetBit, bypValid, useByp) = tagData
+  val (tagDRaw, tgtData, isRetBit, bypValid, useByp) = tagData
 
+  val tagValid  = tagDRaw(conf.btbTagBits)
+  val tagD      = tagDRaw(conf.btbTagBits - 1, 0)
   val btbHitRaw =
-    validArr(btbQidxR) && tagD === btbTagOf(qPCR)
+    tagValid && tagD === btbTagOf(qPCR)
   val btbHit    = if (GlbCtrl.useSram) {
     btbHitRaw && !(bypValid && !useByp)
   } else btbHitRaw
@@ -278,22 +294,18 @@ class BimodalPredictor(conf: BrPredConf) extends BrPred(conf) {
 
   val useRas = btbHit && isRetBit && rasValid
   io.predTaken := btbHit && (useRas || bhtCnt(1))
-  io.targetPC  := Mux(useRas, rasTop, tgtData)
+  io.targetPC  := Mux(isRetBit && rasValid, rasTop, tgtData)
   io.btbHit    := btbHit
   io.bhtCnt    := bhtCnt
 
   tagArr.io.waddr    := btbUidx
-  tagArr.io.wdata    := btbTagOf(io.updPC)
-  tagArr.io.wen      := io.updValid && io.updTaken
+  tagArr.io.wdata    := btbUpdWdata
+  tagArr.io.wen      := btbUpdWen
   targetArr.io.waddr := btbUidx
   targetArr.io.wdata := io.updTarget
   targetArr.io.wen   := io.updValid && io.updTaken
   when(io.updValid && io.updTaken) {
-    validArr(btbUidx) := true.B
-    typeArr(btbUidx)  := io.updIsRet
-  }
-  when(io.updValid && !io.updIsBranch && io.updBtbHit) {
-    validArr(btbUidx) := false.B
+    typeArr(btbUidx) := io.updIsRet
   }
 }
 

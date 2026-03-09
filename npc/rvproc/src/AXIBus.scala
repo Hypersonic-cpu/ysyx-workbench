@@ -122,9 +122,13 @@ class ArbiterRead(N: Int) extends Module {
   io.device.ar.bits  := pivot.ar.bits
   io.device.r.ready  := pivot.r.ready
 
+  // Gate r.valid with serving (registered) to break
+  // PriorityEncoder -> r.valid combinational path.
+  val serving = state === serve
   for (i <- 0 until N) {
     val selectThis = i.U === usingIdx
-    io.hosts(i).r.valid  := selectThis && io.device.r.valid
+    io.hosts(i).r.valid  :=
+      serving && selectThis && io.device.r.valid
     io.hosts(i).r.bits   := io.device.r.bits
     io.hosts(i).ar.ready := selectThis && io.device.ar.ready
   }
@@ -171,9 +175,11 @@ class ArbiterWrite(N: Int) extends Module {
   io.device.w.bits   := pivot.w.bits
   io.device.b.ready  := pivot.b.ready
 
+  val serving = state === serve
   for (i <- 0 until N) {
     val selectThis = i.U === usingIdx
-    io.hosts(i).b.valid  := selectThis && io.device.b.valid
+    io.hosts(i).b.valid  :=
+      serving && selectThis && io.device.b.valid
     io.hosts(i).b.bits   := io.device.b.bits
     io.hosts(i).aw.ready := selectThis && io.device.aw.ready
     io.hosts(i).w.ready  := selectThis && io.device.w.ready
@@ -294,7 +300,7 @@ class XBarRead(N: Int, amap: Seq[UInt => Bool]) extends Module {
       error -> Mux(io.host.r.ready, idle, error)
     )
   )
-  dontTouch(io)
+  if (GlbCtrl.debug) { dontTouch(io) }
 }
 
 class XBarWrite(N: Int, amap: Seq[UInt => Bool]) extends Module {
@@ -378,7 +384,7 @@ class XBarWrite(N: Int, amap: Seq[UInt => Bool]) extends Module {
     )
   )
   state := nextState
-  dontTouch(io)
+  if (GlbCtrl.debug) { dontTouch(io) }
 }
 
 class AXIXBar(N: Int, amap: Seq[UInt => Bool]) extends Module {

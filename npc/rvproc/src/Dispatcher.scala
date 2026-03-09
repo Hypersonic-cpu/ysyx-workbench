@@ -49,20 +49,13 @@ class Dispatcher extends Module {
   io.decodeSide.ready := !dispValid || tgtReady
 
   // Capture / consume logic.
-  // pipeFlush kills MUL/DIV in-flight but keeps the ALU
-  // instruction so it can drain through EXU -> LSU (it is
-  // the mispredicting branch that must still commit).
+  // brDet is gated by outFire, so pipeFlush only fires
+  // after the mispredicting instruction has left. Safe
+  // to unconditionally clear.
   val canFire = dispValid && tgtReady
 
-  when(io.excpFlush) {
+  when(io.excpFlush || io.pipeFlush) {
     dispValid := false.B
-  }.elsewhen(io.pipeFlush) {
-    when(isMD || !dispValid) {
-      dispValid := false.B
-    }.elsewhen(canFire) {
-      // ALU fires this cycle during flush - consumed
-      dispValid := false.B
-    }
   }.elsewhen(canFire || !dispValid) {
     dispValid := io.decodeSide.valid
     when(io.decodeSide.valid) {

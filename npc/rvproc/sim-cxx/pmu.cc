@@ -84,15 +84,15 @@ SoftPerfUnit::stats_json() const {
 void
 SoftPerfUnit::notifyIFRecvd(addr_t pc) {
   ifRingPush('R', pc, curr_tick());
-  if (ifetchboard.empty() || std::get<0>(ifetchboard.front()) != pc) {
-    ifRingDump();
-  }
+  // if (ifetchboard.empty() || std::get<0>(ifetchboard.front()) != pc) {
+  //   ifRingDump();
+  // }
   v_assert(!ifetchboard.empty(), "Cannot find pc @", pc, "in IF Pipeline");
   while (std::get<0>(ifetchboard.front()) != pc) {
     ifetchboard.pop_front();
-    if (ifetchboard.empty()) {
-      ifRingDump();
-    }
+    // if (ifetchboard.empty()) {
+    //   ifRingDump();
+    // }
     v_assert(!ifetchboard.empty(), "Cannot find pc @", pc, "in IF Pipeline");
   }
   ifcyc.sample(curr_tick() - std::get<1>(ifetchboard.front()));

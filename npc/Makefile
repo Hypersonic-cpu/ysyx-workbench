@@ -181,6 +181,7 @@ verilog: $(SCALA_SOURCES)
 	@echo "Verilog written to " $(BUILD_SV_DIR)
 	@sed -i '/^\/\/ ----- 8< -----/,$$d' $(BUILD_SV_DIR)/*.sv
 	@find $(BUILD_SV_DIR) -type f -name "*.v" -o -name "*.sv" -print0 | xargs -0 sed -i -e 's/_\(aw\|ar\|w\|r\|b\)_\(\|bits_\)/_\1/g'
+	@sed -i 's/\(wire.*_collect_io_wbSide_bits_foward_pc\);/\1 \/* verilator public_flat_rd *\/;/' $(BUILD_SV_DIR)/rvCore.sv
 	@cp $(SRC_DPIC_DIR)/PMemBox.sv $(BUILD_SV_DIR)/PMemBox.sv
 	@if grep -q 'sram_1rw_' $(BUILD_SV_DIR)/*.sv 2>/dev/null; then \
 	  mkdir -p $(SRAM_DIR) && \

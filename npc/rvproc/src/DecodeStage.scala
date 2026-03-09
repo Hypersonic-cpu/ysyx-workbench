@@ -265,6 +265,8 @@ class DecodeStage extends Module {
     val fwdRes    = Input(new SourceFoward)
     val excpFlush = Input(Bool())
     val sbBusy    = Input(UInt(ISA.RegNum.W))
+    val rawStall =
+      if (GlbCtrl.debug) Some(Output(Bool())) else None
   })
 
   val flushed = io.flush
@@ -348,6 +350,7 @@ class DecodeStage extends Module {
   iofw.ecall  := iDec.io.ecall
   iofw.fenceI := iDec.io.fenceI
   iofw.pc     := ioif.pc
+  iofw.snpc   := ioif.pc + 4.U
   iofw.inst   := io.in.bits.inst
   iofw.csrVal := csrVal
 
@@ -391,6 +394,7 @@ class DecodeStage extends Module {
       StallCause.RAW,
       Mux(flushed, StallCause.Branch, StallCause.InstFetch)
     )
+    io.rawStall.get := (waitRAW || waitSB) && validCtrl
   } else {
     iofw.stallT := DontCare
   }

@@ -188,7 +188,7 @@ class ExecuteStage extends Module {
     val bpPmu = Module(new pmu.BrPredPMU)
     bpPmu.io.clock        := clock
     bpPmu.io.reset        := reset
-    bpPmu.io.valid        := validCtrl && ioid.brInst.isBr
+    bpPmu.io.valid        := outFire && ioid.brInst.isBr
     bpPmu.io.predTaken    := ioid.predTaken
     bpPmu.io.actualTaken  := actualTaken
     bpPmu.io.predTarget   := ioid.predTarget
@@ -229,10 +229,13 @@ class ExecuteStage extends Module {
 
   // Misalignment detection moved to MemoryStage
 
-  // Flush IDU/EXU on misprediction
+  // Flush IDU/EXU on misprediction.
+  // Gate with outFire: brDet only fires when the
+  // instruction actually exits EXU. This prevents
+  // repeated flushes while the skid buffer is full.
   val needFlush = mispred
-  val brDetV    = validCtrl && !io.excpFlush
-  val brDetB    = brDetV && needFlush
+  val brDetV    = outFire
+  val brDetB    = outFire && needFlush
 
   io.brDet.valid  := brDetV
   io.brDet.bits   := brDetB

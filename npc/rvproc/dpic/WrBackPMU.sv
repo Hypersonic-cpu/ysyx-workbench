@@ -15,11 +15,7 @@ module WrBackPMU (
   always_ff @(posedge clock) begin
     if (reset) begin
     end else begin
-      // isNewInst=true -> commit (stalltp=0)
-      // isNewInst=false, stallTp!=0 -> genuine stall
-      // isNewInst=false, stallTp==0 -> bubble (encode as IfuStall=1)
-      notify_commit(pc, inst,
-        isNewInst ? 8'h0 : (stallTp == 8'h0 ? 8'h1 : stallTp));
+      notify_commit(pc, inst, stallTp);
     end
   end
 
