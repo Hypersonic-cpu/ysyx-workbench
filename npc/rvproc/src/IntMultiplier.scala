@@ -70,9 +70,9 @@ object IntMulMath {
           "b00".U
         )(
           Seq(
-            "b100".U -> "b10".U, // −2S,
-            "b101".U -> "b01".U, // −S ,
-            "b110".U -> "b01".U  // −S ,
+            "b100".U -> 1.U(2.W), // -2S: +1 at position i
+            "b101".U -> 1.U(2.W), // -S : +1 at position i
+            "b110".U -> 1.U(2.W)  // -S : +1 at position i
           )
         ).asBools
       val currMsb   = currSeq(N)
@@ -88,7 +88,7 @@ object IntMulMath {
       } else {
         // 1n case
         if (i + N + 1 < N * 2) retarrays(i + N + 1) += (!currMsb)
-        if (i + N + 2 < N * 2) retarrays(i + N + 2) += (currMsb)
+        if (i + N + 2 < N * 2) retarrays(i + N + 2) += true.B
       }
 
       if (i == N - 1 || i == N - 2) {} else {
@@ -181,14 +181,13 @@ class IntMultiplier extends Module {
   // Pipeline stage 1: registered inputs
   val s1Valid  = RegInit(false.B)
   val s1Rs1    = Reg(UInt((ISA.RegBits + 1).W))
+  val s1Rs1inv = Reg(UInt((ISA.RegBits + 1).W))
   val s1Rs2    = Reg(UInt((ISA.RegBits + 1).W))
   val s1Op     = Reg(MulDivOp())
   val s1Foward = Reg(new DecodeFoward)
 
-  // Pipeline stage 2: result
+  // Pipeline stage 2: Booth+Wallace sum/carry registered here
   val s2Valid  = RegInit(false.B)
-  // val s2Sum    = Reg(UInt((2 * (ISA.RegBits + 1)).W))
-  // val s2Carry  = Reg(UInt((2 * (ISA.RegBits + 1)).W))
   val s2Foward = Reg(new DecodeFoward)
 
   // Pipeline stage 3: result
@@ -228,22 +227,28 @@ class IntMultiplier extends Module {
     s1Valid := io.in.valid
     when(io.in.valid) {
       s1Rs1    := src1Full
+      s1Rs1inv := ~src1Full
       s1Rs2    := src2Full
       s1Op     := io.in.bits.op
       s1Foward := io.in.bits.foward
     }
   }
 
-  // Stage 1 -> Stage 2: register the full 66-bit product and op select.
-  // s1Rs1/s1Rs2 are already sign-extended to 33 bits; the signed multiply
-  // produces a 66-bit result that covers both lower (Mul) and upper
-  // (Mulh/Mulhsu/Mulhu) halves.
-  val s2Product = RegEnable(
-    (s1Rs1.asSInt * s1Rs2.asSInt).asUInt,
-    s1Ready
-  )
+  // Stage 1 -> Stage 2: Booth Radix-4 partial products + Wallace
+  // tree reduction. One cycle for Booth+Wallace (combinational),
+  // next cycle for the final 66-bit addition.
+  val partialProducts    =
+    IntMulMath.boothRadix4(
+      s1Rs1.asBools,
+      s1Rs1inv.asBools,
+      s1Rs2.asBools
+    )
+  val (sumRow, carryRow) =
+    IntMulMath.wallaceReduction(partialProducts)
+  val s2Sum     = RegEnable(sumRow, s1Ready)
+  val s2Carry   = RegEnable(carryRow, s1Ready)
   val s2SelHigh = RegEnable(s1Op =/= MulDivOp.Mul, s1Ready)
-  val product   = s2Product
+  val product   = s2Sum + s2Carry
 
   val result = Mux(s2SelHigh, product(63, 32), product(31, 0))
 
