@@ -362,9 +362,9 @@ class DecodeStage extends Module {
   val isEcall      = iDec.io.ecall
   val isExcp       = isIdExcp || isEcall
 
-  iofw.excpValid      := isExcp
+  iofw.excpValid := isExcp
   iofw.excpFlush := false.B
-  iofw.mcause         := MuxCase(
+  iofw.mcause    := MuxCase(
     0.U,
     Seq(
       pcMisaligned -> 0.U,

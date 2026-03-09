@@ -139,8 +139,8 @@ class ExecuteStage extends Module {
     val fwdDet    = Output(new FwBundle)
   })
 
-  val flushed    = io.flush
-  val validCtrl  =
+  val flushed   = io.flush
+  val validCtrl =
     io.in.valid && !flushed
 
   io.in.ready := io.out.ready
@@ -234,10 +234,10 @@ class ExecuteStage extends Module {
   val brDetV    = validCtrl && !io.excpFlush
   val brDetB    = brDetV && needFlush
 
-  io.brDet.valid   := brDetV
-  io.brDet.bits    := brDetB
-  io.brInfo.valid  := brDetV
-  io.brInfo.bits   := toFWire
+  io.brDet.valid  := brDetV
+  io.brDet.bits   := brDetB
+  io.brInfo.valid := brDetV
+  io.brInfo.bits  := toFWire
 
   // Flush handled by FlushCtrl; regBrFlush removed
 

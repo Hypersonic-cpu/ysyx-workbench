@@ -15,8 +15,8 @@ case class BrPredConf(numEntries: Int = 64, numBtbEnt: Int = 64) {
     s"BrPredConf: numBtbEnt must be power of 2, got $numBtbEnt"
   )
   // BHT index (for saturating counters)
-  def idxBits = log2Ceil(numEntries)
-  def idxHi   = idxBits + 2 - 1
+  def idxBits    = log2Ceil(numEntries)
+  def idxHi      = idxBits + 2 - 1
   // BTB index/tag (for tag + target arrays)
   def btbIdxBits = log2Ceil(numBtbEnt)
   def btbIdxHi   = btbIdxBits + 2 - 1
@@ -26,19 +26,20 @@ case class BrPredConf(numEntries: Int = 64, numBtbEnt: Int = 64) {
 // predTaken/targetPC valid ONE cycle after queryPC changes.
 abstract class BrPred(val conf: BrPredConf) extends Module {
   val io = IO(new Bundle {
-    val queryPC   = Input(Tp.AddrType())
-    val predTaken = Output(Bool())
-    val targetPC  = Output(Tp.AddrType())
-    val btbHit    = Output(Bool())
-    val bhtCnt    = Output(UInt(2.W))
-    val updValid  = Input(Bool())
-    val updPC     = Input(Tp.AddrType())
-    val updTaken  = Input(Bool())
-    val updTarget = Input(Tp.AddrType())
-    val updBtbHit = Input(Bool())
-    val updOldCnt = Input(UInt(2.W))
-    val updIsCall = Input(Bool())
-    val updIsRet  = Input(Bool())
+    val queryPC     = Input(Tp.AddrType())
+    val predTaken   = Output(Bool())
+    val targetPC    = Output(Tp.AddrType())
+    val btbHit      = Output(Bool())
+    val bhtCnt      = Output(UInt(2.W))
+    val updValid    = Input(Bool())
+    val updPC       = Input(Tp.AddrType())
+    val updTaken    = Input(Bool())
+    val updTarget   = Input(Tp.AddrType())
+    val updBtbHit   = Input(Bool())
+    val updOldCnt   = Input(UInt(2.W))
+    val updIsCall   = Input(Bool())
+    val updIsRet    = Input(Bool())
+    val updIsBranch = Input(Bool())
   })
 
   // BHT index (for saturating counters)
@@ -168,6 +169,9 @@ class BTFNTPredictor(conf: BrPredConf) extends BrPred(conf) {
     validArr(uidx) := true.B
     typeArr(uidx)  := io.updIsRet
   }
+  when(io.updValid && !io.updIsBranch && io.updBtbHit) {
+    validArr(uidx) := false.B
+  }
 }
 
 class BimodalPredictor(conf: BrPredConf) extends BrPred(conf) {
@@ -186,9 +190,9 @@ class BimodalPredictor(conf: BrPredConf) extends BrPred(conf) {
   // BHT: SyncReadMem eliminates the wide combinational
   // MUX of a DFF Vec, breaking the timing-critical path
   // through the saturating counter read.
-  val bhtMem   = SyncReadMem(conf.numEntries, UInt(2.W))
-  val bhtQidx  = idxOf(io.queryPC)
-  val bhtRd    = bhtMem.read(bhtQidx)
+  val bhtMem  = SyncReadMem(conf.numEntries, UInt(2.W))
+  val bhtQidx = idxOf(io.queryPC)
+  val bhtRd   = bhtMem.read(bhtQidx)
 
   val qPCR     = RegNext(io.queryPC)
   // BTB index (may differ from BHT index width)
@@ -228,7 +232,7 @@ class BimodalPredictor(conf: BrPredConf) extends BrPred(conf) {
     bypBhtV && bypBhtI === bhtQidxR
   val bhtCnt    = Mux(useBhtByp, bypBhtD, bhtRd)
 
-  val btbUidx = btbIdxOf(io.updPC)
+  val btbUidx                                     = btbIdxOf(io.updPC)
   val tagData                                     = if (GlbCtrl.useSram) {
     val bypValid  = RegNext(io.updValid && io.updTaken)
     val bypIdx    = RegNext(btbIdxOf(io.updPC))
@@ -287,6 +291,9 @@ class BimodalPredictor(conf: BrPredConf) extends BrPred(conf) {
   when(io.updValid && io.updTaken) {
     validArr(btbUidx) := true.B
     typeArr(btbUidx)  := io.updIsRet
+  }
+  when(io.updValid && !io.updIsBranch && io.updBtbHit) {
+    validArr(btbUidx) := false.B
   }
 }
 

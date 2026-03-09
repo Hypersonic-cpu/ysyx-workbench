@@ -33,18 +33,23 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
   val pc     = RegInit(resetVector.U(ISA.RegBits.W))
   val lastPC = RegEnable(io.out.bits.pc, io.out.fire)
 
+  val pdFlushPending = RegInit(false.B)
+  val pdFlushPCReg   = Reg(Tp.AddrType())
+  val flushFromEx    = io.fromEx.valid && brex.mispred
+
   val brTaken  = io.fromEx.valid && brex.brTaken
   val brTarget = MuxCase(
     brex.brLPC4,
     Seq(
-      io.wbExcp -> io.wbExcpTarget,
-      brTaken   -> brex.brTarget,
-      fenceI    -> (lastPC + 4.U)
+      io.wbExcp                        -> io.wbExcpTarget,
+      brTaken                          -> brex.brTarget,
+      fenceI                           -> (lastPC + 4.U),
+      (pdFlushPending && !flushFromEx) -> pdFlushPCReg
     )
   )
 
   val flushWire =
-    (io.fromEx.valid && brex.mispred) || fenceI || io.wbExcp
+    flushFromEx || fenceI || io.wbExcp || pdFlushPending
 
   val validBuf      = Reg(Vec(PipeDepth + 1, Bool()))
   val pcBuf         = Reg(Vec(PipeDepth + 1, Tp.AddrType()))
@@ -68,15 +73,17 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
 
   bp match {
     case Some(p) =>
-      p.io.queryPC   := btbRdAddr
-      p.io.updValid  := io.fromEx.valid && (brex.isBr || brex.mispred)
-      p.io.updPC     := brex.brLPC
-      p.io.updTaken  := brex.brTaken
-      p.io.updTarget := brex.brTarget
-      p.io.updBtbHit := brex.predBtbHit
-      p.io.updOldCnt := brex.predBhtCnt
-      p.io.updIsCall := brex.isCall
-      p.io.updIsRet  := brex.isRet
+      p.io.queryPC     := btbRdAddr
+      p.io.updValid    :=
+        io.fromEx.valid && (brex.isBr || brex.predBtbHit)
+      p.io.updPC       := brex.brLPC
+      p.io.updTaken    := brex.brTaken
+      p.io.updTarget   := brex.brTarget
+      p.io.updBtbHit   := brex.predBtbHit
+      p.io.updOldCnt   := brex.predBhtCnt
+      p.io.updIsCall   := brex.isCall
+      p.io.updIsRet    := brex.isRet
+      p.io.updIsBranch := brex.isBr
     case None    =>
   }
 
@@ -178,11 +185,34 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
   }
 
   val ioid = io.out.bits
+
+  // Pre-decode: check opcode of instruction at output pointer.
+  // B-type=0x63, JAL=0x6F, JALR=0x67
+  val isBranchPD     = {
+    val op = instBuf(toidPtr)(6, 0)
+    op === "b1100011".U || op === "b1101111".U ||
+    op === "b1100111".U
+  }
+  // When a non-branch was falsely predicted taken, flush
+  // subsequent wrong-path instructions one cycle after output.
+  val nonBrPredTaken =
+    io.out.fire && !isBranchPD && predTakenBuf(toidPtr)
+  when(nonBrPredTaken) {
+    pdFlushPending := true.B
+    pdFlushPCReg   := pcBuf(toidPtr) + 4.U
+  }.otherwise {
+    pdFlushPending := false.B
+  }
+
   ioid.pc           := Mux(io.out.valid, pcBuf(toidPtr), 0.U)
   ioid.inst         :=
     Mux(io.out.valid, instBuf(toidPtr), 0.U)
   ioid.predTaken    :=
-    Mux(io.out.valid, predTakenBuf(toidPtr), false.B)
+    Mux(
+      io.out.valid,
+      predTakenBuf(toidPtr) && isBranchPD,
+      false.B
+    )
   ioid.predTarget   :=
     Mux(io.out.valid, predTargetBuf(toidPtr), 0.U)
   ioid.predBtbHit   :=

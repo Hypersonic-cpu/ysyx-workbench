@@ -42,7 +42,7 @@ class Dispatcher extends Module {
     io.mulSide.ready,
     Mux(isDivDisp, io.divSide.ready, io.aluSide.ready)
   )
-  val tgtReady = unitReady && !sbAnyBusy
+  val tgtReady  = unitReady && !sbAnyBusy
 
   // Accept from IDU when dispatch register is empty or
   // the current dispatch can fire
@@ -71,23 +71,23 @@ class Dispatcher extends Module {
   }
 
   // Drive ALU output
-  io.aluSide.valid         := dispValid && !isMD && !sbAnyBusy
-  io.aluSide.bits.rs1V     := dispBits.rs1V
-  io.aluSide.bits.rs2V     := dispBits.rs2V
-  io.aluSide.bits.imm      := dispBits.imm
-  io.aluSide.bits.pc       := dispBits.pc
-  io.aluSide.bits.aluOp    := dispBits.aluOp
-  io.aluSide.bits.aluSel   := dispBits.aluSel
-  io.aluSide.bits.brInst   := dispBits.brInst
-  io.aluSide.bits.memOp    := dispBits.memOp
-  io.aluSide.bits.aluEn    := dispBits.aluEn
+  io.aluSide.valid           := dispValid && !isMD && !sbAnyBusy
+  io.aluSide.bits.rs1V       := dispBits.rs1V
+  io.aluSide.bits.rs2V       := dispBits.rs2V
+  io.aluSide.bits.imm        := dispBits.imm
+  io.aluSide.bits.pc         := dispBits.pc
+  io.aluSide.bits.aluOp      := dispBits.aluOp
+  io.aluSide.bits.aluSel     := dispBits.aluSel
+  io.aluSide.bits.brInst     := dispBits.brInst
+  io.aluSide.bits.memOp      := dispBits.memOp
+  io.aluSide.bits.aluEn      := dispBits.aluEn
   io.aluSide.bits.predTaken  := dispBits.predTaken
   io.aluSide.bits.predTarget := dispBits.predTarget
   io.aluSide.bits.predBtbHit := dispBits.predBtbHit
   io.aluSide.bits.predBhtCnt := dispBits.predBhtCnt
-  io.aluSide.bits.isCall   := dispBits.isCall
-  io.aluSide.bits.isRet    := dispBits.isRet
-  io.aluSide.bits.foward   := dispBits.foward
+  io.aluSide.bits.isCall     := dispBits.isCall
+  io.aluSide.bits.isRet      := dispBits.isRet
+  io.aluSide.bits.foward     := dispBits.foward
 
   // Drive MUL output
   io.mulSide.valid       := dispValid && isMulDisp &&

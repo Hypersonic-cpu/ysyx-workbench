@@ -15,8 +15,8 @@ class FlushCtrl extends Module {
     val wbExcpTarget = Input(Tp.AddrType())
 
     // To IFU (registered pipeline)
-    val toFetch       = Decoupled(new ExecuteBackward)
-    val ifWbExcp      = Output(Bool())
+    val toFetch        = Decoupled(new ExecuteBackward)
+    val ifWbExcp       = Output(Bool())
     val ifWbExcpTarget = Output(Tp.AddrType())
 
     // To IDU (registered pipeline)
@@ -37,19 +37,19 @@ class FlushCtrl extends Module {
     false.B,
     io.toFetch.ready
   )
-  io.toFetch.bits := RegEnable(
+  io.toFetch.bits  := RegEnable(
     io.brInfo.bits,
     io.toFetch.ready
   )
 
   // IDU flush: registered pipeline (BusConnect semantics)
-  io.brDet.ready  := io.toIDU.ready
+  io.brDet.ready := io.toIDU.ready
   io.toIDU.valid := RegEnable(
     io.brDet.valid,
     false.B,
     io.toIDU.ready
   )
-  io.toIDU.bits := RegEnable(
+  io.toIDU.bits  := RegEnable(
     io.brDet.bits,
     false.B,
     io.toIDU.ready

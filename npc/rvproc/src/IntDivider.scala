@@ -97,7 +97,7 @@ class IntDivider extends Module {
           remainder(31, 0),
           quotient(31)
         )
-        val trial = shifted -& divisor
+        val trial   = shifted -& divisor
 
         when(!trial(32)) {
           remainder := trial
