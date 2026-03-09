@@ -158,10 +158,11 @@ void init_monitor(int argc, char *argv[]) {
 
   /* Initialize devices. */
   IFDEF(CONFIG_DEVICE, init_device());
+
 #if !defined(CONFIG_DEVICE) && defined(CONFIG_SOC)
   void init_map(void); init_map();
-#endif
   IFDEF(CONFIG_SOC, init_soc());
+#endif
 
   IFDEF(CONFIG_NPSIM_TRACE, void init_npsim_trace(void); init_npsim_trace();)
 

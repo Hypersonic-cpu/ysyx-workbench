@@ -94,7 +94,6 @@ void paddr_write(paddr_t addr, int len, word_t data) {
     handle = true;
   } else {
     IFDEF(CONFIG_DEVICE, mmio_write(addr, len, data), handle=true; );
-    IFDEF(CONFIG_SOC   , mmio_write(addr, len, data), handle=true; );
   }
   IFDEF(CONFIG_MTRACE_ENABLE, mtrace_logging(addr, data, len, false));
   if (!handle) { out_of_bound(addr); }

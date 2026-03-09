@@ -67,7 +67,7 @@ object ElaborConfig {
     GlbCtrl.debug = debugDefault
     GlbCtrl.sta = staDefault
 
-    val cfgL1iSize = 1024
+    val cfgL1iSize = 2048
     val cfgL1iBlk  = 16
     val cfgL1dSize = 1024
     val cfgL1dBlk  = 16

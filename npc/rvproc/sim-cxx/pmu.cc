@@ -33,6 +33,16 @@ SoftPerfUnit::dump_stats(std::ostream& os) const {
   for (auto const& ptr : statslist) {
     ptr->dump_stats(os);
   }
+  if (cacheRates.get_samples() > 0) {
+    os << std::format("iCache Miss Rate : {:.2f}%",
+                      100.0 * cacheRates.at(CacheBreakdown::Miss) / cacheRates.get_samples())
+       << std::endl;
+  }
+  if (dcacheRates.get_samples() > 0) {
+    os << std::format("dCache Miss Rate : {:.2f}%",
+                      100.0 * dcacheRates.at(CacheBreakdown::Miss) / dcacheRates.get_samples())
+       << std::endl;
+  }
   auto bp_total = bpStats.get_samples();
   if (bp_total > 0) {
     auto bp_correct = bpStats.at(BpCorrect);
