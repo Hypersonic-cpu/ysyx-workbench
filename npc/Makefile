@@ -238,6 +238,22 @@ formal-icache:
 	@echo "Running SymbiYosys"
 	cd $(NPC_HOME) && sby -f $(FORMAL_ICACHE_SBY) bmc && cd -
 
+## Formal verification — IntMultiplier
+FORMAL_MUL_DIR = formal/mul
+FORMAL_MUL_SBY = $(FORMAL_MUL_DIR)/IntMulFormal.sby
+
+formal-mul:
+	@echo "Generating IntMultiplier formal SV"
+	@mkdir -p $(FORMAL_MUL_DIR)
+	@rm -f $(FORMAL_MUL_DIR)/*.sv
+	mill -i $(PRJ).runMain ElaborateFormalMul --target-dir $(FORMAL_MUL_DIR)/
+	@echo "Copying template .sby file"
+	@cat $(FORMAL_TOOL_DIR)/IntMul-sby.md | awk '/^```/{flag=!flag; next} flag' > $(FORMAL_MUL_SBY)
+	@echo "Patching SV for Yosys compatibility"
+	@python3 $(FORMAL_TOOL_DIR)/patch_sv.py $(FORMAL_MUL_DIR) IntMulFormal
+	@echo "Running SymbiYosys"
+	cd $(NPC_HOME) && sby -f $(FORMAL_MUL_SBY) bmc && cd -
+
 ## SRAM library generation
 SRAM_DIR = libs/sram
 SRAM_LIB = $(SRAM_DIR)/sram_1rw.lib
@@ -249,7 +265,7 @@ sramlib:
 	@python3 scripts/gen_sram_lib.py $(SRAM_LIB) $(BUILD_SV_DIR) 2>&1 || \
 	 python3 scripts/gen_sram_lib.py $(SRAM_LIB)
 
-.PHONY: test runam verilog help reformat checkformat clean prebuild sim printhook formal-icache sramlib compile
+.PHONY: test runam verilog help reformat checkformat clean prebuild sim printhook formal-icache formal-mul sramlib compile
 
 prebuild:
 	@mkdir -p $(BUILD_OBJ_DIR)

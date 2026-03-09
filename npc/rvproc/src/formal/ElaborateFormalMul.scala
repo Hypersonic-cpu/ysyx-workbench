@@ -1,12 +1,10 @@
-// Elaboration entry point for iCache formal verification.
-// Generates iCache as SystemVerilog with SVA assertions,
-// to be consumed by the hand-written iCacheFormal.sv wrapper.
+// Elaboration entry point for IntMultiplier formal verification.
 
-object ElaborateFormal extends App {
+object ElaborateFormalMul extends App {
   val ysyxNPC    = System.getenv("NPC_HOME")
   assert(ysyxNPC.nonEmpty)
-  val outputDir = ysyxNPC + "/formal/icache"
-  // val outputDir = "/home/kong/ysyx-workbench/npc/formal/icache/"
+  val outputDir = ysyxNPC + "/formal/mul"
+  // val outputDir = "/home/kong/ysyx-workbench/npc/formal/mul/"
 
   val firtoolOptions = Array(
     "--split-verilog",
@@ -23,7 +21,7 @@ object ElaborateFormal extends App {
   )
 
   circt.stage.ChiselStage.emitSystemVerilogFile(
-    new rvproc.formal.iCacheFormalWrapper,
+    new rvproc.formal.IntMulFormalWrapper,
     args,
     firtoolOptions
   )

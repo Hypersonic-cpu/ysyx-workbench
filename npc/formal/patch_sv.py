@@ -31,7 +31,7 @@ def patch_file(path):
         f.write(patched)
 
 
-def inject_initial_reset(path):
+def inject_initial_reset(path, top_module="iCacheFormal"):
     """Force non-resettable Chisel register (RegNext etc.) in a known state.
     We inject:
       initial assume(reset);       -- step 0: reset=1
@@ -42,8 +42,7 @@ def inject_initial_reset(path):
     with open(path, "r") as f:
         text = f.read()
 
-    # Only inject into the file containing module iCacheFormal
-    if "module iCacheFormal(" not in text:
+    if f"module {top_module}(" not in text:
         return
 
     inject = (
@@ -73,29 +72,26 @@ def inject_initial_reset(path):
         f.write(patched)
 
 
-def update_sby(sv_dir):
+def update_sby(sv_dir, top_module="iCacheFormal"):
     """Inject [script] and [files] sections in .sby from filelist.f."""
-    sby_path = os.path.join(sv_dir, "iCacheFormal.sby")
+    sby_path = os.path.join(sv_dir, f"{top_module}.sby")
     fl_path = os.path.join(sv_dir, "filelist.f")
     if not os.path.exists(fl_path) or not os.path.exists(sby_path):
         return
 
-    # Context in .f will change after Cache size changes
+    wrapper_name = f"{top_module}Wrapper"
     with open(fl_path) as f:
-        # Skip the empty wrapper (iCacheFormalWrapper.sv)
-        sv_files = [l.strip() for l in f if l.strip() and "Wrapper" not in l]
+        sv_files = [l.strip() for l in f if l.strip() and wrapper_name not in l]
 
     with open(sby_path) as f:
         sby = f.read()
 
-    # Build new [script] and [files] sections
     read_lines = "\n".join(f"read -sv {fn}" for fn in sv_files)
     file_lines = "\n".join(f"{sv_dir}/{fn}" for fn in sv_files)
 
-    script_section = f"[script]\n{read_lines}\nprep -top iCacheFormal"
+    script_section = f"[script]\n{read_lines}\nprep -top {top_module}"
     files_section = f"[files]\n{file_lines}"
 
-    # Replace sections
     sby = re.sub(r"\[script\].*?(?=\n\[)", script_section + "\n", sby, flags=re.DOTALL)
     sby = re.sub(r"\[files\].*", files_section, sby, flags=re.DOTALL)
 
@@ -105,8 +101,9 @@ def update_sby(sv_dir):
 
 if __name__ == "__main__":
     sv_dir = sys.argv[1] if len(sys.argv) > 1 else "."
+    top_module = sys.argv[2] if len(sys.argv) > 2 else "iCacheFormal"
     for sv in glob.glob(os.path.join(sv_dir, "*.sv")):
         patch_file(sv)
     for sv in glob.glob(os.path.join(sv_dir, "*.sv")):
-        inject_initial_reset(sv)
-    update_sby(sv_dir)
+        inject_initial_reset(sv, top_module)
+    update_sby(sv_dir, top_module)

@@ -77,7 +77,7 @@ object IntMulMath {
         ).asBools
       val currMsb   = currSeq(N)
       for (j <- 0 to N) {
-        retarrays(i + j) :+ currSeq(j)
+        retarrays(i + j) += currSeq(j)
       }
 
       if (i == 0) {
@@ -181,7 +181,6 @@ class IntMultiplier extends Module {
   // Pipeline stage 1: registered inputs
   val s1Valid  = RegInit(false.B)
   val s1Rs1    = Reg(UInt((ISA.RegBits + 1).W))
-  val s1Rs1inv = Reg(UInt((ISA.RegBits + 1).W))
   val s1Rs2    = Reg(UInt((ISA.RegBits + 1).W))
   val s1Op     = Reg(MulDivOp())
   val s1Foward = Reg(new DecodeFoward)
@@ -203,14 +202,14 @@ class IntMultiplier extends Module {
   val s0Ready = !s1Valid || s1Ready
   io.in.ready := s0Ready
 
-  // Stage 0 -> Stage 1
-  // 64-bit product: sign-extend to 33 bits based on op
-  val isMulh   = s1Op === MulDivOp.Mulh
-  val isMulhsu = s1Op === MulDivOp.Mulhsu
-  val isMulhu  = s1Op === MulDivOp.Mulhu
-
-  val src1Sgn = !isMulhu && !isMulhsu
-  val src2Sgn = !isMulhu
+  // Stage 0 -> Stage 1: sign-extend from CURRENT input op.
+  // Mul/Mulh : rs1 signed, rs2 signed
+  // Mulhsu   : rs1 signed, rs2 unsigned
+  // Mulhu    : rs1 unsigned, rs2 unsigned
+  val inIsMulhsu = io.in.bits.op === MulDivOp.Mulhsu
+  val inIsMulhu  = io.in.bits.op === MulDivOp.Mulhu
+  val src1Sgn    = !inIsMulhu
+  val src2Sgn    = !inIsMulhu && !inIsMulhsu
 
   val src1Full = Cat(
     Mux(src1Sgn, io.in.bits.rs1(31), 0.U(1.W)),
@@ -229,28 +228,24 @@ class IntMultiplier extends Module {
     s1Valid := io.in.valid
     when(io.in.valid) {
       s1Rs1    := src1Full
-      s1Rs1inv := ~src1Full
       s1Rs2    := src2Full
       s1Op     := io.in.bits.op
       s1Foward := io.in.bits.foward
     }
   }
 
-  // val product = (a * b).asUInt // 66-bit result
-  val partialProducts    =
-    IntMulMath.boothRadix4(
-      s1Rs1.asBools,
-      s1Rs1inv.asBools,
-      s1Rs2.asBools
-    )
-  val (sumRow, carryRow) = IntMulMath.wallaceReduction(partialProducts)
-  val s2Sum   = RegEnable(sumRow, s1Valid)
-  val s2Carry = RegEnable(carryRow, s1Valid)
-  val product = s2Sum + s2Carry
+  // Stage 1 -> Stage 2: register the full 66-bit product and op select.
+  // s1Rs1/s1Rs2 are already sign-extended to 33 bits; the signed multiply
+  // produces a 66-bit result that covers both lower (Mul) and upper
+  // (Mulh/Mulhsu/Mulhu) halves.
+  val s2Product = RegEnable(
+    (s1Rs1.asSInt * s1Rs2.asSInt).asUInt,
+    s1Ready
+  )
+  val s2SelHigh = RegEnable(s1Op =/= MulDivOp.Mul, s1Ready)
+  val product   = s2Product
 
-  val selHigh = s1Op =/= MulDivOp.Mul
-  val result  =
-    Mux(selHigh, product(63, 32), product(31, 0))
+  val result = Mux(s2SelHigh, product(63, 32), product(31, 0))
 
   // Stage 1 -> Stage 2
   when(io.flush) {
@@ -258,10 +253,13 @@ class IntMultiplier extends Module {
     s3Valid := false.B
   }.elsewhen(s1Ready) {
     s2Valid := s1Valid
-    s3Valid := s2Valid
-    when(s2Valid) {
-      s3Result := result
-      s3Foward := s2Foward
+    // S2->S3 only when S3 can accept; otherwise S3 holds its current value.
+    when(s2Ready) {
+      s3Valid := s2Valid
+      when(s2Valid) {
+        s3Result := result
+        s3Foward := s2Foward
+      }
     }
     when(s1Valid) {
       s2Foward := s1Foward
