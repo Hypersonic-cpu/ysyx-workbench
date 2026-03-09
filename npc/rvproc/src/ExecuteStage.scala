@@ -162,10 +162,10 @@ class ExecuteStage extends Module {
   iExe.io.aluEn := ioid.aluEn && validCtrl
   iExe.io.br    := ioid.brInst
 
-  /** Forward: disabled. Only used for RAW hazard */
+  /** Forward: ALU results forwarded from EXU */
   io.fwdDet.valid := validCtrl
-  io.fwdDet.gprFw := false.B
-  io.fwdDet.gprDt := 0.U
+  io.fwdDet.gprFw := ioid.foward.wbSel === WbSel.fromAlu
+  io.fwdDet.gprDt := iExe.io.aluOut
 
   /** Back to Fetch */
   val actualTaken  = iExe.io.brRel || iExe.io.brAbs

@@ -248,7 +248,7 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
     pmu.io.reset     := reset
     pmu.io.trigFetch := iMem.ar.fire
     pmu.io.trigRecvd := iMem.r.fire && discardCnt === 0.U
-    pmu.io.pcFetch   := pc
+    pmu.io.pcFetch   := iMem.ar.bits.addr
     pmu.io.pcRecvd   := pcBuf(tailPtr)
     pmu.io.inst      := io.out.bits.inst
   }

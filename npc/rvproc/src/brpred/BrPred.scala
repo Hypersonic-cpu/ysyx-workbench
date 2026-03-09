@@ -42,8 +42,9 @@ abstract class BrPred(val conf: BrPredConf) extends Module {
     val updIsBranch = Input(Bool())
   })
 
-  // BHT index (for saturating counters)
-  protected def idxOf(pc: UInt): UInt = pc(conf.idxHi, 2)
+  // BHT index: XOR-fold upper bits for anti-aliasing
+  protected def idxOf(pc: UInt): UInt =
+    pc(conf.idxHi, 2) ^ pc(conf.idxHi + conf.idxBits, conf.idxHi + 1)
   // BTB index/tag (for tag + target arrays)
   protected def btbIdxOf(pc: UInt): UInt =
     pc(conf.btbIdxHi, 2)
