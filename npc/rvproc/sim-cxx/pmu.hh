@@ -98,6 +98,10 @@ private:
 
   ClassifiedStats<BpBreakdown> bpStats;
 
+  uint64_t pfIssued{0};
+  uint64_t pfHitC2{0};
+  uint64_t pfUseful{0};
+
   struct BpPerPC {
     uint32_t correct{0};
     uint32_t wrong{0};
@@ -150,6 +154,7 @@ public:
   void notifyMemXBar(bool is_write, uint64_t last_time, uint32_t time_usage);
   void notifyCacheResp(addr_t addr, bool is_hit, uint16_t id);
   void notifyCacheReq(addr_t addr, uint16_t id);
+  void notifyPfEvent(uint8_t event_type, addr_t addr);
   void notifyBrOutcome(bool pred_taken, bool actual_taken,
                        uint32_t pred_target, uint32_t actual_target,
                        bool btb_hit, uint32_t br_pc);

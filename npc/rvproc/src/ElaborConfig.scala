@@ -58,6 +58,8 @@ object ElaborConfig {
           GlbCtrl.btbEntries = args(i + 1).toInt; i += 1
         case "--ras-size"        =>
           GlbCtrl.rasSize = args(i + 1).toInt; i += 1
+        case "--with-prefetch"   =>
+          GlbCtrl.withPrefetch = true
         case other               => rest += other
       }
       i += 1

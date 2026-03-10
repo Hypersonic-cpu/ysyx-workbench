@@ -57,3 +57,15 @@ class iCacheSwPMU extends BlackBox with HasBlackBoxPath {
   })
   addPath(PATH.dpic("iCacheSwPMU.sv"))
 }
+
+class PfSwPMU extends BlackBox with HasBlackBoxPath {
+  val io = IO(new Bundle {
+    val clock      = Input(Clock())
+    val reset      = Input(Reset())
+    val pfIssued   = Input(Bool())
+    val pfHitC2    = Input(Bool())
+    val pfUseful   = Input(Bool())
+    val pfAddr     = Input(Tp.AddrType())
+  })
+  addPath(PATH.dpic("PfSwPMU.sv"))
+}

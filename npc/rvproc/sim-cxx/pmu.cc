@@ -68,6 +68,15 @@ SoftPerfUnit::dump_stats(std::ostream& os) const {
     //      << std::endl;
     // }
   }
+  if (pfIssued > 0) {
+    uint64_t pfUnused = pfIssued > pfUseful ?
+      pfIssued - pfUseful : 0;
+    os << std::format(
+          "Prefetch Issued {:d} Hit {:d} Useful {:d}"
+          " Unused {:d}",
+          pfIssued, pfHitC2, pfUseful, pfUnused)
+       << std::endl;
+  }
 }
 
 json
@@ -77,6 +86,13 @@ SoftPerfUnit::stats_json() const {
     ret[ptr->name()] = ptr->gen_json();
   }
   ret["ipc"] = get_ipc();
+  if (pfIssued > 0) {
+    ret["pf.issued"]  = pfIssued;
+    ret["pf.hitC2"]   = pfHitC2;
+    ret["pf.useful"]  = pfUseful;
+    ret["pf.unused"]  = pfIssued > pfUseful ?
+      pfIssued - pfUseful : 0;
+  }
   return ret;
 }
 
@@ -172,6 +188,16 @@ SoftPerfUnit::notifyCacheReq(addr_t addr, uint16_t id) {
 }
 
 void
+SoftPerfUnit::notifyPfEvent(uint8_t event_type, addr_t addr) {
+  switch (event_type) {
+  case 0: ++pfIssued; break;
+  case 1: ++pfHitC2; break;
+  case 2: ++pfUseful; break;
+  default: break;
+  }
+}
+
+void
 SoftPerfUnit::notifyBrOutcome(bool pred_taken, bool actual_taken,
                               uint32_t pred_target, uint32_t actual_target,
                               bool btb_hit, uint32_t br_pc) {
@@ -237,6 +263,8 @@ SoftPerfUnit::notifyCacheResp(addr_t addr, bool is_hit, uint16_t id) {}
 void
 SoftPerfUnit::notifyCacheReq(addr_t addr, uint16_t id) {}
 void
+SoftPerfUnit::notifyPfEvent(uint8_t event_type, addr_t addr) {}
+void
 SoftPerfUnit::notifyBrOutcome(bool pred_taken, bool actual_taken,
                               uint32_t pred_target, uint32_t actual_target,
                               bool btb_hit, uint32_t br_pc) {}
@@ -256,6 +284,9 @@ SoftPerfUnit::reset_stats() {
     ptr->reset_stats();
   }
   bpPerPC.clear();
+  pfIssued = 0;
+  pfHitC2 = 0;
+  pfUseful = 0;
 }
 
 void

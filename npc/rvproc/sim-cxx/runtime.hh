@@ -54,6 +54,8 @@ void notify_flush();
 void notify_cache_resp(addr_t a, uint8_t is_hit, uint16_t id);
 void notify_cache_req(addr_t a, uint16_t id);
 
+void notify_pf_event(uint8_t event_type, addr_t addr);
+
 void notify_bp_outcome(uint8_t pred_taken, uint8_t actual_taken,
                        uint32_t pred_target, uint32_t actual_target,
                        uint8_t btb_hit, uint32_t br_pc);

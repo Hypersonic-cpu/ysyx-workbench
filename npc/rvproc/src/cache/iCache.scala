@@ -13,6 +13,7 @@ import rvproc.axi4.AXI.RespStatus.OKAY
 import rvproc.axi4.AXI.BurstOpts._
 import rvproc.GlbCtrl.{debug, sta}
 import rvproc.pmu.iCacheSwPMU
+import rvproc.pmu.PfSwPMU
 
 case class iCacheConf(
   addrBits:  Int = 32,
@@ -151,28 +152,58 @@ class iCache(
   val reqA1 = req.bits.addr
   val reqV1 = req.valid
 
-  tagArr.io.raddr  := idxOf(reqA1)
-  tagArr.io.ren    := willShift && reqV1
-  dataArr.io.raddr := idxOf(reqA1)
-  dataArr.io.ren   := willShift && reqV1
+  val reqA2  = Reg(Tp.AddrType())
+  val reqV2  = RegInit(false.B)
+  val isPfC2 = RegInit(false.B)
 
-  val reqA2 = RegEnable(reqA1, willShift)
-  val reqV2 = RegInit(false.B)
-  when(willShift) { reqV2 := reqV1 }.otherwise { reqV2 := false.B }
+  // Prefetch injection: when pipeline C1 is idle, use pf addr
+  val pfInject = WireInit(false.B)
+  val pfAddr   = WireInit(0.U(conf.addrBits.W))
+  pf.foreach { p =>
+    pfAddr := p.io.addr
+    pfIdle := p.io.pending &&
+      !reqV2 && !req.valid && !flushPending &&
+      state === flowing
+    pfInject := pfIdle && willShift
+  }
+
+  val c1Addr = Mux(pfInject, pfAddr, reqA1)
+  val c1Valid = reqV1 || pfInject
+
+  tagArr.io.raddr  := idxOf(c1Addr)
+  tagArr.io.ren    := willShift && c1Valid
+  dataArr.io.raddr := idxOf(c1Addr)
+  dataArr.io.ren   := willShift && c1Valid
+
+  when(willShift) {
+    reqA2  := c1Addr
+    reqV2  := c1Valid
+    isPfC2 := pfInject
+  }.otherwise {
+    reqV2  := false.B
+    isPfC2 := false.B
+  }
 
   // Cycle 2: tag compare + word select + respond
   val tagRead = tagArr.io.rdata
   tagHit := tagRead === tagOf(reqA2) &&
-    validArr(idxOf(reqA2)) && reqV2
+    validArr(idxOf(reqA2)) && reqV2 && !isPfC2
 
-  pf.foreach { p =>
-    pfIdle := p.io.pending &&
-      !reqV2 && !req.valid && !flushPending
-  }
+  val pfHitC2 = tagRead === tagOf(reqA2) &&
+    validArr(idxOf(reqA2)) && reqV2 && isPfC2
+  val pfMissC2 = reqV2 && isPfC2 && !pfHitC2
+
+  val demandMiss = reqV2 && !isPfC2 && !tagHit
+  // Demand miss during prefetch fill: saves address so we
+  // can serve it after the prefetch fill completes.
+  val pfDemandPend = RegInit(false.B)
+  val pfDemandAddr = Reg(Tp.AddrType())
 
   willShift :=
-    state === flowing && !fillFinish &&
-      !flushPending && (tagHit || !reqV2)
+    (state === flowing || (state === waiting &&
+      isPrefetch && !pfDemandPend)) &&
+      !fillFinish && !flushPending &&
+      (tagHit || pfHitC2 || !reqV2)
 
   // Word select directly from SRAM output (no register)
   val lineRead  = dataArr.io.rdata
@@ -210,16 +241,20 @@ class iCache(
   }
 
   // FSM
+  when(state === waiting && isPrefetch && demandMiss) {
+    pfDemandPend := true.B
+    pfDemandAddr := reqA2
+  }
+  when((pfDemandPend && fillFinish) || io.flushAll) {
+    pfDemandPend := false.B
+  }
+
   nextState := MuxLookup(state, waiting)(
     Seq(
       flowing  -> Mux(
-        tagHit || !reqV2,
-        Mux(
-          pfIdle,
-          memreq,
-          Mux(flushPending, flushing, flowing)
-        ),
-        memreq
+        demandMiss || pfMissC2,
+        memreq,
+        Mux(flushPending, flushing, flowing)
       ),
       memreq   -> Mux(
         io.memSide.ar.fire,
@@ -228,7 +263,11 @@ class iCache(
       ),
       waiting  -> Mux(
         fillFinish,
-        Mux(flushPending, flushing, flowing),
+        Mux(
+          pfDemandPend,
+          memreq,
+          Mux(flushPending, flushing, flowing)
+        ),
         waiting
       ),
       flushing -> flowing
@@ -244,17 +283,14 @@ class iCache(
 
   when(state === flowing && nextState === memreq) {
     fillAddr   := reqA2
+    isPrefetch := isPfC2
+  }
+  when(pfDemandPend && fillFinish) {
+    fillAddr   := pfDemandAddr
     isPrefetch := false.B
-    pf.foreach { p =>
-      when(pfIdle) {
-        fillAddr   := p.io.addr
-        isPrefetch := true.B
-      }
-    }
   }
   pf.foreach { p =>
-    p.io.consumed  := state === flowing &&
-      nextState === memreq && pfIdle
+    p.io.consumed  := pfHitC2 || pfMissC2
     p.io.snoopDone := fillFinish && !isPrefetch
     p.io.snoopAddr := fillAddr
   }
@@ -318,6 +354,26 @@ class iCache(
     missServe := false.B
   }
 
+  // Prefetch usefulness tracking
+  val pfUsefulSig = WireInit(false.B)
+  if (withPrefetch) {
+    val isPrefetched = RegInit(
+      VecInit(Seq.fill(conf.numSets)(false.B))
+    )
+    when(fillFinish && fillError === OKAY) {
+      isPrefetched(idxOf(fillAddr)) := isPrefetch
+    }
+    when(state === flushing) {
+      isPrefetched.foreach(_ := false.B)
+    }
+    // demand hit on a prefetch-filled line
+    pfUsefulSig := tagHit &&
+      isPrefetched(idxOf(reqA2))
+    when(pfUsefulSig) {
+      isPrefetched(idxOf(reqA2)) := false.B
+    }
+  }
+
   if (debug) {
     dontTouch(reqA1)
     dontTouch(reqA2)
@@ -340,5 +396,15 @@ class iCache(
     pmu.io.reqAddr  := req.bits.addr
     pmu.io.req      := req.fire
     pmu.io.id       := 0.U
+
+    if (withPrefetch) {
+      val pfPmu = Module(new PfSwPMU)
+      pfPmu.io.clock    := clock
+      pfPmu.io.reset    := reset
+      pfPmu.io.pfIssued := fillFinish && isPrefetch
+      pfPmu.io.pfHitC2  := pfHitC2
+      pfPmu.io.pfUseful := pfUsefulSig
+      pfPmu.io.pfAddr   := fillAddr
+    }
   }
 }

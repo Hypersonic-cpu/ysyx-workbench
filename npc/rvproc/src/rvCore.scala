@@ -209,7 +209,10 @@ class rvCore(
 
   val clint  = Module(new CLINT)
   val icache = Module(
-    new cache.iCache(this.l1iConf, withPrefetch = false)
+    new cache.iCache(
+      this.l1iConf,
+      withPrefetch = GlbCtrl.withPrefetch
+    )
   )
 
   if (isSoc) {
