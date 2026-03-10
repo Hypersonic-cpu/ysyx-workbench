@@ -18,83 +18,60 @@ object IntMulMath {
   //  n*****************xy
 
   /**
-    * Expand int mul into Seq[Seq[Bool]], which the sum of 
-    * inner Seq[Bool] is the bit of final product.
+    * Booth radix-4 partial product generation using direct
+    * boolean logic (no MuxLookup). Each bit is computed as:
+    * pp[j] = active & (neg ^ ((one & M[j]) | (two & M[j-1])))
     *
-    * @param op1 Operand 1, sign extended ()
-    * @param invop1 ~ Operand 1
-    * @param op2 Operand 2, use its b{i+1}b{i}b{i-1} to switch
+    * @param op1 Operand 1, sign extended (N+1 bits)
+    * @param op2 Operand 2, sign extended (N+1 bits)
     */
   def boothRadix4(
-    op1:  Seq[Bool],
-    nop1: Seq[Bool],
-    op2:  Seq[Bool]
+    op1: Seq[Bool],
+    op2: Seq[Bool]
   ) = {
-    require(op1.size == nop1.size)
     require(op1.size == op2.size)
     val N         = op1.size
-    val zero      = 0.U((1 + N).W)
     val op1msb    = op1(N - 1).asBool
-    val op2msb    = op2(N - 1).asBool // s, ~n
-    val op1pos    = Cat(op1.reverse).asUInt
-    val op1inv    = Cat(nop1.reverse).asUInt
-    val op1extpos = op1msb ## op1pos
-    val op1extinv = (~op1msb) ## op1inv
+    val op2msb    = op2(N - 1).asBool
     val retarrays = Seq.fill(N * 2)(ListBuffer.empty[Bool])
 
     for (i <- Range(0, N, 2)) {
-      val currKey   = Cat(
-        if (i + 1 == N) op2msb else op2(i + 1),
-        op2(i),
-        if (i == 0) 0.B else op2(i - 1)
-      ).asUInt
-      val currSeq   =
-        MuxLookup(
-          currKey,
-          zero
-        )(
-          Seq(
-            "b000".U -> zero,
-            "b001".U -> op1extpos,          // +S ,
-            "b010".U -> op1extpos,          // +S ,
-            "b011".U -> op1pos ## 0.U(1.W), // +2S,
-            "b100".U -> op1inv ## 1.U(1.W), // −2S,
-            "b101".U -> op1extinv,          // −S ,
-            "b110".U -> op1extinv,          // −S ,
-            "b111".U -> zero                // +0 ,
-          )
-        ).asBools
-      val currComps =
-        MuxLookup(
-          currKey,
-          "b00".U
-        )(
-          Seq(
-            "b100".U -> 1.U(2.W), // -2S: +1 at position i
-            "b101".U -> 1.U(2.W), // -S : +1 at position i
-            "b110".U -> 1.U(2.W)  // -S : +1 at position i
-          )
-        ).asBools
-      val currMsb   = currSeq(N)
+      val b2 =
+        if (i + 1 == N) op2msb else op2(i + 1)
+      val b1 = op2(i)
+      val b0 = if (i == 0) 0.B else op2(i - 1)
+
+      val neg    = b2
+      val one    = b1 ^ b0
+      val two    = (b2 ^ b1) & (~one)
+      val active = one | two
+
       for (j <- 0 to N) {
-        retarrays(i + j) += currSeq(j)
+        val mj = if (j < N) op1(j) else op1msb
+        val mj1 =
+          if (j == 0) 0.B
+          else if (j - 1 < N) op1(j - 1)
+          else op1msb
+        val ppBit =
+          active & (neg ^ ((one & mj) | (two & mj1)))
+        if (i + j < N * 2) retarrays(i + j) += ppBit
       }
 
+      val currMsb = active & (neg ^ op1msb)
+
       if (i == 0) {
-        // nss case
         retarrays(i + N + 3) += (~currMsb)
         retarrays(i + N + 2) += (currMsb)
         retarrays(i + N + 1) += (currMsb)
       } else {
-        // 1n case
-        if (i + N + 1 < N * 2) retarrays(i + N + 1) += (!currMsb)
-        if (i + N + 2 < N * 2) retarrays(i + N + 2) += true.B
+        if (i + N + 1 < N * 2)
+          retarrays(i + N + 1) += (!currMsb)
+        if (i + N + 2 < N * 2)
+          retarrays(i + N + 2) += true.B
       }
 
       if (i == N - 1 || i == N - 2) {} else {
-        // xy
-        retarrays(i + 0) += currComps(0)
-        retarrays(i + 1) += currComps(1)
+        retarrays(i) += (neg & active)
       }
     }
     retarrays.map(_.toSeq)
@@ -181,7 +158,6 @@ class IntMultiplier extends Module {
   // Pipeline stage 1: registered inputs
   val s1Valid  = RegInit(false.B)
   val s1Rs1    = Reg(UInt((ISA.RegBits + 1).W))
-  val s1Rs1inv = Reg(UInt((ISA.RegBits + 1).W))
   val s1Rs2    = Reg(UInt((ISA.RegBits + 1).W))
   val s1Op     = Reg(MulDivOp())
   val s1Foward = Reg(new DecodeFoward)
@@ -227,7 +203,6 @@ class IntMultiplier extends Module {
     s1Valid := io.in.valid
     when(io.in.valid) {
       s1Rs1    := src1Full
-      s1Rs1inv := ~src1Full
       s1Rs2    := src2Full
       s1Op     := io.in.bits.op
       s1Foward := io.in.bits.foward
@@ -240,7 +215,6 @@ class IntMultiplier extends Module {
   val partialProducts    =
     IntMulMath.boothRadix4(
       s1Rs1.asBools,
-      s1Rs1inv.asBools,
       s1Rs2.asBools
     )
   val (sumRow, carryRow) =

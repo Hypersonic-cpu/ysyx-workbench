@@ -42,7 +42,7 @@ case class iCacheConf(
   }
 }
 
-// Readonly, 3-cycle pipeline: recv -> tag-compare -> word-select
+// Readonly, 2-cycle pipeline: recv -> tag-compare + word-select
 // Valid bit is a separate DFF array (requires reset).
 // Tag/data backend: SyncReadMem (Tiny) or SRAM BlackBox (Extended).
 class iCache(conf: iCacheConf) extends Module {
@@ -114,7 +114,6 @@ class iCache(conf: iCacheConf) extends Module {
   val willShift = Wire(Bool())
   req.ready := willShift
 
-  val hitRespV  = RegNext(tagHit)
   val missServe = RegInit(false.B)
   val missData  = RegInit(0.U(32.W))
   val fillError = RegInit(OKAY)
@@ -144,7 +143,7 @@ class iCache(conf: iCacheConf) extends Module {
   val reqV2 = RegInit(false.B)
   when(willShift) { reqV2 := reqV1 }.otherwise { reqV2 := false.B }
 
-  // Cycle 2 tag compare
+  // Cycle 2: tag compare + word select + respond
   val tagRead = tagArr.io.rdata
   tagHit := tagRead === tagOf(reqA2) &&
     validArr(idxOf(reqA2)) && reqV2
@@ -154,22 +153,18 @@ class iCache(conf: iCacheConf) extends Module {
     state === flowing && !fillFinish &&
       !flushPending && (tagHit || !reqV2)
 
-  // Register line data for cycle 3 (breaks SRAM->mux path).
-  val lineRead  = dataArr.io.rdata
-  val lineReadR = RegNext(lineRead)
-  val reqA3     = RegNext(reqA2)
-
-  // Cycle 3 word select + respond
+  // Word select directly from SRAM output (no register)
+  val lineRead = dataArr.io.rdata
   val lineSplit =
     VecInit.tabulate(conf.lineTrans)(i =>
-      lineReadR(
+      lineRead(
         (i + 1) * ISA.RegBits - 1,
         i * ISA.RegBits
       )
     )
-  val wordSel   = WireInit(lineSplit(ithOf(reqA3)))
+  val wordSel   = WireInit(lineSplit(ithOf(reqA2)))
 
-  resp.valid     := missServe || hitRespV
+  resp.valid     := missServe || tagHit
   resp.bits.data := Mux(missServe, missData, wordSel)
   resp.bits.resp := Mux(missServe, fillError, OKAY)
 
@@ -278,14 +273,12 @@ class iCache(conf: iCacheConf) extends Module {
   if (debug) {
     dontTouch(reqA1)
     dontTouch(reqA2)
-    dontTouch(reqA3)
     dontTouch(reqV1)
     dontTouch(reqV2)
     dontTouch(tagRead)
     dontTouch(wordSel)
     dontTouch(lineSplit)
     dontTouch(lineRead)
-    dontTouch(lineReadR)
   }
 
   if (!sta) {
@@ -294,8 +287,8 @@ class iCache(conf: iCacheConf) extends Module {
     pmu.io.reset    := reset
     pmu.io.clock    := clock
     pmu.io.resp     := resp.fire
-    pmu.io.respHit  := resp.fire && hitRespV
-    pmu.io.respAddr := reqA3
+    pmu.io.respHit  := resp.fire && tagHit
+    pmu.io.respAddr := reqA2
     pmu.io.reqAddr  := req.bits.addr
     pmu.io.req      := req.fire
     pmu.io.id       := 0.U
