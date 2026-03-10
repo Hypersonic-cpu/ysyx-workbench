@@ -91,10 +91,11 @@ class rvCore(
   BusConnect(ifs.io.out, ids.io.in, PipeReg, iduFlush)
 
   // fence.I: registered, always-accept (rare, not perf-critical)
-  ids.io.fenceI.ready    := true.B
-  ifs.io.fromId.valid    := RegNext(ids.io.fenceI.fire, false.B)
-  ifs.io.fromId.bits     := RegEnable(
-    ids.io.fenceI.bits, ids.io.fenceI.fire
+  ids.io.fenceI.ready := true.B
+  ifs.io.fromId.valid := RegNext(ids.io.fenceI.fire, false.B)
+  ifs.io.fromId.bits  := RegEnable(
+    ids.io.fenceI.bits,
+    ids.io.fenceI.fire
   )
 
   // ID -> Dispatcher -> {ALU, MUL, DIV}
@@ -106,13 +107,13 @@ class rvCore(
   // through scoreboard to dispatch.dispValid.
   // sbAnyBusy already prevents double-dispatch so
   // 1-cycle stale ready is safe.
-  mul.io.in.valid := dispatch.io.mulSide.valid
-  mul.io.in.bits  := dispatch.io.mulSide.bits
+  mul.io.in.valid           := dispatch.io.mulSide.valid
+  mul.io.in.bits            := dispatch.io.mulSide.bits
   dispatch.io.mulSide.ready :=
     RegNext(mul.io.in.ready, true.B)
 
-  div.io.in.valid := dispatch.io.divSide.valid
-  div.io.in.bits  := dispatch.io.divSide.bits
+  div.io.in.valid           := dispatch.io.divSide.valid
+  div.io.in.bits            := dispatch.io.divSide.bits
   dispatch.io.divSide.ready :=
     RegNext(div.io.in.ready, true.B)
 
@@ -133,8 +134,9 @@ class rvCore(
         .elsewhen(skidV) { mainB := skidB; skidV := false.B }
         .otherwise { mainV := false.B }
     }.elsewhen(exs.io.out.fire) {
-      when(!mainV) { mainV := true.B; mainB := exs.io.out.bits }
-        .otherwise { skidV := true.B; skidB := exs.io.out.bits }
+      when(!mainV) {
+        mainV := true.B; mainB := exs.io.out.bits
+      }.otherwise { skidV := true.B; skidB := exs.io.out.bits }
     }
   }
 
@@ -186,7 +188,7 @@ class rvCore(
   )
   // Skid buffer overflow between EXU and LSU
 
-  // TODO: strange code. Out-of-order of mul is acceptable, 只要不存在 RAW/WAW。例如 mul -> x1; lb -> x1; 则 sb 必须后写入， 如果是 mul->x1; lb->x2 则乱序 commit 完全没问题吧？  只是如果出现 mul(还没有完成) 之后立刻出现了异常 (例如 LSU loadword misalignment) 
+  // TODO: strange code. Out-of-order of mul is acceptable, 只要不存在 RAW/WAW。例如 mul -> x1; lb -> x1; 则 sb 必须后写入， 如果是 mul->x1; lb->x2 则乱序 commit 完全没问题吧？  只是如果出现 mul(还没有完成) 之后立刻出现了异常 (例如 LSU loadword misalignment)
   // 需要等到 mul 完成之后再处理。
   // assert false
   locally {
@@ -211,7 +213,7 @@ class rvCore(
 
   val clint  = Module(new CLINT)
   val icache = Module(
-    new cache.iCache(this.l1iConf, withPrefetch = true)
+    new cache.iCache(this.l1iConf, withPrefetch = false)
   )
 
   if (isSoc) {
@@ -232,50 +234,34 @@ class rvCore(
         x(31, 28) >= 0xc.U
     def isCacheable(x: UInt): Bool =
       isFlash(x) || isPsram(x) || isSdram(x)
-    def isFaultSlverr(x: UInt): Bool = x(31, 16) === 0x0a00.U
-    def isFaultDecerr(x: UInt): Bool = x(31, 16) === 0x0b00.U
-
-    val iFaultSlverr = Module(new device.FaultBox(slverr = true))
-    val iFaultDecerr = Module(new device.FaultBox(slverr = false))
 
     val iSplit = Module(
       new AXIXBar(
-        4,
+        2,
         Seq(
           (x: UInt) => isCacheable(x),
-          (x: UInt) => isDev(x),
-          (x: UInt) => isFaultSlverr(x),
-          (x: UInt) => isFaultDecerr(x)
+          (x: UInt) => isDev(x)
         )
       )
     )
     ifs.io.iMem <> iSplit.io.host
     iSplit.io.devices(0) <> icache.io.cpuSide
-    iSplit.io.devices(2) <> iFaultSlverr.io.port
-    iSplit.io.devices(3) <> iFaultDecerr.io.port
     icache.io.flushAll := RegNext(
       ids.io.fenceI.bits && ids.io.fenceI.valid
     )
 
-    val dFaultSlverr = Module(new device.FaultBox(slverr = true))
-    val dFaultDecerr = Module(new device.FaultBox(slverr = false))
-
     val dSplit = Module(
       new AXIXBar(
-        5,
+        3,
         Seq(
           (x: UInt) => isCacheable(x),
           (x: UInt) => isDev(x),
-          (x: UInt) => isClint(x),
-          (x: UInt) => isFaultSlverr(x),
-          (x: UInt) => isFaultDecerr(x)
+          (x: UInt) => isClint(x)
         )
       )
     )
     lss.io.dMem <> dSplit.io.host
     dSplit.io.devices(2) <> clint.io.port
-    dSplit.io.devices(3) <> dFaultSlverr.io.port
-    dSplit.io.devices(4) <> dFaultDecerr.io.port
 
     if (GlbCtrl.hasDCache) {
       val l1d = Module(new dCache(this.l1dConf))
@@ -312,23 +298,19 @@ class rvCore(
       ids.io.fenceI.bits && ids.io.fenceI.valid
 
     if (GlbCtrl.hasDCache) {
-      val faultSlverr =
-        Module(new device.FaultBox(slverr = true))
-      val dSplit      = Module(
+      val dSplit = Module(
         new AXIXBar(
-          4,
+          3,
           Seq(
             (x: UInt) => (x >= 0x8000_0000L.U),
             (x: UInt) => (x >= 0x0f00_0000L.U && x < 0x8000_0000L.U),
-            (x: UInt) => (x >= 0x0200_0000L.U && x <= 0x0201_0000L.U),
-            (x: UInt) => (x(31, 16) === 0x0a00.U)
+            (x: UInt) => (x >= 0x0200_0000L.U && x <= 0x0201_0000L.U)
           )
         )
       )
       dSplit.io.host <> lss.io.dMem
       dSplit.io.devices(2) <> clint.io.port
-      dSplit.io.devices(3) <> faultSlverr.io.port
-      val l1d         = Module(new dCache(this.l1dConf))
+      val l1d    = Module(new dCache(this.l1dConf))
       l1d.io.cpuSide <> dSplit.io.devices(0)
       l1d.io.flushAll := wbs.io.fenceI
       val fenceOnce = RegInit(false.B)
@@ -342,78 +324,34 @@ class rvCore(
         ) { fenceOnce := false.B }
       ifs.io.fromLs := !fenceOnce
 
-      val locXbar      = Module(
-        new AXIXBar(
-          3,
-          Seq(
-            (x: UInt) =>
-              (x(31, 16) =/= 0x0a00.U &&
-                x(31, 16) =/= 0x0b00.U),
-            (x: UInt) => (x(31, 16) === 0x0a00.U),
-            (x: UInt) => (x(31, 16) === 0x0b00.U)
-          )
-        )
-      )
-      val iFaultSlverr =
-        Module(new device.FaultBox(slverr = true))
-      val iFaultDecerr =
-        Module(new device.FaultBox(slverr = false))
-      locXbar.io.devices(1) <> iFaultSlverr.io.port
-      locXbar.io.devices(2) <> iFaultDecerr.io.port
-
       val arbiter = Module(new AXIArbiter(3))
       arbiter.io.hosts(0) <> icache.io.memSide
       arbiter.io.hosts(1) <> l1d.io.memSide
       arbiter.io.hosts(2) <> dSplit.io.devices(1)
-      locXbar.io.host <> arbiter.io.device
 
       val pMem = Module(new PMemBox)
-      pMem.io.master <> locXbar.io.devices(0)
+      pMem.io.master <> arbiter.io.device
       io.master := DontCare
     } else {
       ifs.io.fromLs := true.B
-      val faultSlverr =
-        Module(new device.FaultBox(slverr = true))
-      val dSplit      = Module(
+      val dSplit = Module(
         new AXIXBar(
-          3,
+          2,
           Seq(
             (x: UInt) => (x >= 0x0f00_0000L.U && x <= 0xffff_ffffL.U),
-            (x: UInt) => (x >= 0x0200_0000L.U && x <= 0x0201_0000L.U),
-            (x: UInt) => (x(31, 16) === 0x0a00.U)
+            (x: UInt) => (x >= 0x0200_0000L.U && x <= 0x0201_0000L.U)
           )
         )
       )
       dSplit.io.host <> lss.io.dMem
       dSplit.io.devices(1) <> clint.io.port
-      dSplit.io.devices(2) <> faultSlverr.io.port
-
-      val locXbar      = Module(
-        new AXIXBar(
-          3,
-          Seq(
-            (x: UInt) =>
-              (x(31, 16) =/= 0x0a00.U &&
-                x(31, 16) =/= 0x0b00.U),
-            (x: UInt) => (x(31, 16) === 0x0a00.U),
-            (x: UInt) => (x(31, 16) === 0x0b00.U)
-          )
-        )
-      )
-      val iFaultSlverr =
-        Module(new device.FaultBox(slverr = true))
-      val iFaultDecerr =
-        Module(new device.FaultBox(slverr = false))
-      locXbar.io.devices(1) <> iFaultSlverr.io.port
-      locXbar.io.devices(2) <> iFaultDecerr.io.port
 
       val arbiter = Module(new AXIArbiter(2))
       arbiter.io.hosts(0) <> icache.io.memSide
       arbiter.io.hosts(1) <> dSplit.io.devices(0)
-      locXbar.io.host <> arbiter.io.device
 
       val pMem = Module(new PMemBox)
-      pMem.io.master <> locXbar.io.devices(0)
+      pMem.io.master <> arbiter.io.device
       io.master := DontCare
     }
   }

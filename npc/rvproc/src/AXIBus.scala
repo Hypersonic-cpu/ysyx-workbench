@@ -226,12 +226,20 @@ class AXIArbiter(N: Int) extends Module {
   writeArb.io.device.b <> io.device.b
 }
 
-class XBarRead(N: Int, amap: Seq[UInt => Bool]) extends Module {
+class XBarRead(
+  N:        Int,
+  amap:     Seq[UInt => Bool],
+  slverrDf: Boolean = true)
+    extends Module {
   require(N > 0 && amap.length == N, "amap length must match N")
   val io = IO(new Bundle {
     val host    = Flipped(new AXIReadChannel)
     val devices = Vec(N, new AXIReadChannel)
   })
+
+  val errResp =
+    if (slverrDf) AXI.RespStatus.SLVERR
+    else AXI.RespStatus.DECERR
 
   val IdxWidth:  Int  = log2Ceil(N)
   def IdxType(): UInt = UInt(log2Ceil(N).W)
@@ -258,7 +266,7 @@ class XBarRead(N: Int, amap: Seq[UInt => Bool]) extends Module {
   pivot <> io.host
   io.host.r.bits.resp := Mux(
     state === error,
-    AXI.RespStatus.DECERR,
+    errResp,
     pivot.r.bits.resp
   )
   io.host.r.valid     := Mux(state === error, true.B, pivot.r.valid)
@@ -303,13 +311,21 @@ class XBarRead(N: Int, amap: Seq[UInt => Bool]) extends Module {
   if (GlbCtrl.debug) { dontTouch(io) }
 }
 
-class XBarWrite(N: Int, amap: Seq[UInt => Bool]) extends Module {
+class XBarWrite(
+  N:        Int,
+  amap:     Seq[UInt => Bool],
+  slverrDf: Boolean = true)
+    extends Module {
   require(N > 0 && amap.length == N, "amap length must match N")
 
   val io = IO(new Bundle {
     val host    = Flipped(new AXIWriteChannel)
     val devices = Vec(N, new AXIWriteChannel)
   })
+
+  val errResp =
+    if (slverrDf) AXI.RespStatus.SLVERR
+    else AXI.RespStatus.DECERR
 
   val IdxWidth:  Int  = log2Ceil(N)
   def IdxType(): UInt = UInt(log2Ceil(N).W)
@@ -335,7 +351,7 @@ class XBarWrite(N: Int, amap: Seq[UInt => Bool]) extends Module {
   pivot <> io.host
   io.host.b.bits.resp := Mux(
     state === error,
-    AXI.RespStatus.DECERR,
+    errResp,
     pivot.b.bits.resp
   )
   io.host.b.valid     := Mux(state === error, true.B, pivot.b.valid)
@@ -387,7 +403,11 @@ class XBarWrite(N: Int, amap: Seq[UInt => Bool]) extends Module {
   if (GlbCtrl.debug) { dontTouch(io) }
 }
 
-class AXIXBar(N: Int, amap: Seq[UInt => Bool]) extends Module {
+class AXIXBar(
+  N:        Int,
+  amap:     Seq[UInt => Bool],
+  slverrDf: Boolean = true)
+    extends Module {
   require(amap.length == N, "amap length must match N")
 
   val io = IO(new Bundle {
@@ -395,8 +415,10 @@ class AXIXBar(N: Int, amap: Seq[UInt => Bool]) extends Module {
     val devices = Vec(N, new AXIBus)
   })
 
-  val readChannel  = Module(new XBarRead(N, amap))
-  val writeChannel = Module(new XBarWrite(N, amap))
+  val readChannel  = Module(new XBarRead(N, amap, slverrDf))
+  val writeChannel = Module(
+    new XBarWrite(N, amap, slverrDf)
+  )
   readChannel.io.host.ar <> io.host.ar
   readChannel.io.host.r <> io.host.r
   writeChannel.io.host.aw <> io.host.aw
