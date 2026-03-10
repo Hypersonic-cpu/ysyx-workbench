@@ -149,6 +149,20 @@ class rvCore(
   BusConnect(mul.io.out, collect.io.mulSide, MultiCyc)
   BusConnect(div.io.out, collect.io.divSide, MultiCyc)
 
+  // In-order commit guard: track ALU instructions between
+  // EXU output and Collector input. Block MUL/DIV commit
+  // at Collector while older ALU instructions are draining.
+  val aluInFlight = RegInit(0.U(3.W))
+  val aluIncr     = exs.io.out.fire
+  val aluDecr     = collect.io.aluSide.fire
+  when(flush.io.excpFlush) {
+    aluInFlight := 0.U
+  }.otherwise {
+    aluInFlight := aluInFlight +
+      aluIncr.asUInt - aluDecr.asUInt
+  }
+  collect.io.pendingALU := aluInFlight > 0.U
+
   // Collector -> WBU
   collect.io.wbSide <> wbs.io.in
 

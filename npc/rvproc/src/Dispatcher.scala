@@ -129,19 +129,23 @@ class Dispatcher extends Module {
   * ALU-path (through LSU) is always older in this
   * in-order pipeline and must commit first.
   * When ALU-path is idle: DIV > MUL priority.
+  * pendingALU blocks MUL/DIV commit while older ALU
+  * instructions are still draining through the pipeline.
   */
 class Collector extends Module {
   val io = IO(new Bundle {
-    val aluSide = Flipped(Decoupled(new MemoryToWrBack))
-    val mulSide = Flipped(Decoupled(new IntMulOut))
-    val divSide = Flipped(Decoupled(new IntDivOut))
-    val wbSide  = Decoupled(new MemoryToWrBack)
-    val sbClear = Output(UInt(ISA.RegNum.W))
+    val aluSide    = Flipped(Decoupled(new MemoryToWrBack))
+    val mulSide    = Flipped(Decoupled(new IntMulOut))
+    val divSide    = Flipped(Decoupled(new IntDivOut))
+    val wbSide     = Decoupled(new MemoryToWrBack)
+    val sbClear    = Output(UInt(ISA.RegNum.W))
+    val pendingALU = Input(Bool())
   })
 
-  val divWins = io.divSide.valid && !io.aluSide.valid
+  val canMD   = !io.aluSide.valid && !io.pendingALU
+  val divWins = io.divSide.valid && canMD
   val mulWins = io.mulSide.valid && !io.divSide.valid &&
-    !io.aluSide.valid
+    canMD
   val mdValid = divWins || mulWins
 
   // Convert MUL/DIV result to MemoryToWrBack
@@ -172,15 +176,12 @@ class Collector extends Module {
   // ALU-path handshake
   io.aluSide.ready := io.wbSide.ready
 
-  // MUL/DIV handshake: wait for ALU-path to drain
-  io.divSide.ready := divWins && io.wbSide.ready &&
-    !io.aluSide.valid
-  io.mulSide.ready := mulWins && io.wbSide.ready &&
-    !io.aluSide.valid
+  // MUL/DIV handshake
+  io.divSide.ready := divWins && io.wbSide.ready
+  io.mulSide.ready := mulWins && io.wbSide.ready
 
   // Scoreboard clear on MUL/DIV commit
-  val mdFire = mdValid && io.wbSide.ready &&
-    !io.aluSide.valid
+  val mdFire = mdValid && io.wbSide.ready
   val mdRd   = Mux(
     divWins,
     io.divSide.bits.foward.gprRd,
