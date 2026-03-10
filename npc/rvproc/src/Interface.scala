@@ -175,9 +175,9 @@ class DecodeToExecute extends Bundle {
   val memOp      = new MemOp
   val aluEn      = Bool()
   val predTaken  = Bool()
-  val predTarget = Tp.AddrType()
-  val predBtbHit = Bool()
-  val predBhtCnt = UInt(2.W)
+  val predTarget = Tp.AddrType() // TODO: remove
+  val predBtbHit = Bool() // TODO: remove fields
+  val predBhtCnt = UInt(2.W) // TODO: remove
   val isCall     = Bool()
   val isRet      = Bool()
   val isMul      = Bool()

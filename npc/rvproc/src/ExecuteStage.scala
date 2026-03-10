@@ -7,6 +7,7 @@ import chisel3.assert.Assert
 import BitMath._
 import rvproc.AnsiColor.ColorString
 
+// TODO: Rename To IntALU
 class EXU extends Module {
   val io = IO(new Bundle {
     val aluEn = Input(Bool())
@@ -131,12 +132,12 @@ class ExecuteStage extends Module {
     // To FlushCtrl
     val brDet     = Decoupled(Bool())
     val brInfo    = Decoupled(new ExecuteBackward)
-    val outFire   = Output(Bool())
+    val outFire   = Output(Bool()) // TODO: FIXME: Why this cannot be intergrated with brInfo.valid ?
     // From FlushCtrl
     val flush     = Input(Bool())
     val excpFlush = Input(Bool())
     // Forwarding
-    val fwdDet    = Output(new FwBundle)
+    val fwdDet    = Output(new FwBundle) // TODO: ?
   })
 
   val flushed   = io.flush
@@ -197,7 +198,7 @@ class ExecuteStage extends Module {
     bpPmu.io.brPC         := ioid.pc
   }
 
-  /** Back to Fetch — combinational wire, registered below */
+  /** Back to Fetch - combinational wire, registered below */
   val toFWire = Wire(new ExecuteBackward)
   toFWire.brTaken    := actualTaken
   toFWire.brTarget   := actualTarget
@@ -226,8 +227,6 @@ class ExecuteStage extends Module {
   } else {
     iols.foward.stallT := DontCare
   }
-
-  // Misalignment detection moved to MemoryStage
 
   // Flush IDU/EXU on misprediction.
   // Gate with outFire: brDet only fires when the

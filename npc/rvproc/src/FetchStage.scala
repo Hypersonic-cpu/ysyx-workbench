@@ -33,23 +33,19 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
   val pc     = RegInit(resetVector.U(ISA.RegBits.W))
   val lastPC = RegEnable(io.out.bits.pc, io.out.fire)
 
-  val pdFlushPending = RegInit(false.B)
-  val pdFlushPCReg   = Reg(Tp.AddrType())
-  val flushFromEx    = io.fromEx.valid && brex.mispred
+  val flushFromEx = io.fromEx.valid && brex.mispred
 
   val brTaken  = io.fromEx.valid && brex.brTaken
   val brTarget = MuxCase(
     brex.brLPC4,
     Seq(
-      io.wbExcp                        -> io.wbExcpTarget,
-      brTaken                          -> brex.brTarget,
-      fenceI                           -> (lastPC + 4.U),
-      (pdFlushPending && !flushFromEx) -> pdFlushPCReg
+      io.wbExcp -> io.wbExcpTarget,
+      brTaken   -> brex.brTarget,
+      fenceI    -> (lastPC + 4.U)
     )
   )
 
-  val flushWire =
-    flushFromEx || fenceI || io.wbExcp || pdFlushPending
+  val flushWire = flushFromEx || fenceI || io.wbExcp
 
   val validBuf      = Reg(Vec(PipeDepth + 1, Bool()))
   val pcBuf         = Reg(Vec(PipeDepth + 1, Tp.AddrType()))
@@ -89,51 +85,56 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
     case None    =>
   }
 
-  // BTB result valid when the previous cycle issued a fetch or flush
-  // (pc advanced to match btbRdAddr, so btbQueryR == new pc).
-  val bpRsltV        =
-    RegNext(iMem.ar.fire || flushWire, false.B)
+  // BPU raw outputs (valid 1 cycle after queryPC change)
   val bpRawPredTaken = bp.map(_.io.predTaken).getOrElse(false.B)
-  val bpTargetPC     = bp.map(_.io.targetPC).getOrElse(0.U)
+  val bpRawTargetPC  = bp.map(_.io.targetPC).getOrElse(0.U)
   val bpRawBtbHit    = bp.map(_.io.btbHit).getOrElse(false.B)
   val bpRawBhtCnt    = bp.map(_.io.bhtCnt).getOrElse(0.U)
 
-  // Sticky latch: holds prediction when ar.fire is blocked
-  val bpPredTakenLatch = RegInit(false.B)
-  val bpTargetPCLatch  = RegInit(0.U(ISA.RegBits.W))
-  val bpBtbHitLatch    = RegInit(false.B)
-  val bpBhtCntLatch    = RegInit(0.U(2.W))
-  when(flushWire || iMem.ar.fire) {
-    bpPredTakenLatch := false.B
-    bpBtbHitLatch    := false.B
-  }.elsewhen(bpRsltV) {
-    bpPredTakenLatch := bpRawPredTaken
-    bpTargetPCLatch  := bpTargetPC
-    bpBtbHitLatch    := bpRawBtbHit
-    bpBhtCntLatch    := bpRawBhtCnt
-  }
-  val bpPredTaken      =
-    (bpRawPredTaken && bpRsltV) || bpPredTakenLatch
-  val bpTargetPCEff    =
-    Mux(bpRsltV, bpTargetPC, bpTargetPCLatch)
-  val bpBtbHitEff      =
-    (bpRawBtbHit && bpRsltV) || bpBtbHitLatch
-  val bpBhtCntEff      =
-    Mux(bpRsltV, bpRawBhtCnt, bpBhtCntLatch)
+  // Query BPU with the PC of the just-received instruction
+  btbRdAddr := pcBuf(tailPtr)
 
-  btbRdAddr := Mux(
-    flushWire,
-    brTarget,
-    Mux(
-      bpPredTaken,
-      bpTargetPCEff,
-      pc + 4.U
-    )
-  )
+  val earlyRedirect = Wire(Bool())
+
+  val validRecv = iMem.r.fire && discardCnt === 0.U &&
+    !earlyRedirect && !flushWire
+
+  // Pre-decode at receipt: B=0x63, JAL=0x6F, JALR=0x67
+  val tailIsBranch = {
+    val op = iMem.r.bits.data(6, 0)
+    op === "b1100011".U || op === "b1101111".U ||
+    op === "b1100111".U
+  }
+
+  // 1 cycle after receipt: BPU outputs aligned with bpRsltV
+  val bpRsltV = RegInit(false.B)
+  bpRsltV := validRecv
+  when(flushWire || earlyRedirect) { bpRsltV := false.B }
+
+  val bpQueryBranch = RegNext(tailIsBranch, false.B)
+  val bpTailPtr     = RegNext(tailPtr)
+
+  earlyRedirect := bpRsltV && bpQueryBranch &&
+    bpRawPredTaken && !flushWire
+
+  val metaHold = bpRsltV && (toidPtr === bpTailPtr)
+
+  when(bpRsltV && !flushWire && !earlyRedirect) {
+    predBtbHitBuf(bpTailPtr) := bpRawBtbHit
+    predBhtCntBuf(bpTailPtr) := bpRawBhtCnt
+  }
+  when(earlyRedirect) {
+    predTakenBuf(bpTailPtr)  := true.B
+    predTargetBuf(bpTailPtr) := bpRawTargetPC
+    predBtbHitBuf(bpTailPtr) := bpRawBtbHit
+    predBhtCntBuf(bpTailPtr) := bpRawBhtCnt
+  }
 
   when(iMem.r.fire) {
-    when(discardCnt > 0.U) {
-      discardCnt := discardCnt - 1.U
+    when(discardCnt > 0.U || earlyRedirect) {
+      when(!earlyRedirect) {
+        discardCnt := discardCnt - 1.U
+      }
     }.otherwise {
       instBuf(tailPtr) := iMem.r.bits.data
       respBuf(tailPtr) := iMem.r.bits.resp
@@ -144,24 +145,26 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
     validBuf(headPtr)      := true.B
     pcBuf(headPtr)         := pc
     snpcBuf(headPtr)       := pc + 4.U
-    predTakenBuf(headPtr)  := bpPredTaken
-    predTargetBuf(headPtr) := bpTargetPCEff
-    predBtbHitBuf(headPtr) := bpBtbHitEff
-    predBhtCntBuf(headPtr) := bpBhtCntEff
+    predTakenBuf(headPtr)  := false.B
+    predTargetBuf(headPtr) := 0.U
+    predBtbHitBuf(headPtr) := false.B
+    predBhtCntBuf(headPtr) := 0.U
     headPtr                := iotaMod(headPtr)
   }
-  when(io.out.ready && !instEmpty) {
+  when(io.out.fire) {
     validBuf(toidPtr) := false.B
     toidPtr           := iotaMod(toidPtr)
   }
 
   io.out.valid    :=
-    !instEmpty && !flushWire && validBuf(toidPtr)
+    !instEmpty && !flushWire &&
+    !metaHold && validBuf(toidPtr)
   io.fromEx.ready := true.B
   io.fromId.ready := true.B
 
   iMem.ar.valid      :=
-    !reset.asBool && !bufFull && !fenceState && !flushWire
+    !reset.asBool && !bufFull && !fenceState &&
+    !flushWire
   iMem.ar.bits.addr  := pc
   iMem.ar.bits.size  := 0x2.U
   iMem.ar.bits.burst := INCR
@@ -189,13 +192,17 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
       validBuf(i) := false.B
     }
     pc := brTarget
+  }.elsewhen(earlyRedirect) {
+    val newTailPtr = iotaMod(bpTailPtr)
+    tailPtr := newTailPtr
+    headPtr := newTailPtr
+    val inFlight = headPtr - newTailPtr
+    discardCnt := inFlight - iMem.r.fire.asUInt +
+      iMem.ar.fire.asUInt
+    pc         := bpRawTargetPC
   }.otherwise {
     when(iMem.ar.fire) {
-      when(bpPredTaken) {
-        pc := bpTargetPCEff
-      }.otherwise {
-        pc := pc + 4.U
-      }
+      pc := pc + 4.U
     }
   }
   val prevPC   = RegNext(pc)
@@ -203,53 +210,30 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
 
   val ioid = io.out.bits
 
-  // Pre-decode: check opcode of instruction at output pointer.
-  // B-type=0x63, JAL=0x6F, JALR=0x67
+  // Pre-decode at output for safety: mask predTaken on non-branch
   val isBranchPD     = {
     val op = instBuf(toidPtr)(6, 0)
     op === "b1100011".U || op === "b1101111".U ||
     op === "b1100111".U
   }
-  // When a non-branch was falsely predicted taken, flush
-  // subsequent wrong-path instructions one cycle after output.
-  val nonBrPredTaken =
-    io.out.fire && !isBranchPD && predTakenBuf(toidPtr)
-  when(nonBrPredTaken) {
-    pdFlushPending := true.B
-    pdFlushPCReg   := snpcBuf(toidPtr)
-  }.otherwise {
-    pdFlushPending := false.B
-  }
 
-  ioid.pc           := Mux(io.out.valid, pcBuf(toidPtr), 0.U)
-  ioid.inst         :=
-    Mux(io.out.valid, instBuf(toidPtr), 0.U)
+  ioid.pc           := pcBuf(toidPtr)
+  ioid.inst         := instBuf(toidPtr)
   ioid.predTaken    :=
-    Mux(
-      io.out.valid,
-      predTakenBuf(toidPtr) && isBranchPD,
-      false.B
-    )
-  ioid.predTarget   :=
-    Mux(io.out.valid, predTargetBuf(toidPtr), 0.U)
-  ioid.predBtbHit   :=
-    Mux(io.out.valid, predBtbHitBuf(toidPtr), false.B)
-  ioid.predBhtCnt   :=
-    Mux(io.out.valid, predBhtCntBuf(toidPtr), 0.U)
-  ioid.ifuExcp      :=
-    Mux(io.out.valid, respBuf(toidPtr) =/= OKAY, false.B)
-  ioid.ifuExcpCause := Mux(
-    io.out.valid,
-    Mux(respBuf(toidPtr) === SLVERR, 1.U, 12.U),
-    0.U
-  )
+    predTakenBuf(toidPtr) && isBranchPD
+  ioid.predTarget   := predTargetBuf(toidPtr)
+  ioid.predBtbHit   := predBtbHitBuf(toidPtr)
+  ioid.predBhtCnt   := predBhtCntBuf(toidPtr)
+  ioid.ifuExcp      := respBuf(toidPtr) =/= OKAY
+  ioid.ifuExcpCause :=
+    Mux(respBuf(toidPtr) === SLVERR, 1.U, 12.U)
 
   if (GlbCtrl.debug) {
     val pmu = Module(new FetchPMU)
     pmu.io.clock     := clock
     pmu.io.reset     := reset
     pmu.io.trigFetch := iMem.ar.fire
-    pmu.io.trigRecvd := iMem.r.fire && discardCnt === 0.U
+    pmu.io.trigRecvd := validRecv
     pmu.io.pcFetch   := iMem.ar.bits.addr
     pmu.io.pcRecvd   := pcBuf(tailPtr)
     pmu.io.inst      := io.out.bits.inst
