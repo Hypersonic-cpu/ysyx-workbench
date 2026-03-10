@@ -127,6 +127,7 @@ SoftPerfUnit::notifyLSResp(addr_t a) {
 void
 SoftPerfUnit::notifyFlush() {
   flushedRec = {true, curr_tick()};
+  instboard.clear();
 }
 
 void
@@ -205,11 +206,12 @@ SoftPerfUnit::notifyCommit(addr_t pc, unsigned char stalltp) {
   auto it = std::find_if(
     instboard.begin(), instboard.end(),
     [&pc](const iboard_t& ib) { return std::get<0>(ib) == pc; });
-  v_assert(it != instboard.end(), "Cannot find pc", pc, "in instboard");
-  auto const [pc_, tp, t0] = *it;
-  auto const deltat = curr_tick() - t0;
-  instcyc.sample(tp, deltat);
-  instboard.erase(it);
+  if (it != instboard.end()) {
+    auto const [pc_, tp, t0] = *it;
+    auto const deltat = curr_tick() - t0;
+    instcyc.sample(tp, deltat);
+    instboard.erase(it);
+  }
 
   instStatus.sample(Commit, 1);
 }
