@@ -42,7 +42,7 @@ class Dispatcher extends Module {
     io.mulSide.ready,
     Mux(isDivDisp, io.divSide.ready, io.aluSide.ready)
   )
-  val tgtReady  = unitReady && !sbAnyBusy
+  val tgtReady  = unitReady && Mux(isMD, !sbAnyBusy, true.B)
 
   // Accept from IDU when dispatch register is empty or
   // the current dispatch can fire
@@ -64,7 +64,7 @@ class Dispatcher extends Module {
   }
 
   // Drive ALU output
-  io.aluSide.valid           := dispValid && !isMD && !sbAnyBusy
+  io.aluSide.valid           := dispValid && !isMD
   io.aluSide.bits.rs1V       := dispBits.rs1V
   io.aluSide.bits.rs2V       := dispBits.rs2V
   io.aluSide.bits.imm        := dispBits.imm
@@ -108,7 +108,7 @@ class Dispatcher extends Module {
     0.U
   )
 
-  when(io.pipeFlush || io.excpFlush) {
+  when(io.excpFlush) {
     scoreboard := 0.U
   }.otherwise {
     scoreboard := (scoreboard | sbSet) & ~io.sbClear
@@ -140,13 +140,16 @@ class Collector extends Module {
     val wbSide     = Decoupled(new MemoryToWrBack)
     val sbClear    = Output(UInt(ISA.RegNum.W))
     val pendingALU = Input(Bool())
+    val excpFlush  = Input(Bool())
   })
 
-  val canMD   = !io.aluSide.valid && !io.pendingALU
-  val divWins = io.divSide.valid && canMD
-  val mulWins = io.mulSide.valid && !io.divSide.valid &&
+  val excpHoldOff = RegNext(io.excpFlush, false.B)
+  val canMD       = !io.aluSide.valid && !io.pendingALU &&
+    !excpHoldOff
+  val divWins     = io.divSide.valid && canMD
+  val mulWins     = io.mulSide.valid && !io.divSide.valid &&
     canMD
-  val mdValid = divWins || mulWins
+  val mdValid     = divWins || mulWins
 
   // Convert MUL/DIV result to MemoryToWrBack
   val mdBits = Wire(new MemoryToWrBack)

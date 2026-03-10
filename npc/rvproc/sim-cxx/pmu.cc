@@ -211,11 +211,7 @@ SoftPerfUnit::notifyCommit(addr_t pc, unsigned char stalltp) {
   instcyc.sample(tp, deltat);
   instboard.erase(it);
 
-  auto const remove_cnt = std::erase_if(
-    instboard, [&t0](const iboard_t& ib) { return std::get<2>(ib) < t0; });
-
   instStatus.sample(Commit, 1);
-  instStatus.sample(NotUsed, remove_cnt);
 }
 
 #else
