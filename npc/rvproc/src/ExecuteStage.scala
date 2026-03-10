@@ -212,9 +212,10 @@ class ExecuteStage extends Module {
   toFWire.isRet      := ioid.isRet
 
   /** To LSU, AluOut = Addr */
-  iols.aluOut := iExe.io.aluOut
-  iols.memOp  := ioid.memOp
-  iols.rs2Val := ioid.rs2V
+  iols.aluOut  := iExe.io.aluOut
+  iols.memOp   := ioid.memOp
+  iols.isMemEn := ioid.memOp.isEn
+  iols.rs2Val  := ioid.rs2V
 
   /** Foward */
   ioid.foward <> iols.foward

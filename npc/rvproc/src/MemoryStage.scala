@@ -34,7 +34,7 @@ class MemoryStage extends Module {
     addr(0) =/= 0.U &&
       ioex.memOp.len === MemLen.Half
   val excpMisalign =
-    io.in.valid && ioex.memOp.isEn &&
+    io.in.valid && ioex.isMemEn &&
       (wordMis || halfMis)
 
   // val idle :: serve :: hold :: Nil = Enum(3)
@@ -42,7 +42,7 @@ class MemoryStage extends Module {
 
   val state     = RegInit(idle)
   val trigIss   =
-    state === idle && io.in.valid && ioex.memOp.isEn &&
+    state === idle && io.in.valid && ioex.isMemEn &&
       !io.excpFlush && !excpMisalign
   val reqReady  = Mux(!ioex.memOp.isSt, dMem.ar.ready, dMem.aw.ready)
   val respValid = Mux(!ioex.memOp.isSt, dMem.r.valid, dMem.b.valid)
@@ -58,7 +58,7 @@ class MemoryStage extends Module {
   // WARN: WBU如果需要等待, 则这里会出问题(respValid仅有1cyc高)
   // val delay1Trig = RegNext(trigIss)
   io.out.valid := io.in.valid &&
-    (!ioex.memOp.isEn || excpMisalign || respValid) &&
+    (!ioex.isMemEn || excpMisalign || respValid) &&
     !io.excpFlush
   io.in.ready  := io.out.ready && ((!trigIss && state === idle) || io.out.valid)
 
@@ -127,12 +127,12 @@ class MemoryStage extends Module {
   // LSU exception detection (causes 5, 7, 13, 15)
   val lsuExcp      = Wire(Bool())
   val lsuExcpCause = Wire(UInt(4.W))
-  when(ioex.memOp.isEn && respValid && !ioex.memOp.isSt) {
+  when(ioex.isMemEn && respValid && !ioex.memOp.isSt) {
     lsuExcp      := dMem.r.bits.resp =/= OKAY
     lsuExcpCause :=
       Mux(dMem.r.bits.resp === SLVERR, 5.U, 13.U)
   }.elsewhen(
-    ioex.memOp.isEn && respValid && ioex.memOp.isSt
+    ioex.isMemEn && respValid && ioex.memOp.isSt
   ) {
     lsuExcp      := dMem.b.bits.resp =/= OKAY
     lsuExcpCause :=
@@ -152,7 +152,7 @@ class MemoryStage extends Module {
 
   // Misalignment exception (causes 4, 6)
   val isLoad =
-    ioex.memOp.isEn && !ioex.memOp.isSt
+    ioex.isMemEn && !ioex.memOp.isSt
   when(excpMisalign) {
     iowb.foward.excpValid := true.B
     iowb.foward.excpFlush := true.B

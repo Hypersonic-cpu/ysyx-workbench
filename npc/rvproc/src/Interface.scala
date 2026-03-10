@@ -187,10 +187,10 @@ class DecodeToExecute extends Bundle {
 }
 
 class ExecuteToMemory extends Bundle {
-  val memOp  = new MemOp()
-  // val takeBr = Bool()
-  val aluOut = Tp.RegType()
-  val rs2Val = Tp.RegType()
+  val memOp   = new MemOp()
+  val isMemEn = Bool()
+  val aluOut  = Tp.RegType()
+  val rs2Val  = Tp.RegType()
 
   val foward = new DecodeFoward
 }
