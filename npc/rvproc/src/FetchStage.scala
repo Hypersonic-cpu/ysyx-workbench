@@ -198,6 +198,8 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
       }
     }
   }
+  val prevPC   = RegNext(pc)
+  val prevFire = RegNext(iMem.ar.fire)
 
   val ioid = io.out.bits
 

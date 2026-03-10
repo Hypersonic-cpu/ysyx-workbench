@@ -45,7 +45,10 @@ case class iCacheConf(
 // Readonly, 2-cycle pipeline: recv -> tag-compare + word-select
 // Valid bit is a separate DFF array (requires reset).
 // Tag/data backend: SyncReadMem (Tiny) or SRAM BlackBox (Extended).
-class iCache(conf: iCacheConf) extends Module {
+class iCache(
+  conf:         iCacheConf,
+  withPrefetch: Boolean = false)
+    extends Module {
   require(conf.assoc == 1, "Set assoc unimplemented")
   val io = IO(new Bundle {
     val flushAll = Input(Bool())
@@ -108,7 +111,21 @@ class iCache(conf: iCacheConf) extends Module {
   )
 
   val flushPending = RegInit(false.B)
+  val fillAddr     = Reg(Tp.AddrType())
+  val isPrefetch   = RegInit(false.B)
   when(io.flushAll) { flushPending := true.B }
+
+  val pf = if (withPrefetch)
+    Some(Module(new NextLinePrefetcher(conf)))
+  else None
+
+  val pfIdle = WireInit(false.B)
+  pf.foreach { p =>
+    p.io.flush     := io.flushAll
+    p.io.snoopDone := false.B
+    p.io.snoopAddr := DontCare
+    p.io.consumed  := false.B
+  }
 
   // Direct computation bypasses MuxLookup for nextState.
   val willShift = Wire(Bool())
@@ -148,13 +165,17 @@ class iCache(conf: iCacheConf) extends Module {
   tagHit := tagRead === tagOf(reqA2) &&
     validArr(idxOf(reqA2)) && reqV2
 
-  // Accept C1 requests only in steady-state flowing.
+  pf.foreach { p =>
+    pfIdle := p.io.pending &&
+      !reqV2 && !req.valid && !flushPending
+  }
+
   willShift :=
     state === flowing && !fillFinish &&
       !flushPending && (tagHit || !reqV2)
 
   // Word select directly from SRAM output (no register)
-  val lineRead = dataArr.io.rdata
+  val lineRead  = dataArr.io.rdata
   val lineSplit =
     VecInit.tabulate(conf.lineTrans)(i =>
       lineRead(
@@ -168,12 +189,36 @@ class iCache(conf: iCacheConf) extends Module {
   resp.bits.data := Mux(missServe, missData, wordSel)
   resp.bits.resp := Mux(missServe, fillError, OKAY)
 
+  when(resp.fire) {
+    printf(
+      cf"IC resp: ms=$missServe tH=$tagHit "
+        + cf"rA2=$reqA2%x fA=$fillAddr%x "
+        + cf"d=$missData%x pf=$isPrefetch\n"
+    )
+  }
+  when(fillFinish) {
+    printf(
+      cf"IC fill: fA=$fillAddr%x pf=$isPrefetch "
+        + cf"w0=${fillBuf(0.U)}%x w1=${fillBuf(1.U)}%x "
+        + cf"w2=${fillBuf(2.U)}%x w3=${fillBuf(3.U)}%x\n"
+    )
+  }
+  when(state === flowing && nextState === memreq) {
+    printf(
+      cf"IC miss: reqA2=$reqA2%x pf=$pfIdle\n"
+    )
+  }
+
   // FSM
   nextState := MuxLookup(state, waiting)(
     Seq(
       flowing  -> Mux(
         tagHit || !reqV2,
-        Mux(flushPending, flushing, flowing),
+        Mux(
+          pfIdle,
+          memreq,
+          Mux(flushPending, flushing, flowing)
+        ),
         memreq
       ),
       memreq   -> Mux(
@@ -186,7 +231,6 @@ class iCache(conf: iCacheConf) extends Module {
         Mux(flushPending, flushing, flowing),
         waiting
       ),
-      // 1-cycle flush: validArr cleared below
       flushing -> flowing
     )
   )
@@ -197,6 +241,23 @@ class iCache(conf: iCacheConf) extends Module {
     validArr.foreach(_ := false.B)
   }
   when(nextState === flushing) { flushPending := false.B }
+
+  when(state === flowing && nextState === memreq) {
+    fillAddr   := reqA2
+    isPrefetch := false.B
+    pf.foreach { p =>
+      when(pfIdle) {
+        fillAddr   := p.io.addr
+        isPrefetch := true.B
+      }
+    }
+  }
+  pf.foreach { p =>
+    p.io.consumed  := state === flowing &&
+      nextState === memreq && pfIdle
+    p.io.snoopDone := fillFinish && !isPrefetch
+    p.io.snoopAddr := fillAddr
+  }
 
   // Cache line fill
   val fillPtr = RegInit(0.U(conf.lineTBits.W))
@@ -219,20 +280,9 @@ class iCache(conf: iCacheConf) extends Module {
     fillError := OKAY
   }
 
-  // when(state === flowing && nextState === memreq) {
-  //   printf(cf"iCache Miss : addr ${reqA2}%x\n")
-  // }
-
-  // when(io.cpuSide.r.fire) {
-  //   printf(
-  //     cf"iCache Hit : addr ${reqA3}%x"
-  //       + cf" data ${io.cpuSide.r.bits.data}%x\n"
-  //   )
-  // }
-
   io.memSide.r.ready       := true.B
   io.memSide.ar.valid      := state === memreq
-  io.memSide.ar.bits.addr  := blkOf(reqA2)
+  io.memSide.ar.bits.addr  := blkOf(fillAddr)
   io.memSide.ar.bits.len   := (conf.lineTrans - 1).U
   io.memSide.ar.bits.burst := INCR
   io.memSide.ar.bits.id    := 0.U   // iCache
@@ -246,22 +296,20 @@ class iCache(conf: iCacheConf) extends Module {
 
   // Tag: fill completion only (flush uses validArr DFF)
   tagArr.io.wen   := fillFinish && fillError === OKAY
-  tagArr.io.waddr := idxOf(reqA2)
-  tagArr.io.wdata := tagOf(reqA2)
+  tagArr.io.waddr := idxOf(fillAddr)
+  tagArr.io.wdata := tagOf(fillAddr)
 
-  // Valid: set on fill, cleared on flush (above)
   when(fillFinish && fillError === OKAY) {
-    validArr(idxOf(reqA2)) := true.B
+    validArr(idxOf(fillAddr)) := true.B
   }
 
-  // Data: fill completion only
   dataArr.io.wen   := fillFinish && fillError === OKAY
-  dataArr.io.waddr := idxOf(reqA2)
+  dataArr.io.waddr := idxOf(fillAddr)
   dataArr.io.wdata := catData
 
-  when(fillFinish) {
+  when(fillFinish && !isPrefetch) {
     missServe := true.B
-    missData  := fillBuf(ithOf(reqA2))
+    missData  := fillBuf(ithOf(fillAddr))
     assert(
       !resp.fire,
       "Transaction (resp) during fill\n"

@@ -206,19 +206,28 @@ trace::GuestTracer* pccdb = nullptr;
 trace::SoftPerfUnit* ppmu = nullptr;
 trace::DiffTester* pdiff = nullptr;
 
+static uint32_t last_recvd_pc = 0;
+static uint32_t last_recvd_inst = 0;
 void
 notify_recvd(uint32_t pc, uint32_t inst) {
-  // std::cerr << std::format(ANSI_YELLOW "IFetch Recv @ pc {:8x}" ANSI_NONE,
-  // pc) << std::endl;
+  last_recvd_pc = pc;
+  last_recvd_inst = inst;
   ppmu->notifyIFRecvd(pc);
 }
 
+static uint32_t last_fetch_pc = 0;
+static int fetch_count = 0;
 void
 notify_fetch(uint32_t pc) {
-  // Allow fault-injection fetch addresses (tests 8, 9 in exception.c)
-  v_assert(pc != 0, "Invalid PC @", pc);
-  // std::cerr << std::format(ANSI_YELLOW "IFetch Req @ pc {:8x}" ANSI_NONE,
-  // pc) << std::endl;
+  fetch_count++;
+  if (pc == 0) {
+    std::cerr << "FATAL: PC=0 fetch #" << std::dec << fetch_count
+              << ", last_fetch=0x" << std::hex << last_fetch_pc
+              << ", last_recvd=0x" << last_recvd_pc
+              << " inst=0x" << last_recvd_inst << std::endl;
+    abortHandler();
+  }
+  last_fetch_pc = pc;
   ppmu->notifyIFFetch(pc);
 }
 

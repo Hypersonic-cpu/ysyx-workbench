@@ -185,6 +185,10 @@ class rvCore(
     raw.io.exsrd
   )
   // Skid buffer overflow between EXU and LSU
+
+  // TODO: strange code. Out-of-order of mul is acceptable, 只要不存在 RAW/WAW。例如 mul -> x1; lb -> x1; 则 sb 必须后写入， 如果是 mul->x1; lb->x2 则乱序 commit 完全没问题吧？  只是如果出现 mul(还没有完成) 之后立刻出现了异常 (例如 LSU loadword misalignment) 
+  // 需要等到 mul 完成之后再处理。
+  // assert false
   locally {
     val fw = Wire(new FwBundle)
     fw.valid := skidV
@@ -207,7 +211,7 @@ class rvCore(
 
   val clint  = Module(new CLINT)
   val icache = Module(
-    new cache.iCache(this.l1iConf)
+    new cache.iCache(this.l1iConf, withPrefetch = true)
   )
 
   if (isSoc) {
