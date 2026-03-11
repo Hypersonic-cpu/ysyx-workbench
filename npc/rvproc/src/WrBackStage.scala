@@ -44,7 +44,7 @@ class WrBackStage extends Module {
 
   val iWbu = Module(new WBU)
   val iols = io.in.bits
-  val iofw = io.in.bits.foward
+  val iofw = io.in.bits.forward
   io.fenceI     := io.in.valid && iofw.fenceI
   iWbu.io.aluV  := iols.aluOut
   iWbu.io.memV  := iols.lsuOut

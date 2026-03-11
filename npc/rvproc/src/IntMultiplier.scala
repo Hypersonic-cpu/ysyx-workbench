@@ -160,16 +160,16 @@ class IntMultiplier extends Module {
   val s1Rs1    = Reg(UInt((ISA.RegBits + 1).W))
   val s1Rs2    = Reg(UInt((ISA.RegBits + 1).W))
   val s1Op     = Reg(MulDivOp())
-  val s1Foward = Reg(new DecodeFoward)
+  val s1Forward = Reg(new DecodeForward)
 
   // Pipeline stage 2: Booth+Wallace sum/carry registered here
   val s2Valid  = RegInit(false.B)
-  val s2Foward = Reg(new DecodeFoward)
+  val s2Forward = Reg(new DecodeForward)
 
   // Pipeline stage 3: result
   val s3Valid  = RegInit(false.B)
   val s3Result = Reg(Tp.RegType())
-  val s3Foward = Reg(new DecodeFoward)
+  val s3Forward = Reg(new DecodeForward)
 
   // Stage 1 accepts when stage 2 can accept or is empty
   val s2Ready = !s3Valid || io.out.ready
@@ -205,7 +205,7 @@ class IntMultiplier extends Module {
       s1Rs1    := src1Full
       s1Rs2    := src2Full
       s1Op     := io.in.bits.op
-      s1Foward := io.in.bits.foward
+      s1Forward := io.in.bits.forward
     }
   }
 
@@ -237,16 +237,16 @@ class IntMultiplier extends Module {
       s3Valid := s2Valid
       when(s2Valid) {
         s3Result := result
-        s3Foward := s2Foward
+        s3Forward := s2Forward
       }
     }
     when(s1Valid) {
-      s2Foward := s1Foward
+      s2Forward := s1Forward
     }
   }
 
   // Output
   io.out.valid       := s3Valid
   io.out.bits.result := s3Result
-  io.out.bits.foward := s3Foward
+  io.out.bits.forward := s3Forward
 }

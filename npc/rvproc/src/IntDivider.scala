@@ -26,7 +26,7 @@ class IntDivider extends Module {
   val negQ      = Reg(Bool())
   val negR      = Reg(Bool())
   val isRem     = Reg(Bool())
-  val foward    = Reg(new DecodeFoward)
+  val forward    = Reg(new DecodeForward)
   val quotient  = Reg(UInt(32.W))
   val remainder = Reg(UInt(33.W))
   val divisor   = Reg(UInt(33.W))
@@ -57,7 +57,7 @@ class IntDivider extends Module {
   switch(state) {
     is(idle) {
       when(io.in.valid && !io.flush) {
-        foward := io.in.bits.foward
+        forward := io.in.bits.forward
         isRem  := wantRem
         negQ   := rs1Neg ^ rs2Neg
         negR   := rs1Neg
@@ -133,5 +133,5 @@ class IntDivider extends Module {
     result,
     Mux(isRem, corrR, corrQ)
   )
-  io.out.bits.foward := foward
+  io.out.bits.forward := forward
 }

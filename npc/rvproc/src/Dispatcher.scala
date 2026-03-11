@@ -80,7 +80,7 @@ class Dispatcher extends Module {
   io.aluSide.bits.predBhtCnt := dispBits.predBhtCnt
   io.aluSide.bits.isCall     := dispBits.isCall
   io.aluSide.bits.isRet      := dispBits.isRet
-  io.aluSide.bits.foward     := dispBits.foward
+  io.aluSide.bits.forward     := dispBits.forward
 
   // Drive MUL output
   io.mulSide.valid       := dispValid && isMulDisp &&
@@ -88,7 +88,7 @@ class Dispatcher extends Module {
   io.mulSide.bits.rs1    := dispBits.rs1V
   io.mulSide.bits.rs2    := dispBits.rs2V
   io.mulSide.bits.op     := dispBits.mulDivOp
-  io.mulSide.bits.foward := dispBits.foward
+  io.mulSide.bits.forward := dispBits.forward
 
   // Drive DIV output
   io.divSide.valid       := dispValid && isDivDisp &&
@@ -96,12 +96,12 @@ class Dispatcher extends Module {
   io.divSide.bits.rs1    := dispBits.rs1V
   io.divSide.bits.rs2    := dispBits.rs2V
   io.divSide.bits.op     := dispBits.mulDivOp
-  io.divSide.bits.foward := dispBits.foward
+  io.divSide.bits.forward := dispBits.forward
 
   // Scoreboard
   val dispFire = dispValid && isMD && tgtReady &&
     !io.pipeFlush && !io.excpFlush
-  val dispRd   = dispBits.foward.gprRd
+  val dispRd   = dispBits.forward.gprRd
   val sbSet    = Mux(
     dispFire && dispRd.orR,
     1.U(ISA.RegNum.W) << dispRd,
@@ -159,10 +159,10 @@ class Collector extends Module {
     io.mulSide.bits.result
   )
   mdBits.lsuOut := 0.U
-  mdBits.foward := Mux(
+  mdBits.forward := Mux(
     divWins,
-    io.divSide.bits.foward,
-    io.mulSide.bits.foward
+    io.divSide.bits.forward,
+    io.mulSide.bits.forward
   )
 
   when(io.aluSide.valid) {
@@ -187,8 +187,8 @@ class Collector extends Module {
   val mdFire = mdValid && io.wbSide.ready
   val mdRd   = Mux(
     divWins,
-    io.divSide.bits.foward.gprRd,
-    io.mulSide.bits.foward.gprRd
+    io.divSide.bits.forward.gprRd,
+    io.mulSide.bits.forward.gprRd
   )
   io.sbClear := Mux(
     mdFire && mdRd.orR,

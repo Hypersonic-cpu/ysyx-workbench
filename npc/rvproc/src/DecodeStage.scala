@@ -262,7 +262,7 @@ class DecodeStage extends Module {
     val fenceI    = Decoupled(Bool())
     val flush     = Input(Bool())
     val rawSrc    = new DecodeHazard
-    val fwdRes    = Input(new SourceFoward)
+    val fwdRes    = Input(new SourceForward)
     val excpFlush = Input(Bool())
     val sbBusy    = Input(UInt(ISA.RegNum.W))
     val rawStall  =
@@ -342,7 +342,7 @@ class DecodeStage extends Module {
   ioex.isDiv      := iDec.io.isDiv
   ioex.mulDivOp   := iDec.io.mulDivOp
 
-  val iofw = ioex.foward
+  val iofw = ioex.forward
   iofw.gprRd  := iDec.io.rd
   iofw.csrRd  := iDec.io.csriw
   iofw.gprWE  := iDec.io.gprWE

@@ -157,15 +157,15 @@ class ExecuteStage extends Module {
   iExe.io.sel   := ioid.aluSel
   iExe.io.rs1V  := ioid.rs1V
   iExe.io.rs2V  := ioid.rs2V
-  iExe.io.csrV  := ioid.foward.csrVal
+  iExe.io.csrV  := ioid.forward.csrVal
   iExe.io.imm   := ioid.imm
-  iExe.io.pc    := ioid.pc // use pc directly (not foward.pc, which is 0 in non-debug)
+  iExe.io.pc    := ioid.pc // use pc directly (not forward.pc, which is 0 in non-debug)
   iExe.io.aluEn := ioid.aluEn && validCtrl
   iExe.io.br    := ioid.brInst
 
   /** Forward: ALU results forwarded from EXU */
   io.fwdDet.valid := validCtrl
-  io.fwdDet.gprFw := ioid.foward.wbSel === WbSel.fromAlu
+  io.fwdDet.gprFw := ioid.forward.wbSel === WbSel.fromAlu
   io.fwdDet.gprDt := iExe.io.aluOut
 
   /** Back to Fetch */
@@ -217,16 +217,16 @@ class ExecuteStage extends Module {
   iols.isMemEn := ioid.memOp.isEn
   iols.rs2Val  := ioid.rs2V
 
-  /** Foward */
-  ioid.foward <> iols.foward
+  /** Forward */
+  ioid.forward <> iols.forward
   if (GlbCtrl.debug) {
-    iols.foward.stallT := Mux(
+    iols.forward.stallT := Mux(
       flushed,
       StallCause.Branch,
-      ioid.foward.stallT
+      ioid.forward.stallT
     )
   } else {
-    iols.foward.stallT := DontCare
+    iols.forward.stallT := DontCare
   }
 
   // Flush IDU/EXU on misprediction.
@@ -251,9 +251,9 @@ class ExecuteStage extends Module {
     iInt.io.reset    := reset
     iInt.io.a0in     := ioid.rs1V
     iInt.io.a5in     := ioid.rs2V
-    iInt.io.pcin     := ioid.foward.pc
-    iInt.io.isEbreak := validCtrl && ioid.foward.ebreak
-    iInt.io.isEcall  := validCtrl && ioid.foward.ecall
+    iInt.io.pcin     := ioid.forward.pc
+    iInt.io.isEbreak := validCtrl && ioid.forward.ebreak
+    iInt.io.isEcall  := validCtrl && ioid.forward.ecall
     println("== Sim - EcallBox ===".green)
   } else {
     println("== STA - Fake Ecall ===".yellow)

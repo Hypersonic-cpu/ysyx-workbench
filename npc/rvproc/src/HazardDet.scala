@@ -38,7 +38,7 @@ class DecodeHazard extends Bundle {
   val useC = Bool()
 }
 
-class SourceFoward extends Bundle {
+class SourceForward extends Bundle {
   val block = Bool()
   val rs1fw = Bool()
   val rs1dt = Tp.RegType()
@@ -98,7 +98,7 @@ class RAWForward extends Module {
 
 class RAWDet extends Module {
   val io = IO(new Bundle {
-    val srcfw  = Output(new SourceFoward)
+    val srcfw  = Output(new SourceForward)
     val decode = Input(new DecodeHazard)
     val exsrd  = Input(new RegDstBundle)
     val skidrd = Input(new RegDstBundle)

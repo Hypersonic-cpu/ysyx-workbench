@@ -121,7 +121,7 @@ class MemoryStage extends Module {
     )
 
   iowb.aluOut <> io.in.bits.aluOut
-  iowb.foward <> io.in.bits.foward
+  iowb.forward <> io.in.bits.forward
 
   /** Exception handling */
   // LSU exception detection (causes 5, 7, 13, 15)
@@ -143,38 +143,38 @@ class MemoryStage extends Module {
   }
 
   when(lsuExcp) {
-    iowb.foward.excpValid := true.B
-    iowb.foward.excpFlush := true.B
-    iowb.foward.mcause    := lsuExcpCause
-    iowb.foward.gprWE     := false.B
-    iowb.foward.csrWE     := false.B
+    iowb.forward.excpValid := true.B
+    iowb.forward.excpFlush := true.B
+    iowb.forward.mcause    := lsuExcpCause
+    iowb.forward.gprWE     := false.B
+    iowb.forward.csrWE     := false.B
   }
 
   // Misalignment exception (causes 4, 6)
   val isLoad =
     ioex.isMemEn && !ioex.memOp.isSt
   when(excpMisalign) {
-    iowb.foward.excpValid := true.B
-    iowb.foward.excpFlush := true.B
-    iowb.foward.mcause    :=
+    iowb.forward.excpValid := true.B
+    iowb.forward.excpFlush := true.B
+    iowb.forward.mcause    :=
       Mux(isLoad, 4.U, 6.U)
-    iowb.foward.gprWE     := false.B
-    iowb.foward.csrWE     := false.B
+    iowb.forward.gprWE     := false.B
+    iowb.forward.csrWE     := false.B
   }
 
   /** Forward */
   io.fwdDet.valid := io.in.valid
-  io.fwdDet.gprFw := ioex.foward.wbSel === WbSel.fromAlu
+  io.fwdDet.gprFw := ioex.forward.wbSel === WbSel.fromAlu
   io.fwdDet.gprDt := ioex.aluOut
 
   if (GlbCtrl.debug) {
-    iowb.foward.stallT := Mux(
+    iowb.forward.stallT := Mux(
       io.in.valid && !io.out.valid,
       StallCause.LoadStore,
-      io.in.bits.foward.stallT
+      io.in.bits.forward.stallT
     )
   } else {
-    iowb.foward.stallT := DontCare
+    iowb.forward.stallT := DontCare
   }
 
   if (GlbCtrl.debug) {

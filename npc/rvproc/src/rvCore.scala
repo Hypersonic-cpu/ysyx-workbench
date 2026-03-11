@@ -99,7 +99,7 @@ class rvCore(
   )
 
   // ID -> Dispatcher -> {ALU, MUL, DIV}
-  ids.io.out <> dispatch.io.decodeSide
+  BusConnect(ids.io.out, dispatch.io.decodeSide, MultiCyc)
   BusConnect(dispatch.io.aluSide, exs.io.in, MultiCyc)
 
   // Register MUL/DIV input ready to break the
@@ -184,24 +184,24 @@ class rvCore(
   raw.io.decode <> ids.io.rawSrc
   RegDstPacket(
     exs.io.fwdDet,
-    exs.io.in.bits.foward,
+    exs.io.in.bits.forward,
     raw.io.exsrd
   )
   locally {
     val fw = Wire(new FwBundle)
     fw.valid := skidV
-    fw.gprFw := skidB.foward.wbSel === WbSel.fromAlu
+    fw.gprFw := skidB.forward.wbSel === WbSel.fromAlu
     fw.gprDt := skidB.aluOut
-    RegDstPacket(fw, skidB.foward, raw.io.skidrd)
+    RegDstPacket(fw, skidB.forward, raw.io.skidrd)
   }
   RegDstPacket(
     lss.io.fwdDet,
-    lss.io.in.bits.foward,
+    lss.io.in.bits.forward,
     raw.io.lssrd
   )
   RegDstPacket(
     wbs.io.fwdDet,
-    wbs.io.in.bits.foward,
+    wbs.io.in.bits.forward,
     raw.io.wbsrd
   )
 

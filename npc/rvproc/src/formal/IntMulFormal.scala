@@ -46,7 +46,7 @@ class IntMulFormal extends Module {
   dut.io.in.bits.rs1    := io.rs1
   dut.io.in.bits.rs2    := io.rs2
   dut.io.in.bits.op     := io.op
-  dut.io.in.bits.foward := 0.U.asTypeOf(new DecodeFoward)
+  dut.io.in.bits.forward := 0.U.asTypeOf(new DecodeForward)
   dut.io.out.ready      := io.outReady
 
   val isMulhu  = io.op === MulDivOp.Mulhu

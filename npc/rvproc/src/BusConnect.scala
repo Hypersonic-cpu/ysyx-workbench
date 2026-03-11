@@ -134,7 +134,7 @@ object BusConnect {
 object RegDstPacket {
   def apply[T <: Data](
     fwdsrc: FwBundle,
-    signal: DecodeFoward,
+    signal: DecodeForward,
     output: RegDstBundle
   ): Unit = {
     output.valid := fwdsrc.valid

@@ -142,7 +142,7 @@ object StallCause extends ChiselEnum {
   val NoStall, InstFetch, LoadStore, Branch, RAW = Value
 }
 
-class DecodeFoward extends Bundle {
+class DecodeForward extends Bundle {
   val wbSel  = WbSel()
   val gprRd  = Tp.RegIdxType()
   val gprWE  = Bool()
@@ -183,7 +183,7 @@ class DecodeToExecute extends Bundle {
   val isMul      = Bool()
   val isDiv      = Bool()
   val mulDivOp   = MulDivOp()
-  val foward     = new DecodeFoward
+  val forward     = new DecodeForward
 }
 
 class ExecuteToMemory extends Bundle {
@@ -192,14 +192,14 @@ class ExecuteToMemory extends Bundle {
   val aluOut  = Tp.RegType()
   val rs2Val  = Tp.RegType()
 
-  val foward = new DecodeFoward
+  val forward = new DecodeForward
 }
 
 class MemoryToWrBack extends Bundle {
   val aluOut = Tp.RegType()
   val lsuOut = Tp.RegType()
 
-  val foward = new DecodeFoward
+  val forward = new DecodeForward
 }
 
 class IntAluIn extends Bundle {
@@ -218,29 +218,29 @@ class IntAluIn extends Bundle {
   val predBhtCnt = UInt(2.W)
   val isCall     = Bool()
   val isRet      = Bool()
-  val foward     = new DecodeFoward
+  val forward     = new DecodeForward
 }
 
 class IntMulIn extends Bundle {
   val rs1    = Tp.RegType()
   val rs2    = Tp.RegType()
   val op     = MulDivOp()
-  val foward = new DecodeFoward
+  val forward = new DecodeForward
 }
 
 class IntMulOut extends Bundle {
   val result = Tp.RegType()
-  val foward = new DecodeFoward
+  val forward = new DecodeForward
 }
 
 class IntDivIn extends Bundle {
   val rs1    = Tp.RegType()
   val rs2    = Tp.RegType()
   val op     = MulDivOp()
-  val foward = new DecodeFoward
+  val forward = new DecodeForward
 }
 
 class IntDivOut extends Bundle {
   val result = Tp.RegType()
-  val foward = new DecodeFoward
+  val forward = new DecodeForward
 }
