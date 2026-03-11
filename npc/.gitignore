@@ -43,4 +43,3 @@ formal/**/*.sv
 formal/*/
 local/
 visual/plots/
-lib/sram/

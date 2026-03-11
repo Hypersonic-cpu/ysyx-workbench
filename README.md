@@ -19,7 +19,7 @@ This framework includes
   - Provides detailed performance statistics
   - `~50x` faster than RTL simulation.
 
-## NPC: 1GHz HiFreq RV32IM Pipelined Core in Chisel
+## NPC: 1GHz HiFreq RV32IM Pipeline CPU in Chisel
 
 ### Overview
 
