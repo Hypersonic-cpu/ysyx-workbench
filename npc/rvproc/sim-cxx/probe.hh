@@ -205,7 +205,7 @@ read_reg(uint8_t regid) noexcept {
     case 0x1d: ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__gpr__DOT__gprs_29; break;
     case 0x1e: ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__gpr__DOT__gprs_30; break;
     case 0x1f: ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__reg_0__DOT__gpr__DOT__gprs_31; break;
-    case 0x20:ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT___collect_io_wbSide_bits_foward_pc; break;
+    case 0x20:ret = r->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT___collect_io_wbSide_bits_forward_pc; break;
 #else
     case 0x0: ret = r->rvCore__DOT__reg_0__DOT__gpr__DOT__gprs_0; break;
     case 0x1: ret = r->rvCore__DOT__reg_0__DOT__gpr__DOT__gprs_1; break;
@@ -239,7 +239,7 @@ read_reg(uint8_t regid) noexcept {
     case 0x1d: ret = r->rvCore__DOT__reg_0__DOT__gpr__DOT__gprs_29; break;
     case 0x1e: ret = r->rvCore__DOT__reg_0__DOT__gpr__DOT__gprs_30; break;
     case 0x1f: ret = r->rvCore__DOT__reg_0__DOT__gpr__DOT__gprs_31; break;
-    case 0x20:ret = r->rvCore__DOT___collect_io_wbSide_bits_foward_pc ; break;
+    case 0x20:ret = r->rvCore__DOT___collect_io_wbSide_bits_forward_pc; break;
 #endif
     default: v_assert(false, "Invalid GPR read @ regid =", std::to_string(regid));
       break;

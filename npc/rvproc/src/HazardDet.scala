@@ -26,13 +26,11 @@ class RegDstBundle extends FwBundle {
   val gprRd = Tp.RegIdxType()
   // val gprDt = Tp.RegType()
   val csrWE = Bool()
-  val csrRd = Tp.CsrIdxType()
 }
 
 class DecodeHazard extends Bundle {
   val rs1  = Tp.RegIdxType()
   val rs2  = Tp.RegIdxType()
-  val csr  = Tp.CsrIdxType()
   val use1 = Bool()
   val use2 = Bool()
   val useC = Bool()
@@ -123,13 +121,9 @@ class RAWDet extends Module {
   rs2ctl.io.lssrd  := io.lssrd
   rs2ctl.io.wbsrd  := io.wbsrd
 
-  def conflictCsr(valid: Bool, self: UInt, other: RegDstBundle) = {
-    other.csrWE && valid && other.csrRd === self && other.valid
-  }
-
   val csrraw = VecInit(
     Seq(io.exsrd, io.skidrd, io.lssrd, io.wbsrd).map(r =>
-      conflictCsr(io.decode.useC, io.decode.csr, r)
+      r.csrWE && io.decode.useC && r.valid
     )
   ).asUInt.orR
 

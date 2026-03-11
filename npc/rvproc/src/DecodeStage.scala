@@ -276,21 +276,18 @@ class DecodeStage extends Module {
   val iDec = Module(new IDU)
 
   val waitRAW  = io.fwdRes.block
-  // Scoreboard stall: stall if any used source is in-flight
+  // Scoreboard stall: use pre-decoded use1/use2 from IFU
   val sbHitRs1 = io.sbBusy(iDec.io.rs1) && validCtrl &&
-    !iDec.io.aluSel.rs1SelPC && iDec.io.rs1.orR
+    io.in.bits.pdUse1 && iDec.io.rs1.orR
   val sbHitRs2 = io.sbBusy(iDec.io.rs2) && validCtrl &&
-    (!iDec.io.aluSel.rs2SelImm ||
-      iDec.io.memAcc.isSt || iDec.io.ebreak) &&
-    iDec.io.rs2.orR
+    io.in.bits.pdUse2 && iDec.io.rs2.orR
   val sbHitRd  = io.sbBusy(iDec.io.rd) && validCtrl &&
     iDec.io.gprWE && iDec.io.rd.orR
   val waitSB   = sbHitRs1 || sbHitRs2 || sbHitRd
   io.rawSrc.rs1  := iDec.io.rs1
   io.rawSrc.rs2  := iDec.io.rs2
-  io.rawSrc.csr  := iDec.io.csrir
-  io.rawSrc.use1 := validCtrl && !iDec.io.aluSel.rs1SelPC
-  io.rawSrc.use2 := validCtrl && (!iDec.io.aluSel.rs2SelImm || iDec.io.memAcc.isSt || iDec.io.ebreak)
+  io.rawSrc.use1 := validCtrl && io.in.bits.pdUse1
+  io.rawSrc.use2 := validCtrl && io.in.bits.pdUse2
   io.rawSrc.useC := validCtrl &&
     (iDec.io.wbSel === WbSel.fromCsr || iDec.io.aluSel.brSelCsr)
 
@@ -311,9 +308,9 @@ class DecodeStage extends Module {
   io.toReg.bits.csrr := iDec.io.csrir
   io.fromReg.ready   := true.B
   val rs1Val =
-    Mux(io.fwdRes.rs1fw, io.fwdRes.rs1dt, io.fromReg.bits.rs1Val)
+    io.fromReg.bits.rs1Val
   val rs2Val =
-    Mux(io.fwdRes.rs2fw, io.fwdRes.rs2dt, io.fromReg.bits.rs2Val)
+    io.fromReg.bits.rs2Val
   val csrVal = io.fromReg.bits.csrVal
 
   /** Input from FetchStage */
@@ -323,9 +320,43 @@ class DecodeStage extends Module {
 
   /** To ExecuteStage */
   val ioex = io.out.bits
+  // Restore forwarding mux in IDU (before dispatch register)
+  val fwdRs1 = Mux(
+    io.fwdRes.rs1fw,
+    io.fwdRes.rs1dt,
+    rs1Val
+  )
+  val fwdRs2Base = Mux(
+    iDec.io.csralu,
+    csrVal,
+    rs2Val
+  )
+  val fwdRs2 = Mux(
+    io.fwdRes.rs2fw && !iDec.io.csralu,
+    io.fwdRes.rs2dt,
+    fwdRs2Base
+  )
   ioex.imm        := iDec.io.imm
-  ioex.rs1V       := rs1Val
-  ioex.rs2V       := Mux(iDec.io.csralu, csrVal, rs2Val)
+  ioex.rs1V       := fwdRs1
+  ioex.rs2V       := fwdRs2
+  ioex.aluSrc1    := Mux(
+    iDec.io.aluSel.rs1SelPC,
+    ioif.pc,
+    fwdRs1
+  )
+  // aluSrc2: separate logic cone without csralu.
+  // When rs2SelImm=false (R/B-type), csralu is always false,
+  // so removing csralu from this path is safe.
+  val aluSrc2Inner = Mux(
+    io.fwdRes.rs2fw,
+    io.fwdRes.rs2dt,
+    rs2Val
+  )
+  ioex.aluSrc2    := Mux(
+    iDec.io.aluSel.rs2SelImm,
+    iDec.io.imm,
+    aluSrc2Inner
+  )
   ioex.aluOp      := iDec.io.aluOp
   ioex.aluSel     := iDec.io.aluSel
   ioex.memOp      := iDec.io.memAcc

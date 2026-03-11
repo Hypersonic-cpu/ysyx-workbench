@@ -140,13 +140,14 @@ object IntMulMath {
 
 }
 
-/** Pipelined integer multiplier (2-stage pipeline).
+/** Pipelined integer multiplier (4-stage pipeline).
   *
-  * Stage 1: register inputs, compute partial products
-  * Stage 2: produce 64-bit result, select output word
+  * S1: register inputs, Booth Radix-4 encoding
+  * S2: register partial products, Wallace tree reduction
+  * S3: register sum/carry, 66-bit addition + select
+  * S4: register result, output
   *
-  * Interface: DecoupledIO handshake. Throughput: 1 op
-  * per cycle after 2-cycle latency.
+  * Throughput: 1 op per cycle after 4-cycle latency.
   */
 class IntMultiplier extends Module {
   val io = IO(new Bundle {
@@ -155,37 +156,30 @@ class IntMultiplier extends Module {
     val flush = Input(Bool())
   })
 
-  // Pipeline stage 1: registered inputs
+  // Pipeline valids
   val s1Valid  = RegInit(false.B)
-  val s1Rs1    = Reg(UInt((ISA.RegBits + 1).W))
-  val s1Rs2    = Reg(UInt((ISA.RegBits + 1).W))
-  val s1Op     = Reg(MulDivOp())
-  val s1Forward = Reg(new DecodeForward)
-
-  // Pipeline stage 2: Booth+Wallace sum/carry registered here
   val s2Valid  = RegInit(false.B)
-  val s2Forward = Reg(new DecodeForward)
-
-  // Pipeline stage 3: result
   val s3Valid  = RegInit(false.B)
-  val s3Result = Reg(Tp.RegType())
-  val s3Forward = Reg(new DecodeForward)
+  val s4Valid  = RegInit(false.B)
 
-  // Stage 1 accepts when stage 2 can accept or is empty
-  val s2Ready = !s3Valid || io.out.ready
+  // Pipeline readiness
+  val s3Ready = !s4Valid || io.out.ready
+  val s2Ready = !s3Valid || s3Ready
   val s1Ready = !s2Valid || s2Ready
   val s0Ready = !s1Valid || s1Ready
   io.in.ready := s0Ready
 
-  // Stage 0 -> Stage 1: sign-extend from CURRENT input op.
-  // Mul/Mulh : rs1 signed, rs2 signed
-  // Mulhsu   : rs1 signed, rs2 unsigned
-  // Mulhu    : rs1 unsigned, rs2 unsigned
+  // S1 registers: inputs
+  val s1Rs1     = Reg(UInt((ISA.RegBits + 1).W))
+  val s1Rs2     = Reg(UInt((ISA.RegBits + 1).W))
+  val s1Op      = Reg(MulDivOp())
+  val s1Forward = Reg(new DecodeForward)
+
+  // Sign extension from input
   val inIsMulhsu = io.in.bits.op === MulDivOp.Mulhsu
   val inIsMulhu  = io.in.bits.op === MulDivOp.Mulhu
   val src1Sgn    = !inIsMulhu
   val src2Sgn    = !inIsMulhu && !inIsMulhsu
-
   val src1Full = Cat(
     Mux(src1Sgn, io.in.bits.rs1(31), 0.U(1.W)),
     io.in.bits.rs1
@@ -195,58 +189,79 @@ class IntMultiplier extends Module {
     io.in.bits.rs2
   )
 
+  // S0 -> S1
   when(io.flush) {
-    // NOTE: `flush` represents "this calc is useless".
-    // Cache `fence` represents "next calc is not ready".
     s1Valid := false.B
   }.elsewhen(s0Ready) {
     s1Valid := io.in.valid
     when(io.in.valid) {
-      s1Rs1    := src1Full
-      s1Rs2    := src2Full
-      s1Op     := io.in.bits.op
+      s1Rs1     := src1Full
+      s1Rs2     := src2Full
+      s1Op      := io.in.bits.op
       s1Forward := io.in.bits.forward
     }
   }
 
-  // Stage 1 -> Stage 2: Booth Radix-4 partial products + Wallace
-  // tree reduction. One cycle for Booth+Wallace (combinational),
-  // next cycle for the final 66-bit addition.
-  val partialProducts    =
-    IntMulMath.boothRadix4(
-      s1Rs1.asBools,
-      s1Rs2.asBools
-    )
-  val (sumRow, carryRow) =
-    IntMulMath.wallaceReduction(partialProducts)
-  val s2Sum     = RegEnable(sumRow, s1Ready)
-  val s2Carry   = RegEnable(carryRow, s1Ready)
+  // S1: Booth Radix-4 encoding (combinational from s1Rs1, s1Rs2)
+  val ppMatrix = IntMulMath.boothRadix4(
+    s1Rs1.asBools, s1Rs2.asBools
+  )
+
+  // S1 -> S2: register partial products column by column
+  val s2PPRegs = ppMatrix.map { col =>
+    RegEnable(VecInit(col).asUInt, s1Ready)
+  }
   val s2SelHigh = RegEnable(s1Op =/= MulDivOp.Mul, s1Ready)
-  val product   = s2Sum + s2Carry
+  val s2Forward = Reg(new DecodeForward)
 
-  val result = Mux(s2SelHigh, product(63, 32), product(31, 0))
+  // S2: Wallace tree reduction (combinational from s2PPRegs)
+  val s2PP = s2PPRegs.zipWithIndex.map { case (reg, i) =>
+    (0 until ppMatrix(i).size).map(j => reg(j)).toSeq
+  }
+  val (sumRow, carryRow) =
+    IntMulMath.wallaceReduction(s2PP)
 
-  // Stage 1 -> Stage 2
+  // S2 -> S3: register sum/carry
+  val s3Sum     = RegEnable(sumRow, s2Ready)
+  val s3Carry   = RegEnable(carryRow, s2Ready)
+  val s3SelHigh = RegEnable(s2SelHigh, s2Ready)
+  val s3Forward = Reg(new DecodeForward)
+
+  // S3: addition + select (combinational)
+  val product = s3Sum + s3Carry
+  val result  = Mux(s3SelHigh, product(63, 32), product(31, 0))
+
+  // S4 registers: result
+  val s4Result  = Reg(Tp.RegType())
+  val s4Forward = Reg(new DecodeForward)
+
+  // S1 -> S2 -> S3 -> S4 valid/forward propagation
   when(io.flush) {
     s2Valid := false.B
     s3Valid := false.B
+    s4Valid := false.B
   }.elsewhen(s1Ready) {
     s2Valid := s1Valid
-    // S2->S3 only when S3 can accept; otherwise S3 holds its current value.
+    when(s1Valid) {
+      s2Forward := s1Forward
+    }
     when(s2Ready) {
       s3Valid := s2Valid
       when(s2Valid) {
-        s3Result := result
         s3Forward := s2Forward
       }
-    }
-    when(s1Valid) {
-      s2Forward := s1Forward
+      when(s3Ready) {
+        s4Valid := s3Valid
+        when(s3Valid) {
+          s4Result  := result
+          s4Forward := s3Forward
+        }
+      }
     }
   }
 
   // Output
-  io.out.valid       := s3Valid
-  io.out.bits.result := s3Result
-  io.out.bits.forward := s3Forward
+  io.out.valid        := s4Valid
+  io.out.bits.result  := s4Result
+  io.out.bits.forward := s4Forward
 }

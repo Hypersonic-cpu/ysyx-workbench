@@ -228,6 +228,14 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
   ioid.ifuExcpCause :=
     Mux(respBuf(toidPtr) === SLVERR, 1.U, 12.U)
 
+  // Pre-decode use1/use2 for RAW path shortening.
+  // Registered by IF->ID PipeReg so IDU sees zero decode delay.
+  val pdOp = instBuf(toidPtr)(6, 2)
+  ioid.pdUse1 := pdOp =/= "b00101".U &&
+    pdOp =/= "b11011".U
+  ioid.pdUse2 := instBuf(toidPtr)(5) &&
+    !instBuf(toidPtr)(3) && !instBuf(toidPtr)(2)
+
   if (GlbCtrl.debug) {
     val pmu = Module(new FetchPMU)
     pmu.io.clock     := clock

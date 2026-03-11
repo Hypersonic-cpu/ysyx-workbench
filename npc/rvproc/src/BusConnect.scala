@@ -140,7 +140,6 @@ object RegDstPacket {
     output.valid := fwdsrc.valid
     output.gprFw := fwdsrc.gprFw
     output.gprDt := fwdsrc.gprDt
-    output.csrRd := signal.csrRd
     output.csrWE := signal.csrWE
     output.gprRd := signal.gprRd
     output.gprWE := signal.gprWE

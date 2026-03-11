@@ -15,6 +15,8 @@ class FetchToDecode extends Bundle {
   val predBhtCnt   = UInt(2.W)
   val ifuExcp      = Bool()
   val ifuExcpCause = UInt(4.W)
+  val pdUse1       = Bool()
+  val pdUse2       = Bool()
 }
 
 class RegFromIDU extends Bundle {
@@ -167,6 +169,8 @@ class DecodeForward extends Bundle {
 class DecodeToExecute extends Bundle {
   val rs1V       = Tp.RegType()
   val rs2V       = Tp.RegType()
+  val aluSrc1    = Tp.RegType()
+  val aluSrc2    = Tp.RegType()
   val imm        = Tp.RegType()
   val pc         = Tp.AddrType()
   val aluOp      = AluOp()
@@ -205,6 +209,8 @@ class MemoryToWrBack extends Bundle {
 class IntAluIn extends Bundle {
   val rs1V       = Tp.RegType()
   val rs2V       = Tp.RegType()
+  val aluSrc1    = Tp.RegType()
+  val aluSrc2    = Tp.RegType()
   val imm        = Tp.RegType()
   val pc         = Tp.AddrType()
   val aluOp      = AluOp()

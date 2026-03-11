@@ -10,15 +10,17 @@ import rvproc.AnsiColor.ColorString
 // TODO: Rename To IntALU
 class EXU extends Module {
   val io = IO(new Bundle {
-    val aluEn = Input(Bool())
-    val rs1V  = Input(Tp.RegType())
-    val rs2V  = Input(Tp.RegType())
-    val csrV  = Input(Tp.RegType())
-    val pc    = Input(Tp.RegType())
-    val imm   = Input(Tp.RegType())
-    val op    = Input(AluOp())
-    val br    = Input(new BrInst())
-    val sel   = Input(new AluSel)
+    val aluEn   = Input(Bool())
+    val rs1V    = Input(Tp.RegType())
+    val rs2V    = Input(Tp.RegType())
+    val aluSrc1 = Input(Tp.RegType())
+    val aluSrc2 = Input(Tp.RegType())
+    val csrV    = Input(Tp.RegType())
+    val pc      = Input(Tp.RegType())
+    val imm     = Input(Tp.RegType())
+    val op      = Input(AluOp())
+    val br      = Input(new BrInst())
+    val sel     = Input(new AluSel)
 
     val aluOut = Output(Tp.RegType())
 
@@ -55,8 +57,8 @@ class EXU extends Module {
 
   val flip1 = io.sel.rs1Invert
   val flip2 = io.sel.rs2Invert
-  val raw1  = Mux(io.sel.rs1SelPC, io.pc, io.rs1V)
-  val raw2  = Mux(io.sel.rs2SelImm, io.imm, io.rs2V)
+  val raw1  = io.aluSrc1
+  val raw2  = io.aluSrc2
   val src1  = Mux(flip1, ~raw1, raw1)
   val src2  = Mux(flip2, ~raw2, raw2)
 
@@ -153,10 +155,12 @@ class ExecuteStage extends Module {
   val iExe = Module(new EXU)
   val ioid = io.in.bits
   val iols = io.out.bits
-  iExe.io.op    := ioid.aluOp
-  iExe.io.sel   := ioid.aluSel
-  iExe.io.rs1V  := ioid.rs1V
-  iExe.io.rs2V  := ioid.rs2V
+  iExe.io.op      := ioid.aluOp
+  iExe.io.sel     := ioid.aluSel
+  iExe.io.rs1V    := ioid.rs1V
+  iExe.io.rs2V    := ioid.rs2V
+  iExe.io.aluSrc1 := ioid.aluSrc1
+  iExe.io.aluSrc2 := ioid.aluSrc2
   iExe.io.csrV  := ioid.forward.csrVal
   iExe.io.imm   := ioid.imm
   iExe.io.pc    := ioid.pc // use pc directly (not forward.pc, which is 0 in non-debug)

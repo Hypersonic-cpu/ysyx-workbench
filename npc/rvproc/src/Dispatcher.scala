@@ -63,10 +63,15 @@ class Dispatcher extends Module {
     }
   }
 
+  // Forwarding done in IDU; dispBits.rs1V/rs2V are
+  // already forwarded. Use directly.
+
   // Drive ALU output
   io.aluSide.valid           := dispValid && !isMD
   io.aluSide.bits.rs1V       := dispBits.rs1V
   io.aluSide.bits.rs2V       := dispBits.rs2V
+  io.aluSide.bits.aluSrc1    := dispBits.aluSrc1
+  io.aluSide.bits.aluSrc2    := dispBits.aluSrc2
   io.aluSide.bits.imm        := dispBits.imm
   io.aluSide.bits.pc         := dispBits.pc
   io.aluSide.bits.aluOp      := dispBits.aluOp
@@ -143,56 +148,75 @@ class Collector extends Module {
     val excpFlush  = Input(Bool())
   })
 
-  val excpHoldOff = RegNext(io.excpFlush, false.B)
-  val canMD       = !io.aluSide.valid && !io.pendingALU &&
-    !excpHoldOff
-  val divWins     = io.divSide.valid && canMD
-  val mulWins     = io.mulSide.valid && !io.divSide.valid &&
-    canMD
-  val mdValid     = divWins || mulWins
+  // excpFlush clears mdRegV directly; no hold-off needed.
 
-  // Convert MUL/DIV result to MemoryToWrBack
+  // Register MUL/DIV results to break timing from
+  // div/mul state regs through forwarding to mainB.
+  val mdRegV  = RegInit(false.B)
+  val mdRegB  = Reg(new MemoryToWrBack)
+  val mdRegRd = Reg(Tp.RegIdxType())
+
+  // Accept MUL/DIV into register when slot is empty
+  val isDivSrc  = io.divSide.valid
+  val canAccept = !mdRegV
+  io.divSide.ready := isDivSrc && canAccept
+  io.mulSide.ready :=
+    io.mulSide.valid && !isDivSrc && canAccept
+
+  val mdAccept = io.divSide.fire || io.mulSide.fire
+
   val mdBits = Wire(new MemoryToWrBack)
   mdBits.aluOut := Mux(
-    divWins,
+    isDivSrc,
     io.divSide.bits.result,
     io.mulSide.bits.result
   )
   mdBits.lsuOut := 0.U
   mdBits.forward := Mux(
-    divWins,
+    isDivSrc,
     io.divSide.bits.forward,
     io.mulSide.bits.forward
   )
 
+  val mdRdWire = Mux(
+    isDivSrc,
+    io.divSide.bits.forward.gprRd,
+    io.mulSide.bits.forward.gprRd
+  )
+
+  // Output: ALU has priority, then registered MD
+  val canMDOut =
+    !io.aluSide.valid && !io.pendingALU
+  val mdCommit = mdRegV && canMDOut && io.wbSide.ready
+
   when(io.aluSide.valid) {
     io.wbSide.valid := true.B
     io.wbSide.bits  := io.aluSide.bits
-  }.elsewhen(mdValid) {
+  }.elsewhen(mdRegV && canMDOut) {
     io.wbSide.valid := true.B
-    io.wbSide.bits  := mdBits
+    io.wbSide.bits  := mdRegB
   }.otherwise {
     io.wbSide.valid := false.B
     io.wbSide.bits  := io.aluSide.bits
   }
 
-  // ALU-path handshake
   io.aluSide.ready := io.wbSide.ready
 
-  // MUL/DIV handshake
-  io.divSide.ready := divWins && io.wbSide.ready
-  io.mulSide.ready := mulWins && io.wbSide.ready
+  // MD register update
+  when(io.excpFlush) {
+    mdRegV := false.B
+  }.elsewhen(mdAccept) {
+    mdRegV  := true.B
+    mdRegB  := mdBits
+    mdRegRd := mdRdWire
+  }.elsewhen(mdCommit) {
+    mdRegV := false.B
+  }
 
-  // Scoreboard clear on MUL/DIV commit
-  val mdFire = mdValid && io.wbSide.ready
-  val mdRd   = Mux(
-    divWins,
-    io.divSide.bits.forward.gprRd,
-    io.mulSide.bits.forward.gprRd
-  )
+  // Scoreboard clear on registered MD commit
   io.sbClear := Mux(
-    mdFire && mdRd.orR,
-    1.U(ISA.RegNum.W) << mdRd,
+    mdCommit && mdRegRd.orR,
+    1.U(ISA.RegNum.W) << mdRegRd,
     0.U
   )
 }
