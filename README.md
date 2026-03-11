@@ -6,9 +6,10 @@ This framework includes
 
 - **NPC** (New Processor Core), an **1GHz** pipelined RISC-V processor core in **Chisel**:
   - `RV32IM_Zifencei_Zicsr` in this `scalar-rv32im` branch.
-  - An 2-cycle multiplier and out-of-pipeline divider for integer operations.
-  - Configurable iCache/dCache with 3-cycle read latency.
+  - M-Mode exception/interrupt handling, **RT-Thread capable**
+  - An 3-cycle multiplier and out-of-pipeline divider for integer operations.
   - Branch prediction support (bimodal, BTFNT, or none) with return address stack.
+  - Configurable iCache/dCache with 3-cycle read latency.
   - AXI interconnect to rocket-chip-based SoC
 - **NEMU** (NJU EMUlator), a reference RV32IM emulator in C:
   - Used as **ref** for functional correctness verification of NPC via DiffTest
@@ -74,75 +75,30 @@ cd am_kernels/coremark && \
 
 ### Design Details
 
-1. Clear `PCGen->IF{1-3}->ID->EX->MEM->WB` pipeline with registered handshake between stages via Chisel `DecoupledIO`, 
+1. Clear `PCGen->IF{1-3}->ID->EX->MEM->WB` pipeline with registered handshake between stages via Chisel `DecoupledIO`,
    suitable for DiffTest validation.
 
 1. **Front-end**
    - Bimodal branch predictor with 2-bit saturating counters
-   - Suitable for formal verification and DiffTest validation
-   - Open-source Chisel HDL (human-readable, scala-based)
+   - Return Address Stack (RAS) for predicting function returns
+   - 3-cycle (recv, tag-compare, resp) pipelined instruction cache, throughtput of 1 inst/cyc
 
-1. **Instruction-Level Parallelism (ILP)**
-   - Load/multiply bypass forwarding reduces pipeline stalls
-   - Hazard detection logic prevents data hazards
+1. **Functional Units**
+   - 3-cycle pipelined integer multiplier (Booth Radix-4, Wallace, Adder), out-of-pipeline divider
+   - Out-of-order completion of mul/div with dispatcher WAW hazard control
+   - Forwarding from EX/MEM and MEM/WB to ID/EX for ALU and load/store instructions
 
 1. **Memory Hierarchy**
-   - Direct-mapped caches avoid set associativity complexity while supporting dynamic reconfiguration
-   - Configurable line sizes match typical SoC memory widths (32-bit base, 64-bit capable)
+   - Use `iSplit` and `dSplit` micro-xbar for address mapping
    - SRAM blackbox support for synthesis-ready designs
 
 1. **SoC Integration**
+   - Provide CLINT (Core Local Interruptor) for timer
+   - **APB and AXI4 delayer** for correct timing with single-clock-domain simulator (like Verlitor)
    - AXI4 master/slave interfaces for bus communication
    - Standalone simulation mode (PMemBox DPI-C) and SoC mode (external SDRAM/Flash)
-   - Optional interrupt support (mip/mie CSR fields)
 
 ## Design Framework
-
-### NPC Core Implementation (`npc/rvproc/src/`)
-
-**Pipeline Stages**
-
-- `FetchStage.scala` — Instruction fetch, PC management, branch prediction interface
-- `DecodeStage.scala` — Instruction decode, operand extraction, hazard detection input
-- `ExecuteStage.scala` — ALU, branch resolution, forwarding logic
-- `MemoryStage.scala` — Load/store unit, cache interface
-- `WrBackStage.scala` — Register file write-back
-
-**Execution Units**
-
-- `IntMultiplier.scala` — 32-bit combinational/pipelined multiplier
-- `IntDivider.scala` — 32-bit divider (separate pipeline)
-- `RegFile.scala` — 32×32-bit register file with dual-read, single-write ports
-
-**Cache Subsystem** (`src/cache/`)
-
-- `iCache.scala` — Direct-mapped instruction cache with configurable size/line width
-- `dCache.scala` — Direct-mapped data cache with write-back policy
-- `Prefetcher.scala` — Optional prefetch logic
-- `iCachePMU.scala` — Cache performance monitoring
-
-**Bus & Interconnect**
-
-- `AXIBus.scala` — AXI4-Lite master/slave interface definitions
-- `BusConnect.scala` — Registered handshake pipeline connectors
-- `Interface.scala` — Top-level core I/O ports
-
-**Control & Utilities**
-
-- `HazardDet.scala` — Hazard detection and forwarding control
-- `FlushCtrl.scala` — Pipeline flush on branch misprediction
-- `IsaParams.scala` — ISA constants, configuration flags (Tiny/Extended, BP type)
-- `ElaborConfig.scala` — Build-time argument parsing
-- `Util.scala` — Common utility functions
-
-**Core Top Module**
-
-- `rvCore.scala` — Top-level processor integrating all stages and subsystems
-
-**Device Interfaces**
-
-- `device/UART.scala` — Serial communication controller
-- `device/CLINT.scala` — Core-local interrupt controller (timer, software interrupts)
 
 The structure is as follows:
 
@@ -176,4 +132,3 @@ ysyx-workbench/
 │   └── # others
 └── ysyxSoC            # SoC integration, including SDRAM/Flash sim model
 ```
-
