@@ -1,4 +1,4 @@
-j# CAS「一生一芯」Project: RISC-V Core Design Framework
+# CAS「一生一芯」Project: RISC-V Core Design Framework
 
 Forked from [一生一芯](https://github.com/OSCPU/ysyx-workbench).
 
@@ -19,7 +19,7 @@ This framework includes
   - Provides detailed performance statistics
   - `~50x` faster than RTL simulation.
 
-## NPC: HiFreq RV32IM Pipelined Core in Chisel
+## NPC: 1GHz HiFreq RV32IM Pipelined Core in Chisel
 
 ### Overview
 
