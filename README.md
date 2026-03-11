@@ -23,7 +23,7 @@ This framework includes
 
 ### Overview
 
-![ysyx-workbench](docs/CorePipeline.png)
+![ysyx-workbench](docs/RV32IM-NPC-Arch.png)
 
 ### Configuration
 
