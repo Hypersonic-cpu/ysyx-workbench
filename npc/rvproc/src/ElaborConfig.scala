@@ -1,11 +1,11 @@
-import rvproc.cache.iCacheConf
+import rvproc.cache.CacheConf
 import scala.collection.mutable.ArrayBuffer
 import rvproc.{BTFNT, Bimodal, Extended, GlbCtrl, NoPred, Tiny}
 
 case class ElaborConfig(
   isSocMode: Boolean,
-  l1iConfig: iCacheConf,
-  l1dConfig: iCacheConf,
+  l1iConfig: CacheConf,
+  l1dConfig: CacheConf,
   restArgs:  Array[String])
 
 object ElaborConfig {
@@ -81,8 +81,8 @@ object ElaborConfig {
 
     ElaborConfig(
       isSocMode,
-      iCacheConf(32, l1iSize, l1iBlksize, l1iAssoc),
-      iCacheConf(32, l1dSize, l1dBlksize, 1),
+      CacheConf(32, l1iSize, l1iBlksize, l1iAssoc),
+      CacheConf(32, l1dSize, l1dBlksize, 1),
       rest.toArray
     )
   }

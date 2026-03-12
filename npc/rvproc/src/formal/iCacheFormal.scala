@@ -6,7 +6,7 @@ import rvproc._
 import rvproc.axi4._
 import rvproc.axi4.AXI.RespStatus
 import rvproc.axi4.AXI.BurstOpts
-import rvproc.cache.{iCache, iCacheConf}
+import rvproc.cache.{iCache, CacheConf}
 
 // ---------------------------------------------------------------------------
 // Formal-verification wrapper for iCache.
@@ -31,7 +31,7 @@ import rvproc.cache.{iCache, iCacheConf}
 // ---------------------------------------------------------------------------
 
 class iCacheFormal extends Module {
-  val conf = iCacheConf(
+  val conf = CacheConf(
     addrBits = 32,
     dataBytes = 128,
     lineBytes = 16,

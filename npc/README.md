@@ -66,7 +66,7 @@ Five stages: IFU → IDU → EXU → LSU → WBU, connected with
 
 - **iCache**: Direct-mapped, 3-cycle read pipeline. Valid bit stored
   as a separate DFF array (requires reset). Configurable via
-  `iCacheConf(addrWidth, dataBytes, lineBytes, assoc)`.
+  `CacheConf(addrWidth, dataBytes, lineBytes, assoc)`.
   `GlbCtrl.sramlib` selects OpenRAM SRAM BlackBox vs SyncReadMem.
 - **AXI subsystem**: AXIArbiter (R/W) → AXIXBar (address decode)
 - **SoC mode** (`SOCMODE=1`): reset `0x3000_0000`, external AXI master

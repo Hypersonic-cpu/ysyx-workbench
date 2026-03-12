@@ -15,7 +15,7 @@ import rvproc.GlbCtrl.{debug, sta}
 import rvproc.pmu.iCacheSwPMU
 import rvproc.pmu.PfSwPMU
 
-case class iCacheConf(
+case class CacheConf(
   addrBits:  Int = 32,
   dataBytes: Int = 1024,
   lineBytes: Int = 16,
@@ -47,7 +47,7 @@ case class iCacheConf(
 // Valid bit is a separate DFF array (requires reset).
 // Tag/data backend: SyncReadMem (Tiny) or SRAM BlackBox (Extended).
 class iCache(
-  conf:         iCacheConf,
+  conf:         CacheConf,
   withPrefetch: Boolean = false)
     extends Module {
   require(conf.assoc == 1, "Set assoc unimplemented")

@@ -10,15 +10,15 @@ import rvproc.device.CLINT
 import rvproc.device.CLINTAddr
 import rvproc.BusType._
 import BitMath._
-import rvproc.cache.iCacheConf
+import rvproc.cache.CacheConf
 import rvproc.cache.iCache
 import rvproc.cache.dCache
 import rvproc.AnsiColor.ColorString
 
 class rvCore(
   isSoc:   Boolean,
-  l1iConf: iCacheConf = iCacheConf(32, 1024, 16, 1),
-  l1dConf: iCacheConf = iCacheConf(32, 1024, 16, 1))
+  l1iConf: CacheConf = CacheConf(32, 1024, 16, 1),
+  l1dConf: CacheConf = CacheConf(32, 1024, 16, 1))
     extends Module {
   val io = IO(new Bundle {
     val interrupt = Input(Bool())
@@ -405,8 +405,8 @@ class rvCore(
 
 class rvCoreWrapper(
   isSoc: Boolean,
-  l1i:   iCacheConf,
-  l1d:   iCacheConf)
+  l1i:   CacheConf,
+  l1d:   CacheConf)
     extends Module {
   val io   = IO(new Bundle {
     val interrupt   = Input(Bool())

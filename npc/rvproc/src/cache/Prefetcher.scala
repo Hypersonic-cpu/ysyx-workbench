@@ -4,7 +4,7 @@ import chisel3._
 import chisel3.util._
 import rvproc.Tp
 
-class NextLinePrefetcher(conf: iCacheConf)
+class NextLinePrefetcher(conf: CacheConf)
     extends Module {
   val io = IO(new Bundle {
     val snoopDone = Input(Bool())

@@ -15,7 +15,7 @@ import rvproc.pmu.iCacheSwPMU
 // Write-back, direct-mapped, non-pipelined data cache.
 // Dirty bits in DFF. Tag/data via CacheArray (DFF or SRAM).
 // Hit latency: 1 cycle. Eviction: burst write then burst read.
-class dCache(conf: iCacheConf) extends Module {
+class dCache(conf: CacheConf) extends Module {
   require(conf.assoc == 1, "Set assoc unimplemented")
   require(conf.dataBytes > 0, "dCache size must be > 0")
   val io = IO(new Bundle {
