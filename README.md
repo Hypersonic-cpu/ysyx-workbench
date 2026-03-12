@@ -1,6 +1,6 @@
-# CAS「一生一芯」Project: RISC-V Core Design Framework
+# 1GHz HiFreq RV32IM In-Order CPU in Chisel
 
-Forked from [一生一芯](https://github.com/OSCPU/ysyx-workbench).
+Forked from [CAS「一生一芯」Project](https://github.com/OSCPU/ysyx-workbench).
 
 This framework includes
 
@@ -19,7 +19,7 @@ This framework includes
   - Provides detailed performance statistics
   - `~50x` faster than RTL simulation.
 
-## NPC: 1GHz HiFreq RV32IM Pipeline CPU in Chisel
+## NPC: Tape-out parts - core and L1 caches
 
 ### Overview
 
