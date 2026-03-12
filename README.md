@@ -14,7 +14,7 @@ This framework includes
 - **NEMU** (NJU EMUlator), a reference RV32IM emulator in C:
   - Used as **ref** for functional correctness verification of NPC via DiffTest
   - Used as a trace generator for npSim timing simulator.
-- **npSim** (NPC Simulator), a trace-driven timing simulator in C++:
+- **npSim** ([NPC Simulator](https://github.com/Hypersonic-cpu/ysyx-npSim)), a trace-driven timing simulator in C++:
   - Simulates NPC execution with IPC error `<5%`
   - Provides detailed performance statistics
   - `~50x` faster than RTL simulation.
