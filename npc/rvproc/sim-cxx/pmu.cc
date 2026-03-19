@@ -55,18 +55,18 @@ SoftPerfUnit::dump_stats(std::ostream& os) const {
         topWrong.push_back({pc, s.wrong});
     std::sort(topWrong.begin(), topWrong.end(),
               [](auto& a, auto& b) { return a.second > b.second; });
-    // os << "Top mispredicting PCs:" << std::endl;
-    // for (size_t i = 0;
-    //      i < std::min(topWrong.size(), size_t(15)); i++) {
-    //   auto pc = topWrong[i].first;
-    //   auto& s = bpPerPC[pc];
-    //   os << std::format(
-    //        "  {:08x} wrong {:6d} correct {:6d} "
-    //        "total {:6d} acc {:.1f}%",
-    //        pc, s.wrong, s.correct, s.wrong + s.correct,
-    //        100.0 * s.correct / (s.wrong + s.correct))
-    //      << std::endl;
-    // }
+    os << "Top mispredicting PCs:" << std::endl;
+    for (size_t i = 0;
+         i < std::min(topWrong.size(), size_t(7)); i++) {
+      auto pc = topWrong[i].first;
+      auto& s = bpPerPC[pc];
+      os << std::format(
+           "  {:08x} wrong {:6d} correct {:6d} "
+           "total {:6d} acc {:.1f}%",
+           pc, s.wrong, s.correct, s.wrong + s.correct,
+           100.0 * s.correct / (s.wrong + s.correct))
+         << std::endl;
+    }
   }
   if (pfIssued > 0) {
     uint64_t pfUnused = pfIssued > pfUseful ?

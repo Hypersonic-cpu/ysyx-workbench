@@ -4,6 +4,7 @@ import chisel3._
 import chisel3.util._
 import rvproc.{BTFNT, Bimodal, GlbCtrl, ISA, NoPred, Tp}
 import rvproc.device.CacheArray
+import rvproc.AnsiColor.ColorString
 
 case class BrPredConf(numEntries: Int = 64, numBtbEnt: Int = 64) {
   require(
@@ -183,6 +184,7 @@ class BTFNTPredictor(conf: BrPredConf) extends BrPred(conf) {
 
 class BimodalPredictor(conf: BrPredConf) extends BrPred(conf) {
 
+  println(s"|> Bimodal BP: Ent ${conf.numEntries} Btb ${conf.numBtbEnt}".green)
   // Valid bit merged into tag MSB to avoid DFF Vec MUX
   val tagArr    = Module(
     new CacheArray(conf.numBtbEnt, conf.btbTagBits + 1)

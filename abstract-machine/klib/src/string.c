@@ -117,34 +117,27 @@ void *memset(void *s, int c, size_t n) {
   unsigned char *ptr = (unsigned char *)s;
   unsigned char u8c = (unsigned char)c;
 
-  // Align to 4B
   while (n && ((uintptr_t)ptr & 3)) {
-    *ptr = u8c;
-    ptr++;
+    *ptr++ = u8c;
+    n--;
   }
 
   if (n >= 4) {
-    uint32_t u32c = (((uint32_t)u8c) | ((uint32_t)u8c << 8) |
-                     ((uint32_t)u8c << 16) | ((uint32_t)u8c << 24));
+    uint32_t pattern = (uint32_t)u8c;
+    pattern |= pattern << 8;
+    pattern |= pattern << 16;
+
     uint32_t *wptr = (uint32_t *)ptr;
-    // 4x Loop Unroll
-    while (n >= 16) {
-      wptr[0] = u32c;
-      wptr[1] = u32c;
-      wptr[2] = u32c;
-      wptr[3] = u32c;
-      wptr += 4;
-      n -= 16;
+    size_t words = n / 4;
+    while (words--) {
+      *wptr++ = pattern;
     }
-    while (n >= 4) {
-      *wptr = u32c;
-      wptr++;
-    }
+    ptr = (unsigned char *)wptr;
+    n &= 3;
   }
 
   while (n--) {
-    *ptr = u8c;
-    ptr++;
+    *ptr++ = u8c;
   }
   return s;
 }
@@ -235,7 +228,7 @@ byte_cmp:
     while (n--) {
       int diff = (int)*uc1++ - (int)*uc2++;
       if (diff)
-        return (int)*uc1 - (int)*uc2;
+        return diff;
     }
   }
   return 0;

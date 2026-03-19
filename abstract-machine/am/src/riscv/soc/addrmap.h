@@ -33,10 +33,13 @@
 #define UART_OFF_LS       5U // Line Status
 #define UART_BAUD_RATE    ((uint16_t)115200U)
 
-// #define SOC_CYC_PER_US   1050 // 1050 MHz
-// Default: 500 MHz. Override at compile time with -DSOC_CYC_PER_US=<value>
+// SOC_CYC_PER_US is provided through -DSOC_CYC_PER_US=$(MHZ) when building SOC targets.
+#ifdef __PLATFORM_SOC__
 #ifndef SOC_CYC_PER_US
-#define SOC_CYC_PER_US       500
+#error "SOC_CYC_PER_US must be defined for SOC builds (pass MHZ=<frequency> when invoking make)"
+#endif
+#else
+/* Non-SOC builds do not depend on SOC_CYC_PER_US, so the header can still be included. */
 #endif
 
 #endif // !__RISCV_NPC_ADDRMAP_H__

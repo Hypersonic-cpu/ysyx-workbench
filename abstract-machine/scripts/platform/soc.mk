@@ -14,7 +14,9 @@ LDFLAGS   += --defsym=_pmem_start=0x20000000 --defsym=_entry_offset=0x0
 LDFLAGS   += --gc-sections -e _start
 
 # Core clock frequency (MHz). Override with MHZ=<value> on make command line.
-MHZ ?= 500
+ifeq ($(strip $(MHZ)),)
+$(error MHZ must be specified when building the soc platform. Pass MHZ=<value> to make.)
+endif
 export MHZ
 CFLAGS += -DSOC_CYC_PER_US=$(MHZ)
 
