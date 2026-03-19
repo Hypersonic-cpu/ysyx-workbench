@@ -71,7 +71,7 @@ object ElaborConfig {
 
     val cfgL1iSize = 2048
     val cfgL1iBlk  = 16
-    val cfgL1dSize = 1024
+    val cfgL1dSize = 2048
     val cfgL1dBlk  = 16
 
     if (l1iSize < 0) l1iSize = cfgL1iSize
