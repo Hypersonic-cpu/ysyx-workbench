@@ -22,18 +22,7 @@ simccargs ?=
 imagebin ?=
 ARCH ?= riscv32im-ysyxsoc
 
-PERF_COREMARK_ITER ?= 20
-PERF_DHRYSTONE_ITER ?= 10000
-PERF_DHRYSTONE_DIR ?= dhryston5k
-PERF_MAX_CYCLE ?= 200000000
-PERF_AM_BENCH ?= $(if $(AM_BENCH),$(AM_BENCH),$(abspath ../am-kernels/benchmarks))
-
-ifneq ($(findstring ysyxsoc,$(ARCH)),)
-PERF_SOCMODE = 1
-else
-PERF_SOCMODE = 0
-endif
-
+## Main
 PRJ=rvproc
 TOPNAME=INVALID_NAME
 ifeq ($(SOCMODE),1)
@@ -186,83 +175,6 @@ run: printhook $(LIBCAPSTONE) compile
 runonly: prebuild $(SIM_BIN)
 	$(SIM_BIN) $(imagebin) $(simccargs)
 
-perf-metric: SHELL := /bin/bash
-perf-metric:
-	@set -euo pipefail; \
-	repo_root="$(abspath ..)"; \
-	ts="$$(date +%Y%m%d-%H-%M-%S)"; \
-	if [ -n "$$(git -C "$$repo_root" status --porcelain)" ]; then \
-		metric_tag="metric-$$ts"; \
-		printf "\033[1;33m[WARN] Working tree has uncommitted changes. Commit hash is omitted.\033[0m\n"; \
-	else \
-		commit7="$$(git -C "$$repo_root" rev-parse --short=7 HEAD)"; \
-		metric_tag="metric-$$commit7-$$ts"; \
-	fi; \
-	metric_root="ccout/$$metric_tag"; \
-	core_rel="$$metric_tag/coremark20"; \
-	dhry_rel="$$metric_tag/$(PERF_DHRYSTONE_DIR)"; \
-	core_log="$$metric_root/coremark20/run.log"; \
-	dhry_log="$$metric_root/$(PERF_DHRYSTONE_DIR)/run.log"; \
-	summary_log="$$metric_root/summary.txt"; \
-	mkdir -p "$$metric_root/coremark20" "$$metric_root/$(PERF_DHRYSTONE_DIR)"; \
-	echo "[1/5] Build CoreMark (ITERATION=$(PERF_COREMARK_ITER))"; \
-	$(MAKE) -C "$(PERF_AM_BENCH)/coremark" ARCH="$(ARCH)" MHZ="$(MHZ)" ITERATION="$(PERF_COREMARK_ITER)" insert-arg; \
-	echo "[2/5] Build Dhrystone (ITERATION=$(PERF_DHRYSTONE_ITER))"; \
-	$(MAKE) -C "$(PERF_AM_BENCH)/dhrystone" ARCH="$(ARCH)" MHZ="$(MHZ)" ITERATION="$(PERF_DHRYSTONE_ITER)" insert-arg; \
-	echo "[3/5] Compile simulator (SOCMODE=$(PERF_SOCMODE), MHZ=$(MHZ), ARCH=$(ARCH))"; \
-	$(MAKE) compile SOCMODE="$(PERF_SOCMODE)" MHZ="$(MHZ)" RTL_SCALA_ARG="$(RTL_SCALA_ARG)"; \
-	core_bin="$(PERF_AM_BENCH)/coremark/build/coremark-$(ARCH).bin"; \
-	dhry_bin="$(PERF_AM_BENCH)/dhrystone/build/dhrystone-$(ARCH).bin"; \
-	echo "[4/5] Run CoreMark -> $$core_log"; \
-	./$(SIM_BIN) "$$core_bin" -M "$(PERF_MAX_CYCLE)" --rec-outdir "$$core_rel" 2>&1 | tee "$$core_log"; \
-	echo "[5/5] Run Dhrystone -> $$dhry_log"; \
-	./$(SIM_BIN) "$$dhry_bin" -M "$(PERF_MAX_CYCLE)" --rec-outdir "$$dhry_rel" 2>&1 | tee "$$dhry_log"; \
-	{ \
-		echo "========== metric summary =========="; \
-		echo "Output dir: $$metric_root"; \
-		echo; \
-		for item in "CoreMark:$$core_log" "Dhrystone:$$dhry_log"; do \
-			name="$${item%%:*}"; \
-			log="$${item#*:}"; \
-			echo "[$$name]"; \
-			grep -E "CoreMark (PASS|FAIL)|Dhrystone (PASS|FAIL)" "$$log" | tail -n 1 || true; \
-			grep -E "InstRet [0-9]+ IPC [0-9.]+" "$$log" | tail -n 1 || true; \
-			grep -E "iCache Miss Rate" "$$log" | tail -n 1 || true; \
-			grep -E "dCache Miss Rate" "$$log" | tail -n 1 || true; \
-			grep -E "BrPred Accuracy" "$$log" | tail -n 1 || true; \
-			stall_line="$$(grep -E "BlockedCause\\s*:\\s*samples" "$$log" | tail -n 1 || true)"; \
-			if [ -n "$$stall_line" ]; then \
-				echo "$$stall_line" | awk '\
-					{ \
-						gsub(/,/, "", $$0); \
-						samples = 0; n = 0; \
-						for (i = 1; i <= NF; i++) { \
-							if ($$i == "samples") samples = $$(i + 1); \
-							if ($$i == "NoStall" || $$i == "NoInst" || $$i == "LsuStall" || $$i == "BranchMispred" || $$i == "RAW") { \
-								name = $$i; val = $$(i + 1); \
-								if (val ~ /^[0-9]+$$/) { \
-									if (!(name in seen)) order[++n] = name; \
-									seen[name] = 1; cnt[name] = val; \
-								} \
-							} \
-						} \
-						if (samples > 0) { \
-							for (j = 1; j <= n; j++) { \
-								k = order[j]; \
-								printf("  StallCause %-12s %10d (%.2f%%)\n", k, cnt[k], 100.0 * cnt[k] / samples); \
-							} \
-						} else { \
-							printf("  StallCause N/A\n"); \
-						} \
-					}'; \
-			else \
-				echo "  StallCause N/A"; \
-			fi; \
-			echo; \
-		done; \
-	} | tee "$$summary_log"; \
-	echo "Saved logs/metrics to $$metric_root"
-
 verilog: $(SCALA_SOURCES)
 	$(call git_commit, "generate verilog")
 	rm -rf $(BUILD_SV_DIR)
@@ -363,3 +275,4 @@ prebuild:
 	@mkdir -p $(BUILD_SIM_DIR)
 
 -include ../Makefile
+-include perf-metric.mk
