@@ -20,6 +20,7 @@ object ElaborConfig {
     var l1iAssoc   = 1
     var l1dSize    = -1
     var l1dBlksize = -1
+    var l1dAssoc   = 1
     val rest       = scala.collection.mutable.ArrayBuffer[String]()
 
     var i = 0
@@ -36,6 +37,8 @@ object ElaborConfig {
           l1dSize = args(i + 1).toInt; i += 1
         case "--l1d-blksize"     =>
           l1dBlksize = args(i + 1).toInt; i += 1
+        case "--l1d-assoc"       =>
+          l1dAssoc = args(i + 1).toInt; i += 1
         case "--debug"           => GlbCtrl.debug = true
         case "--no-debug"        => GlbCtrl.debug = false
         case "--sta"             => GlbCtrl.sta = true
@@ -82,7 +85,7 @@ object ElaborConfig {
     ElaborConfig(
       isSocMode,
       CacheConf(32, l1iSize, l1iBlksize, l1iAssoc),
-      CacheConf(32, l1dSize, l1dBlksize, 1),
+      CacheConf(32, l1dSize, l1dBlksize, l1dAssoc),
       rest.toArray
     )
   }

@@ -12,11 +12,11 @@ import rvproc.GlbCtrl.debug
 import rvproc.device.CacheArray
 import rvproc.pmu.iCacheSwPMU
 
-// Write-back, direct-mapped, non-pipelined data cache.
+// Write-back, set-associative, non-pipelined data cache.
 // Dirty bits in DFF. Tag/data via CacheArray (DFF or SRAM).
 // Hit latency: 1 cycle. Eviction: burst write then burst read.
+// PLRU replacement policy (1, 2, or 4 ways).
 class dCache(conf: CacheConf) extends Module {
-  require(conf.assoc == 1, "Set assoc unimplemented")
   require(conf.dataBytes > 0, "dCache size must be > 0")
   val io = IO(new Bundle {
     val cpuSide  = Flipped(new AXIBus)
@@ -27,16 +27,26 @@ class dCache(conf: CacheConf) extends Module {
 
   conf.printConf()
 
-  val tagArr   = Module(
-    new CacheArray(conf.numSets, conf.tagBits)
-  )
-  val dataArr  = Module(
-    new CacheArray(conf.numSets, conf.lineBytes * 8)
-  )
-  val validArr =
-    RegInit(VecInit(Seq.fill(conf.numSets)(false.B)))
-  val dirtyArr =
-    RegInit(VecInit(Seq.fill(conf.numSets)(false.B)))
+  // Arrays per way
+  val tagArrs  = Seq.tabulate(conf.assoc) { _ =>
+    Module(new CacheArray(conf.numSets, conf.tagBits))
+  }
+  val dataArrs = Seq.tabulate(conf.assoc) { _ =>
+    Module(new CacheArray(conf.numSets, conf.lineBytes * 8))
+  }
+
+  // Valid and dirty bits per set per way
+  val validArr = RegInit(VecInit(Seq.fill(conf.numSets)(
+    VecInit(Seq.fill(conf.assoc)(false.B))
+  )))
+  val dirtyArr = RegInit(VecInit(Seq.fill(conf.numSets)(
+    VecInit(Seq.fill(conf.assoc)(false.B))
+  )))
+
+  // PLRU bits per set
+  val plruArr = RegInit(VecInit(Seq.fill(conf.numSets)(
+    0.U(PLRU.width(conf.assoc).W)
+  )))
 
   val idle :: lookup :: evict :: filling :: flushing :: Nil = Enum(5)
   val state                                                 = RegInit(idle)
@@ -110,30 +120,47 @@ class dCache(conf: CacheConf) extends Module {
     }
   }
 
-  // Array read: issue in idle cycle when request arrives
-  tagArr.io.raddr  := idxOf(
+  // Victim way selection - store when transitioning to lookup
+  val victimWay = Reg(UInt(log2Ceil(conf.assoc).W))
+  val hitWay    = Reg(UInt(log2Ceil(conf.assoc).W))
+
+  // Array read: issue to ALL ways in idle cycle when request arrives
+  val readIdx = idxOf(
     Mux(cpuStore, io.cpuSide.aw.bits.addr, io.cpuSide.ar.bits.addr)
   )
-  tagArr.io.ren    := state === idle && cpuReq
-  dataArr.io.raddr := idxOf(
-    Mux(cpuStore, io.cpuSide.aw.bits.addr, io.cpuSide.ar.bits.addr)
-  )
-  dataArr.io.ren   := state === idle && cpuReq
+  tagArrs.foreach { arr =>
+    arr.io.raddr := readIdx
+    arr.io.ren   := state === idle && cpuReq
+  }
+  dataArrs.foreach { arr =>
+    arr.io.raddr := readIdx
+    arr.io.ren   := state === idle && cpuReq
+  }
 
-  // Tag compare in lookup cycle
-  val tagRead  = tagArr.io.rdata
-  val lineRead = dataArr.io.rdata
-  tagHit := validArr(reqIdx) && tagRead === reqTag
+  // Tag compare across all ways in lookup cycle
+  val tagReads  = VecInit(tagArrs.map(_.io.rdata))
+  val dataReads = VecInit(dataArrs.map(_.io.rdata))
 
-  val isDirty   = validArr(reqIdx) && dirtyArr(reqIdx)
-  val needEvict = !tagHit && isDirty
+  val wayHits = VecInit.tabulate(conf.assoc) { w =>
+    tagReads(w) === reqTag && validArr(reqIdx)(w)
+  }
+  val anyHit = wayHits.asUInt.orR
+  tagHit := anyHit
 
-  // Line data as word vector
+  // Determine victim way on miss: first invalid, else PLRU
+  val invalids     = VecInit.tabulate(conf.assoc)(w => !validArr(reqIdx)(w))
+  val hasInvalid   = invalids.asUInt.orR
+  val firstInvalid = PriorityEncoder(invalids.asUInt)
+  val plruVictim   = PLRU.getVictim(plruArr(reqIdx), conf.assoc)
+
+  // Victim is dirty if valid and dirty
+  val victimDirty = validArr(reqIdx)(victimWay) && dirtyArr(reqIdx)(victimWay)
+  val needEvict   = !anyHit && victimDirty
+
+  // Line data as word vector from hit way
+  val hitData = Mux1H(wayHits, dataReads)
   val lineVec = VecInit.tabulate(conf.lineTrans)(i =>
-    lineRead(
-      (i + 1) * ISA.RegBits - 1,
-      i * ISA.RegBits
-    )
+    hitData((i + 1) * ISA.RegBits - 1, i * ISA.RegBits)
   )
 
   // Merge store data into line for store hit
@@ -188,13 +215,17 @@ class dCache(conf: CacheConf) extends Module {
     evictPtr === (conf.lineTrans - 1).U
   io.memSide.b.ready       := false.B
 
-  // Array write defaults
-  tagArr.io.wen    := false.B
-  tagArr.io.waddr  := reqIdx
-  tagArr.io.wdata  := reqTag
-  dataArr.io.wen   := false.B
-  dataArr.io.waddr := reqIdx
-  dataArr.io.wdata := mergedLine.asUInt
+  // Array write defaults - per way
+  tagArrs.foreach { arr =>
+    arr.io.wen   := false.B
+    arr.io.waddr := reqIdx
+    arr.io.wdata := reqTag
+  }
+  dataArrs.foreach { arr =>
+    arr.io.wen   := false.B
+    arr.io.waddr := reqIdx
+    arr.io.wdata := mergedLine.asUInt
+  }
 
   // Latch flushAll pulse so it isn't missed if dCache is busy
   when(io.flushAll) { flushPending := true.B }
@@ -211,7 +242,7 @@ class dCache(conf: CacheConf) extends Module {
         Mux(cpuReq, lookup, idle)
       ),
       lookup   -> Mux(
-        tagHit,
+        anyHit,
         idle,
         Mux(needEvict, evict, filling)
       ),
@@ -226,23 +257,40 @@ class dCache(conf: CacheConf) extends Module {
   )
   state     := nextState
 
-  // idle: nothing extra
+  // Select victim way and latch hit way when entering lookup
+  when(state === idle && cpuReq) {
+    victimWay := Mux(hasInvalid, firstInvalid, plruVictim)
+    hitWay    := OHToUInt(wayHits)
+  }
+
   // lookup: respond on hit or start eviction/fill
-  when(state === lookup && tagHit) {
+  when(state === lookup && anyHit) {
+    val actualHitWay = OHToUInt(wayHits)
+    plruArr(reqIdx) := PLRU.update(plruArr(reqIdx), actualHitWay, conf.assoc)
     when(reqIsStore) {
-      dataArr.io.wen     := true.B
-      dataArr.io.wdata   := mergedLine.asUInt
-      dirtyArr(reqIdx)   := true.B
-      io.cpuSide.b.valid := true.B
+      for (w <- 0 until conf.assoc) {
+        when(wayHits(w)) {
+          dataArrs(w).io.wen   := true.B
+          dataArrs(w).io.wdata := mergedLine.asUInt
+        }
+      }
+      dirtyArr(reqIdx)(actualHitWay) := true.B
+      io.cpuSide.b.valid             := true.B
     }.otherwise {
       io.cpuSide.r.valid := true.B
     }
   }
 
-  when(state === lookup && !tagHit) {
-    evictTag := tagRead
+  // Victim way data for eviction
+  val victimData = dataReads(victimWay)
+  val victimVec  = VecInit.tabulate(conf.lineTrans)(i =>
+    victimData((i + 1) * ISA.RegBits - 1, i * ISA.RegBits)
+  )
+
+  when(state === lookup && !anyHit) {
+    evictTag := tagReads(victimWay)
     for (i <- 0 until conf.lineTrans) {
-      evictLine(i) := lineVec(i)
+      evictLine(i) := victimVec(i)
     }
     when(needEvict) {
       evictPtr := 0.U
@@ -289,7 +337,7 @@ class dCache(conf: CacheConf) extends Module {
     }
   }
 
-  // Fill completion: write arrays and respond to CPU
+  // Fill completion: write arrays to victim way and respond to CPU
   val fillDone = state === filling &&
     io.memSide.r.valid && io.memSide.r.bits.last
   when(fillDone) {
@@ -324,11 +372,17 @@ class dCache(conf: CacheConf) extends Module {
         finalLine(i) := filledLine(i)
     }
 
-    tagArr.io.wen    := true.B
-    dataArr.io.wen   := true.B
-    dataArr.io.wdata := finalLine.asUInt
-    validArr(reqIdx) := true.B
-    dirtyArr(reqIdx) := reqIsStore
+    // Write to victim way
+    for (w <- 0 until conf.assoc) {
+      when(victimWay === w.U) {
+        tagArrs(w).io.wen    := true.B
+        dataArrs(w).io.wen   := true.B
+        dataArrs(w).io.wdata := finalLine.asUInt
+      }
+    }
+    validArr(reqIdx)(victimWay) := true.B
+    dirtyArr(reqIdx)(victimWay) := reqIsStore
+    plruArr(reqIdx) := PLRU.update(plruArr(reqIdx), victimWay, conf.assoc)
 
     when(reqIsStore) {
       io.cpuSide.b.valid := true.B
@@ -338,34 +392,50 @@ class dCache(conf: CacheConf) extends Module {
     }
   }
 
-  // flushing: walk all sets, evict dirty ones then invalidate
+  // flushing: walk all sets and ways, evict dirty ones then invalidate
+  val flushWay = RegInit(0.U(log2Ceil(conf.assoc).W))
   when(state === flushing) {
     when(!flushEvict && !flushReadPending) {
-      when(validArr(flushIdx) && dirtyArr(flushIdx)) {
-        tagArr.io.raddr  := flushIdx
-        tagArr.io.ren    := true.B
-        dataArr.io.raddr := flushIdx
-        dataArr.io.ren   := true.B
+      // Check if current way at current set is dirty
+      val wayDirty = validArr(flushIdx)(flushWay) && dirtyArr(flushIdx)(flushWay)
+      when(wayDirty) {
+        tagArrs.zipWithIndex.foreach { case (arr, w) =>
+          arr.io.raddr := flushIdx
+          arr.io.ren   := w.U === flushWay
+        }
+        dataArrs.zipWithIndex.foreach { case (arr, w) =>
+          arr.io.raddr := flushIdx
+          arr.io.ren   := w.U === flushWay
+        }
         flushReadPending := true.B
         reqAddr          := (flushIdx << conf.offBits).asUInt
       }.otherwise {
-        validArr(flushIdx) := false.B
-        dirtyArr(flushIdx) := false.B
-        when(flushIdx < (conf.numSets - 1).U) {
-          flushIdx := flushIdx + 1.U
+        validArr(flushIdx)(flushWay) := false.B
+        dirtyArr(flushIdx)(flushWay) := false.B
+        // Move to next way or next set
+        when(flushWay < (conf.assoc - 1).U) {
+          flushWay := flushWay + 1.U
         }.otherwise {
-          flushAllDone := true.B
+          flushWay := 0.U
+          when(flushIdx < (conf.numSets - 1).U) {
+            flushIdx := flushIdx + 1.U
+          }.otherwise {
+            flushAllDone := true.B
+          }
         }
       }
     }.elsewhen(flushReadPending) {
-      evictTag := tagArr.io.rdata
+      val flushTagReads  = VecInit(tagArrs.map(_.io.rdata))
+      val flushDataReads = VecInit(dataArrs.map(_.io.rdata))
+      evictTag := flushTagReads(flushWay)
+      val flushData = flushDataReads(flushWay)
       for (i <- 0 until conf.lineTrans) {
-        evictLine(i) := dataArr.io.rdata(
+        evictLine(i) := flushData(
           (i + 1) * ISA.RegBits - 1,
           i * ISA.RegBits
         )
       }
-      evictPtr := 0.U
+      evictPtr         := 0.U
       awSent           := false.B
       wDone            := false.B
       bRecvd           := false.B
@@ -390,13 +460,19 @@ class dCache(conf: CacheConf) extends Module {
         }
       }
       when(io.memSide.b.fire) {
-        validArr(flushIdx) := false.B
-        dirtyArr(flushIdx) := false.B
-        flushEvict         := false.B
-        when(flushIdx < (conf.numSets - 1).U) {
-          flushIdx := flushIdx + 1.U
+        validArr(flushIdx)(flushWay) := false.B
+        dirtyArr(flushIdx)(flushWay) := false.B
+        flushEvict                   := false.B
+        // Move to next way or next set
+        when(flushWay < (conf.assoc - 1).U) {
+          flushWay := flushWay + 1.U
         }.otherwise {
-          flushAllDone := true.B
+          flushWay := 0.U
+          when(flushIdx < (conf.numSets - 1).U) {
+            flushIdx := flushIdx + 1.U
+          }.otherwise {
+            flushAllDone := true.B
+          }
         }
       }
     }
@@ -404,14 +480,15 @@ class dCache(conf: CacheConf) extends Module {
 
   when(io.flushAll && state === idle) {
     flushIdx         := 0.U
+    flushWay         := 0.U
     flushReadPending := false.B
     flushEvict       := false.B
     flushAllDone     := false.B
   }
 
   if (debug) {
-    dontTouch(tagHit)
-    dontTouch(isDirty)
+    dontTouch(anyHit)
+    dontTouch(victimDirty)
     dontTouch(needEvict)
     dontTouch(reqAddr)
     dontTouch(reqIsStore)
@@ -429,7 +506,7 @@ class dCache(conf: CacheConf) extends Module {
       io.cpuSide.r.valid || io.cpuSide.b.valid
     pmu.io.resp     := respFire
     pmu.io.respHit  := respFire &&
-      (state === lookup && tagHit)
+      (state === lookup && anyHit)
     pmu.io.respAddr := reqAddr
     pmu.io.id       := 1.U
   }

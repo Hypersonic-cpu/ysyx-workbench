@@ -2,7 +2,13 @@
 // Generates iCache as SystemVerilog with SVA assertions,
 // to be consumed by the hand-written iCacheFormal.sv wrapper.
 
+import rvproc.GlbCtrl
+
 object ElaborateFormal extends App {
+  // Disable PMU and SRAM for formal - BlackBox modules can't be analyzed
+  GlbCtrl.sta       = true
+  GlbCtrl.formalMode = true
+
   val ysyxNPC   = System.getenv("NPC_HOME")
   assert(ysyxNPC.nonEmpty)
   val outputDir = ysyxNPC + "/formal/icache"

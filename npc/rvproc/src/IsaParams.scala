@@ -25,6 +25,7 @@ case object Extended extends ConfigMode
 object GlbCtrl {
   var debug        = true
   var sta          = false
+  var formalMode   = false
   var cyclicPrint  = false
   var config       = Extended: ConfigMode
   var bpType       = Bimodal:  BrPredType
@@ -32,7 +33,7 @@ object GlbCtrl {
   var btbEntries   = 128
   var rasSize      = 8
   var withPrefetch = false
-  def useSram:   Boolean = config == Extended
+  def useSram:   Boolean = config == Extended && !formalMode
   def hasDCache: Boolean = config == Extended
   assert(
     config == Extended,

@@ -31,11 +31,12 @@ import rvproc.cache.{iCache, CacheConf}
 // ---------------------------------------------------------------------------
 
 class iCacheFormal extends Module {
+  // Test 2-way set-associative with small cache for formal tractability
   val conf = CacheConf(
-    addrBits = 32,
-    dataBytes = 128,
-    lineBytes = 16,
-    assoc = 1
+    addrBits  = 32,
+    dataBytes = 256,   // 256B total
+    lineBytes = 16,    // 16B lines
+    assoc     = 2      // 2-way -> 8 sets
   )
 
   val io = IO(new Bundle {
@@ -55,14 +56,21 @@ class iCacheFormal extends Module {
   chisel3.assume(io.cpuReqAddr(1, 0) === 0.U)
   chisel3.assume(io.cpuReqAddr < conf.dataBytes.U)
 
-  dut.io.cpuSide.ar.valid     := io.cpuReqValid
-  dut.io.cpuSide.ar.bits.addr := io.cpuReqAddr
-  dut.io.cpuSide.ar.bits.size := 2.U
-  dut.io.cpuSide.r.ready      := true.B
-  dut.io.cpuSide.aw.valid     := false.B
-  dut.io.cpuSide.aw.bits      := DontCare
-  dut.io.cpuSide.b.ready      := false.B
-  dut.io.flushAll             := false.B
+  dut.io.cpuSide.ar.valid      := io.cpuReqValid
+  dut.io.cpuSide.ar.bits.addr  := io.cpuReqAddr
+  dut.io.cpuSide.ar.bits.size  := 2.U
+  dut.io.cpuSide.ar.bits.len   := 0.U
+  dut.io.cpuSide.ar.bits.burst := BurstOpts.FIXED
+  dut.io.cpuSide.ar.bits.id    := 0.U
+  dut.io.cpuSide.r.ready       := true.B
+  dut.io.cpuSide.aw.valid      := false.B
+  dut.io.cpuSide.aw.bits       := DontCare
+  dut.io.cpuSide.w.valid       := false.B
+  dut.io.cpuSide.w.bits.data   := 0.U
+  dut.io.cpuSide.w.bits.strb   := 0.U
+  dut.io.cpuSide.w.bits.last   := false.B
+  dut.io.cpuSide.b.ready       := false.B
+  dut.io.flushAll              := false.B
 
   // === AXI memory model =====================================================
   val sIdle :: sBurst :: Nil = Enum(2)

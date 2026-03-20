@@ -20,21 +20,30 @@ case class CacheConf(
   addrBits:  Int = 32,
   dataBytes: Int = 1024,
   lineBytes: Int = 16,
-  assoc: Int = 1) {
-  def numSets     = dataBytes / (lineBytes * assoc)
-  def idxBits     = log2Ceil(this.numSets)
-  def idxBitHi    = this.offBits + this.idxBits - 1
-  def idxBitLo    = this.offBits
-  def offBits     = log2Ceil(lineBytes)
-  def tagBits     = addrBits - this.idxBits - this.offBits
-  def tagVBits    = tagBits // valid bit is a separate DFF, not in tag
-  def tagBitHi    = addrBits - 1
-  def tagBitLo    = addrBits - tagBits
-  def lineTrans   = this.lineBytes / (this.addrBits / 8)
-  def lineTBits   = log2Ceil(this.lineTrans)
+  assoc:     Int = 1) {
+  require(
+    assoc == 1 || assoc == 2 || assoc == 4,
+    s"assoc must be 1, 2, or 4, got $assoc"
+  )
+  def numSets = dataBytes / (lineBytes * assoc)
+  require(
+    numSets > 0 && (numSets & (numSets - 1)) == 0,
+    s"numSets must be power of 2, got $numSets"
+  )
+  def idxBits   = log2Ceil(this.numSets)
+  def idxBitHi  = this.offBits + this.idxBits - 1
+  def idxBitLo  = this.offBits
+  def offBits   = log2Ceil(lineBytes)
+  def tagBits   = addrBits - this.idxBits - this.offBits
+  def tagVBits  = tagBits
+  def tagBitHi  = addrBits - 1
+  def tagBitLo  = addrBits - tagBits
+  def lineTrans = this.lineBytes / (this.addrBits / 8)
+  def lineTBits = log2Ceil(this.lineTrans)
+  def plruBits  = if (assoc > 1) assoc - 1 else 0
   def printConf() = {
     println(
-      s"iCache : [${this.tagBitHi}: tag :${this.tagBitLo}]"
+      s"Cache : [${this.tagBitHi}: tag :${this.tagBitLo}]"
         + s"[${this.idxBitHi}: idx :${this.idxBitLo}]"
         + s"[${this.offBits - 1}: off :0]"
         + s" Assoc ${this.assoc} #Sets ${this.numSets}"
@@ -47,11 +56,11 @@ case class CacheConf(
 // Readonly, 2-cycle pipeline: recv -> tag-compare + word-select
 // Valid bit is a separate DFF array (requires reset).
 // Tag/data backend: SyncReadMem (Tiny) or SRAM BlackBox (Extended).
+// Set-associative with PLRU replacement (1, 2, or 4 ways).
 class iCache(
   conf:         CacheConf,
   withPrefetch: Boolean = false)
     extends Module {
-  require(conf.assoc == 1, "Set assoc unimplemented")
   val io = IO(new Bundle {
     val flushAll = Input(Bool())
     val cpuSide  = Flipped(new AXIBus)
@@ -62,17 +71,23 @@ class iCache(
 
   import rvproc.device.CacheArray
 
-  // Arrays - CacheArray selects SyncReadMem or SRAM
-  val tagArr  = Module(
-    new CacheArray(conf.numSets, conf.tagBits)
-  )
-  val dataArr = Module(
-    new CacheArray(conf.numSets, conf.lineBytes * 8)
-  )
+  // Arrays per way - CacheArray selects SyncReadMem or SRAM
+  val tagArrs  = Seq.tabulate(conf.assoc) { _ =>
+    Module(new CacheArray(conf.numSets, conf.tagBits))
+  }
+  val dataArrs = Seq.tabulate(conf.assoc) { _ =>
+    Module(new CacheArray(conf.numSets, conf.lineBytes * 8))
+  }
 
-  // Valid bits: separate DFF array with reset
-  val validArr =
-    RegInit(VecInit(Seq.fill(conf.numSets)(false.B)))
+  // Valid bits per set per way
+  val validArr = RegInit(VecInit(Seq.fill(conf.numSets)(
+    VecInit(Seq.fill(conf.assoc)(false.B))
+  )))
+
+  // PLRU bits per set (assoc-1 bits each)
+  val plruArr = RegInit(VecInit(Seq.fill(conf.numSets)(
+    0.U(PLRU.width(conf.assoc).W)
+  )))
 
   val flowing :: waiting :: memreq :: flushing :: Nil =
     Enum(4)
@@ -150,7 +165,7 @@ class iCache(
     x(conf.tagBitHi, conf.offBits) ## 0.U(conf.offBits.W)
   def ithOf(x: UInt) = x(conf.offBits - 1, ISA.WordShift)
 
-  // Cycle 1 (recv) - issue array reads
+  // Cycle 1 (recv) - issue array reads to ALL ways
   val reqA1 = req.bits.addr
   val reqV1 = req.valid
 
@@ -172,10 +187,15 @@ class iCache(
   val c1Addr  = Mux(pfInject, pfAddr, reqA1)
   val c1Valid = reqV1 || pfInject
 
-  tagArr.io.raddr  := idxOf(c1Addr)
-  tagArr.io.ren    := willShift && c1Valid
-  dataArr.io.raddr := idxOf(c1Addr)
-  dataArr.io.ren   := willShift && c1Valid
+  // Issue reads to all ways in parallel
+  tagArrs.foreach { arr =>
+    arr.io.raddr := idxOf(c1Addr)
+    arr.io.ren   := willShift && c1Valid
+  }
+  dataArrs.foreach { arr =>
+    arr.io.raddr := idxOf(c1Addr)
+    arr.io.ren   := willShift && c1Valid
+  }
 
   when(willShift) {
     reqA2  := c1Addr
@@ -186,18 +206,30 @@ class iCache(
     isPfC2 := false.B
   }
 
-  // Cycle 2: tag compare + word select + respond
-  val tagRead = tagArr.io.rdata
-  tagHit := tagRead === tagOf(reqA2) &&
-    validArr(idxOf(reqA2)) && reqV2 && !isPfC2
+  // Cycle 2: tag compare across all ways + word select + respond
+  val tagReads  = VecInit(tagArrs.map(_.io.rdata))
+  val dataReads = VecInit(dataArrs.map(_.io.rdata))
+  val reqIdx2   = idxOf(reqA2)
+  val reqTag2   = tagOf(reqA2)
 
-  val pfHitC2  = tagRead === tagOf(reqA2) &&
-    validArr(idxOf(reqA2)) && reqV2 && isPfC2
-  val pfMissC2 = reqV2 && isPfC2 && !pfHitC2
+  // Per-way hit signals
+  val wayHits = VecInit.tabulate(conf.assoc) { w =>
+    tagReads(w) === reqTag2 && validArr(reqIdx2)(w)
+  }
+  val anyHit  = wayHits.asUInt.orR && reqV2 && !isPfC2
+  val hitWay  = OHToUInt(wayHits)
+  tagHit     := anyHit
 
-  val demandMiss   = reqV2 && !isPfC2 && !tagHit
-  // Demand miss during prefetch fill: saves address so we
-  // can serve it after the prefetch fill completes.
+  // Prefetch hit/miss (for prefetch path)
+  val pfWayHits = VecInit.tabulate(conf.assoc) { w =>
+    tagReads(w) === reqTag2 && validArr(reqIdx2)(w)
+  }
+  val pfAnyHit  = pfWayHits.asUInt.orR && reqV2 && isPfC2
+  val pfHitC2   = pfAnyHit
+  val pfMissC2  = reqV2 && isPfC2 && !pfAnyHit
+
+  val demandMiss   = reqV2 && !isPfC2 && !anyHit
+  // Demand miss during prefetch fill
   val pfDemandPend = RegInit(false.B)
   val pfDemandAddr = Reg(Tp.AddrType())
 
@@ -205,17 +237,18 @@ class iCache(
     (state === flowing || (state === waiting &&
       isPrefetch && !pfDemandPend)) &&
       !fillFinish && !flushPending &&
-      (tagHit || pfHitC2 || !reqV2)
+      (anyHit || pfHitC2 || !reqV2)
 
-  // Word select directly from SRAM output (no register)
-  val lineRead  = dataArr.io.rdata
-  val lineSplit =
-    VecInit.tabulate(conf.lineTrans)(i =>
-      lineRead(
-        (i + 1) * ISA.RegBits - 1,
-        i * ISA.RegBits
-      )
-    )
+  // Update PLRU on hit (demand or prefetch)
+  when(anyHit || pfHitC2) {
+    plruArr(reqIdx2) := PLRU.update(plruArr(reqIdx2), hitWay, conf.assoc)
+  }
+
+  // Word select from hit way's data
+  val hitData   = Mux1H(wayHits, dataReads)
+  val lineSplit = VecInit.tabulate(conf.lineTrans) { i =>
+    hitData((i + 1) * ISA.RegBits - 1, i * ISA.RegBits)
+  }
   val wordSel   = WireInit(lineSplit(ithOf(reqA2)))
 
   resp.valid     := missServe || tagHit
@@ -279,19 +312,45 @@ class iCache(
   )
   state     := nextState
 
-  // Flush valid bits (1-cycle clear)
+  // Flush valid bits (1-cycle clear for all ways)
   when(state === flushing) {
-    validArr.foreach(_ := false.B)
+    validArr.foreach(_.foreach(_ := false.B))
   }
   when(nextState === flushing) { flushPending := false.B }
+
+  // Select victim way using PLRU on miss
+  val fillIdx    = idxOf(fillAddr)
+  val victimWay  = Reg(UInt(log2Ceil(conf.assoc).W))
+  val fillWay    = victimWay
 
   when(state === flowing && nextState === memreq) {
     fillAddr   := reqA2
     isPrefetch := isPfC2
+    // Determine victim way: first invalid, else PLRU
+    val invalids = VecInit.tabulate(conf.assoc)(w =>
+      !validArr(idxOf(reqA2))(w)
+    )
+    val hasInvalid = invalids.asUInt.orR
+    val firstInvalid = PriorityEncoder(invalids.asUInt)
+    victimWay := Mux(
+      hasInvalid,
+      firstInvalid,
+      PLRU.getVictim(plruArr(idxOf(reqA2)), conf.assoc)
+    )
   }
   when(pfDemandPend && fillFinish) {
     fillAddr   := pfDemandAddr
     isPrefetch := false.B
+    val invalids = VecInit.tabulate(conf.assoc)(w =>
+      !validArr(idxOf(pfDemandAddr))(w)
+    )
+    val hasInvalid = invalids.asUInt.orR
+    val firstInvalid = PriorityEncoder(invalids.asUInt)
+    victimWay := Mux(
+      hasInvalid,
+      firstInvalid,
+      PLRU.getVictim(plruArr(idxOf(pfDemandAddr)), conf.assoc)
+    )
   }
   pf.foreach { p =>
     p.io.consumed  := pfHitC2 || pfMissC2
@@ -331,21 +390,25 @@ class iCache(
   io.memSide.aw            := DontCare
   io.memSide.b             := DontCare
 
-  // Centralized array write ports
-  val catData = fillBuf.asUInt
+  // Centralized array write ports - write to victim way only
+  val catData   = fillBuf.asUInt
+  val fillWrite = fillFinish && fillError === OKAY
 
-  // Tag: fill completion only (flush uses validArr DFF)
-  tagArr.io.wen   := fillFinish && fillError === OKAY
-  tagArr.io.waddr := idxOf(fillAddr)
-  tagArr.io.wdata := tagOf(fillAddr)
+  // Tag and data writes to victim way
+  for (w <- 0 until conf.assoc) {
+    tagArrs(w).io.wen   := fillWrite && fillWay === w.U
+    tagArrs(w).io.waddr := fillIdx
+    tagArrs(w).io.wdata := tagOf(fillAddr)
 
-  when(fillFinish && fillError === OKAY) {
-    validArr(idxOf(fillAddr)) := true.B
+    dataArrs(w).io.wen   := fillWrite && fillWay === w.U
+    dataArrs(w).io.waddr := fillIdx
+    dataArrs(w).io.wdata := catData
   }
 
-  dataArr.io.wen   := fillFinish && fillError === OKAY
-  dataArr.io.waddr := idxOf(fillAddr)
-  dataArr.io.wdata := catData
+  when(fillWrite) {
+    validArr(fillIdx)(fillWay) := true.B
+    plruArr(fillIdx) := PLRU.update(plruArr(fillIdx), fillWay, conf.assoc)
+  }
 
   when(fillFinish && !isPrefetch) {
     missServe := true.B
@@ -383,10 +446,11 @@ class iCache(
     dontTouch(reqA2)
     dontTouch(reqV1)
     dontTouch(reqV2)
-    dontTouch(tagRead)
+    dontTouch(tagReads)
     dontTouch(wordSel)
     dontTouch(lineSplit)
-    dontTouch(lineRead)
+    dontTouch(hitData)
+    dontTouch(wayHits)
   }
 
   if (!sta) {
