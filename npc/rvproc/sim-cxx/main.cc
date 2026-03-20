@@ -99,6 +99,7 @@ dump_all_stats() {
   if (options::record_perf) {
     statFile << std::setw(2) << dump_stats() << std::endl;
   }
+  print_stats();
 }
 
 handler_t abortHandler = abort_handler;

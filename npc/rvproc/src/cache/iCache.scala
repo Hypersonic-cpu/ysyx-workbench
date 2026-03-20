@@ -14,6 +14,7 @@ import rvproc.axi4.AXI.BurstOpts._
 import rvproc.GlbCtrl.{debug, sta}
 import rvproc.pmu.iCacheSwPMU
 import rvproc.pmu.PfSwPMU
+import rvproc.GlbCtrl
 
 case class CacheConf(
   addrBits:  Int = 32,
@@ -116,9 +117,10 @@ class iCache(
   val isPrefetch   = RegInit(false.B)
   when(io.flushAll) { flushPending := true.B }
 
-  val pf = if (withPrefetch)
-    Some(Module(new NextLinePrefetcher(conf)))
-  else None
+  val pf =
+    if (withPrefetch)
+      Some(Module(new NextLinePrefetcher(conf)))
+    else None
 
   val pfIdle = WireInit(false.B)
   pf.foreach { p =>
@@ -160,14 +162,14 @@ class iCache(
   val pfInject = WireInit(false.B)
   val pfAddr   = WireInit(0.U(conf.addrBits.W))
   pf.foreach { p =>
-    pfAddr := p.io.addr
-    pfIdle := p.io.pending &&
+    pfAddr   := p.io.addr
+    pfIdle   := p.io.pending &&
       !reqV2 && !req.valid && !flushPending &&
       state === flowing
     pfInject := pfIdle && willShift
   }
 
-  val c1Addr = Mux(pfInject, pfAddr, reqA1)
+  val c1Addr  = Mux(pfInject, pfAddr, reqA1)
   val c1Valid = reqV1 || pfInject
 
   tagArr.io.raddr  := idxOf(c1Addr)
@@ -189,11 +191,11 @@ class iCache(
   tagHit := tagRead === tagOf(reqA2) &&
     validArr(idxOf(reqA2)) && reqV2 && !isPfC2
 
-  val pfHitC2 = tagRead === tagOf(reqA2) &&
+  val pfHitC2  = tagRead === tagOf(reqA2) &&
     validArr(idxOf(reqA2)) && reqV2 && isPfC2
   val pfMissC2 = reqV2 && isPfC2 && !pfHitC2
 
-  val demandMiss = reqV2 && !isPfC2 && !tagHit
+  val demandMiss   = reqV2 && !isPfC2 && !tagHit
   // Demand miss during prefetch fill: saves address so we
   // can serve it after the prefetch fill completes.
   val pfDemandPend = RegInit(false.B)
@@ -220,24 +222,26 @@ class iCache(
   resp.bits.data := Mux(missServe, missData, wordSel)
   resp.bits.resp := Mux(missServe, fillError, OKAY)
 
-  when(resp.fire) {
-    printf(
-      cf"IC resp: ms=$missServe tH=$tagHit "
-        + cf"rA2=$reqA2%x fA=$fillAddr%x "
-        + cf"d=$missData%x pf=$isPrefetch\n"
-    )
-  }
-  when(fillFinish) {
-    printf(
-      cf"IC fill: fA=$fillAddr%x pf=$isPrefetch "
-        + cf"w0=${fillBuf(0.U)}%x w1=${fillBuf(1.U)}%x "
-        + cf"w2=${fillBuf(2.U)}%x w3=${fillBuf(3.U)}%x\n"
-    )
-  }
-  when(state === flowing && nextState === memreq) {
-    printf(
-      cf"IC miss: reqA2=$reqA2%x pf=$pfIdle\n"
-    )
+  if (GlbCtrl.cyclicPrint) {
+    when(resp.fire) {
+      printf(
+        cf"IC resp: ms=$missServe tH=$tagHit "
+          + cf"rA2=$reqA2%x fA=$fillAddr%x "
+          + cf"d=$missData%x pf=$isPrefetch\n"
+      )
+    }
+    when(fillFinish) {
+      printf(
+        cf"IC fill: fA=$fillAddr%x pf=$isPrefetch "
+          + cf"w0=${fillBuf(0.U)}%x w1=${fillBuf(1.U)}%x "
+          + cf"w2=${fillBuf(2.U)}%x w3=${fillBuf(3.U)}%x\n"
+      )
+    }
+    when(state === flowing && nextState === memreq) {
+      printf(
+        cf"IC miss: reqA2=$reqA2%x pf=$pfIdle\n"
+      )
+    }
   }
 
   // FSM

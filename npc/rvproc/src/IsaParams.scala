@@ -25,6 +25,7 @@ case object Extended extends ConfigMode
 object GlbCtrl {
   var debug        = true
   var sta          = false
+  var cyclicPrint  = false
   var config       = Extended: ConfigMode
   var bpType       = Bimodal:  BrPredType
   var bpEntries    = 256

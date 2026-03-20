@@ -1,19 +1,17 @@
 # 1GHz HiFreq RV32IM In-Order CPU in Chisel
 
-Forked from [CAS「一生一芯」Project](https://github.com/OSCPU/ysyx-workbench).
-
-This framework includes
+Forked from [CAS「一生一芯」Project](https://github.com/OSCPU/ysyx-workbench). This framework includes
 
 - **NPC** (New Processor Core), an **1GHz** pipelined RISC-V processor core in **Chisel**:
-  - `RV32IM_Zifencei_Zicsr` in this `scalar-rv32im` branch.
-  - M-Mode exception/interrupt handling, **RT-Thread capable**
-  - An 3-cycle multiplier and out-of-pipeline divider for integer operations.
+  - `RV32IM_Zifencei_Zicsr` ISA support (in this `scalar-rv32im` branch).
+  - M-Mode exception/interrupt handling, **RT-Thread capable**.
+  - An 3-cycle integer multiplier and out-of-pipeline divider. Capable of compressing to 2cyc if a lower freq (820 MHz) is acceptable.
   - Branch prediction support (bimodal, BTFNT, or none) with return address stack.
-  - Configurable iCache/dCache with 3-cycle read latency.
-  - AXI interconnect to rocket-chip-based SoC
-- **NEMU** (NJU EMUlator), a reference RV32IM emulator in C:
-  - Used as **ref** for functional correctness verification of NPC via DiffTest
-  - Used as a trace generator for npSim timing simulator.
+  - Configurable iCache/dCache (currently direct-mapped).
+  - AXI interconnect to rocket-chip-based SoC.
+- **NEMU** (NJU EMUlator), a reference RV32IM ISA emulator in C:
+  - Used as ref for functional correctness verification of RTL via differential testing (DiffTest).
+  - Used as a trace generator for **npSim** timing simulator.
 - **npSim** ([NPC Simulator](https://github.com/Hypersonic-cpu/ysyx-npSim)), a trace-driven timing simulator in C++:
   - Simulates NPC execution with IPC error `<5%`
   - Provides detailed performance statistics

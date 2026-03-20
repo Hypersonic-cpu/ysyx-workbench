@@ -11,6 +11,7 @@ import rvproc.axi4.AXI.BurstOpts._
 import rvproc.axi4.AXI.RespStatus._
 import rvproc.pmu.LoadStorePMU
 import rvproc.GlbCtrl.debug
+import rvproc.AnsiColor.ColorString
 
 class MemoryStage extends Module {
   val io   = IO(new Bundle {
@@ -47,7 +48,6 @@ class MemoryStage extends Module {
   val reqReady  = Mux(!ioex.memOp.isSt, dMem.ar.ready, dMem.aw.ready)
   val respValid = Mux(!ioex.memOp.isSt, dMem.r.valid, dMem.b.valid)
 
-  // FIXME: awValid 和 bValid 同时高的时候 (1周期延迟), 会有问题吗?
   state := MuxLookup(state, idle)(
     Seq(
       idle  -> Mux(trigIss && reqReady, serve, idle),
@@ -131,6 +131,9 @@ class MemoryStage extends Module {
     lsuExcp      := dMem.r.bits.resp =/= OKAY
     lsuExcpCause :=
       Mux(dMem.r.bits.resp === SLVERR, 5.U, 13.U)
+    when(dMem.r.bits.resp =/= OKAY) {
+      printf(cf"WARN: LSU Exception: ${dMem.r.bits.resp}\n")
+    }
   }.elsewhen(
     ioex.isMemEn && respValid && ioex.memOp.isSt
   ) {

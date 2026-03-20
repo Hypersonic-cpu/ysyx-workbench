@@ -10,7 +10,7 @@ override RTL_SCALA_ARG += --soc-mode
 endif
 
 # if this build involve NV Board
-NVBENA ?= 0
+NVBENA?=0
 DPRINTF?=0
 LOGENA?=0
 DIFFENA?=1
@@ -69,7 +69,7 @@ INCFLAGS = $(addprefix -I, $(INC_PATH))
 VINCFLAGS = $(addprefix -I, $(VINC_PATH))
 
 # Stable flags (passed to Verilator, shared by generated + user files)
-CXXFLAGS_BASE = $(INCFLAGS) -DTOP_NAME="\"V$(TOPNAME)\"" -std=c++23 -g
+CXXFLAGS_BASE = $(INCFLAGS) -DTOP_NAME="\"V$(TOPNAME)\"" -std=c++23 -g -flto=auto -march=native -mtune=native
 # Flags that change with build options (only compiled into user files)
 CXXFLAGS_USER = -DLOGENA=$(LOGENA) -DDIFFENA=$(DIFFENA) -DDBGENA=$(DBGENA) -DNVBENA=$(NVBENA) \
 								-DSOCMODE=$(SOCMODE) -DSIM_MHZ=$(MHZ)
@@ -101,9 +101,9 @@ endif
 CSRCS += $(shell find $(abspath $(SIM_CXX_DIR)) -name "*.cc" -or -name "*.cpp")
 # DPIC_SRCS = $(shell find $(abspath $(SRC_DPIC_DIR)) -name "*.cc" -or -name "*.cpp")
 
+LDFLAGS +=  -flto=auto
 ifeq ($(NVBENA),0)
 NVB_ARCHIVE=
-LDFLAGS=
 else
 CXXFLAGS_BASE += -I$(NVBOARD_HOME)/include
 include $(NVBOARD_HOME)/scripts/nvboard.mk
