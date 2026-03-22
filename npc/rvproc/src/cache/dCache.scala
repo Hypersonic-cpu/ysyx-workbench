@@ -35,12 +35,13 @@ class dCache(conf: CacheConf) extends Module {
     Module(new CacheArray(conf.numSets, conf.lineBytes * 8))
   }
 
-  // Valid and dirty bits per set per way
-  val validArr = RegInit(VecInit(Seq.fill(conf.numSets)(
-    VecInit(Seq.fill(conf.assoc)(false.B))
+  // Valid and dirty bits packed by set.
+  // Each set keeps conf.assoc bits, bit i corresponds to way i.
+  val validBits = RegInit(VecInit(Seq.fill(conf.numSets)(
+    0.U(conf.assoc.W)
   )))
-  val dirtyArr = RegInit(VecInit(Seq.fill(conf.numSets)(
-    VecInit(Seq.fill(conf.assoc)(false.B))
+  val dirtyBits = RegInit(VecInit(Seq.fill(conf.numSets)(
+    0.U(conf.assoc.W)
   )))
 
   // PLRU bits per set
@@ -142,19 +143,19 @@ class dCache(conf: CacheConf) extends Module {
   val dataReads = VecInit(dataArrs.map(_.io.rdata))
 
   val wayHits = VecInit.tabulate(conf.assoc) { w =>
-    tagReads(w) === reqTag && validArr(reqIdx)(w)
+    tagReads(w) === reqTag && validBits(reqIdx)(w)
   }
   val anyHit = wayHits.asUInt.orR
   tagHit := anyHit
 
   // Determine victim way on miss: first invalid, else PLRU
-  val invalids     = VecInit.tabulate(conf.assoc)(w => !validArr(reqIdx)(w))
+  val invalids     = VecInit.tabulate(conf.assoc)(w => !validBits(reqIdx)(w))
   val hasInvalid   = invalids.asUInt.orR
   val firstInvalid = PriorityEncoder(invalids.asUInt)
   val plruVictim   = PLRU.getVictim(plruArr(reqIdx), conf.assoc)
 
   // Victim is dirty if valid and dirty
-  val victimDirty = validArr(reqIdx)(victimWay) && dirtyArr(reqIdx)(victimWay)
+  val victimDirty = validBits(reqIdx)(victimWay) && dirtyBits(reqIdx)(victimWay)
   val needEvict   = !anyHit && victimDirty
 
   // Line data as word vector from hit way
@@ -266,6 +267,7 @@ class dCache(conf: CacheConf) extends Module {
   // lookup: respond on hit or start eviction/fill
   when(state === lookup && anyHit) {
     val actualHitWay = OHToUInt(wayHits)
+    val hitWayOH     = wayHits.asUInt
     plruArr(reqIdx) := PLRU.update(plruArr(reqIdx), actualHitWay, conf.assoc)
     when(reqIsStore) {
       for (w <- 0 until conf.assoc) {
@@ -274,7 +276,7 @@ class dCache(conf: CacheConf) extends Module {
           dataArrs(w).io.wdata := mergedLine.asUInt
         }
       }
-      dirtyArr(reqIdx)(actualHitWay) := true.B
+      dirtyBits(reqIdx)              := dirtyBits(reqIdx) | hitWayOH
       io.cpuSide.b.valid             := true.B
     }.otherwise {
       io.cpuSide.r.valid := true.B
@@ -380,8 +382,13 @@ class dCache(conf: CacheConf) extends Module {
         dataArrs(w).io.wdata := finalLine.asUInt
       }
     }
-    validArr(reqIdx)(victimWay) := true.B
-    dirtyArr(reqIdx)(victimWay) := reqIsStore
+    val victimWayOH = UIntToOH(victimWay, conf.assoc)
+    validBits(reqIdx) := validBits(reqIdx) | victimWayOH
+    dirtyBits(reqIdx) := Mux(
+      reqIsStore,
+      dirtyBits(reqIdx) | victimWayOH,
+      dirtyBits(reqIdx) & ~victimWayOH
+    )
     plruArr(reqIdx) := PLRU.update(plruArr(reqIdx), victimWay, conf.assoc)
 
     when(reqIsStore) {
@@ -395,9 +402,10 @@ class dCache(conf: CacheConf) extends Module {
   // flushing: walk all sets and ways, evict dirty ones then invalidate
   val flushWay = RegInit(0.U(log2Ceil(conf.assoc).W))
   when(state === flushing) {
+    val flushWayOH = UIntToOH(flushWay, conf.assoc)
     when(!flushEvict && !flushReadPending) {
       // Check if current way at current set is dirty
-      val wayDirty = validArr(flushIdx)(flushWay) && dirtyArr(flushIdx)(flushWay)
+      val wayDirty = validBits(flushIdx)(flushWay) && dirtyBits(flushIdx)(flushWay)
       when(wayDirty) {
         tagArrs.zipWithIndex.foreach { case (arr, w) =>
           arr.io.raddr := flushIdx
@@ -410,8 +418,8 @@ class dCache(conf: CacheConf) extends Module {
         flushReadPending := true.B
         reqAddr          := (flushIdx << conf.offBits).asUInt
       }.otherwise {
-        validArr(flushIdx)(flushWay) := false.B
-        dirtyArr(flushIdx)(flushWay) := false.B
+        validBits(flushIdx) := validBits(flushIdx) & ~flushWayOH
+        dirtyBits(flushIdx) := dirtyBits(flushIdx) & ~flushWayOH
         // Move to next way or next set
         when(flushWay < (conf.assoc - 1).U) {
           flushWay := flushWay + 1.U
@@ -460,8 +468,8 @@ class dCache(conf: CacheConf) extends Module {
         }
       }
       when(io.memSide.b.fire) {
-        validArr(flushIdx)(flushWay) := false.B
-        dirtyArr(flushIdx)(flushWay) := false.B
+        validBits(flushIdx) := validBits(flushIdx) & ~flushWayOH
+        dirtyBits(flushIdx) := dirtyBits(flushIdx) & ~flushWayOH
         flushEvict                   := false.B
         // Move to next way or next set
         when(flushWay < (conf.assoc - 1).U) {
