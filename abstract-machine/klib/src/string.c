@@ -9,11 +9,18 @@
 // WARN: Untested case: non-null-terminated
 
 size_t strlen(const char *s) {
-  size_t len = 0;
-  while (*s != '\0') {
-    ++len, ++s;
+  const char *start = s;
+  // Aligned to 4B
+  while ((uintptr_t)s & 3) {
+    if (!*s) return s - start;
+    s++;
   }
-  return len;
+  // Word-wise scan
+  const uint32_t *w = (const uint32_t *)s;
+  while (!HASZERO_32B(*w)) w++;
+  s = (const char *)w;
+  while (*s) s++;
+  return s - start;
 }
 
 char *strcpy(char *dst, const char *src) {
@@ -117,10 +124,7 @@ void *memset(void *s, int c, size_t n) {
   unsigned char *ptr = (unsigned char *)s;
   unsigned char u8c = (unsigned char)c;
 
-  while (n && ((uintptr_t)ptr & 3)) {
-    *ptr++ = u8c;
-    n--;
-  }
+  while (n && ((uintptr_t)ptr & 3)) { *ptr++ = u8c; n--; }
 
   if (n >= 4) {
     uint32_t pattern = (uint32_t)u8c;
@@ -128,17 +132,15 @@ void *memset(void *s, int c, size_t n) {
     pattern |= pattern << 16;
 
     uint32_t *wptr = (uint32_t *)ptr;
-    size_t words = n / 4;
-    while (words--) {
-      *wptr++ = pattern;
+    // 4x unroll: 16B/iter
+    while (n >= 16) {
+      wptr[0] = wptr[1] = wptr[2] = wptr[3] = pattern;
+      wptr += 4; n -= 16;
     }
+    while (n >= 4) { *wptr++ = pattern; n -= 4; }
     ptr = (unsigned char *)wptr;
-    n &= 3;
   }
-
-  while (n--) {
-    *ptr++ = u8c;
-  }
+  while (n--) *ptr++ = u8c;
   return s;
 }
 
@@ -155,7 +157,7 @@ void *memmove(void *dst, const void *src, size_t n) {
    * src    [rrrr======]
    * dst [wwww======]
    */
-  if (dst < src || src + n <= dst) {
+  if (dst < src || (uintptr_t)src + n <= (uintptr_t)dst) {
     // Overwrite-safe when processing in-order
     return memcpy(dst, src, n);
   }

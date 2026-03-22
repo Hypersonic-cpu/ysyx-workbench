@@ -1,6 +1,6 @@
 include $(AM_HOME)/scripts/isa/riscv.mk
 include $(AM_HOME)/scripts/platform/soc.mk
-COMMON_CFLAGS += -march=rv32im_zicsr_zifencei -mabi=ilp32  # overwrite
+COMMON_CFLAGS += -march=rv32im_zicsr_zifencei -mabi=ilp32 -fno-tree-vectorize # overwrite
 LDFLAGS       += -melf32lriscv                    # overwrite
 
 # AM_SRCS += riscv/npc/libgcc/div.S \
@@ -8,4 +8,3 @@ LDFLAGS       += -melf32lriscv                    # overwrite
 #            riscv/npc/libgcc/multi3.c \
 #            riscv/npc/libgcc/ashldi3.c \
 #            riscv/npc/libgcc/unused.c
-
