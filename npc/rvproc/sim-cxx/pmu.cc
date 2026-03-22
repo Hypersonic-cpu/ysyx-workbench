@@ -225,6 +225,11 @@ SoftPerfUnit::notifyBrOutcome(bool pred_taken, bool actual_taken,
 void
 SoftPerfUnit::notifyCommit(addr_t pc, unsigned char stalltp) {
   auto cause = static_cast<CycBreakdown>(stalltp);
+  // During recovery (after flush, before first decode), override
+  // non-commit stall causes to BranchMispred for accurate accounting
+  if (flushedRec.first && cause != CycBreakdown::NoStall) {
+    cause = CycBreakdown::BranchMispred;
+  }
   cycStatus.sample(cause);
   if (cause != CycBreakdown::NoStall)
     return;

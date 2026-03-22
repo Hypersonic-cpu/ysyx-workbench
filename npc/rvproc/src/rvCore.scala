@@ -376,11 +376,12 @@ class rvCore(
   if (GlbCtrl.debug) {
     // Centralized per-cycle stall cause for PMU.
     // StallCause enum: NoStall=0 IfuStall=1 LsuStall=2 Branch=3 RAW=4
+    // recovering: set on flush, cleared on first commit after flush
+    // Tracks both IFU refetch and pipeline refill after misprediction
     val recovering = RegInit(false.B)
-    when(
-      ids.io.out.fire &&
-        !(iduFlush || flush.io.excpFlush)
-    ) { recovering := false.B }
+    when(wbs.io.in.fire && !iduFlush && !flush.io.excpFlush) {
+      recovering := false.B
+    }
     when(iduFlush || flush.io.excpFlush) {
       recovering := true.B
     }
@@ -392,14 +393,19 @@ class rvCore(
     val stallCause = Wire(UInt(8.W))
     when(wbs.io.in.fire) {
       stallCause := 0.U // NoStall
-    }.elsewhen(lsuStall) {
+    }.elsewhen(lsuStall && !recovering) {
+      // LSU stall on correct-path (not during recovery)
       stallCause := 2.U // LsuStall
-    }.elsewhen(iduRawStall) {
+    }.elsewhen(iduRawStall && !recovering) {
+      // RAW stall on correct-path (not during recovery)
       stallCause := 4.U // RAW
     }.elsewhen(recovering) {
+      // All non-commit cycles during recovery are mispred penalty
+      // This includes IFU refetch, pipeline refill, and any stalls
+      // on wrong-path instructions still draining
       stallCause := 3.U // BranchMispred
     }.otherwise {
-      stallCause := 1.U // NoInst
+      stallCause := 1.U // NoInst (genuine iCache miss, not mispred)
     }
     wbs.io.stallCauseIn.get := stallCause
 
