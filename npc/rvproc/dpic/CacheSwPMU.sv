@@ -1,4 +1,4 @@
-module iCacheSwPMU (
+module CacheSwPMU (
     input        clock,
     input        reset,
     input        resp,

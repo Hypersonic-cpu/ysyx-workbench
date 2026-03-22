@@ -14,7 +14,7 @@ import rvproc.axi4.AXI.BurstOpts._
 import rvproc.GlbCtrl.{debug, sta}
 import rvproc.PATH
 
-class iCacheHwPMU extends Module {
+class CacheHwPMU extends Module {
   val io         = IO(new Bundle {
     val access = Input(Bool())
     val hit    = Input(Bool())
@@ -44,7 +44,7 @@ class iCacheHwPMU extends Module {
   )
 }
 
-class iCacheSwPMU extends BlackBox with HasBlackBoxPath {
+class CacheSwPMU extends BlackBox with HasBlackBoxPath {
   val io = IO(new Bundle {
     val clock    = Input(Clock())
     val reset    = Input(Reset())
@@ -55,7 +55,7 @@ class iCacheSwPMU extends BlackBox with HasBlackBoxPath {
     val reqAddr  = Input(Tp.AddrType())
     val id       = Input(UInt(16.W))
   })
-  addPath(PATH.dpic("iCacheSwPMU.sv"))
+  addPath(PATH.dpic("CacheSwPMU.sv"))
 }
 
 class PfSwPMU extends BlackBox with HasBlackBoxPath {

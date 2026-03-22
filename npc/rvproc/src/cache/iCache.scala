@@ -12,7 +12,7 @@ import rvproc.ISA
 import rvproc.axi4.AXI.RespStatus.OKAY
 import rvproc.axi4.AXI.BurstOpts._
 import rvproc.GlbCtrl.{debug, sta}
-import rvproc.pmu.iCacheSwPMU
+import rvproc.pmu.CacheSwPMU
 import rvproc.pmu.PfSwPMU
 import rvproc.GlbCtrl
 
@@ -454,7 +454,7 @@ class iCache(
   }
 
   if (!sta) {
-    val pmu        = Module(new iCacheSwPMU)
+    val pmu        = Module(new CacheSwPMU)
     val delayedReq = RegNext(req.fire)
     pmu.io.reset    := reset
     pmu.io.clock    := clock
