@@ -36,14 +36,14 @@ object PLRU {
   def update(plru: UInt, way: UInt, assoc: Int): UInt = {
     assoc match {
       case 1 => 0.U
-      case 2 => ~way(0)
+      case 2 => way(0) // Way#1 MRU -> b0=1, evict Way#0
       case 4 =>
         val b0    = plru(0)
         val b1    = plru(1)
         val b2    = plru(2)
-        val newB0 = ~way(1)
-        val newB1 = Mux(way(1), b1, ~way(0))
-        val newB2 = Mux(way(1), ~way(0), b2)
+        val newB0 = way(1)
+        val newB1 = Mux(way(1), b1, way(0))
+        val newB2 = Mux(way(1), way(0), b2)
         Cat(newB2, newB1, newB0)
       case _ =>
         throw new IllegalArgumentException(s"Unsupported assoc: $assoc")

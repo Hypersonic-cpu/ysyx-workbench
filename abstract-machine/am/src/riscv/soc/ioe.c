@@ -39,6 +39,7 @@ static void __am_gpu_fbdraw(AM_GPU_FBDRAW_T *ctl) {
     ((uint32_t *)(uintptr_t) RV32_SOC_VGAMEM) 
       + ctl->y * VGA_WIDTH + ctl->x;
   uint32_t* src_pos = (uint32_t *) (ctl->pixels);
+  if (!src_pos) return;
   for (size_t j = 0; j < ctl->h; j++) {
     memcpy(cur_pos, src_pos, ctl->w * sizeof(uint32_t));
     cur_pos += VGA_WIDTH;

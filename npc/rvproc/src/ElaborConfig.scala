@@ -17,10 +17,10 @@ object ElaborConfig {
     var isSocMode  = false
     var l1iSize    = -1
     var l1iBlksize = -1
-    var l1iAssoc   = 1
+    var l1iAssoc   = -1
     var l1dSize    = -1
     var l1dBlksize = -1
-    var l1dAssoc   = 1
+    var l1dAssoc   = -1
     val rest       = scala.collection.mutable.ArrayBuffer[String]()
 
     var i = 0
@@ -72,15 +72,19 @@ object ElaborConfig {
     GlbCtrl.debug = debugDefault
     GlbCtrl.sta = staDefault
 
-    val cfgL1iSize = 2048
-    val cfgL1iBlk  = 16
-    val cfgL1dSize = 2048
-    val cfgL1dBlk  = 16
+    val cfgL1iSize  = 2048
+    val cfgL1iBlk   = 16
+    val cfgL1dSize  = 2048
+    val cfgL1dBlk   = 16
+    val cfgL1iAssoc = 4
+    val cfgL1dAssoc = 4
 
     if (l1iSize < 0) l1iSize = cfgL1iSize
-    if (l1iBlksize < 0) l1iBlksize = cfgL1iBlk
     if (l1dSize < 0) l1dSize = cfgL1dSize
+    if (l1iBlksize < 0) l1iBlksize = cfgL1iBlk
     if (l1dBlksize < 0) l1dBlksize = cfgL1dBlk
+    if (l1iAssoc < 0) l1iAssoc = cfgL1iAssoc
+    if (l1dAssoc < 0) l1dAssoc = cfgL1dAssoc
 
     ElaborConfig(
       isSocMode,
