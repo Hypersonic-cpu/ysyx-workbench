@@ -359,7 +359,9 @@ static int decode_exec(Decode *s) {
             }
           }); // R(10) is $a0
   INSTPAT("0000000 00000 00000 001 00000 00011 11",
-          fencei,  I, { /** TODO: npSim stall here */});
+          fencei,  I, {
+            IFDEF(CONFIG_NPSIM_TRACE, s->nptrace.sys_op = SysFenceI);
+          });
 
   /** RV32M Extension */
   INSTPAT("0000001 ????? ????? 000 ????? 01100 11",

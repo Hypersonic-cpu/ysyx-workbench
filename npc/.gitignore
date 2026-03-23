@@ -17,6 +17,7 @@
 !*filelist.f
 !.gitignore
 !.scalafmt.conf
+*.md
 !README.md
 build/
 .github/
@@ -39,6 +40,8 @@ logs/
 ccout/
 formal/**/*.sv
 !*.md
+AGENTS.md
+.github/copilot-instructions.md
 *_bmc/
 formal/*/
 local/
