@@ -223,6 +223,9 @@ idea:
 	mill -i mill.idea.GenIdea/idea
 
 clean:
+	-rm -f $(SIM_BIN)
+
+cleanall:
 	-rm -rf $(BUILD_SV_DIR) $(BUILD_SIM_DIR)
 
 ## Formal verification — iCache
@@ -268,7 +271,7 @@ sramlib:
 	@python3 scripts/gen_sram_lib.py $(SRAM_LIB) $(BUILD_SV_DIR) 2>&1 || \
 	 python3 scripts/gen_sram_lib.py $(SRAM_LIB)
 
-.PHONY: test runam verilog help reformat checkformat clean prebuild sim printhook formal-icache formal-mul sramlib compile perf-metric
+.PHONY: test runam verilog help reformat checkformat clean cleanall prebuild sim printhook formal-icache formal-mul sramlib compile perf-metric
 
 prebuild:
 	@mkdir -p $(BUILD_OBJ_DIR)
