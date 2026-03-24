@@ -1,18 +1,18 @@
 [submodule "npc/libs/json"]
 	path = npc/libs/json
-	url = https://github.com/nlohmann/json.git
+	url = https://github/nlohmann/json.git
 [submodule "npsim"]
 	path = npsim
-	url = https://github.com/Hypersonic-cpu/ysyx-npSim.git
+	url = git@github:Hypersonic-cpu/ysyx-npSim.git
 [submodule "ysyxSoC"]
 	path = ysyxSoC
-	url = https://github.com/Hypersonic-cpu/ysyx-SoC.git
+	url = git@github:Hypersonic-cpu/ysyx-SoC.git
 [submodule "rt-thread-am"]
 	path = rt-thread-am
-	url = https://github.com/Hypersonic-cpu/RT-Thread-ysyx.git
+	url = git@github:Hypersonic-cpu/RT-Thread-ysyx.git
 [submodule "am-kernels"]
 	path = am-kernels
-	url = https://github.com/Hypersonic-cpu/ysyx-AM-kernels.git
+	url = git@github:Hypersonic-cpu/ysyx-AM-kernels.git
 [submodule "npc/libs/openram"]
 	path = npc/libs/openram
-	url = https://github.com/VLSIDA/OpenRAM.git
+	url = git@github:VLSIDA/OpenRAM.git
