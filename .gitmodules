@@ -3,16 +3,16 @@
 	url = https://github/nlohmann/json.git
 [submodule "npsim"]
 	path = npsim
-	url = git@github:Hypersonic-cpu/ysyx-npSim.git
+	url = git@github.com:Hypersonic-cpu/ysyx-npSim.git
 [submodule "ysyxSoC"]
 	path = ysyxSoC
-	url = git@github:Hypersonic-cpu/ysyx-SoC.git
+	url = git@github.com:Hypersonic-cpu/ysyx-SoC.git
 [submodule "rt-thread-am"]
 	path = rt-thread-am
-	url = git@github:Hypersonic-cpu/RT-Thread-ysyx.git
+	url = git@github.com:Hypersonic-cpu/RT-Thread-ysyx.git
 [submodule "am-kernels"]
 	path = am-kernels
-	url = git@github:Hypersonic-cpu/ysyx-AM-kernels.git
+	url = git@github.com:Hypersonic-cpu/ysyx-AM-kernels.git
 [submodule "npc/libs/openram"]
 	path = npc/libs/openram
-	url = git@github:VLSIDA/OpenRAM.git
+	url = https://github.com/VLSIDA/OpenRAM.git
