@@ -149,10 +149,12 @@ class dCache(conf: CacheConf) extends Module {
   tagHit := anyHit
 
   // Determine victim way on miss: first invalid, else PLRU
-  val invalids     = VecInit.tabulate(conf.assoc)(w => !validBits(reqIdx)(w))
+  // Use readIdx (incoming addr) in idle, reqIdx (latched addr) in lookup
+  val victimIdx    = Mux(state === idle, readIdx, reqIdx)
+  val invalids     = VecInit.tabulate(conf.assoc)(w => !validBits(victimIdx)(w))
   val hasInvalid   = invalids.asUInt.orR
   val firstInvalid = PriorityEncoder(invalids.asUInt)
-  val plruVictim   = PLRU.getVictim(plruArr(reqIdx), conf.assoc)
+  val plruVictim   = PLRU.getVictim(plruArr(victimIdx), conf.assoc)
 
   // Victim is dirty if valid and dirty
   val victimDirty = validBits(reqIdx)(victimWay) && dirtyBits(reqIdx)(victimWay)

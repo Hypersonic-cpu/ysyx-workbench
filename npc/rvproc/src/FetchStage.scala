@@ -237,6 +237,20 @@ class FetchStage(resetVector: BigInt, PipeDepth: Int = 3)
     !instBuf(toidPtr)(3) && !instBuf(toidPtr)(2)
 
   if (GlbCtrl.debug) {
+    // Print when IFU outputs instruction in range a00000fc-a0000118
+    val inRange = pcBuf(toidPtr) >= "ha00000fc".U &&
+      pcBuf(toidPtr) <= "ha0000118".U
+    when(io.out.fire && inRange) {
+      printf("IFU OUT: pc=%x inst=%x\n", pcBuf(toidPtr), instBuf(toidPtr))
+    }
+    when(flushWire && pc >= "ha00000fc".U && pc <= "ha0000118".U) {
+      printf("IFU FLUSH: pc=%x brTarget=%x flushFromEx=%d fenceI=%d wbExcp=%d\n",
+        pc, brTarget, flushFromEx, fenceI, io.wbExcp)
+    }
+    // Also print when earlyRedirect happens
+    when(earlyRedirect && pcBuf(bpTailPtr) >= "ha00000fc".U && pcBuf(bpTailPtr) <= "ha0000118".U) {
+      printf("IFU EARLY REDIRECT: pc=%x -> %x\n", pcBuf(bpTailPtr), bpRawTargetPC)
+    }
     val pmu = Module(new FetchPMU)
     pmu.io.clock     := clock
     pmu.io.reset     := reset
