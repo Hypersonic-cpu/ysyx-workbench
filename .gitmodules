@@ -1,6 +1,6 @@
 [submodule "npc/libs/json"]
 	path = npc/libs/json
-	url = https://github/nlohmann/json.git
+	url = https://github.com/nlohmann/json.git
 [submodule "npsim"]
 	path = npsim
 	url = git@github.com:Hypersonic-cpu/ysyx-npSim.git
