@@ -18,6 +18,7 @@
 #include <memory/paddr.h>
 #include <device/mmio.h>
 #include <isa.h>
+#include <stdio.h>
 
 #if   defined(CONFIG_PMEM_MALLOC)
 static uint8_t *pmem = NULL;
@@ -88,12 +89,18 @@ word_t paddr_read(paddr_t addr, int len) {
 }
 
 void paddr_write(paddr_t addr, int len, word_t data) {
+  // printf(" |-> PMEM_WRITE @ %08x\n", addr);
   bool handle = false;
   if (likely(in_pmem(addr))) { 
     pmem_write(addr, len, data); 
+    // printf("  -> Pmem @ %08x\n", addr);
     handle = true;
   } else {
-    IFDEF(CONFIG_DEVICE, mmio_write(addr, len, data), handle=true; );
+#if defined(CONFIG_DEVICE) || defined(CONFIG_TARGET_SHARE)
+    mmio_write(addr, len, data);
+    handle=true;
+    // printf("  -> Device @ %08x\n", addr); 
+#endif
   }
   IFDEF(CONFIG_MTRACE_ENABLE, mtrace_logging(addr, data, len, false));
   if (!handle) { out_of_bound(addr); }
