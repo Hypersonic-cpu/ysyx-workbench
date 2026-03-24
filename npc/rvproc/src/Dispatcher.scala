@@ -49,26 +49,12 @@ class Dispatcher extends Module {
   io.decodeSide.ready := !dispValid || tgtReady
 
   // Capture / consume logic.
-  // A MUL/DIV waiting due to sbAnyBusy is necessarily older
-  // than any ALU instruction that could cause a branch
-  // misprediction (BTB aliasing). Only excpFlush should
-  // clear it; pipeFlush must not drop older instructions.
-  val canFire       = dispValid && tgtReady
-  val mdWaiting     = dispValid && isMD && sbAnyBusy
-  val shouldFlush   = io.excpFlush || (io.pipeFlush && !mdWaiting)
+  // brDet is gated by outFire, so pipeFlush only fires
+  // after the mispredicting instruction has left. Safe
+  // to unconditionally clear.
+  val canFire = dispValid && tgtReady
 
-  if (GlbCtrl.debug) {
-    when(shouldFlush && dispValid && isMD) {
-      printf("DISP FLUSH: pc=%x isMul=%d isDiv=%d sbBusy=%d pflush=%d exflush=%d mdWait=%d\n",
-        dispBits.forward.pc, isMulDisp, isDivDisp, sbAnyBusy,
-        io.pipeFlush, io.excpFlush, mdWaiting)
-    }
-    when(dispValid && isMD && io.pipeFlush && mdWaiting) {
-      printf("DISP PROTECT: pc=%x blocked pipeFlush\n", dispBits.forward.pc)
-    }
-  }
-
-  when(shouldFlush) {
+  when(io.excpFlush || io.pipeFlush) {
     dispValid := false.B
   }.elsewhen(canFire || !dispValid) {
     dispValid := io.decodeSide.valid
