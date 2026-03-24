@@ -2,7 +2,7 @@ package rvproc
 
 import chisel3._
 import chisel3.util._
-import scala.collection.mutable.ArrayBuffer
+import scala.annotation.tailrec
 import scala.collection.mutable.ListBuffer
 
 object IntMulMath {
@@ -77,77 +77,91 @@ object IntMulMath {
     retarrays.map(_.toSeq)
   }
 
+  private def fullAdder(
+    a: Bool,
+    b: Bool,
+    c: Bool
+  ): (Bool, Bool) = {
+    val sum   = a ^ b ^ c
+    val carry = (a & b) | (a & c) | (b & c)
+    (sum, carry)
+  }
+
+  private def halfAdder(a: Bool, b: Bool): (Bool, Bool) = {
+    val sum   = a ^ b
+    val carry = a & b
+    (sum, carry)
+  }
+
+  private def reduceColumn(
+    bits: Seq[Bool]
+  ): (Seq[Bool], Seq[Bool]) = {
+    bits.grouped(3).foldLeft(
+      (Vector.empty[Bool], Vector.empty[Bool])
+    ) { case ((sums, carries), chunk) =>
+      chunk match {
+        case Seq(a, b, c) =>
+          val (sum, carry) = fullAdder(a, b, c)
+          (sums :+ sum, carries :+ carry)
+        case Seq(a, b) =>
+          val (sum, carry) = halfAdder(a, b)
+          (sums :+ sum, carries :+ carry)
+        case Seq(a) =>
+          (sums :+ a, carries)
+      }
+    }
+  }
+
+  private def reduceLevel(
+    matrix: Seq[Seq[Bool]]
+  ): Seq[Seq[Bool]] = {
+    val nextLevel =
+      Vector.fill(matrix.size + 1)(Vector.empty[Bool])
+
+    matrix.zipWithIndex
+      .foldLeft(nextLevel) { case (level, (bits, idx)) =>
+        val (sumBits, carryBits) = reduceColumn(bits)
+        level
+          .updated(idx, level(idx) ++ sumBits)
+          .updated(idx + 1, level(idx + 1) ++ carryBits)
+      }
+      .take(matrix.size)
+  }
+
+  @tailrec
+  private def reduceToRows(
+    matrix: Seq[Seq[Bool]]
+  ): Seq[Seq[Bool]] = {
+    if (matrix.forall(_.size <= 2)) matrix
+    else reduceToRows(reduceLevel(matrix))
+  }
+
   def wallaceReduction(matrix: Seq[Seq[Bool]]): (UInt, UInt) = {
-    var currentLevel = matrix.map(_.toList)
-    val maxColumn    = currentLevel.size
-
-    def reduceColumn(bits: List[Bool]): (List[Bool], List[Bool]) = {
-      var remaining = bits
-      val reduced   = ListBuffer.empty[Bool]
-      val carries   = ListBuffer.empty[Bool]
-
-      while (remaining.size >= 3) {
-        val a     = remaining(0)
-        val b     = remaining(1)
-        val c     = remaining(2)
-        val sum   = a ^ b ^ c
-        val carry = (a & b) | (a & c) | (b & c)
-        reduced += sum
-        carries += carry
-        remaining = remaining.drop(3)
-      }
-      if (remaining.size == 2) {
-        val a = remaining(0)
-        val b = remaining(1)
-        reduced += (a ^ b)
-        carries += (a & b)
-        remaining = remaining.drop(2)
-      }
-      if (remaining.size == 1) {
-        reduced += remaining(0)
-        remaining = remaining.drop(1)
-      }
-      (reduced.toList, carries.toList)
-    }
-
-    while (currentLevel.exists(_.size > 2)) {
-      val nextLevel = Array.fill(maxColumn + 1)(
-        ListBuffer.empty[Bool]
-      )
-
-      for (i <- 0 until maxColumn) {
-        val (sumBits, carryBits) = reduceColumn(currentLevel(i))
-        nextLevel(i) ++= sumBits
-        if (i + 1 < nextLevel.size) {
-          nextLevel(i + 1) ++= carryBits
-        }
-      }
-      currentLevel = nextLevel.take(maxColumn).map(_.toList).toSeq
-    }
-
+    val reduced = reduceToRows(matrix)
     val row0 = Cat(
-      currentLevel
-        .map(bits => if (bits.nonEmpty) bits(0) else 0.B)
+      reduced
         .reverse
+        .map(bits => bits.headOption.getOrElse(false.B))
     )
     val row1 = Cat(
-      currentLevel
-        .map(bits => if (bits.size > 1) bits(1) else 0.B)
+      reduced
         .reverse
+        .map(bits =>
+          bits.drop(1).headOption.getOrElse(false.B)
+        )
     )
     (row0, row1)
   }
 
 }
 
-/** Pipelined integer multiplier (4-stage pipeline).
+/** Pipelined integer multiplier (3-stage pipeline).
   *
-  * S1: register inputs, Booth Radix-4 encoding
-  * S2: register partial products, Wallace tree reduction
-  * S3: register sum/carry, 66-bit addition + select
-  * S4: register result, output
+  * S1: register inputs
+  * S2: Booth Radix-4 + Wallace reduction, register sum/carry
+  * S3: final add, select, register result
   *
-  * Throughput: 1 op per cycle after 4-cycle latency.
+  * Throughput: 1 op per cycle after 3-cycle latency.
   */
 class IntMultiplier extends Module {
   val io = IO(new Bundle {
@@ -160,11 +174,9 @@ class IntMultiplier extends Module {
   val s1Valid  = RegInit(false.B)
   val s2Valid  = RegInit(false.B)
   val s3Valid  = RegInit(false.B)
-  val s4Valid  = RegInit(false.B)
 
   // Pipeline readiness
-  val s3Ready = !s4Valid || io.out.ready
-  val s2Ready = !s3Valid || s3Ready
+  val s2Ready = !s3Valid || io.out.ready
   val s1Ready = !s2Valid || s2Ready
   val s0Ready = !s1Valid || s1Ready
   io.in.ready := s0Ready
@@ -206,40 +218,27 @@ class IntMultiplier extends Module {
   val ppMatrix = IntMulMath.boothRadix4(
     s1Rs1.asBools, s1Rs2.asBools
   )
+  val (sumRow, carryRow) =
+    IntMulMath.wallaceReduction(ppMatrix)
 
-  // S1 -> S2: register partial products column by column
-  val s2PPRegs = ppMatrix.map { col =>
-    RegEnable(VecInit(col).asUInt, s1Ready)
-  }
+  // S1 -> S2: register Wallace outputs
+  val s2Sum     = RegEnable(sumRow, s1Ready)
+  val s2Carry   = RegEnable(carryRow, s1Ready)
   val s2SelHigh = RegEnable(s1Op =/= MulDivOp.Mul, s1Ready)
   val s2Forward = Reg(new DecodeForward)
 
-  // S2: Wallace tree reduction (combinational from s2PPRegs)
-  val s2PP = s2PPRegs.zipWithIndex.map { case (reg, i) =>
-    (0 until ppMatrix(i).size).map(j => reg(j)).toSeq
-  }
-  val (sumRow, carryRow) =
-    IntMulMath.wallaceReduction(s2PP)
+  // S2: addition + select (combinational from s2 regs)
+  val product = s2Sum + s2Carry
+  val result  = Mux(s2SelHigh, product(63, 32), product(31, 0))
 
-  // S2 -> S3: register sum/carry
-  val s3Sum     = RegEnable(sumRow, s2Ready)
-  val s3Carry   = RegEnable(carryRow, s2Ready)
-  val s3SelHigh = RegEnable(s2SelHigh, s2Ready)
+  // S3 registers: result
+  val s3Result  = Reg(Tp.RegType())
   val s3Forward = Reg(new DecodeForward)
 
-  // S3: addition + select (combinational)
-  val product = s3Sum + s3Carry
-  val result  = Mux(s3SelHigh, product(63, 32), product(31, 0))
-
-  // S4 registers: result
-  val s4Result  = Reg(Tp.RegType())
-  val s4Forward = Reg(new DecodeForward)
-
-  // S1 -> S2 -> S3 -> S4 valid/forward propagation
+  // S1 -> S2 -> S3 valid/forward propagation
   when(io.flush) {
     s2Valid := false.B
     s3Valid := false.B
-    s4Valid := false.B
   }.elsewhen(s1Ready) {
     s2Valid := s1Valid
     when(s1Valid) {
@@ -248,20 +247,14 @@ class IntMultiplier extends Module {
     when(s2Ready) {
       s3Valid := s2Valid
       when(s2Valid) {
+        s3Result  := result
         s3Forward := s2Forward
-      }
-      when(s3Ready) {
-        s4Valid := s3Valid
-        when(s3Valid) {
-          s4Result  := result
-          s4Forward := s3Forward
-        }
       }
     }
   }
 
   // Output
-  io.out.valid        := s4Valid
-  io.out.bits.result  := s4Result
-  io.out.bits.forward := s4Forward
+  io.out.valid        := s3Valid
+  io.out.bits.result  := s3Result
+  io.out.bits.forward := s3Forward
 }
