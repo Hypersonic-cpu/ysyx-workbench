@@ -1,5 +1,5 @@
 # soc or npc mode
-SOCMODE?=0
+SOCMODE?=1
 RTL_SCALA_ARG?=
 # Core frequency in MHz — sets SIM_MHZ in simulator and drives ysyxSoC delayers
 MHZ ?= 1000

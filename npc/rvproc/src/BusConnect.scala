@@ -151,6 +151,28 @@ object PortPassing {
     val LeftDrivesRight, RightDrivesLeft = Value
   }
 
+  private def zeroLike[T <: Data](x: T): T =
+    0.U.asTypeOf(chiselTypeOf(x))
+
+  private def passOptField[T <: Data](
+    lhs: Option[T],
+    rhs: Option[T],
+    dir: DriveDir.Value
+  ): Unit = {
+    (lhs, rhs) match {
+      case (Some(l), Some(r)) =>
+        dir match {
+          case DriveDir.LeftDrivesRight => r := l
+          case DriveDir.RightDrivesLeft => l := r
+        }
+      case (Some(l), None) if dir == DriveDir.RightDrivesLeft =>
+        l := zeroLike(l)
+      case (None, Some(r)) if dir == DriveDir.LeftDrivesRight =>
+        r := zeroLike(r)
+      case _ =>
+    }
+  }
+
   def apply[T <: Data](
     lhs: DecoupledIO[T],
     rhs: DecoupledIO[T],
@@ -167,6 +189,27 @@ object PortPassing {
         lhs.bits  := rhs.bits
         rhs.ready := lhs.ready
       }
+    }
+  }
+
+  def apply(
+    lhs: ReadyValidIO[_ <: Record],
+    rhs: ReadyValidIO[_ <: Record],
+    dir: DriveDir.Value
+  ): Unit = {
+    dir match {
+      case DriveDir.LeftDrivesRight =>
+        rhs.valid := lhs.valid
+        rhs.bits.elements.foreach { case (name, r) =>
+          passOptField(lhs.bits.elements.get(name), Some(r), dir)
+        }
+        lhs.ready := rhs.ready
+      case DriveDir.RightDrivesLeft =>
+        lhs.valid := rhs.valid
+        lhs.bits.elements.foreach { case (name, l) =>
+          passOptField(Some(l), rhs.bits.elements.get(name), dir)
+        }
+        rhs.ready := lhs.ready
     }
   }
 }

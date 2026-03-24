@@ -18,6 +18,10 @@ object AXI {
   def LenType()  = UInt(8.W)
 
   def IdType() = UInt(4.W)
+  def LockType() = UInt(1.W)
+  def CacheType() = UInt(4.W)
+  def ProtType() = UInt(3.W)
+  def QosType() = UInt(4.W)
 
   object RespStatus extends ChiselEnum {
     val OKAY, EXOKAY, SLVERR, DECERR = Value
@@ -29,21 +33,29 @@ object AXI {
 }
 
 // To device
-class ArGroup extends Bundle {
+class ArGroup(val isFullExt: Boolean = false) extends Bundle {
   val addr  = Tp.AddrType()
   val size  = AXI.SizeType()
   val len   = AXI.LenType()
   val burst = AXI.BurstOpts()
   val id    = AXI.IdType()
+  val lock  = if (isFullExt) Some(AXI.LockType()) else None
+  val cache = if (isFullExt) Some(AXI.CacheType()) else None
+  val prot  = if (isFullExt) Some(AXI.ProtType()) else None
+  val qos   = if (isFullExt) Some(AXI.QosType()) else None
 }
 
 // To device
-class AwGroup extends Bundle {
+class AwGroup(val isFullExt: Boolean = false) extends Bundle {
   val addr  = Tp.AddrType()
   val size  = AXI.SizeType()
   val len   = AXI.LenType()
   val burst = AXI.BurstOpts()
   val id    = AXI.IdType()
+  val lock  = if (isFullExt) Some(AXI.LockType()) else None
+  val cache = if (isFullExt) Some(AXI.CacheType()) else None
+  val prot  = if (isFullExt) Some(AXI.ProtType()) else None
+  val qos   = if (isFullExt) Some(AXI.QosType()) else None
 }
 
 // To device
@@ -67,21 +79,23 @@ class BGroup extends Bundle {
   val id   = AXI.IdType()
 }
 
-class AXIReadChannel extends Bundle {
-  val ar = Decoupled(new ArGroup)
+class AXIReadChannel(val isFullExt: Boolean = false)
+    extends Bundle {
+  val ar = Decoupled(new ArGroup(isFullExt))
   val r  = Flipped(Decoupled(new RGroup))
 }
 
-class AXIWriteChannel extends Bundle {
-  val aw = Decoupled(new AwGroup)
+class AXIWriteChannel(val isFullExt: Boolean = false)
+    extends Bundle {
+  val aw = Decoupled(new AwGroup(isFullExt))
   val w  = Decoupled(new WGroup)
   val b  = Flipped(Decoupled(new BGroup))
 }
 
-class AXIBus extends Bundle {
-  val ar = Decoupled(new ArGroup)
+class AXIBus(val isFullExt: Boolean = false) extends Bundle {
+  val ar = Decoupled(new ArGroup(isFullExt))
   val r  = Flipped(Decoupled(new RGroup))
-  val aw = Decoupled(new AwGroup)
+  val aw = Decoupled(new AwGroup(isFullExt))
   val w  = Decoupled(new WGroup)
   val b  = Flipped(Decoupled(new BGroup))
 }
@@ -91,11 +105,31 @@ object AXIPortPassing {
   // (source, like IFU.iMemMaster) and left side is outer
   // (like Core.iMemMaster).
   def apply[T <: Data](dst: AXIBus, src: AXIBus): Unit = {
-    PortPassing(dst.ar, src.ar, DriveDir.RightDrivesLeft)
-    PortPassing(dst.r, src.r, DriveDir.LeftDrivesRight)
-    PortPassing(dst.aw, src.aw, DriveDir.RightDrivesLeft)
-    PortPassing(dst.w, src.w, DriveDir.RightDrivesLeft)
-    PortPassing(dst.b, src.b, DriveDir.LeftDrivesRight)
+    PortPassing(
+      dst.ar: ReadyValidIO[_ <: Record],
+      src.ar: ReadyValidIO[_ <: Record],
+      DriveDir.RightDrivesLeft
+    )
+    PortPassing(
+      dst.r: ReadyValidIO[_ <: Record],
+      src.r: ReadyValidIO[_ <: Record],
+      DriveDir.LeftDrivesRight
+    )
+    PortPassing(
+      dst.aw: ReadyValidIO[_ <: Record],
+      src.aw: ReadyValidIO[_ <: Record],
+      DriveDir.RightDrivesLeft
+    )
+    PortPassing(
+      dst.w: ReadyValidIO[_ <: Record],
+      src.w: ReadyValidIO[_ <: Record],
+      DriveDir.RightDrivesLeft
+    )
+    PortPassing(
+      dst.b: ReadyValidIO[_ <: Record],
+      src.b: ReadyValidIO[_ <: Record],
+      DriveDir.LeftDrivesRight
+    )
   }
 }
 

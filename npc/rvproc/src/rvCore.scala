@@ -40,8 +40,8 @@ class rvCore(
     extends Module {
   val io = IO(new Bundle {
     val interrupt = Input(Bool())
-    val master    = new AXIBus
-    val slave     = Flipped(new AXIBus)
+    val master    = new AXIBus(true)
+    val slave     = Flipped(new AXIBus(true))
   })
 
   val resetVector = if (isSoc) 0x3000_0000L else 0x8000_0000L
@@ -434,8 +434,8 @@ class rvCoreWrapper(
     extends Module {
   val io   = IO(new Bundle {
     val interrupt   = Input(Bool())
-    val managerPort = new AXIBus
-    val subordiPort = Flipped(new AXIBus)
+    val managerPort = new AXIBus(true)
+    val subordiPort = Flipped(new AXIBus(true))
   })
   val core = Module(new rvCore(isSoc, l1i, l1d))
   core.io.interrupt := io.interrupt
