@@ -1,0 +1,14 @@
+*.*
+*
+!*/
+!Makefile*
+!*.[cSh]
+!.gitignore
+!README.md
+!resources/logo.txt
+.github/
+.vscode/
+.zed/
+*.md
+!README.md
+.clangd

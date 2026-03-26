@@ -68,6 +68,9 @@ int vsnprintf(char *out, size_t n, const char *fmt, va_list ap) {
 
       unsigned intbase = 10;
       switch (*fmt++) {
+        case 'p':
+          width = sizeof(void*) << 1; // * 8 / 4
+          // Fall through
         case 'x':
           intbase = 16;
           // Fall through
@@ -122,6 +125,14 @@ int vsnprintf(char *out, size_t n, const char *fmt, va_list ap) {
           }
           break;
         default:
+          putch('U'); 
+          putch('n'); 
+          putch('k'); 
+          putch('n'); 
+          putch('o'); 
+          putch('w'); 
+          putch('n'); 
+          putch('\n'); 
           halt(255);
           // Unknown format
           return -1;
@@ -133,7 +144,15 @@ vnfinish:
   *out++ = '\0';
   cnt++;
   if (cnt != (size_t) (out - orig_out)) { 
-    putch(cnt/10+'0'); putch(cnt%10+'0'); putch('\n');
+    putch('O'); 
+    putch('v'); 
+    putch('e'); 
+    putch('r'); 
+    putch('f'); 
+    putch('l'); 
+    putch('o'); 
+    putch('w'); 
+    putch('\n'); 
     assert(0);
   }; 
   return cnt;

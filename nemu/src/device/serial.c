@@ -13,6 +13,7 @@
 * See the Mulan PSL v2 for more details.
 ***************************************************************************************/
 
+#include <stdio.h>
 #include <utils.h>
 #include <device/map.h>
 
@@ -26,6 +27,7 @@ static uint8_t *serial_base = NULL;
 
 static void serial_putc(char ch) {
   MUXDEF(CONFIG_TARGET_AM, putch(ch), putc(ch, stderr));
+  fflush(stderr);
 }
 
 static void serial_io_handler(uint32_t offset, int len, bool is_write) {

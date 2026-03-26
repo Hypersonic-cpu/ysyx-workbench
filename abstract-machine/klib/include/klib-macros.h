@@ -12,8 +12,12 @@
 #define _CONCAT(x, y)       x ## y
 #define CONCAT(x, y)        _CONCAT(x, y)
 
-// NOTE: Used by printf buffer.
+// WARN: Used by printf buffer. Might cause RT-Thread stack overflow
+#ifdef __PLATFORM_NEMU
+#define PRINT_BUF_LEN (1 << 12)
+#else
 #define PRINT_BUF_LEN 256
+#endif
 
 #define putstr(s) \
   ({ for (const char *p = s; *p; p++) putch(*p); })
