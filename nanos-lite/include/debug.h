@@ -3,6 +3,9 @@
 
 #include <common.h>
 
+#define LOADER_DBG 0
+#define STRACE 1
+
 #define Log(format, ...) \
   printf("\33[1;35m[%s,%d,%s] " format "\33[0m\n", \
       __FILE__, __LINE__, __func__, ## __VA_ARGS__)

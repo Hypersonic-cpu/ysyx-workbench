@@ -11,8 +11,6 @@
 #define Elf_Shdr Elf32_Shdr
 #endif
 
-#define VERBOSE 1
-
 __attribute__((unused))
 static const char* ph_type_str(uint32_t type) {
     switch (type) {
@@ -56,7 +54,7 @@ static uintptr_t loader(PCB *pcb, const char *filename) {
   Elf_Phdr phdrs[ehdr.e_phnum];
   ramdisk_read(phdrs, ehdr.e_phoff, ehdr.e_phnum * sizeof(Elf_Phdr));
 
-#if VERBOSE
+#if LOADER_DBG
   Elf_Shdr shdrs[ehdr.e_shnum];
   ramdisk_read(shdrs, ehdr.e_shoff, sizeof(Elf_Shdr) * ehdr.e_shnum);
 
@@ -69,7 +67,7 @@ static uintptr_t loader(PCB *pcb, const char *filename) {
   for (uint16_t i = 0; i < ehdr.e_phnum; i++) {
     Elf_Phdr *hdr = &phdrs[i];
 
-#if VERBOSE
+#if LOADER_DBG
     Log("Segment [%d] type=%s vaddr=0x%x ==>", i, ph_type_str(hdr->p_type),
         hdr->p_vaddr);
 
