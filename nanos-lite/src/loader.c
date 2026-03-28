@@ -71,7 +71,6 @@ static uintptr_t loader(PCB *pcb, const char *filename) {
     Log("Segment [%d] type=%s vaddr=0x%x ==>", i, ph_type_str(hdr->p_type),
         hdr->p_vaddr);
 
-    // 5. 找出属于这个 segment 的所有 section
     for (int j = 0; j < ehdr.e_shnum; j++) {
       Elf_Shdr *sh = &shdrs[j];
       // section 的地址落在 segment 的 [vaddr, vaddr+memsz) 范围内
