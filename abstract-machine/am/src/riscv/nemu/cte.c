@@ -1,4 +1,5 @@
 #include "arch/riscv.h"
+#include "klib-macros.h"
 #include <am.h>
 #include <stdint.h>
 #include <riscv/riscv.h>
@@ -7,22 +8,18 @@
 static Context* (*user_handler)(Event, Context*) = NULL;
 
 Context* __am_irq_handle(Context *c) {
-  if (user_handler) {
-    Event ev = {0};
-    switch (c->mcause) {
-      case 11:
-        ev.event = EVENT_YIELD;
-        c->mepc += 4;
-        break;
-      default: ev.event = EVENT_ERROR; break;
-    }
-
-    printf("DBG: AM Context switch from %p\n", (uintptr_t) c);
-    c = user_handler(ev, c);
-    printf("DBG AM Context switch to %p\n", (uintptr_t) c);
-    assert(c != NULL);
+  assert(user_handler);
+  assert(c->mcause == 11);
+  Event e;
+  e.cause = c->mcause;
+  if (c->GPR1 == -1) {
+    e.event = EVENT_YIELD;
+  } else {
+    e.event = EVENT_SYSCALL;
   }
+  c = user_handler(e, c);
 
+  c->mepc += 4;
   return c;
 }
 
