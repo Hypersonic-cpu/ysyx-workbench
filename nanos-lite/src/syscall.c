@@ -22,11 +22,13 @@ typedef uintptr_t syshandle_t(uintptr_t real_args[3]);
 uintptr_t do_sys_exit(uintptr_t real_args[3]);
 uintptr_t do_sys_yield(uintptr_t real_args[3]);
 uintptr_t do_sys_write(uintptr_t real_args[3]);
+uintptr_t do_sys_brk(uintptr_t real_args[3]);
 
 syshandle_t *SyscallHandlers[] = {
     [SYS_exit] = do_sys_exit,
     [SYS_yield] = do_sys_yield,
     [SYS_write] = do_sys_write,
+    [SYS_brk] = do_sys_brk,
 };
 
 const char *sys_name(uint32_t id) {
@@ -51,6 +53,7 @@ void do_syscall(Context *c) {
   case SYS_exit:
   case SYS_yield:
   case SYS_write:
+  case SYS_brk:
     c->GPRx = SyscallHandlers[a[0]](&(a[1]));
     break;
   default:
@@ -82,4 +85,8 @@ uintptr_t do_sys_write(uintptr_t ra[3]) {
     assert(false && "Non-stdout|stderr output");
     return -1;
   }
+}
+
+uintptr_t do_sys_brk(uintptr_t ra[3]) {
+  return 0;
 }

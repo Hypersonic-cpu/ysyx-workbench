@@ -70,8 +70,20 @@ int _write(int fd, void *buf, size_t count) {
   return 0;
 }
 
+extern char _end;
 void *_sbrk(intptr_t increment) {
-  return (void *)-1;
+  // return (void *)-1;
+  // WARN: MT-Safety?
+  static void* break_pos = &_end;
+  void* new_break = break_pos + increment;
+  void* old_break = break_pos;
+  intptr_t ret = _syscall_(SYS_brk, (intptr_t) new_break, 0, 0);
+  if (ret == 0) {
+    break_pos = new_break;
+    return old_break;
+  } else {
+    return (void*) -1;
+  }
 }
 
 int _read(int fd, void *buf, size_t count) {
