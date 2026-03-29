@@ -4,57 +4,82 @@
 #include <string.h>
 #include <stdlib.h>
 
-void SDL_BlitSurface(SDL_Surface *src, SDL_Rect *srcrect, SDL_Surface *dst, SDL_Rect *dstrect) {
+// Internal helpers
+
+static inline int imax(int a, int b) { return a > b ? a : b; }
+static inline int imin(int a, int b) { return a < b ? a : b; }
+
+/* Clip a 1-D segment [*pos, *pos+*len) against [0, limit).
+ * *other is the paired coordinate on the other surface and is adjusted
+ * symmetrically.  All parameters are plain int — callers must copy
+ * SDL_Rect fields (which are int16_t/uint16_t) into local ints first.
+ * Returns 0 if the segment vanishes. */
+static int clip1d(int *pos, int *len, int limit, int *other) {
+  if (*pos < 0) {
+    *len   += *pos;
+    *other -= *pos;
+    *pos    = 0;
+  }
+  *len = imin(*len, limit - *pos);
+  return *len > 0;
+}
+
+void SDL_BlitSurface(SDL_Surface *src, SDL_Rect *srcrect,
+                     SDL_Surface *dst, SDL_Rect *dstrect) {
   assert(dst && src);
   assert(dst->format->BitsPerPixel == src->format->BitsPerPixel);
-  int src_x = srcrect ? srcrect->x : 0;
-  int src_y = srcrect ? srcrect->y : 0;
-  int dst_x = dstrect ? dstrect->x : 0;
-  int dst_y = dstrect ? dstrect->y : 0;
-  int w = srcrect ? srcrect->w : src->w;
-  int h = srcrect ? srcrect->h : src->h;
 
-  if (src_x < 0) {
-    dst_x -= src_x;
-    w += src_x;
-    src_x = 0;
-  }
-  if (src_y < 0) {
-    dst_y -= src_y;
-    h += src_y;
-    src_y = 0;
-  }
-  if (dst_x < 0) {
-    src_x -= dst_x;
-    w += dst_x;
-    dst_x = 0;
-  }
-  if (dst_y < 0) {
-    src_y -= dst_y;
-    h += dst_y;
-    dst_y = 0;
-  }
+  /* Copy rect fields into plain ints to avoid int16_t * / int * mismatch. */
+  int sx = srcrect ? srcrect->x : 0;
+  int sy = srcrect ? srcrect->y : 0;
+  int dx = dstrect ? dstrect->x : 0;
+  int dy = dstrect ? dstrect->y : 0;
+  int w  = srcrect ? srcrect->w : src->w;
+  int h  = srcrect ? srcrect->h : src->h;
 
-  if (src_x + w > src->w) w = src->w - src_x;
-  if (src_y + h > src->h) h = src->h - src_y;
-  if (dst_x + w > dst->w) w = dst->w - dst_x;
-  if (dst_y + h > dst->h) h = dst->h - dst_y;
-  if (w <= 0 || h <= 0) return;
+  if (!clip1d(&sx, &w, src->w, &dx)) return;
+  if (!clip1d(&sy, &h, src->h, &dy)) return;
+  if (!clip1d(&dx, &w, dst->w, &sx)) return;
+  if (!clip1d(&dy, &h, dst->h, &sy)) return;
 
   int bytes = src->format->BytesPerPixel;
   for (int j = 0; j < h; j++) {
-    uint8_t *src_row = src->pixels + (src_y + j) * src->pitch + src_x * bytes;
-    uint8_t *dst_row = dst->pixels + (dst_y + j) * dst->pitch + dst_x * bytes;
-    memcpy(dst_row, src_row, w * bytes);
+    memcpy(dst->pixels + (dy + j) * dst->pitch + dx * bytes,
+           src->pixels + (sy + j) * src->pitch + sx * bytes,
+           w * bytes);
   }
 
-  if (dstrect) {
-    dstrect->w = w;
-    dstrect->h = h;
-  }
+  if (dstrect) { dstrect->w = w; dstrect->h = h; }
 }
 
 void SDL_FillRect(SDL_Surface *dst, SDL_Rect *dstrect, uint32_t color) {
+  assert(dst);
+
+  int x  = dstrect ? dstrect->x : 0;
+  int y  = dstrect ? dstrect->y : 0;
+  int x2 = dstrect ? dstrect->x + dstrect->w : dst->w;
+  int y2 = dstrect ? dstrect->y + dstrect->h : dst->h;
+
+  x  = imax(x,  0);
+  y  = imax(y,  0);
+  x2 = imin(x2, dst->w);
+  y2 = imin(y2, dst->h);
+  if (x >= x2 || y >= y2) return;
+
+  int bytes = dst->format->BytesPerPixel;
+  int cols  = x2 - x;
+  for (int j = y; j < y2; j++) {
+    uint8_t *row = dst->pixels + j * dst->pitch + x * bytes;
+    if (bytes == 4) {
+      uint32_t *p = (uint32_t *)row;
+      for (int i = 0; i < cols; i++) p[i] = color;
+    } else if (bytes == 1) {
+      memset(row, (uint8_t)color, cols);
+    } else {
+      for (int i = 0; i < cols; i++)
+        memcpy(row + i * bytes, &color, bytes);
+    }
+  }
 }
 
 void SDL_UpdateRect(SDL_Surface *s, int x, int y, int w, int h) {
@@ -63,26 +88,19 @@ void SDL_UpdateRect(SDL_Surface *s, int x, int y, int w, int h) {
 
   if (w == 0) w = s->w;
   if (h == 0) h = s->h;
-  if (x < 0) {
-    w += x;
-    x = 0;
-  }
-  if (y < 0) {
-    h += y;
-    y = 0;
-  }
-  if (x + w > s->w) w = s->w - x;
-  if (y + h > s->h) h = s->h - y;
-  if (w <= 0 || h <= 0) return;
+
+  int dummy = 0;
+  if (!clip1d(&x, &w, s->w, &dummy)) return;
+  if (!clip1d(&y, &h, s->h, &dummy)) return;
 
   uint32_t *pixels = malloc(w * h * sizeof(uint32_t));
   assert(pixels);
 
   if (s->format->BitsPerPixel == 32) {
-    for (int j = 0; j < h; j++) {
-      uint8_t *src_row = s->pixels + (y + j) * s->pitch + x * sizeof(uint32_t);
-      memcpy(pixels + j * w, src_row, w * sizeof(uint32_t));
-    }
+    for (int j = 0; j < h; j++)
+      memcpy(pixels + j * w,
+             s->pixels + (y + j) * s->pitch + x * sizeof(uint32_t),
+             w * sizeof(uint32_t));
   } else {
     assert(s->format->BitsPerPixel == 8);
     assert(s->format->palette);
@@ -90,7 +108,8 @@ void SDL_UpdateRect(SDL_Surface *s, int x, int y, int w, int h) {
       uint8_t *src_row = s->pixels + (y + j) * s->pitch + x;
       for (int i = 0; i < w; i++) {
         SDL_Color c = s->format->palette->colors[src_row[i]];
-        pixels[j * w + i] = (c.a << 24) | (c.r << 16) | (c.g << 8) | c.b;
+        pixels[j * w + i] = ((uint32_t)c.a << 24) | ((uint32_t)c.r << 16)
+                           | ((uint32_t)c.g <<  8) | c.b;
       }
     }
   }
@@ -112,14 +131,15 @@ static inline int maskToShift(uint32_t mask) {
   }
 }
 
-SDL_Surface* SDL_CreateRGBSurface(uint32_t flags, int width, int height, int depth,
+SDL_Surface *SDL_CreateRGBSurface(uint32_t flags, int width, int height, int depth,
     uint32_t Rmask, uint32_t Gmask, uint32_t Bmask, uint32_t Amask) {
   assert(depth == 8 || depth == 32);
   SDL_Surface *s = malloc(sizeof(SDL_Surface));
   assert(s);
-  s->flags = flags;
+  s->flags  = flags;
   s->format = malloc(sizeof(SDL_PixelFormat));
   assert(s->format);
+
   if (depth == 8) {
     s->format->palette = malloc(sizeof(SDL_Palette));
     assert(s->format->palette);
@@ -135,11 +155,10 @@ SDL_Surface* SDL_CreateRGBSurface(uint32_t flags, int width, int height, int dep
     s->format->Amask = Amask; s->format->Ashift = maskToShift(Amask); s->format->Aloss = 0;
   }
 
-  s->format->BitsPerPixel = depth;
+  s->format->BitsPerPixel  = depth;
   s->format->BytesPerPixel = depth / 8;
-
-  s->w = width;
-  s->h = height;
+  s->w     = width;
+  s->h     = height;
   s->pitch = width * depth / 8;
   assert(s->pitch == width * s->format->BytesPerPixel);
 
@@ -147,11 +166,10 @@ SDL_Surface* SDL_CreateRGBSurface(uint32_t flags, int width, int height, int dep
     s->pixels = malloc(s->pitch * height);
     assert(s->pixels);
   }
-
   return s;
 }
 
-SDL_Surface* SDL_CreateRGBSurfaceFrom(void *pixels, int width, int height, int depth,
+SDL_Surface *SDL_CreateRGBSurfaceFrom(void *pixels, int width, int height, int depth,
     int pitch, uint32_t Rmask, uint32_t Gmask, uint32_t Bmask, uint32_t Amask) {
   SDL_Surface *s = SDL_CreateRGBSurface(SDL_PREALLOC, width, height, depth,
       Rmask, Gmask, Bmask, Amask);
@@ -161,124 +179,97 @@ SDL_Surface* SDL_CreateRGBSurfaceFrom(void *pixels, int width, int height, int d
 }
 
 void SDL_FreeSurface(SDL_Surface *s) {
-  if (s != NULL) {
-    if (s->format != NULL) {
-      if (s->format->palette != NULL) {
-        if (s->format->palette->colors != NULL) free(s->format->palette->colors);
+  if (s) {
+    if (s->format) {
+      if (s->format->palette) {
+        free(s->format->palette->colors);
         free(s->format->palette);
       }
       free(s->format);
     }
-    if (s->pixels != NULL && !(s->flags & SDL_PREALLOC)) free(s->pixels);
+    if (s->pixels && !(s->flags & SDL_PREALLOC)) free(s->pixels);
     free(s);
   }
 }
 
-SDL_Surface* SDL_SetVideoMode(int width, int height, int bpp, uint32_t flags) {
+SDL_Surface *SDL_SetVideoMode(int width, int height, int bpp, uint32_t flags) {
   if (flags & SDL_HWSURFACE) NDL_OpenCanvas(&width, &height);
   return SDL_CreateRGBSurface(flags, width, height, bpp,
       DEFAULT_RMASK, DEFAULT_GMASK, DEFAULT_BMASK, DEFAULT_AMASK);
 }
 
-void SDL_SoftStretch(SDL_Surface *src, SDL_Rect *srcrect, SDL_Surface *dst, SDL_Rect *dstrect) {
+void SDL_SoftStretch(SDL_Surface *src, SDL_Rect *srcrect,
+                     SDL_Surface *dst, SDL_Rect *dstrect) {
   assert(src && dst);
   assert(dst->format->BitsPerPixel == src->format->BitsPerPixel);
   assert(dst->format->BitsPerPixel == 8);
 
-  int x = (srcrect == NULL ? 0 : srcrect->x);
-  int y = (srcrect == NULL ? 0 : srcrect->y);
-  int w = (srcrect == NULL ? src->w : srcrect->w);
-  int h = (srcrect == NULL ? src->h : srcrect->h);
+  int x = srcrect ? srcrect->x : 0;
+  int y = srcrect ? srcrect->y : 0;
+  int w = srcrect ? srcrect->w : src->w;
+  int h = srcrect ? srcrect->h : src->h;
 
   assert(dstrect);
-  if(w == dstrect->w && h == dstrect->h) {
-    /* The source rectangle and the destination rectangle
-     * are of the same size. If that is the case, there
-     * is no need to stretch, just copy. */
-    SDL_Rect rect;
-    rect.x = x;
-    rect.y = y;
-    rect.w = w;
-    rect.h = h;
-    SDL_BlitSurface(src, &rect, dst, dstrect);
-  }
-  else {
+  if (w == dstrect->w && h == dstrect->h) {
+    SDL_Rect r = {x, y, w, h};
+    SDL_BlitSurface(src, &r, dst, dstrect);
+  } else {
     assert(0);
   }
 }
 
-void SDL_SetPalette(SDL_Surface *s, int flags, SDL_Color *colors, int firstcolor, int ncolors) {
-  assert(s);
-  assert(s->format);
-  assert(s->format->palette);
+void SDL_SetPalette(SDL_Surface *s, int flags, SDL_Color *colors,
+                    int firstcolor, int ncolors) {
+  assert(s && s->format && s->format->palette);
   assert(firstcolor == 0);
 
   s->format->palette->ncolors = ncolors;
   memcpy(s->format->palette->colors, colors, sizeof(SDL_Color) * ncolors);
 
-  if(s->flags & SDL_HWSURFACE) {
+  if (s->flags & SDL_HWSURFACE) {
     assert(ncolors == 256);
-    for (int i = 0; i < ncolors; i ++) {
-      uint8_t r = colors[i].r;
-      uint8_t g = colors[i].g;
-      uint8_t b = colors[i].b;
-    }
     SDL_UpdateRect(s, 0, 0, 0, 0);
   }
 }
 
 static void ConvertPixelsARGB_ABGR(void *dst, void *src, int len) {
-  int i;
   uint8_t (*pdst)[4] = dst;
   uint8_t (*psrc)[4] = src;
-  union {
-    uint8_t val8[4];
-    uint32_t val32;
-  } tmp;
-  int first = len & ~0xf;
-  for (i = 0; i < first; i += 16) {
-#define macro(i) \
-    tmp.val32 = *((uint32_t *)psrc[i]); \
-    *((uint32_t *)pdst[i]) = tmp.val32; \
-    pdst[i][0] = tmp.val8[2]; \
-    pdst[i][2] = tmp.val8[0];
-
-    macro(i + 0); macro(i + 1); macro(i + 2); macro(i + 3);
-    macro(i + 4); macro(i + 5); macro(i + 6); macro(i + 7);
-    macro(i + 8); macro(i + 9); macro(i +10); macro(i +11);
-    macro(i +12); macro(i +13); macro(i +14); macro(i +15);
-  }
-
-  for (; i < len; i ++) {
-    macro(i);
+  for (int i = 0; i < len; i++) {
+    uint32_t v;
+    memcpy(&v, psrc[i], 4);
+    memcpy(pdst[i], &v, 4);
+    pdst[i][0] = psrc[i][2];
+    pdst[i][2] = psrc[i][0];
   }
 }
 
-SDL_Surface *SDL_ConvertSurface(SDL_Surface *src, SDL_PixelFormat *fmt, uint32_t flags) {
+SDL_Surface *SDL_ConvertSurface(SDL_Surface *src, SDL_PixelFormat *fmt,
+                                 uint32_t flags) {
   assert(src->format->BitsPerPixel == 32);
   assert(src->w * src->format->BytesPerPixel == src->pitch);
   assert(src->format->BitsPerPixel == fmt->BitsPerPixel);
 
-  SDL_Surface* ret = SDL_CreateRGBSurface(flags, src->w, src->h, fmt->BitsPerPixel,
-    fmt->Rmask, fmt->Gmask, fmt->Bmask, fmt->Amask);
+  SDL_Surface *ret = SDL_CreateRGBSurface(flags, src->w, src->h,
+      fmt->BitsPerPixel, fmt->Rmask, fmt->Gmask, fmt->Bmask, fmt->Amask);
 
   assert(fmt->Gmask == src->format->Gmask);
-  assert(fmt->Amask == 0 || src->format->Amask == 0 || (fmt->Amask == src->format->Amask));
-  ConvertPixelsARGB_ABGR(ret->pixels, src->pixels, src->w * src->h);
+  assert(fmt->Amask == 0 || src->format->Amask == 0 ||
+         fmt->Amask == src->format->Amask);
 
+  ConvertPixelsARGB_ABGR(ret->pixels, src->pixels, src->w * src->h);
   return ret;
 }
 
-uint32_t SDL_MapRGBA(SDL_PixelFormat *fmt, uint8_t r, uint8_t g, uint8_t b, uint8_t a) {
+uint32_t SDL_MapRGBA(SDL_PixelFormat *fmt,
+                     uint8_t r, uint8_t g, uint8_t b, uint8_t a) {
   assert(fmt->BytesPerPixel == 4);
-  uint32_t p = (r << fmt->Rshift) | (g << fmt->Gshift) | (b << fmt->Bshift);
-  if (fmt->Amask) p |= (a << fmt->Ashift);
+  uint32_t p = ((uint32_t)r << fmt->Rshift)
+             | ((uint32_t)g << fmt->Gshift)
+             | ((uint32_t)b << fmt->Bshift);
+  if (fmt->Amask) p |= ((uint32_t)a << fmt->Ashift);
   return p;
 }
 
-int SDL_LockSurface(SDL_Surface *s) {
-  return 0;
-}
-
-void SDL_UnlockSurface(SDL_Surface *s) {
-}
+int  SDL_LockSurface(SDL_Surface *s)   { return 0; }
+void SDL_UnlockSurface(SDL_Surface *s) {}
