@@ -77,9 +77,15 @@ size_t fs_read(int fd, void *buf, size_t len) {
     assert(false && "Not opened");
     return -1;
   }
-  size_t curr_off = file_table[fd].disk_offset + file_opened[fd].open_offset;
-  // size_t curr_end = file_table[fd].disk_offset + file_table[fd].size;
-  size_t op_ret = ramdisk_read(buf, curr_off, len);
+  Finfo *finfo = &file_table[file_opened[fd].finfo_idx];
+  ReadFn rd_handler = finfo->read ? finfo->read : ramdisk_read;
+  size_t curr_off = finfo->disk_offset + file_opened[fd].open_offset;
+  if (file_opened[fd].open_offset >= finfo->size) {
+    return 0;
+  }
+  size_t remain = finfo->size - file_opened[fd].open_offset;
+  size_t op_len = len < remain ? len : remain;
+  size_t op_ret = rd_handler(buf, curr_off, op_len);
   file_opened[fd].open_offset += op_ret;
   return op_ret;
 }
@@ -89,12 +95,18 @@ size_t fs_write(int fd, const void *buf, size_t len) {
     assert(false && "Not opened");
     return -1;
   }
-  WriteFn wr_handler =
-      file_table[fd].write ? file_table[fd].write : ramdisk_write;
-  size_t curr_off = file_table[fd].disk_offset + file_opened[fd].open_offset;
-  // size_t curr_end = file_table[fd].disk_offset + file_table[fd].size;
-  size_t op_ret = wr_handler(buf, curr_off, len);
-  assert(op_ret == len);
+  Finfo *finfo = &file_table[file_opened[fd].finfo_idx];
+  WriteFn wr_handler = finfo->write ? finfo->write : ramdisk_write;
+  size_t curr_off = finfo->disk_offset + file_opened[fd].open_offset;
+  size_t op_len = len;
+  if (wr_handler == ramdisk_write) {
+    if (file_opened[fd].open_offset >= finfo->size) {
+      return 0;
+    }
+    size_t remain = finfo->size - file_opened[fd].open_offset;
+    op_len = len < remain ? len : remain;
+  }
+  size_t op_ret = wr_handler(buf, curr_off, op_len);
   file_opened[fd].open_offset += op_ret;
   return op_ret;
 }
@@ -112,13 +124,13 @@ size_t fs_lseek(int fd, size_t offset, int whence) {
     break;
   case SEEK_END:
     file_opened[fd].open_offset =
-        file_table[fd].disk_offset + file_table[fd].size + offset;
+        file_table[file_opened[fd].finfo_idx].size + offset;
     break;
   default:
     assert(false && "No such whence");
     return -1;
   }
-  return file_opened[fd].open_offset - file_table[fd].disk_offset;
+  return file_opened[fd].open_offset;
 }
 
 int fs_close(int fd) {

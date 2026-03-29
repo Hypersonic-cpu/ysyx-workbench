@@ -26,12 +26,20 @@ uintptr_t do_sys_yield(uintptr_t real_args[3]);
 uintptr_t do_sys_write(uintptr_t real_args[3]);
 uintptr_t do_sys_brk(uintptr_t real_args[3]);
 uintptr_t do_sys_gettime(uintptr_t real_args[3]);
+uintptr_t do_sys_open(uintptr_t real_args[3]);
+uintptr_t do_sys_read(uintptr_t real_args[3]);
+uintptr_t do_sys_lseek(uintptr_t real_args[3]);
+uintptr_t do_sys_close(uintptr_t real_args[3]);
 
 syshandle_t *SyscallHandlers[] = {
     [SYS_exit] = do_sys_exit,
     [SYS_yield] = do_sys_yield,
     [SYS_write] = do_sys_write,
     [SYS_brk] = do_sys_brk,
+    [SYS_open] = do_sys_open,
+    [SYS_read] = do_sys_read,
+    [SYS_lseek] = do_sys_lseek,
+    [SYS_close] = do_sys_close,
     [SYS_gettimeofday] = do_sys_gettime,
 };
 
@@ -59,6 +67,10 @@ void do_syscall(Context *c) {
   case SYS_write:
   case SYS_brk:
   case SYS_gettimeofday:
+  case SYS_open:
+  case SYS_read:
+  case SYS_lseek:
+  case SYS_close:
     c->GPRx = SyscallHandlers[a[0]](&(a[1]));
     break;
   default:
@@ -95,3 +107,17 @@ uintptr_t do_sys_gettime(uintptr_t ra[3]) {
   tv->tv_usec = amt.us % 1000000;
   return 0;
 }
+
+uintptr_t do_sys_open(uintptr_t ra[3]) {
+  return fs_open((const char *)ra[0], ra[1], ra[2]);
+}
+
+uintptr_t do_sys_read(uintptr_t ra[3]) {
+  return fs_read(ra[0], (void *)ra[1], ra[2]);
+}
+
+uintptr_t do_sys_lseek(uintptr_t ra[3]) {
+  return fs_lseek(ra[0], ra[1], ra[2]);
+}
+
+uintptr_t do_sys_close(uintptr_t ra[3]) { return fs_close(ra[0]); }
