@@ -39,27 +39,67 @@ static uint32_t *vgactl_port_base = NULL;
 #ifdef CONFIG_VGA_SHOW_SCREEN
 #ifndef CONFIG_TARGET_AM
 #include <SDL2/SDL.h>
+#include <glob.h>
+#include <stdlib.h>
+#include <unistd.h>
 
 static SDL_Renderer *renderer = NULL;
 static SDL_Texture *texture = NULL;
+
+static void try_init_display_env() {
+  if (getenv("DISPLAY") != NULL || getenv("WAYLAND_DISPLAY") != NULL) {
+    return;
+  }
+
+  /** If DISPLAY is not found in shell CLI, then try host display direclty. */
+  char runtime_dir[64];
+  snprintf(runtime_dir, sizeof(runtime_dir), "/run/user/%d", getuid());
+  if (access(runtime_dir, F_OK) == 0) {
+    setenv("XDG_RUNTIME_DIR", runtime_dir, 0);
+
+    char wayland_sock[96];
+    snprintf(wayland_sock, sizeof(wayland_sock), "%s/wayland-0", runtime_dir);
+    if (access(wayland_sock, F_OK) == 0) {
+      setenv("WAYLAND_DISPLAY", "wayland-0", 0);
+    }
+
+    if (getenv("XAUTHORITY") == NULL) {
+      char pattern[128];
+      glob_t matches = {};
+      snprintf(pattern, sizeof(pattern), "%s/.mutter-Xwaylandauth.*", runtime_dir);
+      if (glob(pattern, 0, NULL, &matches) == 0 && matches.gl_pathc > 0) {
+        setenv("XAUTHORITY", matches.gl_pathv[0], 0);
+      }
+      globfree(&matches);
+    }
+  }
+
+  // Not override, check X11
+  if (access("/tmp/.X11-unix/X0", F_OK) == 0) {
+    setenv("DISPLAY", ":0", 0);
+  }
+}
 
 static void init_screen() {
   SDL_Window *window = NULL;
   char title[128];
   sprintf(title, "%s-NEMU", str(__GUEST_ISA__));
-  SDL_Init(SDL_INIT_VIDEO);
-  SDL_CreateWindowAndRenderer(
+  try_init_display_env();
+  Assert(SDL_Init(SDL_INIT_VIDEO) == 0, "SDL_Init failed: %s", SDL_GetError());
+  Assert(SDL_CreateWindowAndRenderer(
       SCREEN_W * (MUXDEF(CONFIG_VGA_SIZE_400x300, 2, 1)),
       SCREEN_H * (MUXDEF(CONFIG_VGA_SIZE_400x300, 2, 1)),
-      0, &window, &renderer);
+      0, &window, &renderer) == 0, "SDL_CreateWindowAndRenderer failed: %s", SDL_GetError());
+  Assert(window != NULL && renderer != NULL, "SDL window/renderer not created");
   SDL_SetWindowTitle(window, title);
   texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888,
       SDL_TEXTUREACCESS_STATIC, SCREEN_W, SCREEN_H);
+  Assert(texture != NULL, "SDL_CreateTexture failed: %s", SDL_GetError());
   SDL_RenderPresent(renderer);
 }
 
-// static inline void 
-void 
+// static inline void
+void
 __attribute_noinline__
 update_screen() {
   SDL_UpdateTexture(texture, NULL, vmem, SCREEN_W * sizeof(uint32_t));
@@ -70,9 +110,9 @@ update_screen() {
 #else
 static void init_screen() {}
 
-void 
+void
 __attribute_noinline__
-// static inline void 
+// static inline void
 update_screen() {
   io_write(AM_GPU_FBDRAW, 0, 0, vmem, screen_width(), screen_height(), true);
 }
@@ -83,13 +123,13 @@ static IOMap* vga_ctrl_map = NULL;
 void vga_update_screen() {
   // call `update_screen()` when the sync register is non-zero,
   // then zero out the sync register
-  bool s = MUXDEF(CONFIG_TARGET_AM, io_read(AM_GPU_FBDRAW).sync, 
+  bool s = MUXDEF(CONFIG_TARGET_AM, io_read(AM_GPU_FBDRAW).sync,
            map_read(CONFIG_VGA_CTL_MMIO + 4, 4, vga_ctrl_map));
   // printf("DISPLAY = %s\n", s ? "SHOW" : "HIDE");
   if (s) {
     IFDEF(CONFIG_VGA_SHOW_SCREEN, update_screen());
-    MUXDEF(CONFIG_TARGET_AM, 
-           io_write(AM_GPU_FBDRAW, 0, 0, vmem, screen_width(), screen_height(), false), 
+    MUXDEF(CONFIG_TARGET_AM,
+           io_write(AM_GPU_FBDRAW, 0, 0, vmem, screen_width(), screen_height(), false),
            map_write(CONFIG_VGA_CTL_MMIO + 4, 4, 0, vga_ctrl_map);
            );
   }

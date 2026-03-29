@@ -6,6 +6,9 @@ typedef size_t (*ReadFn)(void *buf, size_t offset, size_t len);
 typedef size_t (*WriteFn)(const void *buf, size_t offset, size_t len);
 
 size_t serial_write(const void *buf, size_t offset, size_t len);
+size_t events_read(void *buf, size_t offset, size_t len);
+size_t dispinfo_read(void *buf, size_t offset, size_t len);
+size_t fb_write(const void *buf, size_t offset, size_t len);
 
 typedef struct {
   char *name;
@@ -21,7 +24,7 @@ typedef struct {
   size_t open_offset;
 } Fopened;
 
-enum { FD_STDIN, FD_STDOUT, FD_STDERR, FD_FB };
+enum { FD_STDIN, FD_STDOUT, FD_STDERR, FD_EVENTS, FD_DISPINFO, FD_FB };
 
 size_t invalid_read(void *buf, size_t offset, size_t len) {
   panic("should not reach here");
@@ -38,6 +41,9 @@ static Finfo file_table[] __attribute__((used)) = {
     [FD_STDIN] = {"stdin", 0, 0, invalid_read, invalid_write},
     [FD_STDOUT] = {"stdout", 0, 0, invalid_read, serial_write},
     [FD_STDERR] = {"stderr", 0, 0, invalid_read, serial_write},
+    [FD_EVENTS] = {"/dev/events", 0, 0, events_read, invalid_write},
+    [FD_DISPINFO] = {"/proc/dispinfo", 0, 0, dispinfo_read, invalid_write},
+    [FD_FB] = {"/dev/fb", 0, 0, invalid_read, fb_write},
 #include "files.h"
     {NULL, 0, 0}};
 
@@ -53,7 +59,9 @@ void init_fs() {
   }
   file_opened[FD_STDOUT] = (Fopened){.finfo_idx = FD_STDOUT};
   file_opened[FD_STDERR] = (Fopened){.finfo_idx = FD_STDERR};
-  // TODO: initialize the size of /dev/fb
+  AM_GPU_CONFIG_T cfg = {};
+  ioe_read(AM_GPU_CONFIG, &cfg);
+  file_table[FD_FB].size = cfg.width * cfg.height * sizeof(uint32_t);
 }
 
 int fs_open(const char *pathname, int flags, int mode) {
@@ -80,11 +88,14 @@ size_t fs_read(int fd, void *buf, size_t len) {
   Finfo *finfo = &file_table[file_opened[fd].finfo_idx];
   ReadFn rd_handler = finfo->read ? finfo->read : ramdisk_read;
   size_t curr_off = finfo->disk_offset + file_opened[fd].open_offset;
-  if (file_opened[fd].open_offset >= finfo->size) {
-    return 0;
+  size_t op_len = len;
+  if (rd_handler == ramdisk_read) {
+    if (file_opened[fd].open_offset >= finfo->size) {
+      return 0;
+    }
+    size_t remain = finfo->size - file_opened[fd].open_offset;
+    op_len = len < remain ? len : remain;
   }
-  size_t remain = finfo->size - file_opened[fd].open_offset;
-  size_t op_len = len < remain ? len : remain;
   size_t op_ret = rd_handler(buf, curr_off, op_len);
   file_opened[fd].open_offset += op_ret;
   return op_ret;

@@ -9,6 +9,7 @@
 .github/
 .vscode/
 .zed/
+.local/
 *.md
 !README.md
 .clangd
