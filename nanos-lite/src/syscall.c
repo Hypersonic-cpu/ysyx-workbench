@@ -31,7 +31,7 @@ syshandle_t *SyscallHandlers[] = {
     [SYS_brk] = do_sys_brk,
 };
 
-const char *sys_name(uint32_t id) {
+const char *sys_name(uintptr_t id) {
   if (id > SYS_gettimeofday) {
     return "[[Unknown]]";
   }

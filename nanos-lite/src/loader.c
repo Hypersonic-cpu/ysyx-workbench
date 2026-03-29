@@ -1,3 +1,4 @@
+#include "fs.h"
 #include <elf.h>
 #include <proc.h>
 
@@ -11,56 +12,52 @@
 #define Elf_Shdr Elf32_Shdr
 #endif
 
-__attribute__((unused))
-static const char* ph_type_str(uint32_t type) {
-    switch (type) {
-        case 0: return "PT_NULL";
-        case 1: return "PT_LOAD";
-        case 2: return "PT_DYNAMIC";
-        case 3: return "PT_INTERP";
-        case 4: return "PT_NOTE";
-        case 6: return "PT_PHDR";
-        default: return "PT_UNKNOWN";
-    }
+__attribute__((used)) static const char *ph_type_str(uint32_t type) {
+  switch (type) {
+  case 0:
+    return "PT_NULL";
+  case 1:
+    return "PT_LOAD";
+  case 2:
+    return "PT_DYNAMIC";
+  case 3:
+    return "PT_INTERP";
+  case 4:
+    return "PT_NOTE";
+  case 6:
+    return "PT_PHDR";
+  default:
+    return "PT_UNKNOWN";
+  }
 }
 
-/* read `len' bytes starting from `offset' of ramdisk into `buf' */
-size_t ramdisk_read(void *buf, size_t offset, size_t len);
-/* write `len' bytes starting from `buf' into the `offset' of ramdisk */
-size_t ramdisk_write(const void *buf, size_t offset, size_t len);
-
-size_t get_ramdisk_size();
-
 static uintptr_t loader(PCB *pcb, const char *filename) {
+  int fd = fs_open(filename, 0, 0);
+  assert(fd >= 3);
+
   Elf_Ehdr ehdr;
-  ramdisk_read(&ehdr, 0, sizeof(ehdr));
+  fs_read(fd, &ehdr, sizeof(ehdr));
 
   // Magic number check
   assert(ehdr.e_ident[0] == 0x7f && ehdr.e_ident[1] == 'E' &&
          ehdr.e_ident[2] == 'L' && ehdr.e_ident[3] == 'F');
 
-  // ISA check
-  // #if defined(__ISA_AM_NATIVE__)
-  // # define EXPECT_ISA_CHECK EM_ARM
-  // #elif defined(__riscv)
-  // # define EXPECT_ISA_CHECK EM_
-  // #else
-  // # error Unsupported ISA
-  // #endif
-
   Log("ELF entry = %p, phoff = %u, phnum = %u", (void *)ehdr.e_entry,
       ehdr.e_phoff, ehdr.e_phnum);
 
   Elf_Phdr phdrs[ehdr.e_phnum];
-  ramdisk_read(phdrs, ehdr.e_phoff, ehdr.e_phnum * sizeof(Elf_Phdr));
+  fs_lseek(fd, ehdr.e_phoff, SEEK_SET);
+  fs_read(fd, phdrs, ehdr.e_phnum * sizeof(Elf_Phdr));
 
 #if LOADER_DBG
   Elf_Shdr shdrs[ehdr.e_shnum];
-  ramdisk_read(shdrs, ehdr.e_shoff, sizeof(Elf_Shdr) * ehdr.e_shnum);
+  fs_lseek(fd, ehdr.e_shoff, SEEK_SET);
+  fs_read(fd, shdrs, ehdr.e_shnum * sizeof(Elf_Shdr));
 
   Elf_Shdr *shstrtab_hdr = &shdrs[ehdr.e_shstrndx];
   char shstrtab[shstrtab_hdr->sh_size];
-  ramdisk_read(shstrtab, shstrtab_hdr->sh_offset, shstrtab_hdr->sh_size);
+  fs_lseek(fd, shstrtab_hdr->sh_offset, SEEK_SET);
+  ramdisk_read(fd, shstrtab, shstrtab_hdr->sh_size);
 #endif
 
   // For each header
@@ -89,7 +86,8 @@ static uintptr_t loader(PCB *pcb, const char *filename) {
 
     // Alloc target space
     void *tar = (void *)hdr->p_vaddr;
-    ramdisk_read(tar, hdr->p_offset, hdr->p_filesz);
+    fs_lseek(fd, hdr->p_offset, SEEK_SET);
+    fs_read(fd, tar, hdr->p_filesz);
     if (hdr->p_memsz > hdr->p_filesz) {
       memset(tar + hdr->p_filesz, 0, hdr->p_memsz - hdr->p_filesz);
     }
