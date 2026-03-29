@@ -43,6 +43,7 @@ static uint32_t *vgactl_port_base = NULL;
 #include <stdlib.h>
 #include <unistd.h>
 
+static SDL_Window *window = NULL;
 static SDL_Renderer *renderer = NULL;
 static SDL_Texture *texture = NULL;
 
@@ -51,17 +52,10 @@ static void try_init_display_env() {
     return;
   }
 
-  /** If DISPLAY is not found in shell CLI, then try host display direclty. */
   char runtime_dir[64];
   snprintf(runtime_dir, sizeof(runtime_dir), "/run/user/%d", getuid());
   if (access(runtime_dir, F_OK) == 0) {
     setenv("XDG_RUNTIME_DIR", runtime_dir, 0);
-
-    char wayland_sock[96];
-    snprintf(wayland_sock, sizeof(wayland_sock), "%s/wayland-0", runtime_dir);
-    if (access(wayland_sock, F_OK) == 0) {
-      setenv("WAYLAND_DISPLAY", "wayland-0", 0);
-    }
 
     if (getenv("XAUTHORITY") == NULL) {
       char pattern[128];
@@ -74,14 +68,20 @@ static void try_init_display_env() {
     }
   }
 
-  // Not override, check X11
   if (access("/tmp/.X11-unix/X0", F_OK) == 0) {
     setenv("DISPLAY", ":0", 0);
+    setenv("SDL_VIDEODRIVER", "x11", 0);
+    return;
+  }
+
+  char wayland_sock[96];
+  snprintf(wayland_sock, sizeof(wayland_sock), "%s/wayland-0", runtime_dir);
+  if (access(wayland_sock, F_OK) == 0) {
+    setenv("WAYLAND_DISPLAY", "wayland-0", 0);
   }
 }
 
 static void init_screen() {
-  SDL_Window *window = NULL;
   char title[128];
   sprintf(title, "%s-NEMU", str(__GUEST_ISA__));
   try_init_display_env();
@@ -92,6 +92,8 @@ static void init_screen() {
       0, &window, &renderer) == 0, "SDL_CreateWindowAndRenderer failed: %s", SDL_GetError());
   Assert(window != NULL && renderer != NULL, "SDL window/renderer not created");
   SDL_SetWindowTitle(window, title);
+  SDL_RaiseWindow(window);
+  SDL_SetWindowInputFocus(window);
   texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888,
       SDL_TEXTUREACCESS_STATIC, SCREEN_W, SCREEN_H);
   Assert(texture != NULL, "SDL_CreateTexture failed: %s", SDL_GetError());
