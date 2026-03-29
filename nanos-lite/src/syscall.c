@@ -1,5 +1,6 @@
 #include "syscall.h"
 #include "am.h"
+#include "fs.h"
 #include "debug.h"
 #include <common.h>
 #include <stdint.h>
@@ -75,16 +76,7 @@ uintptr_t do_sys_write(uintptr_t ra[3]) {
   int fd = ra[0];
   unsigned char *buf = (unsigned char *)ra[1];
   size_t len = ra[2];
-  if (fd == 1 || fd == 2) {
-    // Call AM's write
-    for (size_t i = 0; i < len; i++) {
-      putch(buf[i]);
-    }
-    return len;
-  } else {
-    assert(false && "Non-stdout|stderr output");
-    return -1;
-  }
+  return fs_write(fd, buf, len);
 }
 
 uintptr_t do_sys_brk(uintptr_t ra[3]) {

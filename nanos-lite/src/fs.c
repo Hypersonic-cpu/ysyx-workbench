@@ -5,6 +5,8 @@
 typedef size_t (*ReadFn)(void *buf, size_t offset, size_t len);
 typedef size_t (*WriteFn)(const void *buf, size_t offset, size_t len);
 
+size_t serial_write(const void *buf, size_t offset, size_t len);
+
 typedef struct {
   char *name;
   size_t size;
@@ -34,9 +36,8 @@ size_t invalid_write(const void *buf, size_t offset, size_t len) {
 /* This is the information about all files in disk. */
 static Finfo file_table[] __attribute__((used)) = {
     [FD_STDIN] = {"stdin", 0, 0, invalid_read, invalid_write},
-    // TODO:
-    [FD_STDOUT] = {"stdout", 0, 0, invalid_read, invalid_write},
-    [FD_STDERR] = {"stderr", 0, 0, invalid_read, invalid_write},
+    [FD_STDOUT] = {"stdout", 0, 0, invalid_read, serial_write},
+    [FD_STDERR] = {"stderr", 0, 0, invalid_read, serial_write},
 #include "files.h"
     {NULL, 0, 0}};
 
@@ -50,6 +51,8 @@ void init_fs() {
   for (int i = 0; i < MAX_FD; i++) {
     file_opened[i].finfo_idx = -1;
   }
+  file_opened[FD_STDOUT] = (Fopened){.finfo_idx = FD_STDOUT};
+  file_opened[FD_STDERR] = (Fopened){.finfo_idx = FD_STDERR};
   // TODO: initialize the size of /dev/fb
 }
 
@@ -71,28 +74,29 @@ int fs_open(const char *pathname, int flags, int mode) {
 
 size_t fs_read(int fd, void *buf, size_t len) {
   if (file_opened[fd].finfo_idx < 0) {
+    assert(false && "Not opened");
     return -1;
   }
   size_t curr_off = file_table[fd].disk_offset + file_opened[fd].open_offset;
-  size_t curr_end = file_table[fd].disk_offset + file_table[fd].size;
-  size_t op_len = (curr_off + len > curr_end) ? (curr_end - curr_off) : len;
-  size_t op_ret = ramdisk_read(buf, curr_off, op_len);
-  assert(op_ret == op_len);
-  file_opened[fd].open_offset += op_len;
-  return op_len;
+  // size_t curr_end = file_table[fd].disk_offset + file_table[fd].size;
+  size_t op_ret = ramdisk_read(buf, curr_off, len);
+  file_opened[fd].open_offset += op_ret;
+  return op_ret;
 }
 
 size_t fs_write(int fd, const void *buf, size_t len) {
   if (file_opened[fd].finfo_idx < 0) {
+    assert(false && "Not opened");
     return -1;
   }
+  WriteFn wr_handler =
+      file_table[fd].write ? file_table[fd].write : ramdisk_write;
   size_t curr_off = file_table[fd].disk_offset + file_opened[fd].open_offset;
-  size_t curr_end = file_table[fd].disk_offset + file_table[fd].size;
-  size_t op_len = (curr_off + len > curr_end) ? (curr_end - curr_off) : len;
-  size_t op_ret = ramdisk_write(buf, curr_off, op_len);
-  assert(op_ret == op_len);
-  file_opened[fd].open_offset += op_len;
-  return op_len;
+  // size_t curr_end = file_table[fd].disk_offset + file_table[fd].size;
+  size_t op_ret = wr_handler(buf, curr_off, len);
+  assert(op_ret == len);
+  file_opened[fd].open_offset += op_ret;
+  return op_ret;
 }
 
 size_t fs_lseek(int fd, size_t offset, int whence) {
