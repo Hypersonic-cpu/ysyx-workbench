@@ -1,9 +1,10 @@
 #include "syscall.h"
 #include "am.h"
-#include "fs.h"
 #include "debug.h"
+#include "fs.h"
 #include <common.h>
 #include <stdint.h>
+#include <sys/time.h>
 
 const char *SyscallName[] = {
     [SYS_exit] = "SysExit",     [SYS_yield] = "SysYield",
@@ -24,12 +25,14 @@ uintptr_t do_sys_exit(uintptr_t real_args[3]);
 uintptr_t do_sys_yield(uintptr_t real_args[3]);
 uintptr_t do_sys_write(uintptr_t real_args[3]);
 uintptr_t do_sys_brk(uintptr_t real_args[3]);
+uintptr_t do_sys_gettime(uintptr_t real_args[3]);
 
 syshandle_t *SyscallHandlers[] = {
     [SYS_exit] = do_sys_exit,
     [SYS_yield] = do_sys_yield,
     [SYS_write] = do_sys_write,
     [SYS_brk] = do_sys_brk,
+    [SYS_gettimeofday] = do_sys_gettime,
 };
 
 const char *sys_name(uintptr_t id) {
@@ -55,6 +58,7 @@ void do_syscall(Context *c) {
   case SYS_yield:
   case SYS_write:
   case SYS_brk:
+  case SYS_gettimeofday:
     c->GPRx = SyscallHandlers[a[0]](&(a[1]));
     break;
   default:
@@ -79,6 +83,15 @@ uintptr_t do_sys_write(uintptr_t ra[3]) {
   return fs_write(fd, buf, len);
 }
 
-uintptr_t do_sys_brk(uintptr_t ra[3]) {
+uintptr_t do_sys_brk(uintptr_t ra[3]) { return 0; }
+
+uintptr_t do_sys_gettime(uintptr_t ra[3]) {
+  struct timeval *tv = (struct timeval *)ra[0];
+  struct timezone *tz_nullable = (struct timezone *)ra[1];
+  assert(tz_nullable == NULL);
+  AM_TIMER_UPTIME_T amt;
+  ioe_read(AM_TIMER_UPTIME, &amt);
+  tv->tv_sec = amt.us / 1000000;
+  tv->tv_usec = amt.us % 1000000;
   return 0;
 }

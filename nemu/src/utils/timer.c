@@ -13,6 +13,7 @@
 * See the Mulan PSL v2 for more details.
 ***************************************************************************************/
 
+#include "debug.h"
 #include <common.h>
 #include MUXDEF(CONFIG_TIMER_GETTIMEOFDAY, <sys/time.h>, <time.h>)
 
@@ -35,6 +36,7 @@ static uint64_t get_time_internal() {
   clock_gettime(CLOCK_MONOTONIC_COARSE, &now);
   uint64_t us = now.tv_sec * 1000000 + now.tv_nsec / 1000;
 #endif
+  // Log("NEMU timer us = %lu", us);
   return us;
 }
 

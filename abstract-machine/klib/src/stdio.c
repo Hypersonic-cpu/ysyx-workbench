@@ -6,7 +6,8 @@
 
 #if !defined(__ISA_NATIVE__) || defined(__NATIVE_USE_KLIB__)
 
-int printf(const char *fmt, ...) {
+int
+printf(const char* fmt, ...) {
   char buffer[PRINT_BUF_LEN] = {0};
   va_list args;
   va_start(args, fmt);
@@ -16,11 +17,13 @@ int printf(const char *fmt, ...) {
   return ret;
 }
 
-int vsprintf(char *out, const char *fmt, va_list ap) {
+int
+vsprintf(char* out, const char* fmt, va_list ap) {
   return vsnprintf(out, /* size_t */ -1, fmt, ap);
 }
 
-int sprintf(char *out, const char *fmt, ...) {
+int
+sprintf(char* out, const char* fmt, ...) {
   va_list args;
   va_start(args, fmt);
   int ret = vsprintf(out, fmt, args);
@@ -28,7 +31,8 @@ int sprintf(char *out, const char *fmt, ...) {
   return ret;
 }
 
-int snprintf(char *out, size_t n, const char *fmt, ...) {
+int
+snprintf(char* out, size_t n, const char* fmt, ...) {
   va_list args;
   va_start(args, fmt);
   int ret = vsnprintf(out, n, fmt, args);
@@ -36,8 +40,9 @@ int snprintf(char *out, size_t n, const char *fmt, ...) {
   return ret;
 }
 
-int vsnprintf(char *out, size_t n, const char *fmt, va_list ap) {
-  char *const orig_out = out;
+int
+vsnprintf(char* out, size_t n, const char* fmt, va_list ap) {
+  char* const orig_out = out;
   /** 0:text, 1:after% */
   unsigned char state = 0;
   size_t cnt = 0;
@@ -70,11 +75,22 @@ int vsnprintf(char *out, size_t n, const char *fmt, va_list ap) {
         fmt++;
       }
 
+      // length modifier
+      unsigned char longmod = 0;
+      if (*fmt == 'l') {
+        longmod = 1;
+        fmt++;
+        if (*fmt == 'l') {
+          longmod = 2;
+          fmt++;
+        }
+      }
+
       unsigned intbase = 10;
       bool intusgn = false;
       switch (*fmt++) {
       case 'p':
-        width = sizeof(void *) << 1; // * 8 / 4
+        width = sizeof(void*) << 1; // * 8 / 4
         // Fall through
       case 'x':
         intbase = 16;
@@ -83,8 +99,10 @@ int vsnprintf(char *out, size_t n, const char *fmt, va_list ap) {
         intusgn = true;
         // Fall through
       case 'd': {
-        int outv = va_arg(ap, int);
-        unsigned outu = 0xBadC0de;
+        long long outv = longmod == 2   ? va_arg(ap, long long)
+                         : longmod == 1 ? (long long)va_arg(ap, long)
+                                        : (long long)va_arg(ap, int);
+        unsigned long long outu = 0xBadC0deULL;
         // int64_t have 20 digits at most (including neg sign)
         // so 20 Byte buffer is enough
         char outbuf[32] = {0};
@@ -92,7 +110,16 @@ int vsnprintf(char *out, size_t n, const char *fmt, va_list ap) {
         unsigned bufptr = 0;
 
         if (intusgn) {
-          outu = *(unsigned *)(&outv);
+          // Truncate to the actual width before treating as unsigned,
+          // otherwise sign-extended bits of narrower types would pollute
+          // outu.
+          if (longmod == 2) {
+            outu = (unsigned long long)outv;
+          } else if (longmod == 1) {
+            outu = (unsigned long)outv;
+          } else {
+            outu = (unsigned int)outv;
+          }
         } else {
           if (outv < 0) {
             assert(intbase == 10 && "Non-DEC signed number");
@@ -127,7 +154,7 @@ int vsnprintf(char *out, size_t n, const char *fmt, va_list ap) {
         }
       } break;
       case 's': {
-        const char *outs = va_arg(ap, const char *);
+        const char* outs = va_arg(ap, const char*);
         while (*outs != '\0') {
           if (cnt++ + 1 >= n) {
             goto vnfinish;

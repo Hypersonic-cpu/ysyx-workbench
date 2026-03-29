@@ -1,12 +1,12 @@
-#include <unistd.h>
+#include "syscall.h"
+#include <assert.h>
 #include <sys/stat.h>
 #include <sys/time.h>
-#include <assert.h>
 #include <time.h>
-#include "syscall.h"
+#include <unistd.h>
 
 // helper macros
-#define _concat(x, y) x ## y
+#define _concat(x, y) x##y
 #define concat(x, y) _concat(x, y)
 #define _args(n, list) concat(_arg, n) list
 #define _arg0(a0, ...) a0
@@ -17,7 +17,7 @@
 #define _arg5(a0, a1, a2, a3, a4, a5, ...) a5
 
 // extract an argument from the macro array
-#define SYSCALL  _args(0, ARGS_ARRAY)
+#define SYSCALL _args(0, ARGS_ARRAY)
 #define GPR1 _args(1, ARGS_ARRAY)
 #define GPR2 _args(2, ARGS_ARRAY)
 #define GPR3 _args(3, ARGS_ARRAY)
@@ -26,38 +26,42 @@
 
 // ISA-depedent definitions
 #if defined(__ISA_X86__)
-# define ARGS_ARRAY ("int $0x80", "eax", "ebx", "ecx", "edx", "eax")
+#define ARGS_ARRAY ("int $0x80", "eax", "ebx", "ecx", "edx", "eax")
 #elif defined(__ISA_MIPS32__)
-# define ARGS_ARRAY ("syscall", "v0", "a0", "a1", "a2", "v0")
+#define ARGS_ARRAY ("syscall", "v0", "a0", "a1", "a2", "v0")
 #elif defined(__riscv)
 #ifdef __riscv_e
-# define ARGS_ARRAY ("ecall", "a5", "a0", "a1", "a2", "a0")
+#define ARGS_ARRAY ("ecall", "a5", "a0", "a1", "a2", "a0")
 #else
-# define ARGS_ARRAY ("ecall", "a7", "a0", "a1", "a2", "a0")
+#define ARGS_ARRAY ("ecall", "a7", "a0", "a1", "a2", "a0")
 #endif
 #elif defined(__ISA_AM_NATIVE__)
-# define ARGS_ARRAY ("call *0x100000", "rdi", "rsi", "rdx", "rcx", "rax")
+#define ARGS_ARRAY ("call *0x100000", "rdi", "rsi", "rdx", "rcx", "rax")
 #elif defined(__ISA_X86_64__)
-# define ARGS_ARRAY ("int $0x80", "rdi", "rsi", "rdx", "rcx", "rax")
+#define ARGS_ARRAY ("int $0x80", "rdi", "rsi", "rdx", "rcx", "rax")
 #elif defined(__ISA_LOONGARCH32R__)
-# define ARGS_ARRAY ("syscall 0", "a7", "a0", "a1", "a2", "a0")
+#define ARGS_ARRAY ("syscall 0", "a7", "a0", "a1", "a2", "a0")
 #else
 #error _syscall_ is not implemented
 #endif
 
 intptr_t _syscall_(intptr_t type, intptr_t a0, intptr_t a1, intptr_t a2) {
-  register intptr_t _gpr1 asm (GPR1) = type;
-  register intptr_t _gpr2 asm (GPR2) = a0;
-  register intptr_t _gpr3 asm (GPR3) = a1;
-  register intptr_t _gpr4 asm (GPR4) = a2;
-  register intptr_t ret asm (GPRx);
-  asm volatile (SYSCALL : "=r" (ret) : "r"(_gpr1), "r"(_gpr2), "r"(_gpr3), "r"(_gpr4));
+  register intptr_t _gpr1 asm(GPR1) = type;
+  register intptr_t _gpr2 asm(GPR2) = a0;
+  register intptr_t _gpr3 asm(GPR3) = a1;
+  register intptr_t _gpr4 asm(GPR4) = a2;
+  register intptr_t ret asm(GPRx);
+  asm volatile(SYSCALL
+               : "=r"(ret)
+               : "r"(_gpr1), "r"(_gpr2), "r"(_gpr3), "r"(_gpr4));
+  // : "memory");
   return ret;
 }
 
 void _exit(int status) {
   _syscall_(SYS_exit, status, 0, 0);
-  while (1);
+  while (1)
+    ;
 }
 
 int _open(const char *path, int flags, mode_t mode) {
@@ -66,23 +70,22 @@ int _open(const char *path, int flags, mode_t mode) {
 }
 
 int _write(int fd, void *buf, size_t count) {
-  _syscall_(SYS_write, fd, (intptr_t) buf, count);
+  _syscall_(SYS_write, fd, (intptr_t)buf, count);
   return 0;
 }
 
 extern char _end;
 void *_sbrk(intptr_t increment) {
-  // return (void *)-1;
   // WARN: MT-Safety?
-  static void* break_pos = &_end;
-  void* new_break = break_pos + increment;
-  void* old_break = break_pos;
-  intptr_t ret = _syscall_(SYS_brk, (intptr_t) new_break, 0, 0);
+  static void *break_pos = &_end;
+  void *new_break = break_pos + increment;
+  void *old_break = break_pos;
+  intptr_t ret = _syscall_(SYS_brk, (intptr_t)new_break, 0, 0);
   if (ret == 0) {
     break_pos = new_break;
     return old_break;
   } else {
-    return (void*) -1;
+    return (void *)-1;
   }
 }
 
@@ -102,11 +105,11 @@ off_t _lseek(int fd, off_t offset, int whence) {
 }
 
 int _gettimeofday(struct timeval *tv, struct timezone *tz) {
-  _exit(SYS_gettimeofday);
+  _syscall_(SYS_gettimeofday, (intptr_t)tv, (intptr_t)tz, 0);
   return 0;
 }
 
-int _execve(const char *fname, char * const argv[], char *const envp[]) {
+int _execve(const char *fname, char *const argv[], char *const envp[]) {
   _exit(SYS_execve);
   return 0;
 }
@@ -114,9 +117,7 @@ int _execve(const char *fname, char * const argv[], char *const envp[]) {
 // Syscalls below are not used in Nanos-lite.
 // But to pass linking, they are defined as dummy functions.
 
-int _fstat(int fd, struct stat *buf) {
-  return -1;
-}
+int _fstat(int fd, struct stat *buf) { return -1; }
 
 int _stat(const char *fname, struct stat *buf) {
   assert(0);
@@ -173,9 +174,7 @@ int dup(int oldfd) {
   return -1;
 }
 
-int dup2(int oldfd, int newfd) {
-  return -1;
-}
+int dup2(int oldfd, int newfd) { return -1; }
 
 unsigned int sleep(unsigned int seconds) {
   assert(0);
@@ -192,6 +191,4 @@ int symlink(const char *target, const char *linkpath) {
   return -1;
 }
 
-int ioctl(int fd, unsigned long request, ...) {
-  return -1;
-}
+int ioctl(int fd, unsigned long request, ...) { return -1; }
