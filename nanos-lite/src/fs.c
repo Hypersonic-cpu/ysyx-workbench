@@ -53,32 +53,41 @@ static Fopened file_opened[MAX_FD] __attribute__((used)) = {};
 size_t ramdisk_read(void *buf, size_t offset, size_t len);
 size_t ramdisk_write(const void *buf, size_t offset, size_t len);
 
-void fs_reset(void) {
+static void init_open_files(void) {
   for (int i = 0; i < MAX_FD; i++) {
     file_opened[i] = (Fopened){.finfo_idx = -1};
   }
+  file_opened[FD_STDIN] = (Fopened){.finfo_idx = FD_STDIN};
   file_opened[FD_STDOUT] = (Fopened){.finfo_idx = FD_STDOUT};
   file_opened[FD_STDERR] = (Fopened){.finfo_idx = FD_STDERR};
 }
 
+static int alloc_fd(void) {
+  for (int fd = FD_FB + 1; fd < MAX_FD; fd++) {
+    if (file_opened[fd].finfo_idx == -1) {
+      return fd;
+    }
+  }
+  return -1;
+}
+
 void init_fs() {
-  fs_reset();
+  init_open_files();
   AM_GPU_CONFIG_T cfg = {};
   ioe_read(AM_GPU_CONFIG, &cfg);
   file_table[FD_FB].size = cfg.width * cfg.height * sizeof(uint32_t);
 }
 
 int fs_open(const char *pathname, int flags, int mode) {
-  int idx = 0;
-  while (file_table[idx].name) {
-    if (strcmp(file_table[idx].name, pathname) == 0) {
-      Log("fs_open: find file '%s' @Finfo %d", pathname, idx);
-      assert(file_opened[idx].finfo_idx == -1);
-      file_opened[idx] =
-          (Fopened){.finfo_idx = idx, .ref_count = 1, .open_offset = 0};
-      return idx;
+  for (int finfo_idx = 0; file_table[finfo_idx].name != NULL; finfo_idx++) {
+    if (strcmp(file_table[finfo_idx].name, pathname) == 0) {
+      int fd = alloc_fd();
+      assert(fd >= 0);
+      Log("fs_open: find file '%s' @Finfo %d fd %d", pathname, finfo_idx, fd);
+      file_opened[fd] =
+          (Fopened){.finfo_idx = finfo_idx, .ref_count = 1, .open_offset = 0};
+      return fd;
     }
-    idx++;
   }
   Log("fs_open: No such file '%s'", pathname);
   return -1;
