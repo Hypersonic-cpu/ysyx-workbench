@@ -53,12 +53,16 @@ static Fopened file_opened[MAX_FD] __attribute__((used)) = {};
 size_t ramdisk_read(void *buf, size_t offset, size_t len);
 size_t ramdisk_write(const void *buf, size_t offset, size_t len);
 
-void init_fs() {
+void fs_reset(void) {
   for (int i = 0; i < MAX_FD; i++) {
-    file_opened[i].finfo_idx = -1;
+    file_opened[i] = (Fopened){.finfo_idx = -1};
   }
   file_opened[FD_STDOUT] = (Fopened){.finfo_idx = FD_STDOUT};
   file_opened[FD_STDERR] = (Fopened){.finfo_idx = FD_STDERR};
+}
+
+void init_fs() {
+  fs_reset();
   AM_GPU_CONFIG_T cfg = {};
   ioe_read(AM_GPU_CONFIG, &cfg);
   file_table[FD_FB].size = cfg.width * cfg.height * sizeof(uint32_t);

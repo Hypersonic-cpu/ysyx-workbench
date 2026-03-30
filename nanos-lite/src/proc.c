@@ -1,4 +1,5 @@
 #include <proc.h>
+#include <fs.h>
 
 #define MAX_NR_PROC 4
 
@@ -10,6 +11,7 @@ static const char *init_prog = "/bin/nterm";
 void naive_uload(PCB *pcb, const char *filename);
 
 void run_program(const char *filename) {
+  fs_reset();
   naive_uload(NULL, filename);
 }
 
