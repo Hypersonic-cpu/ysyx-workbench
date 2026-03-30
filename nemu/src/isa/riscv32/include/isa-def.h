@@ -20,6 +20,17 @@
 
 #define RISCV_CSR_NUM 4096
 
+#define RISCV_CSR_MSTATUS 0x300
+#define RISCV_CSR_MTVEC   0x305
+#define RISCV_CSR_MCAUSE  0x342
+#define RISCV_CSR_MEPC    0x341
+#define RISCV_CSR_MCYCLE  0xB00
+#define RISCV_CSR_MVENDORID 0xF11
+#define RISCV_CSR_MARCHID 0xF12
+#define RISCV_CSR_SATP 0x180
+
+word_t csr_read(int idx);
+
 typedef struct {
   // WARN: Remind the order
   word_t gpr[MUXDEF(CONFIG_RVE, 16, 32)];
@@ -31,9 +42,5 @@ typedef struct {
 typedef struct {
   uint32_t inst;
 } MUXDEF(CONFIG_RV64, riscv64_ISADecodeInfo, riscv32_ISADecodeInfo);
-
-#define isa_mmu_check(vaddr, len, type) (MMU_DIRECT)
-
-void isa_csr_display();
 
 #endif

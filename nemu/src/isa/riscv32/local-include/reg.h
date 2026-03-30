@@ -18,29 +18,23 @@
 
 #include "debug.h"
 #include <common.h>
-
-#define RISCV_CSR_MSTATUS 0x300
-#define RISCV_CSR_MTVEC   0x305
-#define RISCV_CSR_MCAUSE  0x342
-#define RISCV_CSR_MEPC    0x341
-#define RISCV_CSR_MCYCLE  0xB00
-#define RISCV_CSR_MVENDORID 0xF11
-#define RISCV_CSR_MARCHID 0xF12
+#include "isa-def.h"
 
 static inline int check_reg_idx(int idx) {
-  IFDEF(CONFIG_RT_CHECK, 
-      Assert(idx >= 0 && idx < MUXDEF(CONFIG_RVE, 16, 32), 
+  IFDEF(CONFIG_RT_CHECK,
+      Assert(idx >= 0 && idx < MUXDEF(CONFIG_RVE, 16, 32),
         "Reg index %d out of bound", idx)
   );
   return idx;
 }
 
 static inline int check_csr_idx(int idx) {
-  IFDEF(CONFIG_RT_CHECK, 
+  IFDEF(CONFIG_RT_CHECK,
       Assert(
+        idx == RISCV_CSR_SATP ||
         idx == RISCV_CSR_MSTATUS ||
         idx == RISCV_CSR_MTVEC   ||
-        idx == RISCV_CSR_MCAUSE  || 
+        idx == RISCV_CSR_MCAUSE  ||
         idx == RISCV_CSR_MEPC    ||
         idx == RISCV_CSR_MCYCLE  ||
         idx == RISCV_CSR_MVENDORID ||

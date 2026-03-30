@@ -1,14 +1,22 @@
 #include <memory.h>
+#include <string.h>
 
 static void *pf = NULL;
 
 void* new_page(size_t nr_page) {
-  return NULL;
+  void *ret = pf;
+  pf += nr_page * PGSIZE;
+  assert(pf <= heap.end && "OS out of physical page");
+  return ret;
 }
 
 #ifdef HAS_VME
 static void* pg_alloc(int n) {
-  return NULL;
+  assert(n % PGSIZE == 0 && "Unaligned page alloc");
+  int nr_page = n / PGSIZE;
+  void* ret = new_page(nr_page);
+  memset(ret, 0, n);
+  return ret;
 }
 #endif
 

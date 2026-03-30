@@ -44,6 +44,7 @@ $(shell mkdir -p $(DST_DIR))
 APP     ?= $(WORK_DIR)/build/$(NAME)-$(ISA)
 ARCHIVE  = $(WORK_DIR)/build/$(NAME)-$(ISA).a
 
+VME ?= 1
 
 ### Add default libraries for ISA != native
 ifneq ($(ISA), native)
@@ -177,7 +178,7 @@ $(CLEAN_ALL):
 .PHONY: clean-all $(CLEAN_ALL)
 
 ### Build fsimg and ramdisk for Nanos-lite
-APPS = nslider nterm menu bird
+APPS = nterm # nslider nterm menu bird
 TESTS = dummy hello timer-test file-test event-test bmp-test
 
 fsimg: $(addprefix apps/, $(APPS)) $(addprefix tests/, $(TESTS))

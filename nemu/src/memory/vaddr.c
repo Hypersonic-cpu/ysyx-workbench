@@ -16,23 +16,37 @@
 #include <isa.h>
 #include <debug.h>
 #include <memory/paddr.h>
+#include <stdio.h>
 
 word_t vaddr_ifetch(vaddr_t addr, int len) {
   return paddr_read(addr, len);
 }
 
 word_t vaddr_read(vaddr_t addr, int len) {
-  Assert(len == 1 || len == 2 || len == 4 || len == sizeof(word_t), 
+  Assert(len == 1 || len == 2 || len == 4 || len == sizeof(word_t),
          "Length %d not supported", len);
-  Assert((addr & (vaddr_t)(len-1)) == 0, 
+  Assert((addr & (vaddr_t)(len-1)) == 0,
          "Read addr " FMT_WORD " not aligned to len %d", addr, len);
-  return paddr_read(addr, len);
+  paddr_t paddr = 0;
+  if (isa_mmu_check(addr, len, /* Unused */ 0) == MMU_TRANSLATE) {
+    paddr = isa_mmu_translate(addr, len, /* Unused */ 0);
+  } else {
+    paddr = addr;
+  }
+  return paddr_read(paddr, len);
 }
 
 void vaddr_write(vaddr_t addr, int len, word_t data) {
-  Assert(len == 1 || len == 2 || len == 4 || len == sizeof(word_t), 
+  Assert(len == 1 || len == 2 || len == 4 || len == sizeof(word_t),
          "Length %d not supported", len);
-  Assert((addr & (vaddr_t)(len-1)) == 0, 
+  Assert((addr & (vaddr_t)(len-1)) == 0,
          "Write addr " FMT_WORD " not aligned to len %d", addr, len);
-  paddr_write(addr, len, data);
+  paddr_t paddr = 0;
+  if (isa_mmu_check(addr, len, /* Unused */ 0) == MMU_TRANSLATE) {
+    paddr = isa_mmu_translate(addr, len, /* Unused */ 0);
+  } else {
+    paddr = addr;
+  }
+  // printf("S VA = %08x PA = %08x\n", addr, paddr);
+  paddr_write(paddr, len, data);
 }

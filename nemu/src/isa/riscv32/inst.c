@@ -365,7 +365,7 @@ static int decode_exec(Decode *s) {
 
   /** RV32M Extension */
   INSTPAT("0000001 ????? ????? 000 ????? 01100 11",
-          mul    , R, 
+          mul    , R,
           R(rd) = src1 * src2;
           IFDEF(CONFIG_NPSIM_TRACE, s->nptrace.ext_op = IntMulL);
           );
@@ -403,7 +403,7 @@ static int decode_exec(Decode *s) {
           IFDEF(CONFIG_NPSIM_TRACE, s->nptrace.ext_op = IntDiv);
           );
   INSTPAT("0000001 ????? ????? 101 ????? 01100 11",
-          divu   , R, 
+          divu   , R,
           R(rd) = (src2==0) ? (word_t)(-1) : src1/src2;
           IFDEF(CONFIG_NPSIM_TRACE, s->nptrace.ext_op = IntDiv);
           );
@@ -452,8 +452,6 @@ static int decode_exec(Decode *s) {
   INSTPAT_END();
 
   R(0) = 0; // NOTE: reset $zero to 0
-
-  // isa_csr_display();
   return 0;
 }
 

@@ -50,7 +50,7 @@ static char* rl_gets() {
 
 static int cmd_si(char *args) {
   uint64_t cmd_to_go = 0;
-  // NULL will cause seg fault, while 
+  // NULL will cause seg fault, while
   // other errors will let `cmd_to_go=0` which causes no harm.
   if (args) { cmd_to_go = atoll(args); }
   // Set the default value to 1;
@@ -61,6 +61,7 @@ static int cmd_si(char *args) {
 
 static int cmd_info(char *args) {
   char* arg = strtok(NULL, " ");
+  void isa_csr_display();
   if (arg == NULL) {
     printf("Invalid arguments, type `help info` for more info\n");
     return 1;
@@ -75,7 +76,7 @@ static int cmd_info(char *args) {
     case 'm':
       isa_csr_display();
       return 0;
-    default: 
+    default:
       printf("Invalid argument `%c`, type `help info` for more info\n", arg[0]);
       return 1;
   }
@@ -101,7 +102,7 @@ static int cmd_x(char *args) {
   }
   size_t scan_num = atoll(arg);
   // printf("Scan len : %lu Bytes\n", scan_num * sizeof(word_t));
-  
+
   arg = strtok(NULL, " ");
   if (arg == NULL) {
     printf("Invalid arguments, type `help x` for more info\n");
@@ -172,7 +173,7 @@ static int cmd_d(char *args) {
     return 1;
   }
   bool success = (id >= 0) && free_wp(id);
-  printf("Watchpoint %d removal %s\n", 
+  printf("Watchpoint %d removal %s\n",
          id, success ? "success" : "failed");
   return 0;
 }
@@ -213,10 +214,10 @@ static struct {
   { "q", "Exit NEMU", cmd_q },
   { "si", "Arg [$N=1], execute `$N` steps", cmd_si },
   { "bt", "Stack trace display", cmd_bt },
-  { "info", "Arg <r|w|m>, show info of registers|watchpoints|csrs", cmd_info }, 
-  { "x", "Arg <$nw> <$VA(hex)> scan next $nw words from mem $VA", cmd_x }, 
-  { "p/x", "Arg <$expr> evaluate expression", cmd_p_hex }, 
-  { "p", "Arg <$expr> evaluate expression", cmd_p_dec }, 
+  { "info", "Arg <r|w|m>, show info of registers|watchpoints|csrs", cmd_info },
+  { "x", "Arg <$nw> <$VA(hex)> scan next $nw words from mem $VA", cmd_x },
+  { "p/x", "Arg <$expr> evaluate expression", cmd_p_hex },
+  { "p", "Arg <$expr> evaluate expression", cmd_p_dec },
   { "w", "Arg <$expr> watchpoint, pause when $expr changes", cmd_w },
   { "d", "Arg <$N> delete watchpoint $N", cmd_d },
   { "save", "Arg <path>, save current NEMU state to path", cmd_save },
