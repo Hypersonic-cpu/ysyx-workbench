@@ -22,6 +22,8 @@ const char *SyscallName[] = {
 
 typedef uintptr_t syshandle_t(uintptr_t real_args[3]);
 
+void naive_uload(PCB *pcb, const char *filename);
+
 uintptr_t do_sys_exit(uintptr_t real_args[3]);
 uintptr_t do_sys_yield(uintptr_t real_args[3]);
 uintptr_t do_sys_write(uintptr_t real_args[3]);
@@ -83,7 +85,7 @@ void do_syscall(Context *c) {
 }
 
 uintptr_t do_sys_exit(uintptr_t ra[3]) {
-  run_init_process();
+  naive_uload(NULL, "/bin/menu");
   halt(ra[0]);
   return ra[0];
 }
@@ -130,6 +132,6 @@ uintptr_t do_sys_close(uintptr_t ra[3]) { return fs_close(ra[0]); }
 uintptr_t do_sys_execve(uintptr_t ra[3]) {
   const char *filename = (const char *)ra[0];
   assert(filename != NULL);
-  run_program(filename);
+  naive_uload(NULL, filename);
   return 0;
 }

@@ -44,8 +44,6 @@ $(shell mkdir -p $(DST_DIR))
 APP     ?= $(WORK_DIR)/build/$(NAME)-$(ISA)
 ARCHIVE  = $(WORK_DIR)/build/$(NAME)-$(ISA).a
 
-VME ?= 1
-
 ### Add default libraries for ISA != native
 ifneq ($(ISA), native)
 LIBS += libc libos

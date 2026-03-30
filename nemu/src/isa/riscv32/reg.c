@@ -86,11 +86,11 @@ void isa_csr_display() {
   }
 }
 
-int isa_mmu_check(vaddr_t vaddr, int len, int type) {
-  bool mode = csr(RISCV_CSR_SATP) >> 31;
-  if (mode) {
-    return MMU_TRANSLATE;
-  } else {
-    return MMU_DIRECT;
-  }
-}
+// int isa_mmu_check(vaddr_t vaddr, int len, int type) {
+//   bool mode = csr(RISCV_CSR_SATP) >> 31;
+//   if (mode) {
+//     return MMU_TRANSLATE;
+//   } else {
+//     return MMU_DIRECT;
+//   }
+// }

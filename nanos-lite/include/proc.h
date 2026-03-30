@@ -18,7 +18,7 @@ typedef union {
 
 extern PCB *current;
 
-void run_program(const char *filename);
-void run_init_process(void);
+// void run_program(const char *filename);
+// void run_init_process(void);
 
 #endif

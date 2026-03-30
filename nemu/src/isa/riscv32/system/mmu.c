@@ -48,6 +48,6 @@ paddr_t isa_mmu_translate(vaddr_t vaddr, int len, int type) {
   // return translate(vaddr, ptable0, 1);
   paddr_t ret = translate(vaddr, ptable0, 1);
   // printf(" Translate for VA " FMT_WORD " -> PA " FMT_WORD "\n", vaddr, ret);
-  assert(ret == vaddr);
+  Assert(ret == vaddr, "translated %08x != vaddr %08x", ret, vaddr);
   return ret;
 }
