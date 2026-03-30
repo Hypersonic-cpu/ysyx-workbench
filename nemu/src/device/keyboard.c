@@ -14,6 +14,8 @@
 ***************************************************************************************/
 
 #include <device/map.h>
+#include <stdbool.h>
+#include <stdio.h>
 #include <utils.h>
 
 #define KEYDOWN_MASK 0x8000
@@ -97,4 +99,24 @@ void init_i8042() {
   add_mmio_map("keyboard", CONFIG_I8042_DATA_MMIO, i8042_data_port_base, 4, i8042_data_io_handler);
 #endif
   IFNDEF(CONFIG_TARGET_AM, init_keymap());
+}
+
+void keyboard_snapshot_save(FILE *fp) {
+  fwrite(i8042_data_port_base, 1, 4, fp);
+#ifndef CONFIG_TARGET_AM
+  fwrite(&key_f, 1, sizeof(key_f), fp);
+  fwrite(&key_r, 1, sizeof(key_r), fp);
+  fwrite(key_queue, 1, sizeof(key_queue), fp);
+#endif
+}
+
+bool keyboard_snapshot_load(FILE *fp) {
+  bool ok = fread(i8042_data_port_base, 1, 4, fp) == 4;
+#ifndef CONFIG_TARGET_AM
+  ok = ok &&
+       fread(&key_f, 1, sizeof(key_f), fp) == sizeof(key_f) &&
+       fread(&key_r, 1, sizeof(key_r), fp) == sizeof(key_r) &&
+       fread(key_queue, 1, sizeof(key_queue), fp) == sizeof(key_queue);
+#endif
+  return ok;
 }

@@ -5,8 +5,17 @@
 static PCB pcb[MAX_NR_PROC] __attribute__((used)) = {};
 static PCB pcb_boot = {};
 PCB *current = NULL;
+static const char *init_prog = "/bin/nterm";
 
 void naive_uload(PCB *pcb, const char *filename);
+
+void run_program(const char *filename) {
+  naive_uload(NULL, filename);
+}
+
+void run_init_process(void) {
+  run_program(init_prog);
+}
 
 void switch_boot_pcb() {
   current = &pcb_boot;
@@ -26,9 +35,7 @@ void init_proc() {
 
   Log("Initializing processes...");
 
-  // load program here
-  naive_uload(NULL, "/bin/menu");
-
+  run_init_process();
 }
 
 Context* schedule(Context *prev) {

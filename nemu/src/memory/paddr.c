@@ -18,6 +18,7 @@
 #include <memory/paddr.h>
 #include <device/mmio.h>
 #include <isa.h>
+#include <snapshot.h>
 #include <stdio.h>
 
 #if   defined(CONFIG_PMEM_MALLOC)
@@ -66,6 +67,14 @@ void init_mem() {
 #endif
   IFDEF(CONFIG_MEM_RANDOM, memset(pmem, rand(), CONFIG_MSIZE));
   Log("physical memory area [" FMT_PADDR ", " FMT_PADDR "]", PMEM_LEFT, PMEM_RIGHT);
+}
+
+void snapshot_pmem_save(FILE *fp) {
+  fwrite(pmem, 1, CONFIG_MSIZE, fp);
+}
+
+bool snapshot_pmem_load(FILE *fp) {
+  return fread(pmem, 1, CONFIG_MSIZE, fp) == CONFIG_MSIZE;
 }
 
 word_t paddr_read(paddr_t addr, int len) {

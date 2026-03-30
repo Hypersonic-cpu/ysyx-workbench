@@ -15,6 +15,7 @@
 
 #include <common.h>
 #include <utils.h>
+#include <snapshot.h>
 #include <device/alarm.h>
 #ifndef CONFIG_TARGET_AM
 #include <SDL2/SDL.h>
@@ -35,14 +36,21 @@ void init_soc();
 
 void send_key(uint8_t, bool);
 void vga_update_screen();
+void timer_snapshot_save(FILE *fp);
+bool timer_snapshot_load(FILE *fp);
+void keyboard_snapshot_save(FILE *fp);
+bool keyboard_snapshot_load(FILE *fp);
+void vga_snapshot_save(FILE *fp);
+bool vga_snapshot_load(FILE *fp);
+
+static uint64_t device_last_update = 0;
 
 void device_update() {
-  static uint64_t last = 0;
   uint64_t now = get_time();
-  if (now - last < 1000000 / TIMER_HZ) {
+  if (now - device_last_update < 1000000 / TIMER_HZ) {
     return;
   }
-  last = now;
+  device_last_update = now;
 
   IFDEF(CONFIG_HAS_VGA, vga_update_screen());
 
@@ -91,4 +99,20 @@ void init_device() {
   IFNDEF(CONFIG_TARGET_AM, init_alarm());
 
   IFDEF(CONFIG_SOC, init_soc();)
+}
+
+void snapshot_device_save(FILE *fp) {
+  fwrite(&device_last_update, 1, sizeof(device_last_update), fp);
+  timer_snapshot_save(fp);
+  keyboard_snapshot_save(fp);
+  vga_snapshot_save(fp);
+}
+
+bool snapshot_device_load(FILE *fp) {
+  bool ok = fread(&device_last_update, 1, sizeof(device_last_update), fp) ==
+                sizeof(device_last_update) &&
+            timer_snapshot_load(fp) &&
+            keyboard_snapshot_load(fp) &&
+            vga_snapshot_load(fp);
+  return ok;
 }

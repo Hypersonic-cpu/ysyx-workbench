@@ -15,6 +15,8 @@
 
 #include <device/map.h>
 #include <device/alarm.h>
+#include <stdbool.h>
+#include <stdio.h>
 #include <utils.h>
 
 static uint32_t *rtc_port_base = NULL;
@@ -46,4 +48,12 @@ void init_timer() {
   add_mmio_map("rtc", CONFIG_RTC_MMIO, rtc_port_base, 8, rtc_io_handler);
 #endif
   IFNDEF(CONFIG_TARGET_AM, add_alarm_handle(timer_intr));
+}
+
+void timer_snapshot_save(FILE *fp) {
+  fwrite(rtc_port_base, 1, 8, fp);
+}
+
+bool timer_snapshot_load(FILE *fp) {
+  return fread(rtc_port_base, 1, 8, fp) == 8;
 }

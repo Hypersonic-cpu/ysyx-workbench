@@ -22,6 +22,7 @@
 #include "debug.h"
 #include "isa-def.h"
 #include "memory/vaddr.h"
+#include "snapshot.h"
 #include "utils.h"
 
 static int is_batch_mode = false;
@@ -184,6 +185,22 @@ static int cmd_bt(char *args) {
   return 0;
 }
 
+static int cmd_save(char *args) {
+  if (args == NULL) {
+    printf("Invalid arguments, type `help save` for more info\n");
+    return 1;
+  }
+  return snapshot_save(args) ? 0 : 1;
+}
+
+static int cmd_load(char *args) {
+  if (args == NULL) {
+    printf("Invalid arguments, type `help load` for more info\n");
+    return 1;
+  }
+  return snapshot_load(args) ? 0 : 1;
+}
+
 static int cmd_help(char *args);
 
 static struct {
@@ -201,7 +218,9 @@ static struct {
   { "p/x", "Arg <$expr> evaluate expression", cmd_p_hex }, 
   { "p", "Arg <$expr> evaluate expression", cmd_p_dec }, 
   { "w", "Arg <$expr> watchpoint, pause when $expr changes", cmd_w },
-  { "d", "Arg <$N> delete watchpoint $N", cmd_d }
+  { "d", "Arg <$N> delete watchpoint $N", cmd_d },
+  { "save", "Arg <path>, save current NEMU state to path", cmd_save },
+  { "load", "Arg <path>, load NEMU state from path", cmd_load }
 };
 
 #define NR_CMD ARRLEN(cmd_table)

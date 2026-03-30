@@ -53,7 +53,8 @@ intptr_t _syscall_(intptr_t type, intptr_t a0, intptr_t a1, intptr_t a2) {
   register intptr_t ret asm(GPRx);
   asm volatile(SYSCALL
                : "=r"(ret)
-               : "r"(_gpr1), "r"(_gpr2), "r"(_gpr3), "r"(_gpr4));
+               : "r"(_gpr1), "r"(_gpr2), "r"(_gpr3), "r"(_gpr4)
+               : "memory");
   return ret;
 }
 
@@ -101,7 +102,7 @@ int _gettimeofday(struct timeval *tv, struct timezone *tz) {
 }
 
 int _execve(const char *fname, char *const argv[], char *const envp[]) {
-  _exit(SYS_execve);
+  return _syscall_(SYS_execve, (intptr_t)fname, (intptr_t)argv, (intptr_t)envp);
 }
 
 // Syscalls below are not used in Nanos-lite.

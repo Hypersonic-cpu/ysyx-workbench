@@ -2,6 +2,7 @@
 #include "am.h"
 #include "debug.h"
 #include "fs.h"
+#include "proc.h"
 #include <common.h>
 #include <stdint.h>
 #include <sys/time.h>
@@ -30,6 +31,7 @@ uintptr_t do_sys_open(uintptr_t real_args[3]);
 uintptr_t do_sys_read(uintptr_t real_args[3]);
 uintptr_t do_sys_lseek(uintptr_t real_args[3]);
 uintptr_t do_sys_close(uintptr_t real_args[3]);
+uintptr_t do_sys_execve(uintptr_t real_args[3]);
 
 syshandle_t *SyscallHandlers[] = {
     [SYS_exit] = do_sys_exit,
@@ -41,6 +43,7 @@ syshandle_t *SyscallHandlers[] = {
     [SYS_lseek] = do_sys_lseek,
     [SYS_close] = do_sys_close,
     [SYS_gettimeofday] = do_sys_gettime,
+    [SYS_execve] = do_sys_execve,
 };
 
 const char *sys_name(uintptr_t id) {
@@ -71,6 +74,7 @@ void do_syscall(Context *c) {
   case SYS_read:
   case SYS_lseek:
   case SYS_close:
+  case SYS_execve:
     c->GPRx = SyscallHandlers[a[0]](&(a[1]));
     break;
   default:
@@ -79,6 +83,7 @@ void do_syscall(Context *c) {
 }
 
 uintptr_t do_sys_exit(uintptr_t ra[3]) {
+  run_init_process();
   halt(ra[0]);
   return ra[0];
 }
@@ -121,3 +126,10 @@ uintptr_t do_sys_lseek(uintptr_t ra[3]) {
 }
 
 uintptr_t do_sys_close(uintptr_t ra[3]) { return fs_close(ra[0]); }
+
+uintptr_t do_sys_execve(uintptr_t ra[3]) {
+  const char *filename = (const char *)ra[0];
+  assert(filename != NULL);
+  run_program(filename);
+  return 0;
+}

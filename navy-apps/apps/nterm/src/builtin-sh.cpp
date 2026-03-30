@@ -1,5 +1,7 @@
 #include <nterm.h>
 #include <stdarg.h>
+#include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 #include <SDL.h>
 
@@ -23,6 +25,40 @@ static void sh_prompt() {
 }
 
 static void sh_handle_cmd(const char *cmd) {
+  char buf[256];
+  strncpy(buf, cmd, sizeof(buf) - 1);
+  buf[sizeof(buf) - 1] = '\0';
+  buf[strcspn(buf, "\r\n")] = '\0';
+
+  char *line = buf;
+  while (*line == ' ' || *line == '\t') {
+    line++;
+  }
+  if (*line == '\0') {
+    return;
+  }
+  char *raw = line;
+
+  char *argv[16] = {};
+  int argc = 0;
+  for (char *tok = strtok(line, " \t"); tok != NULL && argc < 15;
+       tok = strtok(NULL, " \t")) {
+    argv[argc++] = tok;
+  }
+  argv[argc] = NULL;
+
+  if (strcmp(argv[0], "echo") == 0) {
+    const char *msg = raw + 4;
+    while (*msg == ' ' || *msg == '\t') {
+      msg++;
+    }
+    sh_printf("%s\n", msg);
+    return;
+  }
+
+  setenv("PATH", "/bin", 0);
+  execvp(argv[0], argv);
+  sh_printf("exec %s failed\n", argv[0]);
 }
 
 void builtin_sh_run() {

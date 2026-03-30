@@ -16,6 +16,8 @@
 #include <common.h>
 #include <device/map.h>
 #include <device/mmio.h>
+#include <stdbool.h>
+#include <stdio.h>
 #include <sys/cdefs.h>
 
 #define SCREEN_W (MUXDEF(CONFIG_VGA_SIZE_800x600, 800, 400))
@@ -151,4 +153,18 @@ void init_vga() {
   add_mmio_map("vmem", CONFIG_FB_ADDR, vmem, screen_size(), NULL);
   IFDEF(CONFIG_VGA_SHOW_SCREEN, init_screen());
   IFDEF(CONFIG_VGA_SHOW_SCREEN, memset(vmem, 0, screen_size()));
+}
+
+void vga_snapshot_save(FILE *fp) {
+  fwrite(vgactl_port_base, 1, 8, fp);
+  fwrite(vmem, 1, screen_size(), fp);
+}
+
+bool vga_snapshot_load(FILE *fp) {
+  bool ok = fread(vgactl_port_base, 1, 8, fp) == 8 &&
+            fread(vmem, 1, screen_size(), fp) == screen_size();
+  if (ok) {
+    IFDEF(CONFIG_VGA_SHOW_SCREEN, update_screen());
+  }
+  return ok;
 }
