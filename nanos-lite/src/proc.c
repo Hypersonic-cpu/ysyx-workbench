@@ -41,7 +41,9 @@ void init_proc() {
 Context *schedule(Context *prev) {
   assert(nr_pcbs > 0);
   static size_t idx_pcbs = 0;
+  current->cp = prev;
   PCB *ret = &pcb[idx_pcbs];
+  current = ret;
   Log("Scheduling PCB[%d]\n", idx_pcbs);
   idx_pcbs = (idx_pcbs + 1) % nr_pcbs;
   return ret->cp;
