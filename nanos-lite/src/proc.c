@@ -7,13 +7,22 @@ static size_t nr_pcbs = 0;
 static PCB pcb[MAX_NR_PROC] __attribute__((used)) = {};
 static PCB pcb_boot = {};
 PCB *current = NULL;
-const char *init_prog = "/bin/nterm";
+const char *init_prog = "/bin/menu";
 
 void naive_uload(PCB *pcb, const char *filename);
+void (*ctx_uload(PCB *pcb, const char *filename))();
 
 void context_kload(PCB *pcb, void (*fn)(void *), void *args) {
   pcb->cp = kcontext(
       (Area){.start = pcb->stack, .end = pcb->stack + STACK_SIZE}, fn, args);
+}
+
+void context_uload(PCB *pcb, const char *filename) {
+  pcb->as.area.end = heap.end;
+  void *entry = (void *)ctx_uload(pcb, filename);
+  pcb->cp = ucontext(
+      &pcb->as, (Area){.start = pcb->stack, .end = pcb->stack + STACK_SIZE},
+      entry);
 }
 
 void switch_boot_pcb() { current = &pcb_boot; }
@@ -30,11 +39,12 @@ void hello_fun(void *arg) {
 
 void init_proc() {
   context_kload(&pcb[nr_pcbs++], hello_fun, (void *)0x11);
-  context_kload(&pcb[nr_pcbs++], hello_fun, (void *)0x22);
+  // context_kload(&pcb[nr_pcbs++], hello_fun, (void *)0x22);
   switch_boot_pcb();
 
   Log("Initializing processes...");
 
+  context_uload(&pcb[nr_pcbs++], init_prog);
   // naive_uload(NULL, init_prog);
 }
 

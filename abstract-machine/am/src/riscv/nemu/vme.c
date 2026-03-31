@@ -107,4 +107,16 @@ void map(AddrSpace *as, void *va, void *pa, int prot) {
   //        (uintptr_t)ptable1, *leaf);
 }
 
-Context *ucontext(AddrSpace *as, Area kstack, void *entry) { return NULL; }
+Context *ucontext(AddrSpace *as, Area kstack, void *entry) {
+  // U Context itself is on kernel stack
+  Context *ctx = kstack.end - sizeof(Context);
+  for (size_t i = 0; i < sizeof(Context) / sizeof(uintptr_t); i++) {
+    * ((uintptr_t *) ctx + i) = 0xBadC0DE;
+  }
+  // ctx->gpr[10] = (uintptr_t) as;
+  ctx->gpr[ 2] = (uintptr_t) as->area.end;
+  ctx->mepc = (uintptr_t) entry;
+  ctx->mstatus = 0x80;
+  ctx->pdir = as->ptr;
+  return ctx;
+}

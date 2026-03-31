@@ -65,7 +65,7 @@ static uintptr_t loader(PCB *pcb, const char *filename) {
     Elf_Phdr *hdr = &phdrs[i];
 
 #if LOADER_DBG
-    Log("Segment [%d] type=%s vaddr=0x%x ==>", i, ph_type_str(hdr->p_type),
+    // Log("Segment [%d] type=%s vaddr=0x%x ==>", i, ph_type_str(hdr->p_type),
         hdr->p_vaddr);
 
     for (int j = 0; j < ehdr.e_shnum; j++) {
@@ -73,7 +73,7 @@ static uintptr_t loader(PCB *pcb, const char *filename) {
       // section 的地址落在 segment 的 [vaddr, vaddr+memsz) 范围内
       if (sh->sh_addr >= hdr->p_vaddr &&
           sh->sh_addr < hdr->p_vaddr + hdr->p_memsz) {
-        Log("  section: %16s addr=0x%x size=0x%x", &shstrtab[sh->sh_name],
+        // Log("  section: %16s addr=0x%x size=0x%x", &shstrtab[sh->sh_name],
             sh->sh_addr, sh->sh_size);
       }
     }
@@ -82,7 +82,7 @@ static uintptr_t loader(PCB *pcb, const char *filename) {
     if (hdr->p_type != PT_LOAD)
       continue;
 
-    Log("> Copy offset = %08x to vaddr = %08x", hdr->p_offset, hdr->p_vaddr);
+    // Log("> Copy offset = %08x to vaddr = %08x", hdr->p_offset, hdr->p_vaddr);
 
     // Alloc target space
     void *tar = (void *)hdr->p_vaddr;
@@ -94,6 +94,11 @@ static uintptr_t loader(PCB *pcb, const char *filename) {
   }
 
   return ehdr.e_entry;
+}
+
+void (*ctx_uload(PCB *pcb, const char *filename))()  {
+  uintptr_t entry = loader(pcb, filename);
+  return (void (*)())entry;
 }
 
 void naive_uload(PCB *pcb, const char *filename) {
